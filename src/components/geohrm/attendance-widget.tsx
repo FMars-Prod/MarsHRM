@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,10 +11,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2 } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 type AttendanceStatus = "out" | "in" | "break";
+
+interface Location {
+    latitude: number;
+    longitude: number;
+}
 
 export function AttendanceWidget() {
   const [status, setStatus] = useState<AttendanceStatus>("out");
@@ -21,6 +39,8 @@ export function AttendanceWidget() {
   const [breakTimer, setBreakTimer] = useState(0);
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
+  const [location, setLocation] = useState<Location | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -59,15 +79,45 @@ export function AttendanceWidget() {
   }, [status, lastClockInTime]);
 
   const handleClockIn = () => {
-    setStatus("in");
-    setLastClockInTime(new Date());
-    setTimer(0);
-    setBreakTimer(0);
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setLocation({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                });
+                setStatus("in");
+                setLastClockInTime(new Date());
+                setTimer(0);
+                setBreakTimer(0);
+                setHasClockedOutToday(false);
+                toast({
+                    title: "Clocked In",
+                    description: "Your location has been recorded.",
+                });
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Location Error",
+                    description: "Could not get location. Please enable location services.",
+                });
+            }
+        );
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Geolocation Not Supported",
+            description: "Your browser does not support geolocation.",
+        });
+    }
   };
 
   const handleClockOut = () => {
     setStatus("out");
     setHasClockedOutToday(true);
+    setLocation(null);
   };
 
   const handleBreak = () => {
@@ -132,6 +182,12 @@ export function AttendanceWidget() {
                 Clocked in at {lastClockInTime.toLocaleTimeString()}
              </p>
         )}
+        {location && (
+            <div className="flex items-center text-xs text-muted-foreground gap-1">
+                <MapPin className="size-3"/>
+                <span>{`Lat: ${location.latitude.toFixed(4)}, Lon: ${location.longitude.toFixed(4)}`}</span>
+            </div>
+        )}
       </CardContent>
       <CardFooter className="grid grid-cols-2 gap-4">
         {status === "out" ? (
@@ -148,9 +204,25 @@ export function AttendanceWidget() {
               <Coffee className="mr-2" />
               {status === "break" ? "End Break" : "Start Break"}
             </Button>
-            <Button onClick={handleClockOut} variant="destructive" className="w-full">
-              Clock Out
-            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full">
+                        Clock Out
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to clock out?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action will end your current work session. You can clock in again later if needed.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClockOut}>Confirm Clock Out</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
       </CardFooter>
