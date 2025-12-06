@@ -58,6 +58,26 @@ export default function AttendancePage() {
     });
     return modifiers;
   }, []);
+  
+  const DayWithStatus = ({ date }: { date: Date }) => {
+    const event = events.find(e => isSameDay(e.date, date));
+    let statusColor = '';
+    if (event) {
+        switch(event.status) {
+            case 'present': statusColor = 'bg-green-500'; break;
+            case 'late': statusColor = 'bg-yellow-500'; break;
+            case 'absent': statusColor = 'bg-red-500'; break;
+            case 'permission': statusColor = 'bg-blue-500'; break;
+        }
+    }
+    
+    return (
+        <div className="relative flex items-center justify-center h-full w-full">
+            <span>{format(date, 'd')}</span>
+            {statusColor && <div className={`absolute bottom-1.5 h-1.5 w-1.5 rounded-full ${statusColor}`} />}
+        </div>
+    )
+  }
 
   return (
     <>
@@ -77,21 +97,16 @@ export default function AttendancePage() {
                 onMonthChange={setCurrentMonth}
                 className="p-3"
                 modifiers={modifiers}
-                modifiersClassNames={{
-                    present: 'border-b-2 border-green-500 rounded-none',
-                    late: 'border-b-2 border-yellow-500 rounded-none',
-                    absent: 'border-b-2 border-red-500 rounded-none',
-                    permission: 'border-b-2 border-blue-500 rounded-none'
+                components={{
+                    Day: ({ date }) => <DayWithStatus date={date} />,
                 }}
                 classNames={{
                     day: cn(
-                        "h-10 w-10 rounded-full transition-colors hover:bg-accent/50 focus-within:relative focus-within:z-20"
+                        "h-12 w-12 rounded-full text-sm transition-colors hover:bg-accent/50 focus-within:relative focus-within:z-20",
                     ),
                     day_selected: "bg-primary text-primary-foreground hover:bg-primary focus:bg-primary",
                     day_today: "bg-accent text-accent-foreground",
-                    cell: "h-12 w-12 text-center text-sm p-0 relative first:[&:has([aria-selected])]:rounded-l-full last:[&:has([aria-selected])]:rounded-r-full focus-within:relative focus-within:z-20",
-                    head_cell: "text-muted-foreground rounded-md w-12 font-normal text-[0.8rem]",
-                    row: "flex w-full mt-2"
+                    cell: "p-0",
                 }}
               />
             </CardContent>
@@ -129,19 +144,19 @@ export default function AttendancePage() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                     <div className="flex items-center gap-2">
-                        <div className="h-2 w-4 rounded-full border-b-2 border-green-500" />
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
                         <span className="text-sm">Present</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="h-2 w-4 rounded-full border-b-2 border-yellow-500" />
+                        <div className="h-2 w-2 rounded-full bg-yellow-500" />
                         <span className="text-sm">Late</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="h-2 w-4 rounded-full border-b-2 border-red-500" />
+                        <div className="h-2 w-2 rounded-full bg-red-500" />
                         <span className="text-sm">Absent</span>
                     </div>
                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-4 rounded-full border-b-2 border-blue-500" />
+                        <div className="h-2 w-2 rounded-full bg-blue-500" />
                         <span className="text-sm">Permission</span>
                     </div>
                 </CardContent>
