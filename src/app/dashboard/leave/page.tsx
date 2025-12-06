@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, User, ThumbsUp, ThumbsDown } from "lucide-react";
+import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown } from "lucide-react";
 import { leaveData as initialLeaveData } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -45,6 +45,7 @@ import { useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type LeaveRequest = (typeof initialLeaveData)[0] & { employee?: string };
 
@@ -294,6 +295,7 @@ export default function LeavePage() {
                                     </SheetDescription>
                                 </SheetHeader>
                                 <Separator className="my-4" />
+                                <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
                                 <div className="space-y-4">
                                    <div className="space-y-1">
                                         <p className="text-sm font-medium text-muted-foreground">Employee</p>
@@ -317,6 +319,7 @@ export default function LeavePage() {
                                     <h4 className="font-semibold">Approval History</h4>
                                     <LeaveStatusTracker request={request} role={userRole} />
                                 </div>
+                                </ScrollArea>
                             </SheetContent>
                         </Sheet>
                     </div>
