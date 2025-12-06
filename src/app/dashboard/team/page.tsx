@@ -112,7 +112,7 @@ export default function TeamPage() {
     }
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.setAttribute('download', `${selectedMember.name.replace(/\s/g, '_')}_reports.csv`);
+    link.setAttribute('download', `${selectedMember.name}'s Reports.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
