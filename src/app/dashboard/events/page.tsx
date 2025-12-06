@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { events as eventData } from "@/lib/data";
-import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle } from "lucide-react";
+import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,18 @@ import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Textarea } from "@/components/ui/textarea";
 
-type EventItem = (typeof eventData)[0] & { likes: number; liked: boolean };
+type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'HelpCircle';
+
+const iconComponents: Record<IconName, React.FC<React.SVGProps<SVGSVGElement>>> = {
+    Cake,
+    PartyPopper,
+    Users,
+    Gift,
+    Award,
+    HelpCircle,
+};
+
+type EventItem = (typeof eventData)[0] & { likes: number; liked: boolean; icon: IconName };
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -44,7 +55,7 @@ export default function EventsPage() {
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
   const [events, setEvents] = React.useState<EventItem[]>(
-    eventData.map((e) => ({ ...e, likes: Math.floor(Math.random() * 25), liked: false }))
+    eventData.map((e) => ({ ...e, likes: Math.floor(Math.random() * 25), liked: false, icon: e.event === "Birthday" ? 'Cake' : 'PartyPopper' }))
   );
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -52,6 +63,7 @@ export default function EventsPage() {
   const [newEventDate, setNewEventDate] = React.useState<Date | undefined>();
   const [newEventType, setNewEventType] = React.useState("");
   const [otherEventType, setOtherEventType] = React.useState("");
+  const [newEventIcon, setNewEventIcon] = React.useState<IconName>('HelpCircle');
 
   const handleLike = (id: string) => {
     setEvents((prevEvents) =>
@@ -83,6 +95,7 @@ export default function EventsPage() {
         date: format(newEventDate, "MMMM do"),
         likes: 0,
         liked: false,
+        icon: newEventIcon,
     };
 
     setEvents(prev => [newEvent, ...prev]);
@@ -92,7 +105,13 @@ export default function EventsPage() {
     setNewEventDate(undefined);
     setNewEventType("");
     setOtherEventType("");
+    setNewEventIcon('HelpCircle');
     setIsDialogOpen(false);
+  }
+
+  const renderIcon = (iconName: IconName, props: React.SVGProps<SVGSVGElement>) => {
+    const IconComponent = iconComponents[iconName] || HelpCircle;
+    return <IconComponent {...props} />;
   }
 
   return (
@@ -109,7 +128,7 @@ export default function EventsPage() {
                         Create Event
                     </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Create a New Event</DialogTitle>
                         <DialogDescription>
@@ -165,6 +184,25 @@ export default function EventsPage() {
                                 </PopoverContent>
                             </Popover>
                         </div>
+                        <div className="grid grid-cols-4 items-start gap-4">
+                            <Label className="text-right pt-2">Icon</Label>
+                            <div className="col-span-3 grid grid-cols-5 gap-2">
+                                {Object.keys(iconComponents).map(iconKey => {
+                                    const iconName = iconKey as IconName;
+                                    return (
+                                        <Button 
+                                            key={iconName}
+                                            variant="outline"
+                                            size="icon"
+                                            className={cn(newEventIcon === iconName && "ring-2 ring-primary")}
+                                            onClick={() => setNewEventIcon(iconName)}
+                                        >
+                                            {renderIcon(iconName, { className: "h-5 w-5" })}
+                                        </Button>
+                                    )
+                                })}
+                            </div>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
@@ -179,13 +217,7 @@ export default function EventsPage() {
           <Card key={event.id} className="flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                {event.event === "Birthday" ? (
-                  <Cake className="text-pink-500" />
-                ) : event.event === "Work Anniversary" ? (
-                  <PartyPopper className="text-yellow-500" />
-                ) : (
-                  <HelpCircle className="text-blue-500" />
-                )}
+                {renderIcon(event.icon, {className: "h-6 w-6 text-primary"})}
                 {event.name}
               </CardTitle>
             </CardHeader>
