@@ -4,21 +4,24 @@
 import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy, Timestamp, startOfDay, endOfDay } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, isSameDay } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download } from 'lucide-react';
+import { format, subDays, differenceInSeconds, isSameDay } from 'date-fns';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { WithId } from '@/firebase/firestore/use-collection';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+
 
 type User = {
   firstName: string;
@@ -49,6 +52,9 @@ const AnalyticsPage = () => {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
+  const [date, setDate] = React.useState<Date | undefined>(new Date());
+  const [showAll, setShowAll] = React.useState(false);
+
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
@@ -57,11 +63,23 @@ const AnalyticsPage = () => {
 
   const attendanceQuery = useMemoFirebase(() => {
     if (!selectedUserId) return null;
+    if (showAll) {
+      return query(
+        collection(firestore, `users/${selectedUserId}/attendances`),
+        orderBy('checkInTime', 'desc')
+      );
+    }
+    if (!date) return null;
+
+    const start = startOfDay(date);
+    const end = endOfDay(date);
     return query(
       collection(firestore, `users/${selectedUserId}/attendances`),
-      orderBy('checkInTime', 'desc')
+      where('checkInTime', '>=', start),
+      where('checkInTime', '<=', end)
     );
-  }, [firestore, selectedUserId]);
+  }, [firestore, selectedUserId, date, showAll]);
+
   const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
 
   const weeklyChartQuery = useMemoFirebase(() => {
@@ -108,7 +126,7 @@ const AnalyticsPage = () => {
               const day = format(rec.checkInTime.toDate(), 'yyyy-MM-dd');
               let workHours = 0, breakHours = 0;
               if (rec.checkOutTime) {
-                  workHours = (differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0)) / 3600;
+                  workHours = (differenceInSeconds(rec.checkOutTime.toDate(), rec.checkOutTime.toDate()) - (rec.totalBreakDuration || 0)) / 3600;
                   breakHours = (rec.totalBreakDuration || 0) / 3600;
               }
               const existing = dataMap.get(day) || { work: 0, break: 0 };
@@ -164,7 +182,7 @@ const AnalyticsPage = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    const datePart = 'all_time';
+    const datePart = showAll ? 'all_time' : (date ? format(date, 'yyyy-MM-dd') : 'custom');
     link.setAttribute('download', `${selectedUser?.firstName}_${selectedUser?.lastName}_attendance_${datePart}.csv`);
     document.body.appendChild(link);
     link.click();
@@ -188,7 +206,22 @@ const AnalyticsPage = () => {
                 </SelectContent>
             </Select>
         </div>
-        
+        <div className="flex items-center gap-2">
+            <Button variant={!showAll && isSameDay(date || new Date(0), new Date()) ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setShowAll(false); }}>Today</Button>
+            <Button variant={!showAll && isSameDay(date || new Date(0), subDays(new Date(), 1)) ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setShowAll(false); }}>Yesterday</Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button id="date" variant={"outline"} className={cn("w-full md:w-[200px] justify-start text-left font-normal", !date && "text-muted-foreground", showAll && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date && !showAll ? format(date, "MMMM do, yyyy") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={date} onSelect={(d) => { setDate(d); setShowAll(false); }} initialFocus />
+              </PopoverContent>
+            </Popover>
+        </div>
+        <Button variant="ghost" onClick={() => setShowAll(!showAll)}>{showAll ? "View Daily Activity" : "View Full Activity"}</Button>
         <Button onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
             <Download className="mr-2 h-4 w-4"/>
             Export CSV
@@ -228,7 +261,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalHours} hrs</div>
-                    <p className="text-xs text-muted-foreground">All time</p>
+                    <p className="text-xs text-muted-foreground">{showAll ? 'All time' : (date ? format(date, 'MMM d, yyyy') : 'Selected day')}</p>
                 </CardContent>
             </Card>
             <Card>
@@ -238,7 +271,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalBreakHours} hrs</div>
-                     <p className="text-xs text-muted-foreground">All time</p>
+                     <p className="text-xs text-muted-foreground">{showAll ? 'All time' : (date ? format(date, 'MMM d, yyyy') : 'Selected day')}</p>
                 </CardContent>
             </Card>
             <Card>
@@ -248,7 +281,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalLeaves}</div>
-                    <p className="text-xs text-muted-foreground">All time</p>
+                    <p className="text-xs text-muted-foreground">{showAll ? 'All time' : (date ? format(date, 'MMM d, yyyy') : 'Selected day')}</p>
                 </CardContent>
             </Card>
             <Card>
@@ -258,7 +291,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.lateDays}</div>
-                     <p className="text-xs text-muted-foreground">All time</p>
+                     <p className="text-xs text-muted-foreground">{showAll ? 'All time' : (date ? format(date, 'MMM d, yyyy') : 'Selected day')}</p>
                 </CardContent>
             </Card>
         </div>
@@ -278,7 +311,7 @@ const AnalyticsPage = () => {
                                 <YAxis unit="h" />
                                  <ChartTooltip 
                                     cursor={false}
-                                    content={<ChartTooltipContent formatter={(value) => `${value.toFixed(1)}h`} />}
+                                    content={<ChartTooltipContent formatter={(value) => `${(value as number).toFixed(1)}h`} />}
                                 />
                                 <Bar dataKey="work" fill="var(--color-work)" radius={[4, 4, 0, 0]} name="Work" />
                                 <Bar dataKey="break" fill="var(--color-break)" radius={[4, 4, 0, 0]} name="Break" />
@@ -291,7 +324,7 @@ const AnalyticsPage = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Attendance Log</CardTitle>
-                        <CardDescription>Full activity history for the selected employee.</CardDescription>
+                        <CardDescription>{showAll ? "Full activity history for the selected employee." : `Activity for ${date ? format(date, 'PPP') : 'the selected day'}.`}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -337,7 +370,7 @@ const AnalyticsPage = () => {
                         </Table>
                          {(!attendanceData || attendanceData.length === 0) && (
                             <div className="text-center py-10 text-muted-foreground">
-                                No attendance records found for this employee.
+                                No attendance records found for this period.
                             </div>
                          )}
                     </CardContent>
@@ -351,5 +384,3 @@ const AnalyticsPage = () => {
 };
 
 export default AnalyticsPage;
-
-    
