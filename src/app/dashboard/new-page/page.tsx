@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, isSameDay, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { WithId } from '@/firebase/firestore/use-collection';
+import { DateRange } from 'react-day-picker';
 
 
 type User = {
@@ -49,14 +50,16 @@ const chartConfig = {
   },
 } satisfies React.ComponentProps<typeof ChartContainer>['config'];
 
-type PredefinedRange = 'today' | 'yesterday' | 'custom';
-
 const AnalyticsPage = () => {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
-  const [activeFilter, setActiveFilter] = React.useState<PredefinedRange>('today');
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
+    from: subDays(new Date(), 6),
+    to: new Date(),
+  });
+  const [preset, setPreset] = React.useState<string>('last-7-days');
+
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
@@ -64,29 +67,18 @@ const AnalyticsPage = () => {
   const selectedUser = users?.find(u => u.id === selectedUserId);
 
   const attendanceQuery = useMemoFirebase(() => {
-    if (!selectedUserId || !selectedDate) return null;
+    if (!selectedUserId || !dateRange?.from) return null;
+    // Use the end of the day for the 'to' date to include all records on that day
+    const toDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
     return query(
       collection(firestore, `users/${selectedUserId}/attendances`),
-      where('checkInTime', '>=', startOfDay(selectedDate)),
-      where('checkInTime', '<=', endOfDay(selectedDate)),
+      where('checkInTime', '>=', startOfDay(dateRange.from)),
+      where('checkInTime', '<=', toDate),
       orderBy('checkInTime', 'desc')
     );
-  }, [firestore, selectedUserId, selectedDate]);
+  }, [firestore, selectedUserId, dateRange]);
   const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
 
-  // Separate query for the last 7 days for the chart
-  const weeklyAttendanceQuery = useMemoFirebase(() => {
-      if (!selectedUserId) return null;
-      const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
-      return query(
-          collection(firestore, `users/${selectedUserId}/attendances`),
-          where('checkInTime', '>=', sevenDaysAgo),
-          orderBy('checkInTime', 'asc')
-      );
-  }, [firestore, selectedUserId]);
-  const { data: weeklyAttendanceData } = useCollection<AttendanceRecord>(weeklyAttendanceQuery);
-
-  const userAvatar = PlaceHolderImages.find((image) => image.id === 'user-avatar-1');
 
   const stats = React.useMemo(() => {
     if (!attendanceData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0 };
@@ -109,21 +101,38 @@ const AnalyticsPage = () => {
   }, [attendanceData]);
 
   const chartData = React.useMemo(() => {
-      return Array.from({ length: 7 }).map((_, i) => {
-          const day = subDays(new Date(), 6 - i);
-          const rec = weeklyAttendanceData?.find(d => d.checkInTime && isSameDay(d.checkInTime.toDate(), day));
-          let workHours = 0, breakHours = 0;
-          if (rec?.checkInTime && rec?.checkOutTime) {
-              workHours = (differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0)) / 3600;
-              breakHours = (rec.totalBreakDuration || 0) / 3600;
-          }
-          return {
-              date: format(day, 'EEE'),
-              work: parseFloat(workHours.toFixed(2)),
-              break: parseFloat(breakHours.toFixed(2)),
+      if (!attendanceData) return [];
+      
+      const rangeStart = dateRange?.from ? startOfDay(dateRange.from) : startOfDay(new Date());
+      const rangeEnd = dateRange?.to ? endOfDay(dateRange.to) : endOfDay(new Date());
+
+      const dataMap = new Map<string, { work: number, break: number }>();
+
+      (attendanceData || []).forEach(rec => {
+          if (rec.checkInTime) {
+              const day = format(rec.checkInTime.toDate(), 'yyyy-MM-dd');
+              let workHours = 0, breakHours = 0;
+              if (rec.checkOutTime) {
+                  workHours = (differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0)) / 3600;
+                  breakHours = (rec.totalBreakDuration || 0) / 3600;
+              }
+              const existing = dataMap.get(day) || { work: 0, break: 0 };
+              dataMap.set(day, {
+                  work: existing.work + workHours,
+                  break: existing.break + breakHours
+              });
           }
       });
-  }, [weeklyAttendanceData]);
+      
+      return Array.from(dataMap.entries()).map(([date, values]) => ({
+          date: format(new Date(date), 'EEE, MMM d'),
+          work: parseFloat(values.work.toFixed(2)),
+          break: parseFloat(values.break.toFixed(2)),
+      })).reverse();
+  }, [attendanceData, dateRange]);
+
+
+  const userAvatar = PlaceHolderImages.find((image) => image.id === 'user-avatar-1');
 
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -160,22 +169,29 @@ const AnalyticsPage = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.setAttribute('download', `${selectedUser?.firstName}_${selectedUser?.lastName}_attendance_${format(selectedDate, 'yyyy-MM-dd')}.csv`);
+    const datePart = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : 'export';
+    link.setAttribute('download', `${selectedUser?.firstName}_${selectedUser?.lastName}_attendance_${datePart}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
-
-  const handleSetDate = (date: Date | undefined) => {
-    if (date) {
-        setSelectedDate(date);
-        setActiveFilter('custom');
-    }
+  
+  const handlePresetChange = (value: string) => {
+      setPreset(value);
+      const now = new Date();
+      if (value === 'last-7-days') {
+          setDateRange({ from: subDays(now, 6), to: now });
+      } else if (value === 'this-month') {
+          setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+      } else if (value === 'last-month') {
+          const lastMonth = subMonths(now, 1);
+          setDateRange({ from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) });
+      }
   }
 
   return (
     <>
-      <PageHeader title="Employee Analytics" description="Select an employee and a date to view their performance and attendance." />
+      <PageHeader title="Employee Analytics" description="Select an employee and a date range to view their performance and attendance." />
 
       <div className="flex flex-wrap items-center gap-4 mb-6">
         <div className="w-full sm:w-auto sm:min-w-64">
@@ -191,31 +207,56 @@ const AnalyticsPage = () => {
             </Select>
         </div>
         
-        <div className="flex items-center gap-2">
-            <Button variant={activeFilter === 'today' ? 'default' : 'outline'} onClick={() => { setSelectedDate(new Date()); setActiveFilter('today'); }}>Today</Button>
-            <Button variant={activeFilter === 'yesterday' ? 'default' : 'outline'} onClick={() => { setSelectedDate(subDays(new Date(), 1)); setActiveFilter('yesterday'); }}>Yesterday</Button>
-            <Popover>
-                <PopoverTrigger asChild>
-                <Button
-                    variant={activeFilter === 'custom' ? 'default' : 'outline'}
-                    className={cn(
-                    "w-[280px] justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
-                    )}
-                >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {activeFilter === 'custom' && selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleSetDate}
-                    initialFocus
-                />
-                </PopoverContent>
-            </Popover>
+        <div className="flex items-center gap-2 flex-wrap">
+           <Select value={preset} onValueChange={handlePresetChange}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Select a preset" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="last-7-days">Last 7 days</SelectItem>
+              <SelectItem value="this-month">This month</SelectItem>
+              <SelectItem value="last-month">Last month</SelectItem>
+            </SelectContent>
+          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant={"outline"}
+                className={cn(
+                  "w-full md:w-[300px] justify-start text-left font-normal",
+                  !dateRange && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "LLL dd, y")} -{" "}
+                      {format(dateRange.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={(range) => {
+                    setDateRange(range);
+                    setPreset('custom');
+                }}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         <Button onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
@@ -257,7 +298,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalHours} hrs</div>
-                    <p className="text-xs text-muted-foreground">on {format(selectedDate, 'MMM d')}</p>
+                    <p className="text-xs text-muted-foreground">in selected period</p>
                 </CardContent>
             </Card>
             <Card>
@@ -267,7 +308,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalBreakHours} hrs</div>
-                    <p className="text-xs text-muted-foreground">on {format(selectedDate, 'MMM d')}</p>
+                    <p className="text-xs text-muted-foreground">in selected period</p>
                 </CardContent>
             </Card>
             <Card>
@@ -276,18 +317,18 @@ const AnalyticsPage = () => {
                     <CalendarOff className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalLeaves > 0 ? 'Yes' : 'No'}</div>
-                    <p className="text-xs text-muted-foreground">on {format(selectedDate, 'MMM d')}</p>
+                    <div className="text-2xl font-bold">{stats.totalLeaves} days</div>
+                    <p className="text-xs text-muted-foreground">in selected period</p>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Status</CardTitle>
+                    <CardTitle className="text-sm font-medium">Late Days</CardTitle>
                     <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{attendanceData?.[0]?.status ?? 'N/A'}</div>
-                    <p className="text-xs text-muted-foreground">on {format(selectedDate, 'MMM d')}</p>
+                    <div className="text-2xl font-bold">{stats.lateDays} days</div>
+                    <p className="text-xs text-muted-foreground">in selected period</p>
                 </CardContent>
             </Card>
         </div>
@@ -297,13 +338,13 @@ const AnalyticsPage = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Weekly Work Hours</CardTitle>
-                        <CardDescription>Work vs. Break hours over the last 7 days.</CardDescription>
+                        <CardDescription>Work vs. Break hours over the selected period.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                             <BarChart accessibilityLayer data={chartData}>
                                 <CartesianGrid vertical={false} />
-                                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+                                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
                                 <YAxis unit="h" />
                                  <ChartTooltip 
                                     cursor={false}
@@ -320,7 +361,7 @@ const AnalyticsPage = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Attendance Log</CardTitle>
-                        <CardDescription>Activity for the selected day.</CardDescription>
+                        <CardDescription>Activity for the selected period.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
