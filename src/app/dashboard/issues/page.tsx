@@ -33,7 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, MoreHorizontal } from "lucide-react";
-import { issueData } from "@/lib/data";
+import { issueData as allIssueData } from "@/lib/data";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,7 +49,7 @@ import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 
-type Issue = typeof issueData[0];
+type Issue = typeof allIssueData[0];
 
 export default function IssuesPage() {
   const { user } = useUser();
@@ -62,6 +62,11 @@ export default function IssuesPage() {
   );
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
+  const userName = (userData as any)?.firstName ? `${(userData as any)?.firstName} ${(userData as any)?.lastName}` : 'Current User';
+  
+  const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+  
+  const issueData = isAdmin ? allIssueData : allIssueData.filter(issue => issue.submittedBy === 'John Doe'); // Assuming John Doe is the logged-in member for demo
 
   return (
     <>
@@ -110,7 +115,7 @@ export default function IssuesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Submitted By</TableHead>
+                {isAdmin && <TableHead>Submitted By</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -119,7 +124,7 @@ export default function IssuesPage() {
               {issueData.map((issue) => (
                 <TableRow key={issue.id}>
                   <TableCell className="font-medium">{issue.title}</TableCell>
-                  <TableCell>{issue.submittedBy}</TableCell>
+                  {isAdmin && <TableCell>{issue.submittedBy}</TableCell>}
                   <TableCell>
                     <Badge variant="outline"
                       className={cn(
@@ -141,7 +146,7 @@ export default function IssuesPage() {
                         <SheetTrigger asChild>
                           <DropdownMenuItem onClick={() => setSelectedIssue(issue)}>View Details</DropdownMenuItem>
                         </SheetTrigger>
-                        {userRole !== 'Member' && (
+                        {isAdmin && (
                           <>
                             <DropdownMenuItem>Update Status</DropdownMenuItem>
                             <DropdownMenuItem>Assign</DropdownMenuItem>
@@ -169,10 +174,12 @@ export default function IssuesPage() {
                     <p className="text-sm font-medium text-muted-foreground">Title</p>
                     <p className="font-semibold">{selectedIssue.title}</p>
                 </div>
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Submitted By</p>
-                    <p className="font-semibold">{selectedIssue.submittedBy}</p>
-                </div>
+                {isAdmin && (
+                  <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Submitted By</p>
+                      <p className="font-semibold">{selectedIssue.submittedBy}</p>
+                  </div>
+                )}
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Status</p>
                     <Badge variant="outline"
