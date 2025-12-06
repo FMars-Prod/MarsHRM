@@ -25,9 +25,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, getYear, getMonth, getDate } from "date-fns";
 
 
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'HelpCircle';
@@ -69,12 +67,14 @@ export default function EventsPage() {
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [newEventName, setNewEventName] = React.useState("");
-  const [newEventDate, setNewEventDate] = React.useState<Date | undefined>();
   const [newEventType, setNewEventType] = React.useState("");
   const [otherEventType, setOtherEventType] = React.useState("");
   const [newEventIcon, setNewEventIcon] = React.useState<IconName>('HelpCircle');
   const [newEventColor, setNewEventColor] = React.useState<string>('hsl(var(--primary))');
   const [newEventTime, setNewEventTime] = React.useState("");
+  const [newEventDay, setNewEventDay] = React.useState<string>();
+  const [newEventMonth, setNewEventMonth] = React.useState<string>();
+  const [newEventYear, setNewEventYear] = React.useState<string>();
 
 
   const handleLike = (id: string) => {
@@ -94,11 +94,12 @@ export default function EventsPage() {
 
   const handleCreateEvent = () => {
     const eventType = newEventType === "Other" ? otherEventType : newEventType;
-    if (!newEventName || !eventType || !newEventDate) {
+    if (!newEventName || !eventType || !newEventDay || !newEventMonth || !newEventYear) {
         // In a real app, you'd show a toast or form validation message
         console.error("All fields are required");
         return;
     }
+    const newEventDate = new Date(parseInt(newEventYear), parseInt(newEventMonth), parseInt(newEventDay));
 
     const newEvent: EventItem = {
         id: `evt-${Date.now()}`,
@@ -116,12 +117,14 @@ export default function EventsPage() {
 
     // Reset form and close dialog
     setNewEventName("");
-    setNewEventDate(undefined);
     setNewEventType("");
     setOtherEventType("");
     setNewEventIcon('HelpCircle');
     setNewEventColor('hsl(var(--primary))');
     setNewEventTime("");
+    setNewEventDay(undefined);
+    setNewEventMonth(undefined);
+    setNewEventYear(undefined);
     setIsDialogOpen(false);
   }
 
@@ -129,6 +132,10 @@ export default function EventsPage() {
     const IconComponent = iconComponents[iconName] || HelpCircle;
     return <IconComponent {...props} />;
   }
+  
+  const years = Array.from({ length: 10 }, (_, i) => getYear(new Date()) - 5 + i);
+  const months = Array.from({ length: 12 }, (_, i) => ({ value: i, label: format(new Date(0, i), 'MMMM') }));
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
     <>
@@ -177,28 +184,26 @@ export default function EventsPage() {
                         )}
                         <div className="grid grid-cols-4 items-center gap-4">
                              <Label htmlFor="date" className="text-right">Date</Label>
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                      "col-span-3 justify-start text-left font-normal",
-                                      !newEventDate && "text-muted-foreground"
-                                    )}
-                                  >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {newEventDate ? format(newEventDate, "PPP") : <span>Pick a date</span>}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
-                                  <Calendar
-                                    mode="single"
-                                    selected={newEventDate}
-                                    onSelect={setNewEventDate}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
+                             <div className="col-span-3 grid grid-cols-3 gap-2">
+                                <Select onValueChange={setNewEventYear} value={newEventYear}>
+                                    <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                                    <SelectContent>
+                                        {years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select onValueChange={setNewEventMonth} value={newEventMonth}>
+                                    <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+                                    <SelectContent>
+                                        {months.map(month => <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select onValueChange={setNewEventDay} value={newEventDay}>
+                                    <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
+                                    <SelectContent>
+                                        {days.map(day => <SelectItem key={day} value={String(day)}>{day}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                             </div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="time" className="text-right">Time (Optional)</Label>
