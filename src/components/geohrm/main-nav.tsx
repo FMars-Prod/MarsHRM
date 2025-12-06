@@ -21,6 +21,7 @@ import {
   PartyPopper,
   Users,
   Building,
+  File,
 } from "lucide-react";
 import { teamData } from "@/lib/data";
 import React from "react";
@@ -37,6 +38,7 @@ const links = [
   { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/policies", label: "Policies", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/audit-log", label: "Audit Log", icon: BookUser, roles: ['CEO/Admin'] },
+  { href: "/dashboard/new-page", label: "New Page", icon: File, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
 ];
 
 export function MainNav({ userRole }: { userRole: string }) {
