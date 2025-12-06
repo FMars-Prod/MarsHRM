@@ -130,8 +130,15 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
     return <p>Loading user profile...</p>;
   }
 
-  if (!user) {
+  // Only call notFound if loading is complete and user is still null
+  if (!isUserLoading && !user) {
     return notFound();
+  }
+  
+  if (!user) {
+    // This case will be hit if user is still null after loading,
+    // but the notFound() call above is more explicit for Next.js
+    return <p>User data not available.</p>;
   }
 
 
@@ -310,5 +317,3 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
 };
 
 export default UserAnalyticsPage;
-
-    
