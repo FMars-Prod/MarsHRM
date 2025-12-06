@@ -78,16 +78,20 @@ export default function AttendancePage() {
                 className="p-3"
                 modifiers={modifiers}
                 modifiersClassNames={{
-                    present: 'bg-green-100 text-green-800 rounded-lg',
-                    late: 'bg-yellow-100 text-yellow-800 rounded-lg',
-                    absent: 'bg-red-100 text-red-800 rounded-lg',
-                    permission: 'bg-blue-100 text-blue-800 rounded-lg'
+                    present: 'border-b-2 border-green-500 rounded-none',
+                    late: 'border-b-2 border-yellow-500 rounded-none',
+                    absent: 'border-b-2 border-red-500 rounded-none',
+                    permission: 'border-b-2 border-blue-500 rounded-none'
                 }}
                 classNames={{
                     day: cn(
-                        "relative h-12 w-12 rounded-lg transition-colors hover:bg-accent/50 focus-within:relative focus-within:z-20"
+                        "h-10 w-10 rounded-full transition-colors hover:bg-accent/50 focus-within:relative focus-within:z-20"
                     ),
-                    day_selected: "bg-primary text-primary-foreground hover:bg-primary",
+                    day_selected: "bg-primary text-primary-foreground hover:bg-primary focus:bg-primary",
+                    day_today: "bg-accent text-accent-foreground",
+                    cell: "h-12 w-12 text-center text-sm p-0 relative first:[&:has([aria-selected])]:rounded-l-full last:[&:has([aria-selected])]:rounded-r-full focus-within:relative focus-within:z-20",
+                    head_cell: "text-muted-foreground rounded-md w-12 font-normal text-[0.8rem]",
+                    row: "flex w-full mt-2"
                 }}
               />
             </CardContent>
@@ -125,19 +129,19 @@ export default function AttendancePage() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded-full bg-green-100 border border-green-200" />
+                        <div className="h-2 w-4 rounded-full border-b-2 border-green-500" />
                         <span className="text-sm">Present</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded-full bg-yellow-100 border border-yellow-200" />
+                        <div className="h-2 w-4 rounded-full border-b-2 border-yellow-500" />
                         <span className="text-sm">Late</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded-full bg-red-100 border border-red-200" />
+                        <div className="h-2 w-4 rounded-full border-b-2 border-red-500" />
                         <span className="text-sm">Absent</span>
                     </div>
                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded-full bg-blue-100 border border-blue-200" />
+                        <div className="h-2 w-4 rounded-full border-b-2 border-blue-500" />
                         <span className="text-sm">Permission</span>
                     </div>
                 </CardContent>
@@ -147,4 +151,3 @@ export default function AttendancePage() {
     </>
   );
 }
-
