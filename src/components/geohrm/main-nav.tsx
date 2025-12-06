@@ -20,6 +20,7 @@ import {
   Megaphone,
   PartyPopper,
   Users,
+  Building,
 } from "lucide-react";
 import { teamData } from "@/lib/data";
 import React from "react";
@@ -33,6 +34,7 @@ const links = [
   { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badge: "2" },
   { href: "/dashboard/issues", label: "Issues", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/team", label: "Team", icon: Users, roles: ['Team Lead'] },
+  { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/policies", label: "Policies", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/audit-log", label: "Audit Log", icon: BookUser, roles: ['CEO/Admin'] },
 ];
