@@ -13,7 +13,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Hourglass } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Hourglass, Coffee } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { WithId } from '@/firebase/firestore/use-collection';
@@ -59,30 +59,30 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
   const userAvatar = PlaceHolderImages.find((image) => image.id === 'user-avatar-1');
 
   const stats = React.useMemo(() => {
-    if (!attendanceData) return { totalHours: 0, avgHours: 0, totalLeaves: 0, lateDays: 0 };
+    if (!attendanceData) return { totalHours: 0, totalBreakHours: 0, totalLeaves: 0, lateDays: 0 };
 
-    let totalSeconds = 0;
-    let workDays = 0;
+    let totalWorkSeconds = 0;
+    let totalBreakSeconds = 0;
     let lateDays = 0;
     let onLeaveDays = 0;
 
     attendanceData.forEach(rec => {
       if (rec.checkInTime && rec.checkOutTime) {
         const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate());
-        const totalWork = workSeconds - (rec.totalBreakDuration || 0);
-        totalSeconds += totalWork;
-        workDays++;
+        const breakDuration = rec.totalBreakDuration || 0;
+        totalWorkSeconds += workSeconds - breakDuration;
+        totalBreakSeconds += breakDuration;
       }
       if (rec.status === 'late') lateDays++;
       if (rec.status === 'on_leave') onLeaveDays++;
     });
 
-    const totalHours = totalSeconds / 3600;
-    const avgHours = workDays > 0 ? totalHours / workDays : 0;
+    const totalHours = totalWorkSeconds / 3600;
+    const totalBreakHours = totalBreakSeconds / 3600;
 
     return {
       totalHours: totalHours.toFixed(1),
-      avgHours: avgHours.toFixed(1),
+      totalBreakHours: totalBreakHours.toFixed(1),
       totalLeaves: onLeaveDays,
       lateDays,
     };
@@ -129,7 +129,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
               <AvatarFallback>{(user as any).firstName?.[0]}{(user as any).lastName?.[0]}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-2xl">{(user as any).firstName} {(user as any).lastName}</CardTitle>
+              <CardTitle className="text-2xl">{(user as any).firstName} ${(user as any).lastName}</CardTitle>
               <CardDescription>{(user as any).jobTitle} - {(user as any).department}</CardDescription>
             </div>
           </CardHeader>
@@ -148,12 +148,12 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Avg. Work Duration</CardTitle>
-                    <Hourglass className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium">Total Break Time</CardTitle>
+                    <Coffee className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.avgHours} hrs</div>
-                    <p className="text-xs text-muted-foreground">per day in the last 30 days</p>
+                    <div className="text-2xl font-bold">{stats.totalBreakHours} hrs</div>
+                    <p className="text-xs text-muted-foreground">in the last 30 days</p>
                 </CardContent>
             </Card>
             <Card>
@@ -214,7 +214,8 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Date</TableHead>
-                                <TableHead>Work Duration</TableHead>
+                                <TableHead>Clock In/Out</TableHead>
+                                <TableHead>Work</TableHead>
                                 <TableHead>Break</TableHead>
                                 <TableHead>Status</TableHead>
                             </TableRow>
@@ -222,7 +223,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
                         <TableBody>
                             {isAttendanceLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center">Loading attendance...</TableCell>
+                                    <TableCell colSpan={5} className="text-center">Loading attendance...</TableCell>
                                 </TableRow>
                             ) : (attendanceData || []).slice(0, 7).map((rec, i) => {
                                 let workDuration = 0;
@@ -231,7 +232,12 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
                                 }
                                 return (
                                 <TableRow key={i}>
-                                    <TableCell>{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                                    <TableCell className="font-medium">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                                    <TableCell>
+                                      {rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}
+                                      {' / '}
+                                      {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
+                                    </TableCell>
                                     <TableCell>{formatDuration(workDuration)}</TableCell>
                                     <TableCell>{formatDuration(rec.totalBreakDuration || 0)}</TableCell>
                                     <TableCell>
