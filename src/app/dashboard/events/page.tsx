@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { events as eventData } from "@/lib/data";
-import { Cake, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Briefcase, Building, Home, Milestone, Trophy, Ship } from "lucide-react";
+import { Cake, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Briefcase, Building, Home, Milestone, Trophy, Ship, Heart } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { format, parse, getDaysInMonth, startOfToday } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'Briefcase' | 'Building' | 'Home' | 'Milestone' | 'Trophy';
 
@@ -94,10 +96,7 @@ export default function EventsPage() {
   const [newEventColor, setNewEventColor] = React.useState<string>('hsl(var(--primary))');
   const [newEventTime, setNewEventTime] = React.useState("");
   
-  const today = startOfToday();
-  const [year, setYear] = React.useState<number | undefined>();
-  const [month, setMonth] = React.useState<number | undefined>();
-  const [day, setDay] = React.useState<number | undefined>();
+  const [date, setDate] = React.useState<Date>();
 
   const handleLike = (id: string) => {
     setEvents((prevEvents) =>
@@ -121,16 +120,14 @@ export default function EventsPage() {
     setNewEventIcon('PartyPopper');
     setNewEventColor('hsl(var(--primary))');
     setNewEventTime("");
-    setYear(undefined);
-    setMonth(undefined);
-    setDay(undefined);
+    setDate(undefined);
     setEditingEvent(null);
     setIsDialogOpen(false);
   }
 
   const handleCreateOrUpdateEvent = () => {
     const eventType = newEventType === "Other" ? otherEventType : newEventType;
-    if (!newEventName || !eventType || !year || month === undefined || !day) {
+    if (!newEventName || !eventType || !date) {
         toast({
             variant: "destructive",
             title: "Missing Information",
@@ -138,8 +135,6 @@ export default function EventsPage() {
         });
         return;
     }
-    
-    const date = new Date(year, month, day);
 
     const eventPayload: EventItem = {
         id: editingEvent ? editingEvent.id : `evt-${Date.now()}`,
@@ -175,9 +170,7 @@ export default function EventsPage() {
     }
     
     const eventDate = parse(event.date + " " + new Date().getFullYear(), "MMMM do yyyy", new Date());
-    setYear(eventDate.getFullYear());
-    setMonth(eventDate.getMonth());
-    setDay(eventDate.getDate());
+    setDate(eventDate);
     
     setNewEventTime(event.time || "");
     setNewEventIcon(event.icon);
@@ -195,19 +188,6 @@ export default function EventsPage() {
     const IconComponent = iconComponents[iconName] || HelpCircle;
     return <IconComponent {...props} />;
   }
-
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth();
-  const currentDay = today.getDate();
-
-  const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
-  const months = Array.from({ length: 12 }, (_, i) => ({ label: format(new Date(0, i), 'MMMM'), value: i }));
-  
-  const daysInMonth = (year && month !== undefined) ? getDaysInMonth(new Date(year, month)) : 31;
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-  const isPastMonth = (m: number) => year === currentYear && m < currentMonth;
-  const isPastDay = (d: number) => year === currentYear && month === currentMonth && d < currentDay;
 
   return (
     <>
@@ -262,26 +242,30 @@ export default function EventsPage() {
                         )}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="date" className="text-right">Date</Label>
-                            <div className="col-span-3 grid grid-cols-3 gap-2">
-                                <Select onValueChange={(v) => { setYear(Number(v)); setMonth(undefined); setDay(undefined); }} value={year?.toString()}>
-                                    <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                                    <SelectContent>
-                                        {years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select onValueChange={(v) => { setMonth(Number(v)); setDay(undefined); }} value={month?.toString()} disabled={!year}>
-                                    <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                                    <SelectContent>
-                                        {months.map(m => <SelectItem key={m.value} value={m.value.toString()} disabled={isPastMonth(m.value)}>{m.label}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select onValueChange={(v) => setDay(Number(v))} value={day?.toString()} disabled={!year || month === undefined}>
-                                    <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                                    <SelectContent>
-                                        {days.map(d => <SelectItem key={d} value={d.toString()} disabled={isPastDay(d)}>{d}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        id="date"
+                                        variant={"outline"}
+                                        className={cn(
+                                            "col-span-3 justify-start text-left font-normal",
+                                            !date && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={date}
+                                        onSelect={setDate}
+                                        disabled={(date) => date < startOfToday() && !isSameDay(date, startOfToday())}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="time" className="text-right">Time (Optional)</Label>
@@ -394,3 +378,5 @@ export default function EventsPage() {
     </>
   );
 }
+
+    
