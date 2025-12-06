@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,7 +14,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInAnonymously, User } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -81,11 +82,11 @@ export default function LoginPage() {
       const userCredential = await signInAnonymously(auth);
       const user = userCredential.user;
 
-      // Set the user's role in Firestore
+      const batch = writeBatch(firestore);
+
+      // 1. Set the user's main document
       const userDocRef = doc(firestore, 'users', user.uid);
-      
       const roleSpecificData = employeeData[role];
-      
       const userData = {
         id: user.uid,
         employeeId: user.uid, // Using uid as employeeId for dummy user
@@ -93,16 +94,30 @@ export default function LoginPage() {
         ...roleSpecificData,
         email: user.uid + '@geohrm.com' // Make email unique for anonymous users
       };
+      batch.set(userDocRef, userData, { merge: true });
 
-      setDoc(userDocRef, userData, { merge: true })
-        .catch((serverError) => {
+      // 2. Set the role document for security rules
+      if (role === 'CEO/Admin') {
+        const ceoRoleRef = doc(firestore, 'roles_ceo', user.uid);
+        const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
+        batch.set(ceoRoleRef, { employeeId: user.uid });
+        batch.set(adminRoleRef, { employeeId: user.uid });
+      } else if (role === 'HR Manager') {
+        const hrRoleRef = doc(firestore, 'roles_hr_agent', user.uid);
+        batch.set(hrRoleRef, { employeeId: user.uid });
+      } else if (role === 'Team Lead') {
+        const tlRoleRef = doc(firestore, 'roles_team_lead', user.uid);
+        batch.set(tlRoleRef, { employeeId: user.uid });
+      }
+
+      await batch.commit().catch((serverError) => {
             const permissionError = new FirestorePermissionError({
-              path: userDocRef.path,
+              path: `batch write for user ${user.uid}`,
               operation: 'write',
               requestResourceData: userData,
             });
             errorEmitter.emit('permission-error', permissionError);
-        });
+      });
 
 
       toast({
