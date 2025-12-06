@@ -13,9 +13,9 @@ export const leaveData = [
 ];
 
 export const issueData = [
-  { id: '1', submittedBy: 'John Doe', title: 'Office AC not working', status: 'Open' },
-  { id: '2', submittedBy: 'Jane Smith', title: 'Printer needs paper', status: 'In Progress' },
-  { id: '3', submittedBy: 'Peter Jones', title: 'Broken chair in meeting room', status: 'Resolved' },
+  { id: '1', submittedBy: 'John Doe', title: 'Office AC not working', status: 'Open', description: 'The air conditioning unit in the main office area is not blowing cold air. The temperature is getting uncomfortably warm.' },
+  { id: '2', submittedBy: 'Jane Smith', title: 'Printer needs paper', status: 'In Progress', description: 'The main office printer on the 2nd floor is out of A4 paper. We have a few urgent documents to print.' },
+  { id: '3', submittedBy: 'Peter Jones', title: 'Broken chair in meeting room', status: 'Resolved', description: 'The wheel on one of the chairs in Meeting Room 3 has broken off, making it unsafe to use.' },
 ];
 
 export const policyData = [

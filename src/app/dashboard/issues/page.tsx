@@ -39,6 +39,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -49,11 +53,14 @@ import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 
+type IssueStatus = "Open" | "In Progress" | "Resolved";
 type Issue = typeof allIssueData[0];
 
 export default function IssuesPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  
+  const [issues, setIssues] = React.useState<Issue[]>(allIssueData);
   const [selectedIssue, setSelectedIssue] = React.useState<Issue | null>(null);
 
   const userDocRef = useMemoFirebase(
@@ -62,11 +69,18 @@ export default function IssuesPage() {
   );
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
-  const userName = (userData as any)?.firstName ? `${(userData as any)?.firstName} ${(userData as any)?.lastName}` : 'Current User';
   
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
-  const issueData = isAdmin ? allIssueData : allIssueData.filter(issue => issue.submittedBy === 'John Doe'); // Assuming John Doe is the logged-in member for demo
+  const issueData = isAdmin ? issues : issues.filter(issue => issue.submittedBy === 'John Doe'); // Assuming John Doe is the logged-in member for demo
+
+  const handleStatusChange = (issueId: string, newStatus: IssueStatus) => {
+    setIssues(prevIssues => 
+      prevIssues.map(issue => 
+        issue.id === issueId ? { ...issue, status: newStatus } : issue
+      )
+    );
+  };
 
   return (
     <>
@@ -109,7 +123,7 @@ export default function IssuesPage() {
           </DialogContent>
         </Dialog>
       </PageHeader>
-      <Sheet>
+      <Sheet onOpenChange={(isOpen) => !isOpen && setSelectedIssue(null)}>
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
@@ -143,14 +157,19 @@ export default function IssuesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
                         <SheetTrigger asChild>
                           <DropdownMenuItem onClick={() => setSelectedIssue(issue)}>View Details</DropdownMenuItem>
                         </SheetTrigger>
                         {isAdmin && (
-                          <>
-                            <DropdownMenuItem>Update Status</DropdownMenuItem>
-                            <DropdownMenuItem>Assign</DropdownMenuItem>
-                          </>
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'Open')}>Open</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'In Progress')}>In Progress</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'Resolved')}>Resolved</DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -192,7 +211,7 @@ export default function IssuesPage() {
                 </div>
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Description</p>
-                    <p className="text-sm">{/* A full description would go here */}</p>
+                    <p className="text-sm whitespace-pre-wrap">{selectedIssue.description}</p>
                 </div>
             </div>
             </SheetContent>
