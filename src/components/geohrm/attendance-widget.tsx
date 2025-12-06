@@ -24,7 +24,7 @@ export function AttendanceWidget() {
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
 
-    if (status === "in" || status === "break") {
+    if (status === "in") {
       interval = setInterval(() => {
         setTimer((prevTimer) => prevTimer + 1);
       }, 1000);
@@ -42,7 +42,7 @@ export function AttendanceWidget() {
         setBreakTimer(prev => prev + 1);
       }, 1000);
     } else {
-      setBreakTimer(0); // Reset break timer when not on break
+      clearInterval(breakInterval);
     }
     return () => clearInterval(breakInterval);
   }, [status]);
@@ -61,6 +61,7 @@ export function AttendanceWidget() {
     setStatus("in");
     setLastClockInTime(new Date());
     setTimer(0);
+    setBreakTimer(0);
   };
 
   const handleClockOut = () => {
