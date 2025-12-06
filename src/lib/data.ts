@@ -1,3 +1,4 @@
+
 export const attendanceData = [
   { id: '1', employee: 'John Doe', date: '2024-07-29', clockIn: '09:01 AM', clockOut: '05:03 PM', status: 'Present' },
   { id: '2', employee: 'Jane Smith', date: '2024-07-29', clockIn: '08:55 AM', clockOut: '05:00 PM', status: 'Present' },
@@ -12,9 +13,9 @@ export const leaveData = [
 ];
 
 export const issueData = [
-  { id: '1', submittedBy: 'John Doe', title: 'Office AC not working', status: 'Open', assignedTo: 'Admin' },
-  { id: '2', submittedBy: 'Jane Smith', title: 'Printer needs paper', status: 'In Progress', assignedTo: 'HR' },
-  { id: '3', submittedBy: 'Peter Jones', title: 'Broken chair in meeting room', status: 'Resolved', assignedTo: 'Admin' },
+  { id: '1', submittedBy: 'John Doe', title: 'Office AC not working', status: 'Open' },
+  { id: '2', submittedBy: 'Jane Smith', title: 'Printer needs paper', status: 'In Progress' },
+  { id: '3', submittedBy: 'Peter Jones', title: 'Broken chair in meeting room', status: 'Resolved' },
 ];
 
 export const policyData = [
@@ -41,3 +42,9 @@ export const events = [
     { id: '2', name: "Bob Williams", event: "Work Anniversary (3 years)", date: "August 12th" },
     { id: '3', name: "Charlie Brown", event: "Birthday", date: "August 21st" },
 ];
+
+export const teamData = [
+  { id: '1', name: 'John Doe', jobTitle: 'Software Engineer', reports: [{id: 'r1', date: '2024-07-29', summary: 'Worked on feature X.'}, {id: 'r2', date: '2024-07-28', summary: 'Fixed bug Y.'}] },
+  { id: '2', name: 'Peter Jones', jobTitle: 'Frontend Developer', reports: [{id: 'r3', date: '2024-07-29', summary: 'Developed component Z.'}] },
+  { id: '3', name: 'Emily White', jobTitle: 'UI/UX Designer', reports: [] },
+]

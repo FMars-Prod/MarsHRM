@@ -18,6 +18,7 @@ import {
   User,
   Megaphone,
   PartyPopper,
+  Users,
 } from "lucide-react";
 
 const links = [
@@ -28,6 +29,7 @@ const links = [
   { href: "/dashboard/announcements", label: "Announcements", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/issues", label: "Issues", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/team", label: "Team", icon: Users, roles: ['Team Lead'] },
   { href: "/dashboard/policies", label: "Policies", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/audit-log", label: "Audit Log", icon: BookUser, roles: ['CEO/Admin'] },
 ];
@@ -41,7 +43,7 @@ export function MainNav({ userRole }: { userRole: string }) {
         if (!link.roles.includes(userRole)) {
           return null;
         }
-        const isActive = pathname === link.href;
+        const isActive = pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard');
         return (
           <SidebarMenuItem key={link.href}>
             <SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
