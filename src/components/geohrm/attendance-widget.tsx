@@ -35,7 +35,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
@@ -215,7 +215,7 @@ export function AttendanceWidget() {
         (position) => {
             const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
             if (getTodaysAttendanceRef) {
-                updateDoc(getTodaysAttendanceRef, {
+                updateDocumentNonBlocking(getTodaysAttendanceRef, {
                     checkOutTime: serverTimestamp(),
                     totalBreakDuration: totalBreakTime,
                     locationCheckOutLatitude: userLocation.latitude,
@@ -232,16 +232,22 @@ export function AttendanceWidget() {
   };
 
   const handleBreak = () => {
+    const updatedBreakTime = totalBreakTime + breakTimer;
     if (status === "break") {
-      setTotalBreakTime((prev) => prev + breakTimer);
+      setTotalBreakTime(updatedBreakTime);
       if (getTodaysAttendanceRef) {
-        updateDoc(getTodaysAttendanceRef, {
-            totalBreakDuration: totalBreakTime + breakTimer
+        updateDocumentNonBlocking(getTodaysAttendanceRef, {
+            totalBreakDuration: updatedBreakTime
         });
       }
       setBreakTimer(0);
       setStatus("in");
     } else {
+      if (getTodaysAttendanceRef) {
+        updateDocumentNonBlocking(getTodaysAttendanceRef, {
+            totalBreakDuration: updatedBreakTime
+        });
+      }
       setStatus("break");
     }
   };
