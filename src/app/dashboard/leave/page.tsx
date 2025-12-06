@@ -42,11 +42,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { DateRange } from "react-day-picker";
-
+import { format, getDaysInMonth, startOfToday } from "date-fns";
 
 type LeaveRequest = (typeof initialLeaveData)[0] & { employee?: string };
 
@@ -125,14 +121,50 @@ export default function LeavePage() {
 
   const [leaveType, setLeaveType] = React.useState<string>("");
   const [leaveRequests, setLeaveRequests] = React.useState<LeaveRequest[]>(initialLeaveData);
-  const [date, setDate] = React.useState<DateRange | undefined>()
   
+  const [startYear, setStartYear] = React.useState<number | undefined>();
+  const [startMonth, setStartMonth] = React.useState<number | undefined>();
+  const [startDay, setStartDay] = React.useState<number | undefined>();
+
+  const [endYear, setEndYear] = React.useState<number | undefined>();
+  const [endMonth, setEndMonth] = React.useState<number | undefined>();
+  const [endDay, setEndDay] = React.useState<number | undefined>();
   
   const handleRequestStatus = (requestId: string, newStatus: 'Pending HR Approval' | 'Rejected') => {
     setLeaveRequests(prev => prev.map(req => req.id === requestId ? {...req, status: newStatus} : req));
   }
 
   const allLeaveRequests = userRole === 'Team Lead' ? leaveRequests : leaveRequests.filter(r => r.employee === 'Jane Smith');
+
+  const today = startOfToday();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const currentDay = today.getDate();
+
+  const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
+  const months = Array.from({ length: 12 }, (_, i) => ({ label: format(new Date(0, i), 'MMMM'), value: i }));
+  
+  const startDaysInMonth = (startYear && startMonth !== undefined) ? getDaysInMonth(new Date(startYear, startMonth)) : 31;
+  const startDays = Array.from({ length: startDaysInMonth }, (_, i) => i + 1);
+
+  const endDaysInMonth = (endYear && endMonth !== undefined) ? getDaysInMonth(new Date(endYear, endMonth)) : 31;
+  const endDays = Array.from({ length: endDaysInMonth }, (_, i) => i + 1);
+  
+  const isStartPastMonth = (m: number) => startYear === currentYear && m < currentMonth;
+  const isStartPastDay = (d: number) => startYear === currentYear && startMonth === currentMonth && d < currentDay;
+
+  const getStartDate = () => {
+    if (startYear && startMonth !== undefined && startDay) {
+        return new Date(startYear, startMonth, startDay);
+    }
+    return today;
+  }
+
+  const startDate = getStartDate();
+
+  const isEndPastYear = (y: number) => y < startDate.getFullYear();
+  const isEndPastMonth = (m: number) => endYear === startDate.getFullYear() && m < startDate.getMonth();
+  const isEndPastDay = (d: number) => endYear === startDate.getFullYear() && endMonth === startDate.getMonth() && d < startDate.getDate();
 
 
   return (
@@ -173,47 +205,53 @@ export default function LeavePage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="dates" className="text-right">
-                  Dates
+                <Label className="text-right">
+                  Start Date
                 </Label>
-                <div className={cn("col-span-3")}>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="date"
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !date && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date?.from ? (
-                          date.to ? (
-                            <>
-                              {format(date.from, "LLL dd, y")} -{" "}
-                              {format(date.to, "LLL dd, y")}
-                            </>
-                          ) : (
-                            format(date.from, "LLL dd, y")
-                          )
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                      <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={date?.from}
-                        selected={date}
-                        onSelect={setDate}
-                        numberOfMonths={2}
-                        fromDate={new Date()}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <div className="col-span-3 grid grid-cols-3 gap-2">
+                    <Select onValueChange={(v) => { setStartYear(Number(v)); setStartMonth(undefined); setStartDay(undefined); }} value={startYear?.toString()}>
+                        <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                        <SelectContent>
+                            {years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select onValueChange={(v) => { setStartMonth(Number(v)); setStartDay(undefined); }} value={startMonth?.toString()} disabled={!startYear}>
+                        <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+                        <SelectContent>
+                            {months.map(m => <SelectItem key={m.value} value={m.value.toString()} disabled={isStartPastMonth(m.value)}>{m.label}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select onValueChange={(v) => setStartDay(Number(v))} value={startDay?.toString()} disabled={!startYear || startMonth === undefined}>
+                        <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
+                        <SelectContent>
+                            {startDays.map(d => <SelectItem key={d} value={d.toString()} disabled={isStartPastDay(d)}>{d}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">
+                  End Date
+                </Label>
+                <div className="col-span-3 grid grid-cols-3 gap-2">
+                    <Select onValueChange={(v) => { setEndYear(Number(v)); setEndMonth(undefined); setEndDay(undefined); }} value={endYear?.toString()} disabled={!startDay}>
+                        <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                        <SelectContent>
+                            {years.map(y => <SelectItem key={y} value={y.toString()} disabled={isEndPastYear(y)}>{y}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select onValueChange={(v) => { setEndMonth(Number(v)); setEndDay(undefined); }} value={endMonth?.toString()} disabled={!endYear}>
+                        <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+                        <SelectContent>
+                            {months.map(m => <SelectItem key={m.value} value={m.value.toString()} disabled={isEndPastMonth(m.value)}>{m.label}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select onValueChange={(v) => setEndDay(Number(v))} value={endDay?.toString()} disabled={!endYear || endMonth === undefined}>
+                        <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
+                        <SelectContent>
+                            {endDays.map(d => <SelectItem key={d} value={d.toString()} disabled={isEndPastDay(d)}>{d}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
               </div>
                <div className="grid grid-cols-4 items-start gap-4">
@@ -324,5 +362,3 @@ export default function LeavePage() {
     </>
   );
 }
-
-    
