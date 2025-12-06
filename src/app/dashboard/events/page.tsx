@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { events as eventData } from "@/lib/data";
-import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon } from "lucide-react";
+import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ import { useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { Textarea } from "@/components/ui/textarea";
 
 type EventItem = (typeof eventData)[0] & { likes: number; liked: boolean };
 
@@ -50,6 +51,7 @@ export default function EventsPage() {
   const [newEventName, setNewEventName] = React.useState("");
   const [newEventDate, setNewEventDate] = React.useState<Date | undefined>();
   const [newEventType, setNewEventType] = React.useState("");
+  const [otherEventType, setOtherEventType] = React.useState("");
 
   const handleLike = (id: string) => {
     setEvents((prevEvents) =>
@@ -67,7 +69,8 @@ export default function EventsPage() {
   };
 
   const handleCreateEvent = () => {
-    if (!newEventName || !newEventType || !newEventDate) {
+    const eventType = newEventType === "Other" ? otherEventType : newEventType;
+    if (!newEventName || !eventType || !newEventDate) {
         // In a real app, you'd show a toast or form validation message
         console.error("All fields are required");
         return;
@@ -76,7 +79,7 @@ export default function EventsPage() {
     const newEvent: EventItem = {
         id: `evt-${Date.now()}`,
         name: newEventName,
-        event: newEventType,
+        event: eventType,
         date: format(newEventDate, "MMMM do"),
         likes: 0,
         liked: false,
@@ -88,6 +91,7 @@ export default function EventsPage() {
     setNewEventName("");
     setNewEventDate(undefined);
     setNewEventType("");
+    setOtherEventType("");
     setIsDialogOpen(false);
   }
 
@@ -109,7 +113,7 @@ export default function EventsPage() {
                     <DialogHeader>
                         <DialogTitle>Create a New Event</DialogTitle>
                         <DialogDescription>
-                            Add a birthday or work anniversary to the calendar.
+                            Add a birthday, work anniversary, or other event to the calendar.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -126,9 +130,16 @@ export default function EventsPage() {
                                 <SelectContent>
                                     <SelectItem value="Birthday">Birthday</SelectItem>
                                     <SelectItem value="Work Anniversary">Work Anniversary</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
+                        {newEventType === 'Other' && (
+                            <div className="grid grid-cols-4 items-start gap-4">
+                                <Label htmlFor="other-type" className="text-right pt-2">Custom Type</Label>
+                                <Textarea id="other-type" value={otherEventType} onChange={(e) => setOtherEventType(e.target.value)} className="col-span-3" placeholder="e.g., Project Launch" />
+                            </div>
+                        )}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="date" className="text-right">Date</Label>
                             <Popover>
@@ -170,8 +181,10 @@ export default function EventsPage() {
               <CardTitle className="flex items-center gap-2">
                 {event.event === "Birthday" ? (
                   <Cake className="text-pink-500" />
-                ) : (
+                ) : event.event === "Work Anniversary" ? (
                   <PartyPopper className="text-yellow-500" />
+                ) : (
+                  <HelpCircle className="text-blue-500" />
                 )}
                 {event.name}
               </CardTitle>
