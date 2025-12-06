@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -37,6 +37,7 @@ export function AttendanceWidget() {
   const [status, setStatus] = useState<AttendanceStatus>("out");
   const [timer, setTimer] = useState(0);
   const [breakTimer, setBreakTimer] = useState(0);
+  const [totalBreakTime, setTotalBreakTime] = useState(0);
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
@@ -90,6 +91,7 @@ export function AttendanceWidget() {
                 setLastClockInTime(new Date());
                 setTimer(0);
                 setBreakTimer(0);
+                setTotalBreakTime(0);
                 setHasClockedOutToday(false);
                 toast({
                     title: "Clocked In",
@@ -121,7 +123,13 @@ export function AttendanceWidget() {
   };
 
   const handleBreak = () => {
-    setStatus(status === "in" ? "break" : "in");
+    if (status === 'break') { // Ending a break
+      setTotalBreakTime(prev => prev + breakTimer);
+      setBreakTimer(0);
+      setStatus('in');
+    } else { // Starting a break
+      setStatus('break');
+    }
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -164,18 +172,28 @@ export function AttendanceWidget() {
             : `You are currently Clocked ${status === "break" ? "on a Break" : status.charAt(0).toUpperCase() + status.slice(1)}`
           }
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
             <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter">
-            {formatTime(timer)}
+              {formatTime(timer)}
             </div>
-            {status === 'break' && (
-                <div className="flex flex-col items-center">
-                    <span className="text-sm text-muted-foreground">Break</span>
-                    <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
-                        {formatTime(breakTimer)}
+            <div className="flex items-center gap-6">
+                {status === 'break' && (
+                    <div className="flex flex-col items-center">
+                        <span className="text-sm text-muted-foreground">Current Break</span>
+                        <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
+                            {formatTime(breakTimer)}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+                {totalBreakTime > 0 && (
+                    <div className="flex flex-col items-center">
+                        <span className="text-sm text-muted-foreground">Total Break</span>
+                        <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
+                            {formatTime(totalBreakTime)}
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
         {lastClockInTime && status !== 'out' && (
              <p className="text-sm text-muted-foreground">
