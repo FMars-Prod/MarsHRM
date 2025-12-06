@@ -8,8 +8,8 @@ export const attendanceData = [
 
 export const leaveData = [
   { id: '1', employee: 'Peter Jones', startDate: '2024-08-05', endDate: '2024-08-07', type: 'Sick Leave', status: 'Approved' },
-  { id: '2', employee: 'Jane Smith', startDate: '2024-09-01', endDate: '2024-09-10', type: 'Vacation', status: 'Pending' },
-  { id: '3', employee: 'John Doe', startDate: '2024-07-30', endDate: '2024-07-30', type: 'Personal', status: 'Rejected' },
+  { id: '2', employee: 'Jane Smith', startDate: '2024-09-01', endDate: '2024-09-10', type: 'Vacation', status: 'Pending HR Approval' },
+  { id: '3', employee: 'John Doe', startDate: '2024-07-30', endDate: '2024-07-30', type: 'Personal', status: 'Pending' },
 ];
 
 export const issueData = [
@@ -48,3 +48,5 @@ export const teamData = [
   { id: '2', name: 'Peter Jones', jobTitle: 'Frontend Developer', reports: [{id: 'r3', date: '2024-07-29', summary: 'Developed component Z.'}] },
   { id: '3', name: 'Emily White', jobTitle: 'UI/UX Designer', reports: [] },
 ]
+
+    
