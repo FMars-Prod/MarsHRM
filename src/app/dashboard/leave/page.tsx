@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye } from "lucide-react";
+import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock } from "lucide-react";
 import { leaveData } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
