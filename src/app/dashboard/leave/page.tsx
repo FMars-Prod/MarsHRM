@@ -39,6 +39,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 
 const LeaveStatusTracker = () => (
     <div className="space-y-6">
@@ -82,7 +83,9 @@ const LeaveStatusTracker = () => (
 
 
 export default function LeavePage() {
-  const [date, setDate] = React.useState<Date>();
+  const [startDate, setStartDate] = React.useState<Date>();
+  const [endDate, setEndDate] = React.useState<Date>();
+  const [leaveType, setLeaveType] = React.useState<string>("");
 
   return (
     <>
@@ -109,7 +112,7 @@ export default function LeavePage() {
                 <Label htmlFor="leaveType" className="text-right">
                   Leave Type
                 </Label>
-                <Select>
+                <Select onValueChange={setLeaveType}>
                     <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Select leave type" />
                     </SelectTrigger>
@@ -117,6 +120,7 @@ export default function LeavePage() {
                         <SelectItem value="vacation">Vacation</SelectItem>
                         <SelectItem value="sick">Sick Leave</SelectItem>
                         <SelectItem value="personal">Personal</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                 </Select>
               </div>
@@ -130,18 +134,18 @@ export default function LeavePage() {
                         variant={"outline"}
                         className={cn(
                             "w-[240px] justify-start text-left font-normal col-span-3",
-                            !date && "text-muted-foreground"
+                            !startDate && "text-muted-foreground"
                         )}
                         >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                        {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                         mode="single"
-                        selected={date}
-                        onSelect={setDate}
+                        selected={startDate}
+                        onSelect={setStartDate}
                         initialFocus
                         />
                     </PopoverContent>
@@ -157,23 +161,37 @@ export default function LeavePage() {
                         variant={"outline"}
                         className={cn(
                             "w-[240px] justify-start text-left font-normal col-span-3",
-                            !date && "text-muted-foreground"
+                            !endDate && "text-muted-foreground"
                         )}
                         >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                        {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                         mode="single"
-                        selected={date}
-                        onSelect={setDate}
+                        selected={endDate}
+                        onSelect={setEndDate}
                         initialFocus
                         />
                     </PopoverContent>
                 </Popover>
               </div>
+               <div className="grid grid-cols-4 items-start gap-4">
+                <Label htmlFor="reason" className="text-right pt-2">
+                  Reason
+                </Label>
+                <Textarea id="reason" placeholder="Provide a reason for your leave..." className="col-span-3" />
+              </div>
+              {leaveType === 'other' && (
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label htmlFor="otherReason" className="text-right pt-2">
+                    Other Reason
+                  </Label>
+                  <Textarea id="otherReason" placeholder="Please specify..." className="col-span-3" />
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline">Cancel</Button>
