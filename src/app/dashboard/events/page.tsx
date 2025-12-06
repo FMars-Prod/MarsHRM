@@ -98,7 +98,7 @@ export default function EventsPage() {
   return (
     <>
       <PageHeader
-        title="Upcoming Events"
+        title="Events"
         description="Celebrate birthdays and work anniversaries with your colleagues."
       >
         {isAdmin && (
