@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -42,35 +43,35 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
 const LeaveStatusTracker = () => (
-    <div className="space-y-6">
-      <div className="flex items-start">
+    <div className="space-y-4">
+      <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-green-500 text-white">
-            <Check className="h-5 w-5" />
+          <div className="flex items-center justify-center h-6 w-6 rounded-full bg-green-500 text-white">
+            <Check className="h-4 w-4" />
           </div>
-          <div className="h-16 w-0.5 bg-green-500"></div>
+          <div className="h-12 w-0.5 bg-green-500"></div>
         </div>
         <div>
           <h4 className="font-semibold">Submitted</h4>
           <p className="text-sm text-muted-foreground">You submitted this request on July 26, 2024.</p>
         </div>
       </div>
-      <div className="flex items-start">
+      <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-yellow-500 text-white">
-            <Clock className="h-5 w-5" />
+          <div className="flex items-center justify-center h-6 w-6 rounded-full bg-yellow-500 text-white">
+            <Clock className="h-4 w-4" />
           </div>
-          <div className="h-16 w-0.5 bg-gray-200"></div>
+          <div className="h-12 w-0.5 bg-gray-200"></div>
         </div>
         <div>
           <h4 className="font-semibold">Team Lead Approval</h4>
           <p className="text-sm text-muted-foreground">Pending approval from your team lead.</p>
         </div>
       </div>
-       <div className="flex items-start">
+       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-300 text-gray-500">
-            <Clock className="h-5 w-5" />
+          <div className="flex items-center justify-center h-6 w-6 rounded-full bg-gray-300 text-gray-500">
+            <Clock className="h-4 w-4" />
           </div>
         </div>
         <div>
