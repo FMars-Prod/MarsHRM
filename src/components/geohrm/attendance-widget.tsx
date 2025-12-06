@@ -20,6 +20,7 @@ export function AttendanceWidget() {
   const [timer, setTimer] = useState(0);
   const [breakTimer, setBreakTimer] = useState(0);
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
+  const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -66,6 +67,7 @@ export function AttendanceWidget() {
 
   const handleClockOut = () => {
     setStatus("out");
+    setHasClockedOutToday(true);
   };
 
   const handleBreak = () => {
@@ -99,13 +101,18 @@ export function AttendanceWidget() {
             "flex items-center justify-center gap-2 font-semibold",
             status === "in" && "text-green-600",
             status === "break" && "text-yellow-600",
-            status === "out" && "text-red-600"
+            status === "out" && !hasClockedOutToday && "text-red-600",
+            status === "out" && hasClockedOutToday && "text-muted-foreground",
           )}
         >
           {status === "in" && <Briefcase className="size-5" />}
           {status === "break" && <Coffee className="size-5" />}
           {status === "out" && <CheckCircle2 className="size-5" />}
-          You are currently Clocked {status === "break" ? "on a Break" : status.charAt(0).toUpperCase() + status.slice(1)}
+
+          {hasClockedOutToday 
+            ? "You have clocked out for the day"
+            : `You are currently Clocked ${status === "break" ? "on a Break" : status.charAt(0).toUpperCase() + status.slice(1)}`
+          }
         </div>
         <div className="flex items-center gap-4">
             <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter">
@@ -128,7 +135,7 @@ export function AttendanceWidget() {
       </CardContent>
       <CardFooter className="grid grid-cols-2 gap-4">
         {status === "out" ? (
-          <Button onClick={handleClockIn} className="w-full col-span-2">
+          <Button onClick={handleClockIn} className="w-full col-span-2" disabled={hasClockedOutToday}>
             <Clock className="mr-2" /> Clock In
           </Button>
         ) : (
