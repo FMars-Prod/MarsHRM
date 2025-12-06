@@ -35,7 +35,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, setDoc } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
@@ -229,21 +229,20 @@ export function AttendanceWidget() {
           });
           return;
       }
-
-      try {
-          await setDoc(officeLocationDocRef, { latitude: lat, longitude: lon });
-          toast({
-              title: "Location Updated",
-              description: "The office location has been successfully set."
-          });
-          setIsLocationDialogOpen(false);
-      } catch (error: any) {
-          console.error("Failed to set location:", error);
-          toast({
-              variant: "destructive",
-              title: "Update Failed",
-              description: "Could not save the new office location. Check permissions."
-          });
+      
+      if (officeLocationDocRef) {
+        setDocumentNonBlocking(officeLocationDocRef, { latitude: lat, longitude: lon }, { merge: true });
+        toast({
+            title: "Location Update Initiated",
+            description: "The office location is being updated."
+        });
+        setIsLocationDialogOpen(false);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Update Failed",
+          description: "Could not save the new office location. Reference is missing."
+        });
       }
   }
 
