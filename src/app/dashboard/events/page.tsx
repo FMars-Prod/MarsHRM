@@ -40,7 +40,15 @@ const iconComponents: Record<IconName, React.FC<React.SVGProps<SVGSVGElement>>> 
     HelpCircle,
 };
 
-type EventItem = (typeof eventData)[0] & { likes: number; liked: boolean; icon: IconName };
+const colorOptions = [
+    { id: 'primary', value: 'hsl(var(--primary))', className: 'bg-primary' },
+    { id: 'accent', value: 'hsl(var(--accent))', className: 'bg-accent' },
+    { id: 'chart-2', value: 'hsl(var(--chart-2))', className: 'bg-chart-2' },
+    { id: 'chart-3', value: 'hsl(var(--chart-3))', className: 'bg-chart-3' },
+    { id: 'chart-5', value: 'hsl(var(--chart-5))', className: 'bg-chart-5' },
+];
+
+type EventItem = (typeof eventData)[0] & { likes: number; liked: boolean; icon: IconName; color: string; };
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -55,7 +63,7 @@ export default function EventsPage() {
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
   const [events, setEvents] = React.useState<EventItem[]>(
-    eventData.map((e) => ({ ...e, likes: Math.floor(Math.random() * 25), liked: false, icon: e.event === "Birthday" ? 'Cake' : 'PartyPopper' }))
+    eventData.map((e) => ({ ...e, likes: Math.floor(Math.random() * 25), liked: false, icon: e.event === "Birthday" ? 'Cake' : 'PartyPopper', color: 'hsl(var(--primary))' }))
   );
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -64,6 +72,7 @@ export default function EventsPage() {
   const [newEventType, setNewEventType] = React.useState("");
   const [otherEventType, setOtherEventType] = React.useState("");
   const [newEventIcon, setNewEventIcon] = React.useState<IconName>('HelpCircle');
+  const [newEventColor, setNewEventColor] = React.useState<string>('hsl(var(--primary))');
 
   const handleLike = (id: string) => {
     setEvents((prevEvents) =>
@@ -96,6 +105,7 @@ export default function EventsPage() {
         likes: 0,
         liked: false,
         icon: newEventIcon,
+        color: newEventColor,
     };
 
     setEvents(prev => [newEvent, ...prev]);
@@ -106,6 +116,7 @@ export default function EventsPage() {
     setNewEventType("");
     setOtherEventType("");
     setNewEventIcon('HelpCircle');
+    setNewEventColor('hsl(var(--primary))');
     setIsDialogOpen(false);
   }
 
@@ -203,6 +214,22 @@ export default function EventsPage() {
                                 })}
                             </div>
                         </div>
+                         <div className="grid grid-cols-4 items-start gap-4">
+                            <Label className="text-right pt-2">Color</Label>
+                            <div className="col-span-3 flex gap-2">
+                                {colorOptions.map(color => (
+                                    <Button
+                                        key={color.id}
+                                        variant="outline"
+                                        size="icon"
+                                        className={cn("h-8 w-8", newEventColor === color.value && "ring-2 ring-primary")}
+                                        onClick={() => setNewEventColor(color.value)}
+                                    >
+                                        <div className={cn("h-5 w-5 rounded-sm", color.className)} />
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
@@ -217,7 +244,7 @@ export default function EventsPage() {
           <Card key={event.id} className="flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                {renderIcon(event.icon, {className: "h-6 w-6 text-primary"})}
+                {renderIcon(event.icon, {className: "h-6 w-6", style: { color: event.color }})}
                 {event.name}
               </CardTitle>
             </CardHeader>
