@@ -10,28 +10,60 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
+import { signInAnonymously, User } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
+type Role = 'Member' | 'HR Manager' | 'CEO/Admin';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<Role | null>(null);
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
+  const firestore = useFirestore();
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const handleLogin = async (role: Role) => {
+    setIsLoading(role);
+    if (!auth || !firestore) {
+        toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: 'Firebase not initialized.',
+          });
+        setIsLoading(null);
+        return
+    }
+
     try {
-      initiateEmailSignIn(auth, email, password);
+      const userCredential = await signInAnonymously(auth);
+      const user = userCredential.user;
+
+      // Set the user's role in Firestore
+      const userDocRef = doc(firestore, 'users', user.uid);
+      const userData = {
+        id: user.uid,
+        employeeId: user.uid, // Using uid as employeeId for dummy user
+        role: role,
+      };
+
+      setDoc(userDocRef, userData, { merge: true })
+        .catch((serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'write',
+              requestResourceData: userData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+
+
       toast({
         title: 'Success',
-        description: "You've been logged in.",
+        description: `Logged in as ${role}.`,
       });
       router.push('/dashboard');
     } catch (error: any) {
@@ -40,8 +72,7 @@ export default function LoginPage() {
         title: 'Login Failed',
         description: error.message,
       });
-    } finally {
-      setIsLoading(false);
+      setIsLoading(null);
     }
   };
 
@@ -56,38 +87,33 @@ export default function LoginPage() {
           </div>
           <CardTitle className="font-headline text-2xl">GeoHRM Login</CardTitle>
           <CardDescription>
-            Enter your credentials to access your account.
+            Select a role to log in.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Login'}
+          <div className="grid gap-4">
+            <Button
+              onClick={() => handleLogin('Member')}
+              className="w-full"
+              disabled={!!isLoading}
+            >
+              {isLoading === 'Member' ? 'Logging in...' : 'Login as Employee'}
             </Button>
-          </form>
+            <Button
+              onClick={() => handleLogin('HR Manager')}
+              className="w-full"
+              disabled={!!isLoading}
+            >
+              {isLoading === 'HR Manager' ? 'Logging in...' : 'Login as Admin'}
+            </Button>
+            <Button
+              onClick={() => handleLogin('CEO/Admin')}
+              className="w-full"
+              disabled={!!isLoading}
+            >
+              {isLoading === 'CEO/Admin' ? 'Logging in...' : 'Login as CEO'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
