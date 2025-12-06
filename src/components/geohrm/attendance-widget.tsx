@@ -127,12 +127,14 @@ export function AttendanceWidget() {
             setTimer(workDuration - (todaysAttendance.totalBreakDuration || 0));
             setTotalBreakTime(todaysAttendance.totalBreakDuration || 0);
         } else {
+          if (todaysAttendance.checkInTime) {
             setStatus("in");
             setHasClockedOutToday(false);
             setLastClockInTime(todaysAttendance.checkInTime.toDate());
             const secondsSinceClockIn = (new Date().getTime() - todaysAttendance.checkInTime.toMillis()) / 1000;
             setTimer(secondsSinceClockIn);
             setTotalBreakTime(todaysAttendance.totalBreakDuration || 0);
+          }
         }
     } else {
         setStatus("out");
@@ -448,4 +450,3 @@ export function AttendanceWidget() {
     </Card>
   );
 }
-    
