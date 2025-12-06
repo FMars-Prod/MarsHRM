@@ -111,7 +111,6 @@ export default function IssuesPage() {
               <TableRow>
                 <TableHead>Title</TableHead>
                 <TableHead>Submitted By</TableHead>
-                <TableHead>Assigned To</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -121,7 +120,6 @@ export default function IssuesPage() {
                 <TableRow key={issue.id}>
                   <TableCell className="font-medium">{issue.title}</TableCell>
                   <TableCell>{issue.submittedBy}</TableCell>
-                  <TableCell>{issue.assignedTo}</TableCell>
                   <TableCell>
                     <Badge variant="outline"
                       className={cn(
@@ -174,10 +172,6 @@ export default function IssuesPage() {
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Submitted By</p>
                     <p className="font-semibold">{selectedIssue.submittedBy}</p>
-                </div>
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Assigned To</p>
-                    <p className="font-semibold">{selectedIssue.assignedTo}</p>
                 </div>
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Status</p>
