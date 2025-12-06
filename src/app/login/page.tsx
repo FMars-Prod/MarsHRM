@@ -176,7 +176,7 @@ export default function LoginPage() {
       </div>
 
       <div className="flex items-center justify-center p-6 bg-background">
-        <Card className="w-full max-w-sm">
+        <Card className="w-full max-w-sm mx-auto">
           <CardHeader className="text-center">
             <div className="mb-4 flex justify-center">
               <div className="bg-primary text-primary-foreground p-3 rounded-lg">

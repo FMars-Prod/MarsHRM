@@ -97,8 +97,8 @@ export default function AttendancePage() {
         title="Attendance Calendar"
         description="View your monthly attendance at a glance."
       />
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-2">
           <Card>
             <CardContent className="p-0">
                {isLoading ? (
@@ -118,7 +118,7 @@ export default function AttendancePage() {
             </CardContent>
           </Card>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4 lg:col-span-1">
              <Card>
                 <CardHeader>
                     <CardTitle className="text-lg font-headline">
@@ -185,5 +185,3 @@ export default function AttendancePage() {
     </>
   );
 }
-
-    

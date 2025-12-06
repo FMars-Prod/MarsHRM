@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { format, subDays, differenceInSeconds, isSameDay, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -40,11 +40,11 @@ type AttendanceRecord = {
 const chartConfig = {
   work: {
     label: "Work",
-    color: "hsl(var(--primary))",
+    color: "hsl(var(--chart-1))",
   },
   break: {
     label: "Break",
-    color: "hsl(var(--muted-foreground))",
+    color: "hsl(var(--chart-2))",
   },
 } satisfies React.ComponentProps<typeof ChartContainer>['config'];
 
@@ -125,7 +125,7 @@ const AnalyticsPage = () => {
               const day = format(rec.checkInTime.toDate(), 'yyyy-MM-dd');
               let workHours = 0, breakHours = 0;
               if (rec.checkOutTime) {
-                  workHours = (differenceInSeconds(rec.checkOutTime.toDate(), rec.checkOutTime.toDate()) - (rec.totalBreakDuration || 0)) / 3600;
+                  workHours = (differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0)) / 3600;
                   breakHours = (rec.totalBreakDuration || 0) / 3600;
               }
               const existing = dataMap.get(day) || { work: 0, break: 0 };
@@ -206,8 +206,8 @@ const AnalyticsPage = () => {
             </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant={!showAll && isSameDay(date, new Date()) ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setShowAll(false); }}>Today</Button>
-          <Button variant={!showAll && isSameDay(date, subDays(new Date(), 1)) ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setShowAll(false); }}>Yesterday</Button>
+          <Button variant={!showAll && date && format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setShowAll(false); }}>Today</Button>
+          <Button variant={!showAll && date && format(date, 'yyyy-MM-dd') === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setShowAll(false); }}>Yesterday</Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button id="date" variant={"outline"} className={cn("w-full md:w-[200px] justify-start text-left font-normal", !date && "text-muted-foreground", showAll && "text-muted-foreground")}>
@@ -239,7 +239,7 @@ const AnalyticsPage = () => {
       <div className="grid gap-6">
         {selectedUser && (
           <Card>
-            <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+            <CardHeader className="flex flex-col sm:flex-row items-center gap-4 space-y-0">
               <Avatar className="h-20 w-20">
                 {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={selectedUser.firstName} />}
                 <AvatarFallback>{selectedUser.firstName?.[0]}{selectedUser.lastName?.[0]}</AvatarFallback>
@@ -303,7 +303,7 @@ const AnalyticsPage = () => {
                         <CardDescription>Work vs. Break hours over the last 7 days.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                       <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                             <BarChart accessibilityLayer data={chartData}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />

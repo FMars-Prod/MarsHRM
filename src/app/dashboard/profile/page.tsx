@@ -143,8 +143,8 @@ export default function ProfilePage() {
                 title="My Profile"
                 description="View and manage your personal information."
             />
-            <div className="grid gap-6 md:grid-cols-3">
-                <Card className="md:col-span-1">
+            <div className="grid gap-6 lg:grid-cols-3">
+                <Card className="lg:col-span-1">
                     <CardHeader className="items-center text-center">
                         <div className="relative">
                             <Avatar className="h-24 w-24">
@@ -194,7 +194,7 @@ export default function ProfilePage() {
                                 </DialogHeader>
                                 <Form {...form}>
                                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <FormField
                                                 control={form.control}
                                                 name="firstName"
@@ -275,13 +275,13 @@ export default function ProfilePage() {
                         </Dialog>
                     </CardContent>
                 </Card>
-                <Card className="md:col-span-2">
+                <Card className="lg:col-span-2">
                     <CardHeader>
                         <CardTitle className="font-headline">Personal Information</CardTitle>
                         <CardDescription>Details about your employment.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">First Name</p>
                                 <p className="font-semibold">{(employee as any).firstName}</p>
@@ -295,7 +295,7 @@ export default function ProfilePage() {
                             <p className="text-sm font-medium text-muted-foreground">Email</p>
                             <p className="font-semibold">{(employee as any).email}</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Department</p>
                                 <p className="font-semibold">{(employee as any).department}</p>
@@ -305,7 +305,7 @@ export default function ProfilePage() {
                                 <p className="font-semibold">{(employee as any).jobTitle}</p>
                             </div>
                         </div>
-                         <div className="grid grid-cols-2 gap-4">
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Hire Date</p>
                                 <p className="font-semibold">{new Date((employee as any).hireDate).toLocaleDateString()}</p>
@@ -321,5 +321,3 @@ export default function ProfilePage() {
         </>
     )
 }
-
-    
