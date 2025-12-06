@@ -46,9 +46,8 @@ type AttendanceStatus = "out" | "in" | "break";
 interface Location {
   latitude: number;
   longitude: number;
+  maxDistanceKm?: number;
 }
-
-const MAX_DISTANCE_KM = 2;
 
 // Haversine formula to calculate distance between two lat/lon points in km
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
@@ -97,15 +96,18 @@ export function AttendanceWidget() {
   const { data: officeLocationData, isLoading: isLocationLoading } = useDoc<Location>(officeLocationDocRef);
   
   const officeLocation = officeLocationData;
+  const maxDistanceKm = officeLocation?.maxDistanceKm || 2;
 
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
-  const [newLatitude, setNewLatitude] = useState(officeLocation?.latitude.toString() || "");
-  const [newLongitude, setNewLongitude] = useState(officeLocation?.longitude.toString() || "");
+  const [newLatitude, setNewLatitude] = useState("");
+  const [newLongitude, setNewLongitude] = useState("");
+  const [newMaxDistance, setNewMaxDistance] = useState("");
   
   useEffect(() => {
     if (officeLocation) {
         setNewLatitude(officeLocation.latitude.toString());
         setNewLongitude(officeLocation.longitude.toString());
+        setNewMaxDistance((officeLocation.maxDistanceKm || 2).toString());
     }
   }, [officeLocation])
 
@@ -157,13 +159,13 @@ export function AttendanceWidget() {
           const dist = getDistanceInKm(userLocation, officeLocation);
           setDistance(dist);
 
-          if (dist > MAX_DISTANCE_KM) {
+          if (dist > maxDistanceKm) {
             toast({
               variant: "destructive",
               title: "Clock-In Failed",
               description: `You are ${dist.toFixed(
                 2
-              )} km away from the office. You must be within ${MAX_DISTANCE_KM} km.`,
+              )} km away from the office. You must be within ${maxDistanceKm} km.`,
             });
             return;
           }
@@ -220,21 +222,22 @@ export function AttendanceWidget() {
   const handleSetLocation = async () => {
       const lat = parseFloat(newLatitude);
       const lon = parseFloat(newLongitude);
+      const range = parseFloat(newMaxDistance);
 
-      if (isNaN(lat) || isNaN(lon)) {
+      if (isNaN(lat) || isNaN(lon) || isNaN(range)) {
           toast({
               variant: "destructive",
               title: "Invalid Input",
-              description: "Please enter valid numbers for latitude and longitude."
+              description: "Please enter valid numbers for latitude, longitude, and range."
           });
           return;
       }
       
       if (officeLocationDocRef) {
-        setDocumentNonBlocking(officeLocationDocRef, { latitude: lat, longitude: lon }, { merge: true });
+        setDocumentNonBlocking(officeLocationDocRef, { latitude: lat, longitude: lon, maxDistanceKm: range }, { merge: true });
         toast({
             title: "Location Update Initiated",
-            description: "The office location is being updated."
+            description: "The office location and range are being updated."
         });
         setIsLocationDialogOpen(false);
       } else {
@@ -275,7 +278,7 @@ export function AttendanceWidget() {
                         <DialogHeader>
                             <DialogTitle>Set Office Location</DialogTitle>
                             <DialogDescription>
-                                Enter the coordinates for the main office to enable geofenced clock-ins.
+                                Enter the coordinates for the main office and the allowed clock-in radius.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
@@ -286,6 +289,10 @@ export function AttendanceWidget() {
                            <div className="grid gap-2">
                                 <Label htmlFor="longitude">Longitude</Label>
                                 <Input id="longitude" value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} placeholder="e.g., -122.4194" />
+                           </div>
+                           <div className="grid gap-2">
+                                <Label htmlFor="range">Clock-in Range (km)</Label>
+                                <Input id="range" type="number" value={newMaxDistance} onChange={(e) => setNewMaxDistance(e.target.value)} placeholder="e.g., 2" />
                            </div>
                         </div>
                         <DialogFooter>

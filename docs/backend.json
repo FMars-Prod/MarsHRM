@@ -450,6 +450,10 @@
         "longitude": {
           "type": "number",
           "description": "The longitude for the office location."
+        },
+        "maxDistanceKm": {
+          "type": "number",
+          "description": "The maximum distance in kilometers for an employee to be able to clock in."
         }
       }
     }
