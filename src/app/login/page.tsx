@@ -17,7 +17,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-type Role = 'Member' | 'HR Manager' | 'CEO/Admin';
+type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState<Role | null>(null);
@@ -98,6 +98,13 @@ export default function LoginPage() {
               disabled={!!isLoading}
             >
               {isLoading === 'Member' ? 'Logging in...' : 'Login as Employee'}
+            </Button>
+            <Button
+              onClick={() => handleLogin('Team Lead')}
+              className="w-full"
+              disabled={!!isLoading}
+            >
+              {isLoading === 'Team Lead' ? 'Logging in...' : 'Login as Team Lead'}
             </Button>
             <Button
               onClick={() => handleLogin('HR Manager')}
