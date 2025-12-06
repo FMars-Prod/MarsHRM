@@ -4,39 +4,39 @@
 
 @layer base {
   :root {
-    --background: 200 14% 95%; /* #F0F3F4 */
-    --foreground: 210 22% 15%;
+    --background: 210 20% 98%; /* Lighter, almost white background */
+    --foreground: 215 28% 17%;
     --card: 0 0% 100%;
-    --card-foreground: 210 22% 15%;
+    --card-foreground: 215 28% 17%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 22% 15%;
-    --primary: 210 22% 29%; /* #34495E */
+    --popover-foreground: 215 28% 17%;
+    --primary: 217 33% 32%; /* Dark Blue */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 15% 90%;
     --secondary-foreground: 210 22% 9%;
     --muted: 210 15% 90%;
     --muted-foreground: 210 15% 45%;
-    --accent: 180 100% 25%; /* #008080 */
-    --accent-foreground: 180 100% 98%;
+    --accent: 25 80% 50%; /* Dark Orange */
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 210 10% 85%;
     --input: 210 10% 88%;
-    --ring: 180 100% 30%;
-    --chart-1: 180 100% 30%;
-    --chart-2: 210 25% 40%;
+    --ring: 217 33% 42%; /* Darker Blue for ring */
+    --chart-1: 217 33% 32%; /* Dark Blue */
+    --chart-2: 25 80% 50%; /* Dark Orange */
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
     --sidebar-background: 210 22% 24%;
     --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 180 100% 30%;
-    --sidebar-primary-foreground: 180 100% 98%;
+    --sidebar-primary: 25 80% 55%; /* Dark Orange for sidebar primary */
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 22% 34%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 210 22% 32%;
-    --sidebar-ring: 180 100% 35%;
+    --sidebar-ring: 25 80% 60%;
   }
 
   .dark {
