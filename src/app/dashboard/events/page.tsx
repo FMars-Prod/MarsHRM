@@ -19,9 +19,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
@@ -68,8 +65,7 @@ export default function EventsPage() {
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [newEventName, setNewEventName] = React.useState("");
-  const [newEventDate, setNewEventDate] = React.useState<Date | undefined>();
-  const [newEventTime, setNewEventTime] = React.useState("");
+  const [newEventDate, setNewEventDate] = React.useState<string>("");
   const [newEventType, setNewEventType] = React.useState("");
   const [otherEventType, setOtherEventType] = React.useState("");
   const [newEventIcon, setNewEventIcon] = React.useState<IconName>('HelpCircle');
@@ -102,8 +98,7 @@ export default function EventsPage() {
         id: `evt-${Date.now()}`,
         name: newEventName,
         event: eventType,
-        date: format(newEventDate, "MMMM do"),
-        time: newEventTime,
+        date: newEventDate,
         likes: 0,
         liked: false,
         icon: newEventIcon,
@@ -114,8 +109,7 @@ export default function EventsPage() {
 
     // Reset form and close dialog
     setNewEventName("");
-    setNewEventDate(undefined);
-    setNewEventTime("");
+    setNewEventDate("");
     setNewEventType("");
     setOtherEventType("");
     setNewEventIcon('HelpCircle');
@@ -174,32 +168,8 @@ export default function EventsPage() {
                             </div>
                         )}
                         <div className="grid grid-cols-4 items-center gap-4">
-                             <Label htmlFor="date" className="text-right">Date & Time</Label>
-                             <div className="col-span-3 grid grid-cols-2 gap-2">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className={cn(
-                                                "w-full justify-start text-left font-normal",
-                                                !newEventDate && "text-muted-foreground"
-                                            )}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {newEventDate ? format(newEventDate, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
-                                        <Calendar
-                                            mode="single"
-                                            selected={newEventDate}
-                                            onSelect={setNewEventDate}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                                <Input type="time" value={newEventTime} onChange={(e) => setNewEventTime(e.target.value)} />
-                             </div>
+                             <Label htmlFor="date" className="text-right">Date</Label>
+                             <Input id="date" value={newEventDate} onChange={(e) => setNewEventDate(e.target.value)} className="col-span-3" placeholder="e.g., August 5th" />
                         </div>
                         <div className="grid grid-cols-4 items-start gap-4">
                             <Label className="text-right pt-2">Icon</Label>
@@ -280,5 +250,3 @@ export default function EventsPage() {
     </>
   );
 }
-
-    

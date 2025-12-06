@@ -22,13 +22,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown } from "lucide-react";
 import { leaveData as initialLeaveData } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import * as React from "react";
 import {
@@ -122,8 +119,8 @@ export default function LeavePage() {
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
 
-  const [startDate, setStartDate] = React.useState<Date>();
-  const [endDate, setEndDate] = React.useState<Date>();
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
   const [leaveType, setLeaveType] = React.useState<string>("");
   const [leaveRequests, setLeaveRequests] = React.useState<LeaveRequest[]>(initialLeaveData);
   
@@ -174,55 +171,13 @@ export default function LeavePage() {
                 <Label htmlFor="startDate" className="text-right">
                   Start Date
                 </Label>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                        variant={"outline"}
-                        className={cn(
-                            "w-[240px] justify-start text-left font-normal col-span-3",
-                            !startDate && "text-muted-foreground"
-                        )}
-                        >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                        <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        initialFocus
-                        />
-                    </PopoverContent>
-                </Popover>
+                <Input id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="col-span-3" placeholder="YYYY-MM-DD" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="endDate" className="text-right">
                   End Date
                 </Label>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                        variant={"outline"}
-                        className={cn(
-                            "w-[240px] justify-start text-left font-normal col-span-3",
-                            !endDate && "text-muted-foreground"
-                        )}
-                        >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                        <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        initialFocus
-                        />
-                    </PopoverContent>
-                </Popover>
+                <Input id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="col-span-3" placeholder="YYYY-MM-DD" />
               </div>
                <div className="grid grid-cols-4 items-start gap-4">
                 <Label htmlFor="reason" className="text-right pt-2">
@@ -332,5 +287,3 @@ export default function LeavePage() {
     </>
   );
 }
-
-    
