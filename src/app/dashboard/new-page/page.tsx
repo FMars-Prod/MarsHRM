@@ -17,9 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { WithId } from '@/firebase/firestore/use-collection';
 
@@ -52,8 +49,6 @@ const AnalyticsPage = () => {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
-
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
@@ -61,16 +56,12 @@ const AnalyticsPage = () => {
   const selectedUser = users?.find(u => u.id === selectedUserId);
 
   const attendanceQuery = useMemoFirebase(() => {
-    if (!selectedUserId || !date) return null;
-    const dayStart = startOfDay(date);
-    const dayEnd = endOfDay(date);
+    if (!selectedUserId) return null;
     return query(
       collection(firestore, `users/${selectedUserId}/attendances`),
-      where('checkInTime', '>=', dayStart),
-      where('checkInTime', '<=', dayEnd),
       orderBy('checkInTime', 'desc')
     );
-  }, [firestore, selectedUserId, date]);
+  }, [firestore, selectedUserId]);
   const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
 
   const weeklyChartQuery = useMemoFirebase(() => {
@@ -173,7 +164,7 @@ const AnalyticsPage = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    const datePart = date ? format(date, 'yyyy-MM-dd') : 'export';
+    const datePart = 'all_time';
     link.setAttribute('download', `${selectedUser?.firstName}_${selectedUser?.lastName}_attendance_${datePart}.csv`);
     document.body.appendChild(link);
     link.click();
@@ -182,7 +173,7 @@ const AnalyticsPage = () => {
   
   return (
     <>
-      <PageHeader title="Employee Analytics" description="Select an employee and a date to view their performance and attendance." />
+      <PageHeader title="Employee Analytics" description="Select an employee to view their performance and attendance." />
 
       <div className="flex flex-wrap items-center gap-4 mb-6">
         <div className="w-full sm:w-auto sm:min-w-64">
@@ -198,35 +189,6 @@ const AnalyticsPage = () => {
             </Select>
         </div>
         
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant={isSameDay(date || new Date(), new Date()) ? 'default' : 'outline'} onClick={() => setDate(new Date())}>Today</Button>
-          <Button variant={isSameDay(date || new Date(), subDays(new Date(), 1)) ? 'default' : 'outline'} onClick={() => setDate(subDays(new Date(), 1))}>Yesterday</Button>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                id="date"
-                variant={"outline"}
-                className={cn(
-                  "w-full md:w-[260px] justify-start text-left font-normal",
-                  !date && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                initialFocus
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                disabled={(d) => d > new Date() || d < new Date("1900-01-01")}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
         <Button onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
             <Download className="mr-2 h-4 w-4"/>
             Export CSV
@@ -261,42 +223,42 @@ const AnalyticsPage = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Work Hours</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Work Hours</CardTitle>
                     <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalHours} hrs</div>
-                    <p className="text-xs text-muted-foreground">on selected day</p>
+                    <p className="text-xs text-muted-foreground">All time</p>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Break Time</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Break Time</CardTitle>
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalBreakHours} hrs</div>
-                     <p className="text-xs text-muted-foreground">on selected day</p>
+                     <p className="text-xs text-muted-foreground">All time</p>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">On Leave</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Leaves</CardTitle>
                     <CalendarOff className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalLeaves > 0 ? 'Yes' : 'No'}</div>
-                    <p className="text-xs text-muted-foreground">on selected day</p>
+                    <div className="text-2xl font-bold">{stats.totalLeaves}</div>
+                    <p className="text-xs text-muted-foreground">All time</p>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Late Entry</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Late Days</CardTitle>
                     <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.lateDays > 0 ? 'Yes' : 'No'}</div>
-                     <p className="text-xs text-muted-foreground">on selected day</p>
+                    <div className="text-2xl font-bold">{stats.lateDays}</div>
+                     <p className="text-xs text-muted-foreground">All time</p>
                 </CardContent>
             </Card>
         </div>
@@ -329,7 +291,7 @@ const AnalyticsPage = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Attendance Log</CardTitle>
-                        <CardDescription>Activity for the selected day.</CardDescription>
+                        <CardDescription>Full activity history for the selected employee.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -375,7 +337,7 @@ const AnalyticsPage = () => {
                         </Table>
                          {(!attendanceData || attendanceData.length === 0) && (
                             <div className="text-center py-10 text-muted-foreground">
-                                No attendance records found for the selected day.
+                                No attendance records found for this employee.
                             </div>
                          )}
                     </CardContent>
@@ -389,3 +351,5 @@ const AnalyticsPage = () => {
 };
 
 export default AnalyticsPage;
+
+    
