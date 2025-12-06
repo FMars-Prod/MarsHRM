@@ -21,7 +21,7 @@ import {
   PartyPopper,
   Users,
   Building,
-  File,
+  BarChart2,
 } from "lucide-react";
 import { teamData } from "@/lib/data";
 import React from "react";
@@ -36,9 +36,9 @@ const links = [
   { href: "/dashboard/issues", label: "Issues", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/team", label: "Team", icon: Users, roles: ['Team Lead'] },
   { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/new-page", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/policies", label: "Policies", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/audit-log", label: "Audit Log", icon: BookUser, roles: ['CEO/Admin'] },
-  { href: "/dashboard/new-page", label: "New Page", icon: File, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
 ];
 
 export function MainNav({ userRole }: { userRole: string }) {
@@ -57,7 +57,7 @@ export function MainNav({ userRole }: { userRole: string }) {
   return (
     <SidebarMenu>
       {links.map((link) => {
-        if (!link.roles.includes(userRole)) {
+        if (!link.roles.includes(userRole) || link.label === "New Page" && link.roles.includes('Member')) {
           return null;
         }
 
@@ -67,6 +67,11 @@ export function MainNav({ userRole }: { userRole: string }) {
         }
 
         const isActive = pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard');
+        
+        if (link.label === "Analytics" && !['HR Manager', 'CEO/Admin'].includes(userRole)) {
+            return null;
+        }
+
         return (
           <SidebarMenuItem key={link.href}>
             <SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
