@@ -32,10 +32,12 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, FileText, Download } from "lucide-react";
+import { PlusCircle, FileText, Download, Search, CheckCircle, Clock } from "lucide-react";
 import { teamData as initialTeamData } from "@/lib/data";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type Report = { id: string; date: string; summary: string };
 type TeamMember = { id: string; name: string; jobTitle: string; reports: Report[] };
@@ -45,6 +47,7 @@ export default function TeamPage() {
   const [selectedMember, setSelectedMember] = React.useState<TeamMember | null>(null);
   const { toast } = useToast();
   const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   const handleAddReport = (memberId: string, summary: string) => {
     const today = new Date().toLocaleDateString();
@@ -163,6 +166,15 @@ export default function TeamPage() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+  
+  const filteredTeamData = teamData.filter(member =>
+    member.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const hasReportToday = (member: TeamMember) => {
+    const today = new Date().toLocaleDateString();
+    return member.reports.some(report => new Date(report.date).toLocaleDateString() === today);
+  };
 
 
   return (
@@ -171,10 +183,22 @@ export default function TeamPage() {
         title="Team Management"
         description="View your team members and their work reports."
       >
-        <Button onClick={handleExportAll}>
-          <Download className="mr-2" />
-          Export All as CSV
-        </Button>
+        <div className="flex items-center gap-2">
+            <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Search by name..."
+                    className="pl-8"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                />
+            </div>
+            <Button onClick={handleExportAll}>
+            <Download className="mr-2" />
+            Export All as CSV
+            </Button>
+        </div>
       </PageHeader>
       <Sheet>
         <div className="border rounded-lg">
@@ -187,9 +211,18 @@ export default function TeamPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {teamData.map((member) => (
+              {filteredTeamData.map((member) => (
                 <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                        {hasReportToday(member) ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                            <Clock className="h-4 w-4 text-yellow-500" />
+                        )}
+                        {member.name}
+                    </div>
+                  </TableCell>
                   <TableCell>{member.jobTitle}</TableCell>
                   <TableCell className="text-right">
                     <SheetTrigger asChild>
