@@ -188,7 +188,7 @@ export default function LeavePage() {
                       {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <Calendar
                       mode="single"
                       selected={startDate}
@@ -215,7 +215,7 @@ export default function LeavePage() {
                       {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <Calendar
                       mode="single"
                       selected={endDate}
@@ -333,3 +333,5 @@ export default function LeavePage() {
     </>
   );
 }
+
+    
