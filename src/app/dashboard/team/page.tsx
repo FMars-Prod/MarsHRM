@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, FileText } from "lucide-react";
 import { teamData as initialTeamData } from "@/lib/data";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 
 type Report = { id: string; date: string; summary: string };
 type TeamMember = { id: string; name: string; jobTitle: string; reports: Report[] };
@@ -42,17 +43,33 @@ type TeamMember = { id: string; name: string; jobTitle: string; reports: Report[
 export default function TeamPage() {
   const [teamData, setTeamData] = React.useState<TeamMember[]>(initialTeamData);
   const [selectedMember, setSelectedMember] = React.useState<TeamMember | null>(null);
+  const { toast } = useToast();
+  const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
 
   const handleAddReport = (memberId: string, summary: string) => {
+    const today = new Date().toLocaleDateString();
+    const member = teamData.find(m => m.id === memberId);
+    const hasReportForToday = member?.reports.some(report => new Date(report.date).toLocaleDateString() === today);
+
+    if (hasReportForToday) {
+        toast({
+            variant: "destructive",
+            title: "Report already submitted",
+            description: "A report for this team member has already been submitted today.",
+        });
+        return;
+    }
+
     const newReport: Report = {
         id: `r${Date.now()}`,
-        date: new Date().toLocaleDateString(),
+        date: new Date().toLocaleString(), // Includes date and time
         summary,
     };
+
     setTeamData(prevData =>
         prevData.map(member => {
             if (member.id === memberId) {
-                const updatedMember = { ...member, reports: [...member.reports, newReport] };
+                const updatedMember = { ...member, reports: [newReport, ...member.reports] };
                 if (selectedMember?.id === memberId) {
                     setSelectedMember(updatedMember);
                 }
@@ -61,6 +78,11 @@ export default function TeamPage() {
             return member;
         })
     );
+    toast({
+        title: "Report Saved",
+        description: `Work report for ${selectedMember?.name} has been saved.`
+    });
+    setIsAddReportDialogOpen(false);
   };
 
 
@@ -108,7 +130,7 @@ export default function TeamPage() {
             </SheetHeader>
             <Separator className="my-4" />
             <div className="space-y-4">
-              <Dialog>
+              <Dialog open={isAddReportDialogOpen} onOpenChange={setIsAddReportDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
                     <PlusCircle className="mr-2" />
@@ -123,7 +145,6 @@ export default function TeamPage() {
                         if (summary && selectedMember) {
                             handleAddReport(selectedMember.id, summary);
                         }
-                        // Need to find a way to close dialog
                     }}>
                         <DialogHeader>
                             <DialogTitle>New Report for {selectedMember.name}</DialogTitle>
@@ -138,6 +159,9 @@ export default function TeamPage() {
                             </div>
                         </div>
                         <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="outline">Cancel</Button>
+                            </DialogClose>
                             <Button type="submit">Save Report</Button>
                         </DialogFooter>
                     </form>
