@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { format, subDays, differenceInSeconds, isSameDay, startOfDay, endOfDay } from 'date-fns';
+import { format, subDays, differenceInSeconds, isSameDay, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -52,7 +52,7 @@ const AnalyticsPage = () => {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
+  const [date, setDate] = React.useState<Date>(new Date());
   const [showAll, setShowAll] = React.useState(false);
 
 
@@ -69,8 +69,7 @@ const AnalyticsPage = () => {
         orderBy('checkInTime', 'desc')
       );
     }
-    if (!date) return null;
-
+    
     const start = startOfDay(date);
     const end = endOfDay(date);
     return query(
@@ -81,7 +80,7 @@ const AnalyticsPage = () => {
   }, [firestore, selectedUserId, date, showAll]);
 
   const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
-
+  
   const weeklyChartQuery = useMemoFirebase(() => {
     if(!selectedUserId) return null;
     const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
@@ -115,7 +114,7 @@ const AnalyticsPage = () => {
       lateDays,
     };
   }, [attendanceData]);
-
+  
   const chartData = React.useMemo(() => {
       if (!weeklyAttendance) return [];
       
@@ -207,19 +206,19 @@ const AnalyticsPage = () => {
             </Select>
         </div>
         <div className="flex items-center gap-2">
-            <Button variant={!showAll && isSameDay(date || new Date(0), new Date()) ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setShowAll(false); }}>Today</Button>
-            <Button variant={!showAll && isSameDay(date || new Date(0), subDays(new Date(), 1)) ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setShowAll(false); }}>Yesterday</Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button id="date" variant={"outline"} className={cn("w-full md:w-[200px] justify-start text-left font-normal", !date && "text-muted-foreground", showAll && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date && !showAll ? format(date, "MMMM do, yyyy") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={date} onSelect={(d) => { setDate(d); setShowAll(false); }} initialFocus />
-              </PopoverContent>
-            </Popover>
+          <Button variant={!showAll && isSameDay(date, new Date()) ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setShowAll(false); }}>Today</Button>
+          <Button variant={!showAll && isSameDay(date, subDays(new Date(), 1)) ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setShowAll(false); }}>Yesterday</Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button id="date" variant={"outline"} className={cn("w-full md:w-[200px] justify-start text-left font-normal", !date && "text-muted-foreground", showAll && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date && !showAll ? format(date, "MMMM do, yyyy") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={date} onSelect={(d) => { if(d) setDate(d); setShowAll(false); }} initialFocus />
+            </PopoverContent>
+          </Popover>
         </div>
         <Button variant="ghost" onClick={() => setShowAll(!showAll)}>{showAll ? "View Daily Activity" : "View Full Activity"}</Button>
         <Button onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
