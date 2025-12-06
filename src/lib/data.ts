@@ -10,6 +10,8 @@ export const leaveData = [
   { id: '1', employee: 'Peter Jones', startDate: '2024-08-05', endDate: '2024-08-07', type: 'Sick Leave', status: 'Approved' },
   { id: '2', employee: 'Jane Smith', startDate: '2024-09-01', endDate: '2024-09-10', type: 'Vacation', status: 'Pending HR Approval' },
   { id: '3', employee: 'John Doe', startDate: '2024-07-30', endDate: '2024-07-30', type: 'Personal', status: 'Pending' },
+  { id: '4', employee: 'Emily White', startDate: '2024-08-12', endDate: '2024-08-12', type: 'Personal', status: 'Rejected by Team Lead' },
+
 ];
 
 export const issueData = [
@@ -44,8 +46,8 @@ export const events = [
 ];
 
 export const teamData = [
-  { id: '1', name: 'John Doe', jobTitle: 'Software Engineer', reports: [{id: 'r1', date: '2024-07-29', summary: 'Worked on feature X.'}, {id: 'r2', date: '2024-07-28', summary: 'Fixed bug Y.'}] },
-  { id: '2', name: 'Peter Jones', jobTitle: 'Frontend Developer', reports: [{id: 'r3', date: '2024-07-29', summary: 'Developed component Z.'}] },
+  { id: '1', name: 'John Doe', jobTitle: 'Software Engineer', reports: [{id: 'r1', date: '2024-07-29T10:30:00Z', summary: 'Worked on feature X.'}, {id: 'r2', date: '2024-07-28T11:00:00Z', summary: 'Fixed bug Y.'}] },
+  { id: '2', name: 'Peter Jones', jobTitle: 'Frontend Developer', reports: [{id: 'r3', date: '2024-07-29T14:00:00Z', summary: 'Developed component Z.'}] },
   { id: '3', name: 'Emily White', jobTitle: 'UI/UX Designer', reports: [] },
 ]
 

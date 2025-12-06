@@ -42,57 +42,79 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, getDaysInMonth, startOfToday } from "date-fns";
+import { format, getDaysInMonth, startOfToday, addDays } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 type LeaveRequest = (typeof initialLeaveData)[0] & { employee?: string };
+type LeaveStatus = 'Pending' | 'Pending HR Approval' | 'Approved' | 'Rejected by Team Lead' | 'Rejected by HR';
 
-const LeaveStatusTracker = ({ request, role }: { request: LeaveRequest, role: string }) => {
-    const isApprovedByLead = request.status === 'Pending HR Approval' || request.status === 'Approved';
+const LeaveStatusTracker = ({ request }: { request: LeaveRequest }) => {
+    const isSubmitted = true;
+    const isApprovedByLead = ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(request.status);
+    const isRejectedByLead = request.status === 'Rejected by Team Lead';
     const isApprovedByHR = request.status === 'Approved';
-    const isRejected = request.status === 'Rejected';
+    const isRejectedByHR = request.status === 'Rejected by HR';
+
 
     return (
         <div className="space-y-4">
           <div className="flex items-center">
             <div className="flex flex-col items-center mr-4">
-              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white", isApprovedByLead ? 'bg-green-500' : 'bg-yellow-500' )}>
+              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white bg-green-500")}>
                 <Check className="h-4 w-4" />
               </div>
-              <div className={cn("h-12 w-0.5", isApprovedByLead ? 'bg-green-500' : 'bg-gray-200')}></div>
+              <div className={cn("h-12 w-0.5", (isApprovedByLead || isRejectedByLead) ? 'bg-green-500' : 'bg-gray-200')}></div>
             </div>
             <div>
               <h4 className="font-semibold">Submitted</h4>
-              <p className="text-sm text-muted-foreground">Request submitted on {request.startDate}.</p>
+              <p className="text-sm text-muted-foreground">Request submitted for {request.startDate}.</p>
             </div>
           </div>
           <div className="flex items-center">
             <div className="flex flex-col items-center mr-4">
-              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full",
-                isApprovedByLead ? 'bg-green-500 text-white' : isRejected ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
+              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
+                isApprovedByLead && 'bg-green-500',
+                isRejectedByLead && 'bg-red-500',
+                !isApprovedByLead && !isRejectedByLead && 'bg-yellow-500'
               )}>
-                {isApprovedByLead ? <Check className="h-4 w-4" /> : isRejected ? <X className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                {isApprovedByLead && <Check className="h-4 w-4" />}
+                {isRejectedByLead && <X className="h-4 w-4" />}
+                {!isApprovedByLead && !isRejectedByLead && <Clock className="h-4 w-4" />}
               </div>
-              <div className={cn("h-12 w-0.5", isApprovedByHR ? 'bg-green-500' : 'bg-gray-200')}></div>
+              <div className={cn("h-12 w-0.5", isApprovedByHR || isRejectedByHR ? 'bg-green-500' : 'bg-gray-200')}></div>
             </div>
             <div>
-              <h4 className={cn("font-semibold", isRejected && "text-red-500")}>Team Lead Approval</h4>
+              <h4 className={cn("font-semibold", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
               <p className="text-sm text-muted-foreground">
-                {isApprovedByLead ? 'Approved by Team Lead.' : isRejected ? 'Rejected by Team Lead.' : 'Pending approval.'}
+                {isApprovedByLead && 'Approved by Team Lead.'}
+                {isRejectedByLead && 'Rejected by Team Lead.'}
+                {!isApprovedByLead && !isRejectedByLead && 'Pending approval.'}
               </p>
             </div>
           </div>
            <div className="flex items-center">
             <div className="flex flex-col items-center mr-4">
-              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full",
-                isApprovedByHR ? 'bg-green-500 text-white' : isRejected ? 'bg-gray-300 text-gray-500' : !isApprovedByLead ? 'bg-gray-300 text-gray-500' : 'bg-yellow-500 text-white'
+              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
+                isApprovedByHR && 'bg-green-500',
+                isRejectedByHR && 'bg-red-500',
+                !(isApprovedByLead || isRejectedByLead) && 'bg-gray-300',
+                (isApprovedByLead && !isRejectedByHR && !isApprovedByHR) && 'bg-yellow-500',
+                isRejectedByLead && 'bg-gray-300',
               )}>
-                {isApprovedByHR ? <Check className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                {isApprovedByHR && <Check className="h-4 w-4" />}
+                {isRejectedByHR && <X className="h-4 w-4" />}
+                {!(isApprovedByHR || isRejectedByHR) && <Clock className="h-4 w-4" />}
               </div>
             </div>
             <div>
-              <h4 className={cn("font-semibold", !isApprovedByLead && "text-muted-foreground")}>HR Approval</h4>
+              <h4 className={cn("font-semibold", isRejectedByHR && "text-red-500", !(isApprovedByLead || isRejectedByLead) && "text-muted-foreground")}>HR Approval</h4>
               <p className="text-sm text-muted-foreground">
-                {isApprovedByHR ? 'Approved by HR.' : isRejected ? 'Not sent to HR.' : !isApprovedByLead ? 'Waiting for Team Lead approval.' : 'Pending HR approval.'}
+                {isApprovedByHR && 'Approved by HR.'}
+                {isRejectedByHR && 'Rejected by HR.'}
+                {isRejectedByLead && 'Not applicable.'}
+                {!isApprovedByLead && !isRejectedByLead && 'Waiting for Team Lead approval.'}
+                {isApprovedByLead && !isApprovedByHR && !isRejectedByHR && 'Pending HR approval.'}
               </p>
             </div>
           </div>
@@ -104,7 +126,8 @@ const statusVariantMap: { [key: string]: any } = {
     'Approved': 'bg-green-500/20 text-green-700 border-transparent hover:bg-green-500/30',
     'Pending': 'bg-yellow-500/20 text-yellow-700 border-transparent hover:bg-yellow-500/30',
     'Pending HR Approval': 'bg-blue-500/20 text-blue-700 border-transparent hover:bg-blue-500/30',
-    'Rejected': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30'
+    'Rejected by Team Lead': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30',
+    'Rejected by HR': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30'
 };
 
 
@@ -121,16 +144,10 @@ export default function LeavePage() {
 
   const [leaveType, setLeaveType] = React.useState<string>("");
   const [leaveRequests, setLeaveRequests] = React.useState<LeaveRequest[]>(initialLeaveData);
+  const [startDate, setStartDate] = React.useState<Date>();
+  const [endDate, setEndDate] = React.useState<Date>();
   
-  const [startYear, setStartYear] = React.useState<number | undefined>();
-  const [startMonth, setStartMonth] = React.useState<number | undefined>();
-  const [startDay, setStartDay] = React.useState<number | undefined>();
-
-  const [endYear, setEndYear] = React.useState<number | undefined>();
-  const [endMonth, setEndMonth] = React.useState<number | undefined>();
-  const [endDay, setEndDay] = React.useState<number | undefined>();
-  
-  const handleRequestStatus = (requestId: string, newStatus: 'Pending HR Approval' | 'Approved' | 'Rejected') => {
+  const handleRequestStatus = (requestId: string, newStatus: LeaveStatus) => {
     setLeaveRequests(prev => prev.map(req => req.id === requestId ? {...req, status: newStatus} : req));
   }
 
@@ -138,48 +155,19 @@ export default function LeavePage() {
     switch (userRole) {
       case 'HR Manager':
       case 'CEO/Admin':
-        return leaveRequests;
+         // HR and CEO see requests approved by TL, or already actioned by HR
+        return leaveRequests.filter(r => ['Pending HR Approval', 'Approved', 'Rejected by HR', 'Rejected by Team Lead'].includes(r.status));
       case 'Team Lead':
-        return leaveRequests; // Team lead sees all for now, can be filtered to their team later
+        // Team lead sees all for now, can be filtered to their team later
+        return leaveRequests;
       case 'Member':
       default:
-        // Assuming the logged in member is 'Jane Smith' for demo purposes
-        return leaveRequests.filter(r => r.employee === 'John Doe' || r.employee === 'Jane Smith');
+        // Assuming the logged in member is 'John Doe' for demo purposes
+        return leaveRequests.filter(r => r.employee === 'John Doe');
     }
   }
 
   const allLeaveRequests = getVisibleRequests();
-
-  const today = startOfToday();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth();
-  const currentDay = today.getDate();
-
-  const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
-  const months = Array.from({ length: 12 }, (_, i) => ({ label: format(new Date(0, i), 'MMMM'), value: i }));
-  
-  const startDaysInMonth = (startYear && startMonth !== undefined) ? getDaysInMonth(new Date(startYear, startMonth)) : 31;
-  const startDays = Array.from({ length: startDaysInMonth }, (_, i) => i + 1);
-
-  const endDaysInMonth = (endYear && endMonth !== undefined) ? getDaysInMonth(new Date(endYear, endMonth)) : 31;
-  const endDays = Array.from({ length: endDaysInMonth }, (_, i) => i + 1);
-  
-  const isStartPastMonth = (m: number) => startYear === currentYear && m < currentMonth;
-  const isStartPastDay = (d: number) => startYear === currentYear && startMonth === currentMonth && d < currentDay;
-
-  const getStartDate = () => {
-    if (startYear && startMonth !== undefined && startDay) {
-        return new Date(startYear, startMonth, startDay);
-    }
-    return today;
-  }
-
-  const startDate = getStartDate();
-
-  const isEndPastYear = (y: number) => y < startDate.getFullYear();
-  const isEndPastMonth = (m: number) => endYear === startDate.getFullYear() && m < startDate.getMonth();
-  const isEndPastDay = (d: number) => endYear === startDate.getFullYear() && endMonth === startDate.getMonth() && d < startDate.getDate();
-
 
   return (
     <>
@@ -219,54 +207,59 @@ export default function LeavePage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">
-                  Start Date
-                </Label>
-                <div className="col-span-3 grid grid-cols-3 gap-2">
-                    <Select onValueChange={(v) => { setStartYear(Number(v)); setStartMonth(undefined); setStartDay(undefined); }} value={startYear?.toString()}>
-                        <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                        <SelectContent>
-                            {years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select onValueChange={(v) => { setStartMonth(Number(v)); setStartDay(undefined); }} value={startMonth?.toString()} disabled={!startYear}>
-                        <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                        <SelectContent>
-                            {months.map(m => <SelectItem key={m.value} value={m.value.toString()} disabled={isStartPastMonth(m.value)}>{m.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select onValueChange={(v) => setStartDay(Number(v))} value={startDay?.toString()} disabled={!startYear || startMonth === undefined}>
-                        <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                        <SelectContent>
-                            {startDays.map(d => <SelectItem key={d} value={d.toString()} disabled={isStartPastDay(d)}>{d}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
+                  <Label htmlFor="start-date" className="text-right">Start Date</Label>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                          <Button
+                              id="start-date"
+                              variant={"outline"}
+                              className={cn(
+                                  "col-span-3 justify-start text-left font-normal",
+                                  !startDate && "text-muted-foreground"
+                              )}
+                          >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                              mode="single"
+                              selected={startDate}
+                              onSelect={setStartDate}
+                              disabled={(date) => date < startOfToday()}
+                              initialFocus
+                          />
+                      </PopoverContent>
+                  </Popover>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">
-                  End Date
-                </Label>
-                <div className="col-span-3 grid grid-cols-3 gap-2">
-                    <Select onValueChange={(v) => { setEndYear(Number(v)); setEndMonth(undefined); setEndDay(undefined); }} value={endYear?.toString()} disabled={!startDay}>
-                        <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                        <SelectContent>
-                            {years.map(y => <SelectItem key={y} value={y.toString()} disabled={isEndPastYear(y)}>{y}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select onValueChange={(v) => { setEndMonth(Number(v)); setEndDay(undefined); }} value={endMonth?.toString()} disabled={!endYear}>
-                        <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                        <SelectContent>
-                            {months.map(m => <SelectItem key={m.value} value={m.value.toString()} disabled={isEndPastMonth(m.value)}>{m.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select onValueChange={(v) => setEndDay(Number(v))} value={endDay?.toString()} disabled={!endYear || endMonth === undefined}>
-                        <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                        <SelectContent>
-                            {endDays.map(d => <SelectItem key={d} value={d.toString()} disabled={isEndPastDay(d)}>{d}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
+                  <Label htmlFor="end-date" className="text-right">End Date</Label>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                          <Button
+                              id="end-date"
+                              variant={"outline"}
+                              className={cn(
+                                  "col-span-3 justify-start text-left font-normal",
+                                  !endDate && "text-muted-foreground"
+                              )}
+                              disabled={!startDate}
+                          >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                              mode="single"
+                              selected={endDate}
+                              onSelect={setEndDate}
+                              disabled={(date) => date < (startDate || startOfToday())}
+                              initialFocus
+                          />
+                      </PopoverContent>
+                  </Popover>
               </div>
                <div className="grid grid-cols-4 items-start gap-4">
                 <Label htmlFor="reason" className="text-right pt-2">
@@ -309,7 +302,7 @@ export default function LeavePage() {
                 <TableCell>{request.type}</TableCell>
                 <TableCell>
                   <Badge variant='outline' className={cn(statusVariantMap[request.status])}>
-                    {request.status}
+                    {request.status.replace(/ by Team Lead| by HR/g, '')}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -319,7 +312,7 @@ export default function LeavePage() {
                                 <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Pending HR Approval')}>
                                     <ThumbsUp className="mr-2 h-4 w-4"/> Approve
                                 </Button>
-                                <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected')}>
+                                <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected by Team Lead')}>
                                     <ThumbsDown className="mr-2 h-4 w-4"/> Reject
                                 </Button>
                             </>
@@ -329,7 +322,7 @@ export default function LeavePage() {
                                 <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Approved')}>
                                     <ThumbsUp className="mr-2 h-4 w-4"/> Approve
                                 </Button>
-                                <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected')}>
+                                <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected by HR')}>
                                     <ThumbsDown className="mr-2 h-4 w-4"/> Reject
                                 </Button>
                             </>
@@ -371,7 +364,7 @@ export default function LeavePage() {
                                    </div>
                                     <Separator className="my-4" />
                                     <h4 className="font-semibold">Approval History</h4>
-                                    <LeaveStatusTracker request={request} role={userRole} />
+                                    <LeaveStatusTracker request={request} />
                                 </div>
                                 </ScrollArea>
                             </SheetContent>
