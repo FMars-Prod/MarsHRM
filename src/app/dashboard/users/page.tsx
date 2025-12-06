@@ -33,7 +33,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch } from "firebase/firestore";
@@ -44,6 +44,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import Link from "next/link";
 
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
@@ -264,6 +265,12 @@ export default function UsersPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                       <Link href={`/dashboard/users/${user.id}`} passHref>
+                          <DropdownMenuItem asChild>
+                              <a><Eye className="mr-2 h-4 w-4" /> View Details</a>
+                          </DropdownMenuItem>
+                       </Link>
                       <DropdownMenuItem onClick={() => handleEditUser(user)} disabled={!canModify(user.role)}>
                         <Edit className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>
@@ -281,4 +288,3 @@ export default function UsersPage() {
     </>
   );
 }
-    
