@@ -51,70 +51,72 @@ type LeaveStatus = 'Pending' | 'Pending HR Approval' | 'Approved' | 'Rejected by
 
 const LeaveStatusTracker = ({ request }: { request: LeaveRequest }) => {
     const isSubmitted = true;
+    const isFinalRejected = request.status === 'Rejected';
     const isApprovedByLead = ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(request.status);
     const isRejectedByLead = request.status === 'Rejected by Team Lead';
     const isApprovedByHR = request.status === 'Approved';
     const isRejectedByHR = request.status === 'Rejected by HR';
 
-
     return (
         <div className="space-y-4">
           <div className="flex items-center">
             <div className="flex flex-col items-center mr-4">
-              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white bg-green-500")}>
-                <Check className="h-4 w-4" />
+              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white", isFinalRejected ? "bg-red-500" : "bg-green-500")}>
+                {isFinalRejected ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
               </div>
-              <div className={cn("h-12 w-0.5", (isApprovedByLead || isRejectedByLead) ? 'bg-green-500' : 'bg-gray-200')}></div>
+              <div className={cn("h-12 w-0.5", (isApprovedByLead || isRejectedByLead || isFinalRejected) ? 'bg-primary/20' : 'bg-gray-200')}></div>
             </div>
             <div>
-              <h4 className="font-semibold">Submitted</h4>
+              <h4 className={cn("font-semibold", isFinalRejected && "text-red-500")}>{isFinalRejected ? "Rejected" : "Submitted"}</h4>
               <p className="text-sm text-muted-foreground">Request submitted for {request.startDate}.</p>
             </div>
           </div>
           <div className="flex items-center">
             <div className="flex flex-col items-center mr-4">
               <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
-                isApprovedByLead && 'bg-green-500',
-                isRejectedByLead && 'bg-red-500',
-                !isApprovedByLead && !isRejectedByLead && 'bg-yellow-500'
+                isApprovedByLead && !isFinalRejected && 'bg-green-500',
+                (isRejectedByLead || isFinalRejected) && 'bg-red-500',
+                !isApprovedByLead && !isRejectedByLead && !isFinalRejected && 'bg-yellow-500'
               )}>
-                {isApprovedByLead && <Check className="h-4 w-4" />}
-                {isRejectedByLead && <X className="h-4 w-4" />}
-                {!isApprovedByLead && !isRejectedByLead && <Clock className="h-4 w-4" />}
+                {(isApprovedByLead && !isFinalRejected) && <Check className="h-4 w-4" />}
+                {(isRejectedByLead || isFinalRejected) && <X className="h-4 w-4" />}
+                {!isApprovedByLead && !isRejectedByLead && !isFinalRejected && <Clock className="h-4 w-4" />}
               </div>
-              <div className={cn("h-12 w-0.5", isApprovedByHR || isRejectedByHR ? 'bg-green-500' : 'bg-gray-200')}></div>
+              <div className={cn("h-12 w-0.5", (isApprovedByHR || isRejectedByHR || isFinalRejected) ? 'bg-primary/20' : 'bg-gray-200')}></div>
             </div>
             <div>
-              <h4 className={cn("font-semibold", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
+              <h4 className={cn("font-semibold", (isRejectedByLead || isFinalRejected) && "text-red-500")}>Team Lead Approval</h4>
               <p className="text-sm text-muted-foreground">
-                {isApprovedByLead && 'Approved by Team Lead.'}
+                {isFinalRejected && `Rejected by CEO.`}
+                {(isApprovedByLead && !isFinalRejected) && 'Approved by Team Lead.'}
                 {isRejectedByLead && 'Rejected by Team Lead.'}
-                {!isApprovedByLead && !isRejectedByLead && 'Pending approval.'}
+                {!isApprovedByLead && !isRejectedByLead && !isFinalRejected && 'Pending approval.'}
               </p>
             </div>
           </div>
            <div className="flex items-center">
             <div className="flex flex-col items-center mr-4">
               <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
-                isApprovedByHR && 'bg-green-500',
-                isRejectedByHR && 'bg-red-500',
-                !(isApprovedByLead || isRejectedByLead) && 'bg-gray-300',
-                (isApprovedByLead && !isRejectedByHR && !isApprovedByHR) && 'bg-yellow-500',
-                isRejectedByLead && 'bg-gray-300',
+                isApprovedByHR && !isFinalRejected && 'bg-green-500',
+                (isRejectedByHR || isFinalRejected) && 'bg-red-500',
+                !(isApprovedByLead || isRejectedByLead || isFinalRejected) && 'bg-gray-300',
+                (isApprovedByLead && !isRejectedByHR && !isApprovedByHR && !isFinalRejected) && 'bg-yellow-500',
+                (isRejectedByLead && !isFinalRejected) && 'bg-gray-300',
               )}>
-                {isApprovedByHR && <Check className="h-4 w-4" />}
-                {isRejectedByHR && <X className="h-4 w-4" />}
-                {!(isApprovedByHR || isRejectedByHR) && <Clock className="h-4 w-4" />}
+                {(isApprovedByHR && !isFinalRejected) && <Check className="h-4 w-4" />}
+                {(isRejectedByHR || isFinalRejected) && <X className="h-4 w-4" />}
+                {!(isApprovedByHR || isRejectedByHR || isFinalRejected) && <Clock className="h-4 w-4" />}
               </div>
             </div>
             <div>
-              <h4 className={cn("font-semibold", isRejectedByHR && "text-red-500", !(isApprovedByLead || isRejectedByLead) && "text-muted-foreground")}>HR Approval</h4>
+              <h4 className={cn("font-semibold", (isRejectedByHR || isFinalRejected) && "text-red-500", !(isApprovedByLead || isRejectedByLead) && !isFinalRejected && "text-muted-foreground")}>HR Approval</h4>
               <p className="text-sm text-muted-foreground">
-                {isApprovedByHR && 'Approved by HR.'}
-                {isRejectedByHR && 'Rejected by HR.'}
-                {isRejectedByLead && 'Not applicable.'}
-                {!isApprovedByLead && !isRejectedByLead && 'Waiting for Team Lead approval.'}
-                {isApprovedByLead && !isApprovedByHR && !isRejectedByHR && 'Pending HR approval.'}
+                {isFinalRejected && `Rejected by CEO.`}
+                {(isApprovedByHR && !isFinalRejected) && 'Approved by HR.'}
+                {(isRejectedByHR && !isFinalRejected) && 'Rejected by HR.'}
+                {(isRejectedByLead && !isFinalRejected) && 'Not applicable.'}
+                {!(isApprovedByLead || isRejectedByLead || isFinalRejected) && 'Waiting for Team Lead approval.'}
+                {(isApprovedByLead && !isApprovedByHR && !isRejectedByHR && !isFinalRejected) && 'Pending HR approval.'}
               </p>
             </div>
           </div>
@@ -158,7 +160,7 @@ export default function LeavePage() {
         return leaveRequests;
       case 'HR Manager':
          // HR and CEO see requests approved by TL, or already actioned by HR
-        return leaveRequests.filter(r => ['Pending HR Approval', 'Approved', 'Rejected by HR', 'Rejected by Team Lead'].includes(r.status));
+        return leaveRequests.filter(r => ['Pending HR Approval', 'Approved', 'Rejected by HR', 'Rejected'].includes(r.status));
       case 'Team Lead':
         // Team lead sees all for now, can be filtered to their team later
         return leaveRequests;
