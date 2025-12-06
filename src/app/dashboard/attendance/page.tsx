@@ -58,26 +58,13 @@ export default function AttendancePage() {
     });
     return modifiers;
   }, []);
-  
-  const DayWithStatus = ({ date }: { date: Date }) => {
-    const event = events.find(e => isSameDay(e.date, date));
-    let statusColor = '';
-    if (event) {
-        switch(event.status) {
-            case 'present': statusColor = 'bg-green-500'; break;
-            case 'late': statusColor = 'bg-yellow-500'; break;
-            case 'absent': statusColor = 'bg-red-500'; break;
-            case 'permission': statusColor = 'bg-blue-500'; break;
-        }
-    }
-    
-    return (
-        <div className="relative flex items-center justify-center h-full w-full">
-            <span>{format(date, 'd')}</span>
-            {statusColor && <div className={`absolute bottom-1.5 h-1.5 w-1.5 rounded-full ${statusColor}`} />}
-        </div>
-    )
-  }
+
+  const modifiersClassNames = {
+    present: 'bg-green-500/20 text-green-700',
+    late: 'bg-yellow-500/20 text-yellow-700',
+    absent: 'bg-red-500/20 text-red-700',
+    permission: 'bg-blue-500/20 text-blue-700',
+  };
 
   return (
     <>
@@ -97,17 +84,7 @@ export default function AttendancePage() {
                 onMonthChange={setCurrentMonth}
                 className="p-3"
                 modifiers={modifiers}
-                components={{
-                    Day: ({ date }) => <DayWithStatus date={date} />,
-                }}
-                classNames={{
-                    day: cn(
-                        "h-12 w-12 rounded-full text-sm transition-colors hover:bg-accent/50 focus-within:relative focus-within:z-20",
-                    ),
-                    day_selected: "bg-primary text-primary-foreground hover:bg-primary focus:bg-primary",
-                    day_today: "bg-accent text-accent-foreground",
-                    cell: "p-0",
-                }}
+                modifiersClassNames={modifiersClassNames}
               />
             </CardContent>
           </Card>
