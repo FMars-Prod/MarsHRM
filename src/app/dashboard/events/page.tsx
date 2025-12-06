@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { events as eventData } from "@/lib/data";
-import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Anchor, AppWindow, Armchair, Baby, BadgeCheck, Banana, BarChart, Beer, Bike, Bomb, Bone, Book, Bot, Box, Brain, Briefcase, Brush, Bug, Building, Bus, Camera, CandlestickChart, Car, Carrot, Castle, Cat, Check, ChefHat, Cherry, Church, Citrus, Clipboard, Cloud, Code, Cog, Coins, Compass, Computer, Cone, Construction, Contact, Contrast, Cookie, Copy, Crown, CupSoda, Currency, Database, Diamond, Dice5, Dna, Dog, DollarSign, Donut, DoorClosed, Draft, Dribbble, Dumbbell, Ear, Egg, Euro, Eye, Factory, Fan, Feather, FerrisWheel, Figma, File, Film, Filter, Fingerprint, FireExtinguisher, Flag, Flame, Flashlight, FlaskConical, Flower, Folder, Football, Forklift, Framer, Gamepad2, Gauge, Gavel, Gem, Ghost, GitBranch, GitCommit, GitFork, GitMerge, GitPullRequest, Github, Gitlab, GlassWater, Glasses, Globe, Grab, GraduationCap, Grape, Grid, Hammer, Hand, HardHat, Hash, Haze, Heading, Headphones, HeartPulse, Heater, Hexagon, Highlighter, History, Home, Hop, Hourglass, IceCream, Image as ImageIcon, Inbox, Indent, IndianRupee, Infinity, Info, InspectionPanel, Instagram, Italic, IterationCcw, IterationCw, JapaneseYen, Joystick, Kanban, Key, Keyboard, Lamp, Landmark, Laptop, Lasso, Laugh, Layers, Layout, Leaf, Library, LifeBuoy, Lightbulb, Link, Linkedin, List, Locate, Lock, LogIn, LogOut, Luggage, Magnet, Mail, Map, Martini, Medal, Megaphone, Menu, MessageCircle, MessageSquare, Mic, Microscope, Microwave, Milestone, Milk, Minus, Monitor, Moon, Mouse, Move, Music, Navigation, Network, Newspaper, Nut, Orbit, Package, Paintbrush, Palette, Paperclip, ParkingCircle, Pause, PcCase, Pen, Pencil, Percent, PersonStanding, Phone, PieChart, Pilcrow, Pin, Plane, Plug, Pocket, Podcast, Pointer, PoundSterling, Power, Presentation, Printer, Projector, Puzzle, Quote, Radio, Recycle, Redo, Regex, RemoveFormatting, Repeat, Reply, Rocket, Rows, Rss, Ruler, RussianRuble, Sailboat, Save, Scale, Scan, School, Scissors, ScreenShare, Scroll, Search, Send, SeparatorHorizontal, Server, Share, Shield, Ship, ShoppingBag, ShoppingCart, Shovel, ShowerHead, Sigma, Signal, Siren, Sketch, Skull, Slack, Slice, Sliders, Smartphone, Smile, Snowflake, SortAsc, SortDesc, Speaker, Spline, Sprout, Square, Star, SteeringWheel, Stethoscope, Sticker, StickyNote, Strikethrough, Subscript, Sun, Superscript, SwissFranc, SwitchCamera, Sword, Swords, Syringe, Table, Tablet, Tag, Target, Tent, Terminal, TestTube, Text, ThumbsDown, ThumbsUp, Ticket, Timer, ToyBrick, Train, Trash, TreePine, Trophy, Truck, Tv, Twitter, Underline, UnfoldHorizontal, UnfoldVertical, Unlink, Upload, Usb, Video, View, Voicemail, Volume, Wallet, Wand, Watch, Waves, Webcam, Webhook, Weight, Wheat, Wifi, Wind, Wine, Wrench, Youtube, Zap } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -33,17 +33,14 @@ import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Textarea } from "@/components/ui/textarea";
 import { format, getYear, getMonth, getDate, parse } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 
-type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'HelpCircle';
+type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'HelpCircle' | 'Anchor' | 'AppWindow' | 'Armchair' | 'Baby' | 'BadgeCheck' | 'Banana' | 'BarChart' | 'Beer' | 'Bike' | 'Bomb' | 'Bone' | 'Book' | 'Bot' | 'Box' | 'Brain' | 'Briefcase' | 'Brush' | 'Bug' | 'Building' | 'Bus' | 'Camera' | 'CandlestickChart' | 'Car' | 'Carrot' | 'Castle' | 'Cat' | 'Check' | 'ChefHat' | 'Cherry' | 'Church' | 'Citrus' | 'Clipboard' | 'Cloud' | 'Code' | 'Cog' | 'Coins' | 'Compass' | 'Computer' | 'Cone' | 'Construction' | 'Contact' | 'Contrast' | 'Cookie' | 'Copy' | 'Crown' | 'CupSoda' | 'Currency' | 'Database' | 'Diamond' | 'Dice5' | 'Dna' | 'Dog' | 'DollarSign' | 'Donut' | 'DoorClosed' | 'Draft' | 'Dribbble' | 'Dumbbell' | 'Ear' | 'Egg' | 'Euro' | 'Eye' | 'Factory' | 'Fan' | 'Feather' | 'FerrisWheel' | 'Figma' | 'File' | 'Film' | 'Filter' | 'Fingerprint' | 'FireExtinguisher' | 'Flag' | 'Flame' | 'Flashlight' | 'FlaskConical' | 'Flower' | 'Folder' | 'Football' | 'Forklift' | 'Framer' | 'Gamepad2' | 'Gauge' | 'Gavel' | 'Gem' | 'Ghost' | 'GitBranch' | 'GitCommit' | 'GitFork' | 'GitMerge' | 'GitPullRequest' | 'Github' | 'Gitlab' | 'GlassWater' | 'Glasses' | 'Globe' | 'Grab' | 'GraduationCap' | 'Grape' | 'Grid' | 'Hammer' | 'Hand' | 'HardHat' | 'Hash' | 'Haze' | 'Heading' | 'Headphones' | 'HeartPulse' | 'Heater' | 'Hexagon' | 'Highlighter' | 'History' | 'Home' | 'Hop' | 'Hourglass' | 'IceCream' | 'ImageIcon' | 'Inbox' | 'Indent' | 'IndianRupee' | 'Infinity' | 'Info' | 'InspectionPanel' | 'Instagram' | 'Italic' | 'IterationCcw' | 'IterationCw' | 'JapaneseYen' | 'Joystick' | 'Kanban' | 'Key' | 'Keyboard' | 'Lamp' | 'Landmark' | 'Laptop' | 'Lasso' | 'Laugh' | 'Layers' | 'Layout' | 'Leaf' | 'Library' | 'LifeBuoy' | 'Lightbulb' | 'Link' | 'Linkedin' | 'List' | 'Locate' | 'Lock' | 'LogIn' | 'LogOut' | 'Luggage' | 'Magnet' | 'Mail' | 'Map' | 'Martini' | 'Medal' | 'Megaphone' | 'Menu' | 'MessageCircle' | 'MessageSquare' | 'Mic' | 'Microscope' | 'Microwave' | 'Milestone' | 'Milk' | 'Minus' | 'Monitor' | 'Moon' | 'Mouse' | 'Move' | 'Music' | 'Navigation' | 'Network' | 'Newspaper' | 'Nut' | 'Orbit' | 'Package' | 'Paintbrush' | 'Palette' | 'Paperclip' | 'ParkingCircle' | 'Pause' | 'PcCase' | 'Pen' | 'Pencil' | 'Percent' | 'PersonStanding' | 'Phone' | 'PieChart' | 'Pilcrow' | 'Pin' | 'Plane' | 'Plug' | 'Pocket' | 'Podcast' | 'Pointer' | 'PoundSterling' | 'Power' | 'Presentation' | 'Printer' | 'Projector' | 'Puzzle' | 'Quote' | 'Radio' | 'Recycle' | 'Redo' | 'Regex' | 'RemoveFormatting' | 'Repeat' | 'Reply' | 'Rocket' | 'Rows' | 'Rss' | 'Ruler' | 'RussianRuble' | 'Sailboat' | 'Save' | 'Scale' | 'Scan' | 'School' | 'Scissors' | 'ScreenShare' | 'Scroll' | 'Search' | 'Send' | 'SeparatorHorizontal' | 'Server' | 'Share' | 'Shield' | 'Ship' | 'ShoppingBag' | 'ShoppingCart' | 'Shovel' | 'ShowerHead' | 'Sigma' | 'Signal' | 'Siren' | 'Sketch' | 'Skull' | 'Slack' | 'Slice' | 'Sliders' | 'Smartphone' | 'Smile' | 'Snowflake' | 'SortAsc' | 'SortDesc' | 'Speaker' | 'Spline' | 'Sprout' | 'Square' | 'Star' | 'SteeringWheel' | 'Stethoscope' | 'Sticker' | 'StickyNote' | 'Strikethrough' | 'Subscript' | 'Sun' | 'Superscript' | 'SwissFranc' | 'SwitchCamera' | 'Sword' | 'Swords' | 'Syringe' | 'Table' | 'Tablet' | 'Tag' | 'Target' | 'Tent' | 'Terminal' | 'TestTube' | 'Text' | 'ThumbsDown' | 'ThumbsUp' | 'Ticket' | 'Timer' | 'ToyBrick' | 'Train' | 'Trash' | 'TreePine' | 'Trophy' | 'Truck' | 'Tv' | 'Twitter' | 'Underline' | 'UnfoldHorizontal' | 'UnfoldVertical' | 'Unlink' | 'Upload' | 'Usb' | 'Video' | 'View' | 'Voicemail' | 'Volume' | 'Wallet' | 'Wand' | 'Watch' | 'Waves' | 'Webcam' | 'Webhook' | 'Weight' | 'Wheat' | 'Wifi' | 'Wind' | 'Wine' | 'Wrench' | 'Youtube' | 'Zap';
 
 const iconComponents: Record<IconName, React.FC<React.SVGProps<SVGSVGElement>>> = {
-    Cake,
-    PartyPopper,
-    Users,
-    Gift,
-    Award,
-    HelpCircle,
+    Cake, PartyPopper, Users, Gift, Award, HelpCircle, Anchor, AppWindow, Armchair, Baby, BadgeCheck, Banana, BarChart, Beer, Bike, Bomb, Bone, Book, Bot, Box, Brain, Briefcase, Brush, Bug, Building, Bus, Camera, CandlestickChart, Car, Carrot, Castle, Cat, Check, ChefHat, Cherry, Church, Citrus, Clipboard, Cloud, Code, Cog, Coins, Compass, Computer, Cone, Construction, Contact, Contrast, Cookie, Copy, Crown, CupSoda, Currency, Database, Diamond, Dice5, Dna, Dog, DollarSign, Donut, DoorClosed, Draft, Dribbble, Dumbbell, Ear, Egg, Euro, Eye, Factory, Fan, Feather, FerrisWheel, Figma, File, Film, Filter, Fingerprint, FireExtinguisher, Flag, Flame, Flashlight, FlaskConical, Flower, Folder, Football, Forklift, Framer, Gamepad2, Gauge, Gavel, Gem, Ghost, GitBranch, GitCommit, GitFork, GitMerge, GitPullRequest, Github, Gitlab, GlassWater, Glasses, Globe, Grab, GraduationCap, Grape, Grid, Hammer, Hand, HardHat, Hash, Haze, Heading, Headphones, HeartPulse, Heater, Hexagon, Highlighter, History, Home, Hop, Hourglass, IceCream, ImageIcon, Inbox, Indent, IndianRupee, Infinity, Info, InspectionPanel, Instagram, Italic, IterationCcw, IterationCw, JapaneseYen, Joystick, Kanban, Key, Keyboard, Lamp, Landmark, Laptop, Lasso, Laugh, Layers, Layout, Leaf, Library, LifeBuoy, Lightbulb, Link, Linkedin, List, Locate, Lock, LogIn, LogOut, Luggage, Magnet, Mail, Map, Martini, Medal, Megaphone, Menu, MessageCircle, MessageSquare, Mic, Microscope, Microwave, Milestone, Milk, Minus, Monitor, Moon, Mouse, Move, Music, Navigation, Network, Newspaper, Nut, Orbit, Package, Paintbrush, Palette, Paperclip, ParkingCircle, Pause, PcCase, Pen, Pencil, Percent, PersonStanding, Phone, PieChart, Pilcrow, Pin, Plane, Plug, Pocket, Podcast, Pointer, PoundSterling, Power, Presentation, Printer, Projector, Puzzle, Quote, Radio, Recycle, Redo, Regex, RemoveFormatting, Repeat, Reply, Rocket, Rows, Rss, Ruler, RussianRuble, Sailboat, Save, Scale, Scan, School, Scissors, ScreenShare, Scroll, Search, Send, SeparatorHorizontal, Server, Share, Shield, Ship, ShoppingBag, ShoppingCart, Shovel, ShowerHead, Sigma, Signal, Siren, Sketch, Skull, Slack, Slice, Sliders, Smartphone, Smile, Snowflake, SortAsc, SortDesc, Speaker, Spline, Sprout, Square, Star, SteeringWheel, Stethoscope, Sticker, StickyNote, Strikethrough, Subscript, Sun, Superscript, SwissFranc, SwitchCamera, Sword, Swords, Syringe, Table, Tablet, Tag, Target, Tent, Terminal, TestTube, Text, ThumbsDown, ThumbsUp, Ticket, Timer, ToyBrick, Train, Trash, TreePine, Trophy, Truck, Tv, Twitter, Underline, UnfoldHorizontal, UnfoldVertical, Unlink, Upload, Usb, Video, View, Voicemail, Volume, Wallet, Wand, Watch, Waves, Webcam, Webhook, Weight, Wheat, Wifi, Wind, Wine, Wrench, Youtube, Zap,
 };
 
 const colorOptions = [
@@ -93,9 +90,7 @@ export default function EventsPage() {
   const [newEventIcon, setNewEventIcon] = React.useState<IconName>('HelpCircle');
   const [newEventColor, setNewEventColor] = React.useState<string>('hsl(var(--primary))');
   const [newEventTime, setNewEventTime] = React.useState("");
-  const [newEventDay, setNewEventDay] = React.useState<string>();
-  const [newEventMonth, setNewEventMonth] = React.useState<string>();
-  const [newEventYear, setNewEventYear] = React.useState<string>();
+  const [date, setDate] = React.useState<Date>();
 
 
   const handleLike = (id: string) => {
@@ -120,26 +115,23 @@ export default function EventsPage() {
     setNewEventIcon('HelpCircle');
     setNewEventColor('hsl(var(--primary))');
     setNewEventTime("");
-    setNewEventDay(undefined);
-    setNewEventMonth(undefined);
-    setNewEventYear(undefined);
+    setDate(undefined);
     setEditingEvent(null);
     setIsDialogOpen(false);
   }
 
   const handleCreateOrUpdateEvent = () => {
     const eventType = newEventType === "Other" ? otherEventType : newEventType;
-    if (!newEventName || !eventType || !newEventDay || !newEventMonth || !newEventYear) {
+    if (!newEventName || !eventType || !date) {
         console.error("All fields are required");
         return;
     }
-    const newEventDate = new Date(parseInt(newEventYear), parseInt(newEventMonth), parseInt(newEventDay));
 
     const eventPayload: EventItem = {
         id: editingEvent ? editingEvent.id : `evt-${Date.now()}`,
         name: newEventName,
         event: eventType,
-        date: format(newEventDate, "MMMM do"),
+        date: format(date, "MMMM do"),
         likes: editingEvent ? editingEvent.likes : 0,
         liked: editingEvent ? editingEvent.liked : false,
         icon: newEventIcon,
@@ -167,9 +159,7 @@ export default function EventsPage() {
     }
     
     const eventDate = parse(event.date + " " + new Date().getFullYear(), "MMMM do yyyy", new Date());
-    setNewEventDay(String(getDate(eventDate)));
-    setNewEventMonth(String(getMonth(eventDate)));
-    setNewEventYear(String(getYear(eventDate)));
+    setDate(eventDate);
     
     setNewEventTime(event.time || "");
     setNewEventIcon(event.icon);
@@ -186,10 +176,6 @@ export default function EventsPage() {
     const IconComponent = iconComponents[iconName] || HelpCircle;
     return <IconComponent {...props} />;
   }
-  
-  const years = Array.from({ length: 10 }, (_, i) => getYear(new Date()) - 5 + i);
-  const months = Array.from({ length: 12 }, (_, i) => ({ value: i, label: format(new Date(0, i), 'MMMM') }));
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
     <>
@@ -242,27 +228,29 @@ export default function EventsPage() {
                             </div>
                         )}
                         <div className="grid grid-cols-4 items-center gap-4">
-                             <Label htmlFor="date" className="text-right">Date</Label>
-                             <div className="col-span-3 grid grid-cols-3 gap-2">
-                                <Select onValueChange={setNewEventYear} value={newEventYear}>
-                                    <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                                    <SelectContent>
-                                        {years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select onValueChange={setNewEventMonth} value={newEventMonth}>
-                                    <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                                    <SelectContent>
-                                        {months.map(month => <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select onValueChange={setNewEventDay} value={newEventDay}>
-                                    <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                                    <SelectContent>
-                                        {days.map(day => <SelectItem key={day} value={String(day)}>{day}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                             </div>
+                            <Label htmlFor="date" className="text-right">Date</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "col-span-3 justify-start text-left font-normal",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                    >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                                    <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={setDate}
+                                    initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="time" className="text-right">Time (Optional)</Label>
@@ -374,5 +362,3 @@ export default function EventsPage() {
     </>
   );
 }
-
-    
