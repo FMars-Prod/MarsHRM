@@ -48,7 +48,7 @@ const colorOptions = [
     { id: 'chart-5', value: 'hsl(var(--chart-5))', className: 'bg-chart-5' },
 ];
 
-type EventItem = (typeof eventData)[0] & { likes: number; liked: boolean; icon: IconName; color: string; };
+type EventItem = (typeof eventData)[0] & { likes: number; liked: boolean; icon: IconName; color: string; time?: string };
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -69,6 +69,7 @@ export default function EventsPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [newEventName, setNewEventName] = React.useState("");
   const [newEventDate, setNewEventDate] = React.useState<Date | undefined>();
+  const [newEventTime, setNewEventTime] = React.useState("");
   const [newEventType, setNewEventType] = React.useState("");
   const [otherEventType, setOtherEventType] = React.useState("");
   const [newEventIcon, setNewEventIcon] = React.useState<IconName>('HelpCircle');
@@ -102,6 +103,7 @@ export default function EventsPage() {
         name: newEventName,
         event: eventType,
         date: format(newEventDate, "MMMM do"),
+        time: newEventTime,
         likes: 0,
         liked: false,
         icon: newEventIcon,
@@ -113,6 +115,7 @@ export default function EventsPage() {
     // Reset form and close dialog
     setNewEventName("");
     setNewEventDate(undefined);
+    setNewEventTime("");
     setNewEventType("");
     setOtherEventType("");
     setNewEventIcon('HelpCircle');
@@ -171,29 +174,32 @@ export default function EventsPage() {
                             </div>
                         )}
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="date" className="text-right">Date</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className={cn(
-                                            "w-full justify-start text-left font-normal col-span-3",
-                                            !newEventDate && "text-muted-foreground"
-                                        )}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {newEventDate ? format(newEventDate, "PPP") : <span>Pick a date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={newEventDate}
-                                        onSelect={setNewEventDate}
-                                        initialFocus
-                                    />
-                                </PopoverContent>
-                            </Popover>
+                             <Label htmlFor="date" className="text-right">Date & Time</Label>
+                             <div className="col-span-3 grid grid-cols-2 gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal",
+                                                !newEventDate && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {newEventDate ? format(newEventDate, "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={newEventDate}
+                                            onSelect={setNewEventDate}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                <Input type="time" value={newEventTime} onChange={(e) => setNewEventTime(e.target.value)} />
+                             </div>
                         </div>
                         <div className="grid grid-cols-4 items-start gap-4">
                             <Label className="text-right pt-2">Icon</Label>
@@ -205,7 +211,7 @@ export default function EventsPage() {
                                             key={iconName}
                                             variant="outline"
                                             size="icon"
-                                            className={cn(newEventIcon === iconName && "ring-2 ring-primary")}
+                                            className={cn("h-8 w-8", newEventIcon === iconName && "ring-2 ring-primary")}
                                             onClick={() => setNewEventIcon(iconName)}
                                         >
                                             {renderIcon(iconName, { className: "h-5 w-5" })}
@@ -250,7 +256,7 @@ export default function EventsPage() {
             </CardHeader>
             <CardContent className="flex-grow">
               <p className="text-muted-foreground">
-                {event.event} on {event.date}
+                {event.event} on {event.date} {event.time && `at ${event.time}`}
               </p>
             </CardContent>
             <CardFooter>
