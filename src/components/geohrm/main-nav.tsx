@@ -21,6 +21,8 @@ import {
   PartyPopper,
   Users,
 } from "lucide-react";
+import { teamData } from "@/lib/data";
+import React from "react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
@@ -38,12 +40,28 @@ const links = [
 export function MainNav({ userRole }: { userRole: string }) {
   const pathname = usePathname();
 
+  const pendingReportsCount = React.useMemo(() => {
+    const today = new Date().toLocaleDateString();
+    return teamData.filter(
+      (member) =>
+        !member.reports.some(
+          (report) => new Date(report.date).toLocaleDateString() === today
+        )
+    ).length;
+  }, []);
+
   return (
     <SidebarMenu>
       {links.map((link) => {
         if (!link.roles.includes(userRole)) {
           return null;
         }
+
+        let badgeContent = link.badge;
+        if (link.href === "/dashboard/team" && pendingReportsCount > 0) {
+            badgeContent = String(pendingReportsCount);
+        }
+
         const isActive = pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard');
         return (
           <SidebarMenuItem key={link.href}>
@@ -51,7 +69,7 @@ export function MainNav({ userRole }: { userRole: string }) {
               <Link href={link.href}>
                 <link.icon />
                 <span>{link.label}</span>
-                {link.badge && <SidebarMenuBadge>{link.badge}</SidebarMenuBadge>}
+                {badgeContent && <SidebarMenuBadge>{badgeContent}</SidebarMenuBadge>}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
