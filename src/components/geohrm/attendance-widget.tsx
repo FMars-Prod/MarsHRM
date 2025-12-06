@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Timer } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -33,6 +33,24 @@ interface Location {
     longitude: number;
 }
 
+const OFFICE_LOCATION: Location = { latitude: 37.7749, longitude: -122.4194 }; // Example: San Francisco
+const MAX_DISTANCE_KM = 2;
+
+// Haversine formula to calculate distance between two lat/lon points in km
+const getDistanceInKm = (loc1: Location, loc2: Location) => {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (loc2.latitude - loc1.latitude) * (Math.PI / 180);
+    const dLon = (loc2.longitude - loc1.longitude) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(loc1.latitude * (Math.PI / 180)) *
+        Math.cos(loc2.latitude * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
+
 export function AttendanceWidget() {
   const [status, setStatus] = useState<AttendanceStatus>("out");
   const [timer, setTimer] = useState(0);
@@ -41,6 +59,7 @@ export function AttendanceWidget() {
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
+  const [distance, setDistance] = useState<number | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -83,10 +102,24 @@ export function AttendanceWidget() {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                setLocation({
+                const userLocation: Location = {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
-                });
+                };
+                
+                const dist = getDistanceInKm(userLocation, OFFICE_LOCATION);
+                setDistance(dist);
+
+                if (dist > MAX_DISTANCE_KM) {
+                    toast({
+                        variant: "destructive",
+                        title: "Clock-In Failed",
+                        description: `You are ${dist.toFixed(2)} km away from the office. You must be within ${MAX_DISTANCE_KM} km to clock in.`,
+                    });
+                    return;
+                }
+
+                setLocation(userLocation);
                 setStatus("in");
                 setLastClockInTime(new Date());
                 setTimer(0);
@@ -95,7 +128,7 @@ export function AttendanceWidget() {
                 setHasClockedOutToday(false);
                 toast({
                     title: "Clocked In",
-                    description: "Your location has been recorded.",
+                    description: `Your location has been recorded, ${dist.toFixed(2)} km from the office.`,
                 });
             },
             (error) => {
@@ -120,6 +153,7 @@ export function AttendanceWidget() {
     setStatus("out");
     setHasClockedOutToday(true);
     setLocation(null);
+    setDistance(null);
   };
 
   const handleBreak = () => {
@@ -204,6 +238,7 @@ export function AttendanceWidget() {
             <div className="flex items-center text-xs text-muted-foreground gap-1">
                 <MapPin className="size-3"/>
                 <span>{`Lat: ${location.latitude.toFixed(4)}, Lon: ${location.longitude.toFixed(4)}`}</span>
+                {distance !== null && <span>({distance.toFixed(2)} km from office)</span>}
             </div>
         )}
       </CardContent>
