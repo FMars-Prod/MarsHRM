@@ -113,7 +113,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
   };
 
   if (isUserLoading) return <p>Loading user profile...</p>;
-  if (!user) {
+  if (!isUserLoading && !user) {
     notFound();
   }
 
