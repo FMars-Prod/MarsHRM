@@ -13,7 +13,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Hourglass, Coffee } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Hourglass, Coffee, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { WithId } from '@/firebase/firestore/use-collection';
@@ -24,6 +24,11 @@ type AttendanceRecord = {
   totalBreakDuration?: number;
   status: 'present' | 'late' | 'absent' | 'on_leave';
 };
+
+type Report = {
+    date: any;
+    summary: string;
+}
 
 const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
   const firestore = useFirestore();
@@ -45,6 +50,15 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
     [firestore, userId]
   );
   const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
+  
+  const reportsQuery = useMemoFirebase(
+    () => query(
+        collection(firestore, `users/${userId}/reports`),
+        orderBy('date', 'desc')
+    ),
+    [firestore, userId]
+  );
+  const { data: reportsData, isLoading: isReportsLoading } = useCollection<Report>(reportsQuery);
 
   const weeklyAttendanceQuery = useMemoFirebase(
       () => query(
@@ -112,7 +126,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
     return `${hours}h ${minutes}m`;
   };
 
-  if (isUserLoading || isAttendanceLoading) {
+  if (isUserLoading || isAttendanceLoading || isReportsLoading) {
     return <p>Loading user profile...</p>;
   }
 
@@ -182,81 +196,113 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
             </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Weekly Work Hours</CardTitle>
-                    <CardDescription>Work vs. Break hours over the last 7 days.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={chartData}>
-                            <CartesianGrid vertical={false} />
-                            <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
-                            <YAxis unit="h" />
-                             <Tooltip 
-                                cursor={{ fill: 'hsl(var(--muted))' }}
-                                content={<ChartTooltipContent
-                                    formatter={(value, name) => `${value}h`}
-                                    indicator="dot"
-                                    />}
-                            />
-                            <Bar dataKey="work" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Work" />
-                            <Bar dataKey="break" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} name="Break" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 grid gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Weekly Work Hours</CardTitle>
+                        <CardDescription>Work vs. Break hours over the last 7 days.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={chartData}>
+                                <CartesianGrid vertical={false} />
+                                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+                                <YAxis unit="h" />
+                                 <Tooltip 
+                                    cursor={{ fill: 'hsl(var(--muted))' }}
+                                    content={<ChartTooltipContent
+                                        formatter={(value, name) => `${value}h`}
+                                        indicator="dot"
+                                        />}
+                                />
+                                <Bar dataKey="work" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Work" />
+                                <Bar dataKey="break" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} name="Break" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recent Attendance</CardTitle>
-                    <CardDescription>A log of the user's recent clock-in and clock-out activity.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Clock In/Out</TableHead>
-                                <TableHead>Work</TableHead>
-                                <TableHead>Break</TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {(attendanceData || []).slice(0, 7).map((rec, i) => {
-                                let workDuration = 0;
-                                if (rec.checkInTime && rec.checkOutTime) {
-                                    workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
-                                }
-                                return (
-                                <TableRow key={i}>
-                                    <TableCell className="font-medium">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
-                                    <TableCell>
-                                      {rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}
-                                      {' / '}
-                                      {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
-                                    </TableCell>
-                                    <TableCell>{formatDuration(workDuration)}</TableCell>
-                                    <TableCell>{formatDuration(rec.totalBreakDuration || 0)}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant="outline"
-                                            className={cn(
-                                                rec.status === 'present' && 'text-green-600 border-green-600/50',
-                                                rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
-                                                rec.status === 'absent' && 'text-red-600 border-red-600/50',
-                                                rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
-                                            )}
-                                        >{rec.status}</Badge>
-                                    </TableCell>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Recent Attendance</CardTitle>
+                        <CardDescription>A log of the user's recent clock-in and clock-out activity.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Clock In/Out</TableHead>
+                                    <TableHead>Work</TableHead>
+                                    <TableHead>Break</TableHead>
+                                    <TableHead>Status</TableHead>
                                 </TableRow>
-                            )})}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                            </TableHeader>
+                            <TableBody>
+                                {(attendanceData || []).slice(0, 7).map((rec, i) => {
+                                    let workDuration = 0;
+                                    if (rec.checkInTime && rec.checkOutTime) {
+                                        workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+                                    }
+                                    return (
+                                    <TableRow key={i}>
+                                        <TableCell className="font-medium">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                                        <TableCell>
+                                          {rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}
+                                          {' / '}
+                                          {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
+                                        </TableCell>
+                                        <TableCell>{formatDuration(workDuration)}</TableCell>
+                                        <TableCell>{formatDuration(rec.totalBreakDuration || 0)}</TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    rec.status === 'present' && 'text-green-600 border-green-600/50',
+                                                    rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
+                                                    rec.status === 'absent' && 'text-red-600 border-red-600/50',
+                                                    rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
+                                                )}
+                                            >{rec.status}</Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                )})}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="lg:col-span-1">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Work Reports</CardTitle>
+                        <CardDescription>Daily work summaries submitted by the user.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {reportsData && reportsData.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Summary</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {reportsData.map((report, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{format(report.date.toDate(), 'MMM d, yyyy')}</TableCell>
+                                        <TableCell>{report.summary}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">No work reports submitted.</p>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
         </div>
       </div>
     </>
