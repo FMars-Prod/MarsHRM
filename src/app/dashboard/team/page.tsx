@@ -118,13 +118,64 @@ export default function TeamPage() {
     document.body.removeChild(link);
   }
 
+  const handleExportAll = () => {
+    if (teamData.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No data to export",
+        });
+        return;
+    }
+
+    const headers = ["Team Member", "Job Title", "Report Date", "Report Summary"];
+    const csvRows = [headers.join(',')];
+
+    teamData.forEach(member => {
+        if (member.reports.length > 0) {
+            member.reports.forEach(report => {
+                const row = [
+                    `"${member.name}"`,
+                    `"${member.jobTitle}"`,
+                    `"${report.date}"`,
+                    `"${report.summary.replace(/"/g, '""')}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+        } else {
+            const row = [
+                `"${member.name}"`,
+                `"${member.jobTitle}"`,
+                "N/A",
+                "No reports"
+            ];
+            csvRows.push(row.join(','));
+        }
+    });
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', 'All_Team_Reports.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
 
   return (
     <>
       <PageHeader
         title="Team Management"
         description="View your team members and their work reports."
-      />
+      >
+        <Button onClick={handleExportAll}>
+          <Download className="mr-2" />
+          Export All as CSV
+        </Button>
+      </PageHeader>
       <Sheet>
         <div className="border rounded-lg">
           <Table>
