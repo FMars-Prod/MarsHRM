@@ -3,10 +3,10 @@
 
 import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { events as eventData } from "@/lib/data";
-import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award } from "lucide-react";
+import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,7 +32,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Textarea } from "@/components/ui/textarea";
-import { format, getYear, getMonth, getDate } from "date-fns";
+import { format, getYear, getMonth, getDate, parse } from "date-fns";
 
 
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'HelpCircle';
@@ -41,13 +48,25 @@ const iconComponents: Record<IconName, React.FC<React.SVGProps<SVGSVGElement>>> 
 
 const colorOptions = [
     { id: 'primary', value: 'hsl(var(--primary))', className: 'bg-primary' },
-    { id: 'accent', value: 'hsl(var(--accent))', className: 'bg-chart-2' },
+    { id: 'chart-1', value: 'hsl(var(--chart-1))', className: 'bg-chart-1' },
     { id: 'chart-2', value: 'hsl(var(--chart-2))', className: 'bg-chart-2' },
     { id: 'chart-3', value: 'hsl(var(--chart-3))', className: 'bg-chart-3' },
+    { id: 'chart-4', value: 'hsl(var(--chart-4))', className: 'bg-chart-4' },
     { id: 'chart-5', value: 'hsl(var(--chart-5))', className: 'bg-chart-5' },
 ];
 
-type EventItem = (typeof eventData)[0] & { likes: number; liked: boolean; icon: IconName; color: string; time?: string };
+type EventItem = { 
+  id: string; 
+  name: string; 
+  event: string;
+  date: string;
+  likes: number; 
+  liked: boolean; 
+  icon: IconName; 
+  color: string; 
+  time?: string 
+};
+
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -62,10 +81,12 @@ export default function EventsPage() {
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
   const [events, setEvents] = React.useState<EventItem[]>(
-    eventData.map((e) => ({ ...e, likes: Math.floor(Math.random() * 25), liked: false, icon: e.event === "Birthday" ? 'Cake' : 'PartyPopper', color: 'hsl(var(--primary))', time: e.event === 'Birthday' ? '12:00 PM' : undefined }))
+    eventData.map((e) => ({ ...e, id: `evt-${Math.random()}`, likes: Math.floor(Math.random() * 25), liked: false, icon: e.event === "Birthday" ? 'Cake' : 'PartyPopper', color: 'hsl(var(--primary))', time: e.event === 'Birthday' ? '12:00 PM' : undefined }))
   );
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [editingEvent, setEditingEvent] = React.useState<EventItem | null>(null);
+
   const [newEventName, setNewEventName] = React.useState("");
   const [newEventType, setNewEventType] = React.useState("");
   const [otherEventType, setOtherEventType] = React.useState("");
@@ -91,31 +112,8 @@ export default function EventsPage() {
       })
     );
   };
-
-  const handleCreateEvent = () => {
-    const eventType = newEventType === "Other" ? otherEventType : newEventType;
-    if (!newEventName || !eventType || !newEventDay || !newEventMonth || !newEventYear) {
-        // In a real app, you'd show a toast or form validation message
-        console.error("All fields are required");
-        return;
-    }
-    const newEventDate = new Date(parseInt(newEventYear), parseInt(newEventMonth), parseInt(newEventDay));
-
-    const newEvent: EventItem = {
-        id: `evt-${Date.now()}`,
-        name: newEventName,
-        event: eventType,
-        date: format(newEventDate, "MMMM do"),
-        likes: 0,
-        liked: false,
-        icon: newEventIcon,
-        color: newEventColor,
-        time: newEventTime || undefined,
-    };
-
-    setEvents(prev => [newEvent, ...prev]);
-
-    // Reset form and close dialog
+  
+  const resetForm = () => {
     setNewEventName("");
     setNewEventType("");
     setOtherEventType("");
@@ -125,8 +123,64 @@ export default function EventsPage() {
     setNewEventDay(undefined);
     setNewEventMonth(undefined);
     setNewEventYear(undefined);
+    setEditingEvent(null);
     setIsDialogOpen(false);
   }
+
+  const handleCreateOrUpdateEvent = () => {
+    const eventType = newEventType === "Other" ? otherEventType : newEventType;
+    if (!newEventName || !eventType || !newEventDay || !newEventMonth || !newEventYear) {
+        console.error("All fields are required");
+        return;
+    }
+    const newEventDate = new Date(parseInt(newEventYear), parseInt(newEventMonth), parseInt(newEventDay));
+
+    const eventPayload: EventItem = {
+        id: editingEvent ? editingEvent.id : `evt-${Date.now()}`,
+        name: newEventName,
+        event: eventType,
+        date: format(newEventDate, "MMMM do"),
+        likes: editingEvent ? editingEvent.likes : 0,
+        liked: editingEvent ? editingEvent.liked : false,
+        icon: newEventIcon,
+        color: newEventColor,
+        time: newEventTime || undefined,
+    };
+    
+    if (editingEvent) {
+      setEvents(prev => prev.map(e => e.id === editingEvent.id ? eventPayload : e));
+    } else {
+      setEvents(prev => [eventPayload, ...prev]);
+    }
+    
+    resetForm();
+  }
+  
+  const handleOpenEditDialog = (event: EventItem) => {
+    setEditingEvent(event);
+    setNewEventName(event.name);
+    
+    const isPredefinedType = ["Birthday", "Work Anniversary"].includes(event.event);
+    setNewEventType(isPredefinedType ? event.event : "Other");
+    if (!isPredefinedType) {
+      setOtherEventType(event.event);
+    }
+    
+    const eventDate = parse(event.date + " " + new Date().getFullYear(), "MMMM do yyyy", new Date());
+    setNewEventDay(String(getDate(eventDate)));
+    setNewEventMonth(String(getMonth(eventDate)));
+    setNewEventYear(String(getYear(eventDate)));
+    
+    setNewEventTime(event.time || "");
+    setNewEventIcon(event.icon);
+    setNewEventColor(event.color);
+    setIsDialogOpen(true);
+  }
+
+  const handleDeleteEvent = (eventId: string) => {
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+  }
+
 
   const renderIcon = (iconName: IconName, props: React.SVGProps<SVGSVGElement>) => {
     const IconComponent = iconComponents[iconName] || HelpCircle;
@@ -144,7 +198,12 @@ export default function EventsPage() {
         description="Celebrate birthdays and work anniversaries with your colleagues."
       >
         {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+                if (!isOpen) {
+                    resetForm();
+                }
+                setIsDialogOpen(isOpen);
+            }}>
                 <DialogTrigger asChild>
                     <Button>
                         <PlusCircle className="mr-2" />
@@ -153,9 +212,9 @@ export default function EventsPage() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Create a New Event</DialogTitle>
+                        <DialogTitle>{editingEvent ? 'Edit Event' : 'Create a New Event'}</DialogTitle>
                         <DialogDescription>
-                            Add a birthday, work anniversary, or other event to the calendar.
+                            {editingEvent ? 'Update the details of the event.' : 'Add a birthday, work anniversary, or other event to the calendar.'}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -211,7 +270,7 @@ export default function EventsPage() {
                         </div>
                         <div className="grid grid-cols-4 items-start gap-4">
                             <Label className="text-right pt-2">Icon</Label>
-                            <div className="col-span-3 grid grid-cols-5 gap-2">
+                            <div className="col-span-3 grid grid-cols-6 gap-2">
                                 {Object.keys(iconComponents).map(iconKey => {
                                     const iconName = iconKey as IconName;
                                     return (
@@ -246,8 +305,8 @@ export default function EventsPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleCreateEvent}>Create Event</Button>
+                        <Button variant="outline" onClick={resetForm}>Cancel</Button>
+                        <Button onClick={handleCreateOrUpdateEvent}>{editingEvent ? 'Save Changes' : 'Create Event'}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -257,14 +316,41 @@ export default function EventsPage() {
         {events.map((event) => (
           <Card key={event.id} className="flex flex-col">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {renderIcon(event.icon, {className: "h-6 w-6", style: { color: event.color }})}
-                {event.name}
-              </CardTitle>
+              <div className="flex items-start justify-between">
+                <CardTitle className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg" style={{backgroundColor: event.color + '1A'}}>
+                    {renderIcon(event.icon, {className: "h-5 w-5", style: { color: event.color }})}
+                  </div>
+                  {event.name}
+                </CardTitle>
+                {isAdmin && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenEditDialog(event)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          <span>Edit</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDeleteEvent(event.id)} className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Delete</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
+              </div>
+              <CardDescription>
+                  {event.event}
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow">
               <p className="text-muted-foreground">
-                {event.event} on {event.date} {event.time && `at ${event.time}`}
+                <CalendarIcon className="inline-block mr-2 h-4 w-4" />
+                {event.date} {event.time && `at ${event.time}`}
               </p>
             </CardContent>
             <CardFooter>
@@ -288,3 +374,5 @@ export default function EventsPage() {
     </>
   );
 }
+
+    
