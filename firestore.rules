@@ -98,7 +98,7 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin() || isCeo();
-      allow list: if false; // Disallow user enumeration for security
+      allow list: if isAdmin() || isCeo() || isHrAgent();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id;
       allow delete: if false; // User profiles are generally not deletable by the user
@@ -279,4 +279,3 @@ service cloud.firestore {
     }
   }
 }
-    
