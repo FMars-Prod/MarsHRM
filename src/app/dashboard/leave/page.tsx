@@ -47,7 +47,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 
 type LeaveRequest = (typeof initialLeaveData)[0] & { employee?: string };
-type LeaveStatus = 'Pending' | 'Pending HR Approval' | 'Approved' | 'Rejected by Team Lead' | 'Rejected by HR';
+type LeaveStatus = 'Pending' | 'Pending HR Approval' | 'Approved' | 'Rejected by Team Lead' | 'Rejected by HR' | 'Rejected';
 
 const LeaveStatusTracker = ({ request }: { request: LeaveRequest }) => {
     const isSubmitted = true;
@@ -127,7 +127,8 @@ const statusVariantMap: { [key: string]: any } = {
     'Pending': 'bg-yellow-500/20 text-yellow-700 border-transparent hover:bg-yellow-500/30',
     'Pending HR Approval': 'bg-blue-500/20 text-blue-700 border-transparent hover:bg-blue-500/30',
     'Rejected by Team Lead': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30',
-    'Rejected by HR': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30'
+    'Rejected by HR': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30',
+    'Rejected': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30'
 };
 
 
@@ -153,8 +154,9 @@ export default function LeavePage() {
 
   const getVisibleRequests = () => {
     switch (userRole) {
-      case 'HR Manager':
       case 'CEO/Admin':
+        return leaveRequests;
+      case 'HR Manager':
          // HR and CEO see requests approved by TL, or already actioned by HR
         return leaveRequests.filter(r => ['Pending HR Approval', 'Approved', 'Rejected by HR', 'Rejected by Team Lead'].includes(r.status));
       case 'Team Lead':
@@ -307,6 +309,16 @@ export default function LeavePage() {
                 </TableCell>
                 <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
+                        {userRole === 'CEO/Admin' && !['Approved', 'Rejected'].includes(request.status) && (
+                             <>
+                                <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Approved')}>
+                                    <ThumbsUp className="mr-2 h-4 w-4"/> Approve
+                                </Button>
+                                <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected')}>
+                                    <ThumbsDown className="mr-2 h-4 w-4"/> Reject
+                                </Button>
+                            </>
+                        )}
                         {userRole === 'Team Lead' && request.status === 'Pending' && (
                             <>
                                 <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Pending HR Approval')}>
@@ -317,7 +329,7 @@ export default function LeavePage() {
                                 </Button>
                             </>
                         )}
-                         {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && request.status === 'Pending HR Approval' && (
+                         {(userRole === 'HR Manager') && request.status === 'Pending HR Approval' && (
                             <>
                                 <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Approved')}>
                                     <ThumbsUp className="mr-2 h-4 w-4"/> Approve
