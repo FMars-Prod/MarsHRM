@@ -112,10 +112,14 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
     return `${hours}h ${minutes}m`;
   };
 
-  if (isUserLoading) return <p>Loading user profile...</p>;
-  if (!isUserLoading && !user) {
-    notFound();
+  if (isUserLoading || isAttendanceLoading) {
+    return <p>Loading user profile...</p>;
   }
+
+  if (!user) {
+    return notFound();
+  }
+
 
   return (
     <>
@@ -221,11 +225,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isAttendanceLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center">Loading attendance...</TableCell>
-                                </TableRow>
-                            ) : (attendanceData || []).slice(0, 7).map((rec, i) => {
+                            {(attendanceData || []).slice(0, 7).map((rec, i) => {
                                 let workDuration = 0;
                                 if (rec.checkInTime && rec.checkOutTime) {
                                     workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
@@ -264,3 +264,5 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
 };
 
 export default UserAnalyticsPage;
+
+    
