@@ -5,7 +5,6 @@ import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { events as eventData } from "@/lib/data";
 import { Cake, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Briefcase, Building, Home, Milestone, Trophy, Ship, Heart } from "lucide-react";
 import {
   Dialog,
@@ -26,16 +25,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { doc, collection, serverTimestamp, arrayUnion, arrayRemove, orderBy, query, deleteDoc } from "firebase/firestore";
 import { Textarea } from "@/components/ui/textarea";
-import { format, parse, getDaysInMonth, startOfToday } from "date-fns";
+import { format, parse, startOfToday, isSameDay } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import type { WithId } from "@/firebase/firestore/use-collection";
 
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'Briefcase' | 'Building' | 'Home' | 'Milestone' | 'Trophy';
 
@@ -57,17 +56,17 @@ const colorOptions = [
 ];
 
 type EventItem = { 
-  id: string; 
   name: string; 
   event: string;
-  date: string;
+  date: any;
   likes: number; 
-  liked: boolean; 
+  likedBy: string[]; 
   icon: IconName; 
   color: string; 
   time?: string 
 };
 
+type EventItemWithId = WithId<EventItem>;
 
 export default function EventsPage() {
   const { user } = useUser();
@@ -82,12 +81,14 @@ export default function EventsPage() {
   const userRole = (userData as any)?.role || 'Member';
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
-  const [events, setEvents] = React.useState<EventItem[]>(
-    eventData.map((e) => ({ ...e, id: `evt-${Math.random()}`, likes: Math.floor(Math.random() * 25), liked: false, icon: e.event === "Birthday" ? 'Cake' : 'PartyPopper', color: 'hsl(var(--primary))', time: e.event === 'Birthday' ? '12:00 PM' : undefined }))
+  const eventsQuery = useMemoFirebase(
+      () => query(collection(firestore, "events"), orderBy("date", "desc")),
+      [firestore]
   );
-  
+  const { data: events, isLoading } = useCollection<EventItem>(eventsQuery);
+
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [editingEvent, setEditingEvent] = React.useState<EventItem | null>(null);
+  const [editingEvent, setEditingEvent] = React.useState<EventItemWithId | null>(null);
 
   const [newEventName, setNewEventName] = React.useState("");
   const [newEventType, setNewEventType] = React.useState("");
@@ -99,18 +100,15 @@ export default function EventsPage() {
   const [date, setDate] = React.useState<Date>();
 
   const handleLike = (id: string) => {
-    setEvents((prevEvents) =>
-      prevEvents.map((event) => {
-        if (event.id === id) {
-          return {
-            ...event,
-            likes: event.liked ? event.likes - 1 : event.likes + 1,
-            liked: !event.liked,
-          };
-        }
-        return event;
-      })
-    );
+    if (!user) return;
+    const eventRef = doc(firestore, 'events', id);
+    const event = events?.find(e => e.id === id);
+    const liked = event?.likedBy.includes(user.uid);
+
+    updateDocumentNonBlocking(eventRef, {
+        likes: liked ? event.likes -1 : event.likes + 1,
+        likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid)
+    });
   };
   
   const resetForm = () => {
@@ -136,30 +134,35 @@ export default function EventsPage() {
         return;
     }
 
-    const eventPayload: EventItem = {
-        id: editingEvent ? editingEvent.id : `evt-${Date.now()}`,
+    const eventPayload = {
         name: newEventName,
         event: eventType,
-        date: format(date, "MMMM do"),
-        likes: editingEvent ? editingEvent.likes : 0,
-        liked: editingEvent ? editingEvent.liked : false,
+        date: date,
         icon: newEventIcon,
         color: newEventColor,
         time: newEventTime || undefined,
     };
     
     if (editingEvent) {
-      setEvents(prev => prev.map(e => e.id === editingEvent.id ? eventPayload : e));
+      const eventRef = doc(firestore, 'events', editingEvent.id);
+      updateDocumentNonBlocking(eventRef, eventPayload);
       toast({ title: "Event Updated", description: "The event has been successfully updated." });
     } else {
-      setEvents(prev => [eventPayload, ...prev]);
+      const newEventPayload = {
+          ...eventPayload,
+          id: `evt-${Date.now()}`,
+          likes: 0,
+          likedBy: [],
+      }
+      const eventRef = doc(firestore, 'events', newEventPayload.id);
+      addDocumentNonBlocking(collection(firestore, 'events'), newEventPayload);
       toast({ title: "Event Created", description: "The new event has been added to the calendar." });
     }
     
     resetForm();
   }
   
-  const handleOpenEditDialog = (event: EventItem) => {
+  const handleOpenEditDialog = (event: EventItemWithId) => {
     setEditingEvent(event);
     setNewEventName(event.name);
     
@@ -169,7 +172,7 @@ export default function EventsPage() {
       setOtherEventType(event.event);
     }
     
-    const eventDate = parse(event.date + " " + new Date().getFullYear(), "MMMM do yyyy", new Date());
+    const eventDate = event.date.toDate();
     setDate(eventDate);
     
     setNewEventTime(event.time || "");
@@ -179,7 +182,7 @@ export default function EventsPage() {
   }
 
   const handleDeleteEvent = (eventId: string) => {
-      setEvents(prev => prev.filter(e => e.id !== eventId));
+      deleteDocumentNonBlocking(doc(firestore, 'events', eventId));
       toast({ title: "Event Deleted", description: "The event has been removed." });
   }
 
@@ -187,6 +190,12 @@ export default function EventsPage() {
   const renderIcon = (iconName: IconName, props: React.SVGProps<SVGSVGElement>) => {
     const IconComponent = iconComponents[iconName] || HelpCircle;
     return <IconComponent {...props} />;
+  }
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate();
+    return format(date, "MMMM do");
   }
 
   return (
@@ -316,8 +325,11 @@ export default function EventsPage() {
             </Dialog>
         )}
       </PageHeader>
+       {isLoading ? (
+        <p>Loading events...</p>
+      ) : (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {events.map((event) => (
+        {events?.map((event) => (
           <Card key={event.id} className="flex flex-col">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -354,20 +366,18 @@ export default function EventsPage() {
             <CardContent className="flex-grow">
               <p className="text-muted-foreground">
                 <CalendarIcon className="inline-block mr-2 h-4 w-4" />
-                {event.date} {event.time && `at ${event.time}`}
+                {formatDate(event.date)} {event.time && `at ${event.time}`}
               </p>
             </CardContent>
             <CardFooter>
               <Button
-                variant={event.liked ? "secondary" : "outline"}
+                variant={event.likedBy.includes(user?.uid || '') ? "secondary" : "outline"}
                 size="sm"
                 className="w-full"
                 onClick={() => handleLike(event.id)}
               >
                 <Heart
-                  className={`mr-2 h-4 w-4 ${
-                    event.liked ? "text-red-500 fill-red-500" : ""
-                  }`}
+                  className={cn("mr-2 h-4 w-4", event.likedBy.includes(user?.uid || '') && "text-red-500 fill-red-500")}
                 />
                 <span>{event.likes}</span>
               </Button>
@@ -375,6 +385,7 @@ export default function EventsPage() {
           </Card>
         ))}
       </div>
+      )}
     </>
   );
 }

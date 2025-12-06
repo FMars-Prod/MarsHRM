@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Eye, PlusCircle } from "lucide-react";
-import { announcements as initialAnnouncements } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -37,13 +36,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, useCollection, addDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { doc, collection, serverTimestamp, orderBy, query } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import type { WithId } from "@/firebase/firestore/use-collection";
 
-type Announcement = (typeof initialAnnouncements)[0] & { status: "Read" | "Unread" };
+type Announcement = { 
+  title: string;
+  content: string;
+  publishDate: any; 
+  authorId: string;
+};
+
+type AnnouncementWithStatus = WithId<Announcement> & { status: "Read" | "Unread" };
 
 export default function AnnouncementsPage() {
   const { user } = useUser();
@@ -58,12 +64,17 @@ export default function AnnouncementsPage() {
   const userRole = (userData as any)?.role || 'Member';
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
-  const [announcements, setAnnouncements] = React.useState(initialAnnouncements);
+  const announcementsQuery = useMemoFirebase(
+    () => query(collection(firestore, "announcements"), orderBy("publishDate", "desc")),
+    [firestore]
+  );
+  const { data: announcements, isLoading } = useCollection<Announcement>(announcementsQuery);
+
   const [announcementStatus, setAnnouncementStatus] = React.useState<
     Record<string, "Read" | "Unread">
   >({});
   const [selectedAnnouncement, setSelectedAnnouncement] =
-    React.useState<Announcement | null>(null);
+    React.useState<AnnouncementWithStatus | null>(null);
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [newTitle, setNewTitle] = React.useState("");
@@ -74,7 +85,7 @@ export default function AnnouncementsPage() {
   };
 
   const handleCreateAnnouncement = () => {
-    if (!newTitle || !newContent) {
+    if (!newTitle || !newContent || !user) {
       toast({
         variant: "destructive",
         title: "Missing fields",
@@ -83,12 +94,14 @@ export default function AnnouncementsPage() {
       return;
     }
     const newAnnouncement = {
-      id: `ann-${Date.now()}`,
       title: newTitle,
       content: newContent,
-      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      publishDate: serverTimestamp(),
+      authorId: user.uid
     };
-    setAnnouncements(prev => [newAnnouncement, ...prev]);
+    
+    addDocumentNonBlocking(collection(firestore, 'announcements'), newAnnouncement);
+    
     toast({
       title: "Announcement Published",
       description: "Your announcement is now live for all employees.",
@@ -98,11 +111,16 @@ export default function AnnouncementsPage() {
     setNewContent("");
   };
 
-
-  const allAnnouncements: Announcement[] = announcements.map((ann) => ({
+  const allAnnouncements: AnnouncementWithStatus[] = (announcements || []).map((ann) => ({
     ...ann,
     status: announcementStatus[ann.id] || "Unread",
   }));
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return 'Just now';
+    const date = timestamp.toDate();
+    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
 
   return (
     <>
@@ -155,46 +173,60 @@ export default function AnnouncementsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {allAnnouncements.map((announcement) => (
-                <TableRow key={announcement.id}>
-                  <TableCell className="font-medium">
-                    {announcement.title}
-                  </TableCell>
-                  <TableCell>{announcement.date}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        announcement.status === "Read" &&
-                          "text-green-600 border-green-600/50",
-                        announcement.status === "Unread" &&
-                          "text-yellow-600 border-yellow-600/50"
-                      )}
-                    >
-                      {announcement.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <SheetTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedAnnouncement(announcement);
-                          if (announcement.status === "Unread") {
-                            handleMarkAsRead(announcement.id);
-                          }
-                        }}
-                      >
-                        <Eye className="mr-2" />
-                        {announcement.status === "Unread"
-                          ? "View & Acknowledge"
-                          : "View"}
-                      </Button>
-                    </SheetTrigger>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    Loading announcements...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : allAnnouncements.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    No announcements found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                allAnnouncements.map((announcement) => (
+                  <TableRow key={announcement.id}>
+                    <TableCell className="font-medium">
+                      {announcement.title}
+                    </TableCell>
+                    <TableCell>{formatDate(announcement.publishDate)}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          announcement.status === "Read" &&
+                            "text-green-600 border-green-600/50",
+                          announcement.status === "Unread" &&
+                            "text-yellow-600 border-yellow-600/50"
+                        )}
+                      >
+                        {announcement.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <SheetTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedAnnouncement(announcement);
+                            if (announcement.status === "Unread") {
+                              handleMarkAsRead(announcement.id);
+                            }
+                          }}
+                        >
+                          <Eye className="mr-2" />
+                          {announcement.status === "Unread"
+                            ? "View & Acknowledge"
+                            : "View"}
+                        </Button>
+                      </SheetTrigger>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
@@ -203,7 +235,7 @@ export default function AnnouncementsPage() {
             <SheetHeader>
               <SheetTitle>{selectedAnnouncement.title}</SheetTitle>
               <SheetDescription>
-                Published on {selectedAnnouncement.date}
+                Published on {formatDate(selectedAnnouncement.publishDate)}
               </SheetDescription>
             </SheetHeader>
             <Separator className="my-4" />
@@ -218,3 +250,5 @@ export default function AnnouncementsPage() {
     </>
   );
 }
+
+    

@@ -33,7 +33,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, MoreHorizontal } from "lucide-react";
-import { issueData as allIssueData } from "@/lib/data";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,22 +45,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { doc, collection, serverTimestamp, orderBy, query } from "firebase/firestore";
 import React from "react";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import type { WithId } from "@/firebase/firestore/use-collection";
 
 type IssueStatus = "Open" | "In Progress" | "Resolved";
-type Issue = typeof allIssueData[0];
+
+type Issue = {
+  title: string;
+  description: string;
+  status: IssueStatus;
+  employeeId: string;
+  submittedBy: string;
+  submissionDate: any;
+  issueType: string;
+};
+
+type IssueWithId = WithId<Issue>;
 
 export default function IssuesPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
   
-  const [issues, setIssues] = React.useState<Issue[]>(allIssueData);
-  const [selectedIssue, setSelectedIssue] = React.useState<Issue | null>(null);
+  const [selectedIssue, setSelectedIssue] = React.useState<IssueWithId | null>(null);
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
@@ -72,15 +83,44 @@ export default function IssuesPage() {
   
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
-  const issueData = isAdmin ? issues : issues.filter(issue => issue.submittedBy === 'John Doe'); // Assuming John Doe is the logged-in member for demo
+  const issuesQuery = useMemoFirebase(
+      () => query(collection(firestore, "issue_reports"), orderBy("submissionDate", "desc")),
+      [firestore]
+  );
+  const { data: issues, isLoading } = useCollection<Issue>(issuesQuery);
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
+  const [newTitle, setNewTitle] = React.useState('');
+  const [newDescription, setNewDescription] = React.useState('');
+
 
   const handleStatusChange = (issueId: string, newStatus: IssueStatus) => {
-    setIssues(prevIssues => 
-      prevIssues.map(issue => 
-        issue.id === issueId ? { ...issue, status: newStatus } : issue
-      )
-    );
+    const issueRef = doc(firestore, 'issue_reports', issueId);
+    updateDocumentNonBlocking(issueRef, { status: newStatus });
   };
+
+  const handleCreateIssue = () => {
+    if (!newTitle || !newDescription || !user || !userData) {
+        toast({ variant: "destructive", title: "Missing fields" });
+        return;
+    }
+    const issuePayload = {
+        title: newTitle,
+        description: newDescription,
+        status: "Open" as IssueStatus,
+        employeeId: user.uid,
+        submittedBy: `${(userData as any).firstName} ${(userData as any).lastName}`,
+        submissionDate: serverTimestamp(),
+        issueType: "General",
+    }
+    addDocumentNonBlocking(collection(firestore, 'issue_reports'), issuePayload);
+    toast({ title: "Issue Submitted" });
+    setIsCreateDialogOpen(false);
+    setNewTitle('');
+    setNewDescription('');
+  }
+
+  const issueData = isAdmin ? issues : issues?.filter(issue => issue.employeeId === user?.uid);
 
   return (
     <>
@@ -88,7 +128,7 @@ export default function IssuesPage() {
         title="Issue Reporter"
         description="Log non-emergency issues or view the status of existing ones."
       >
-        <Dialog>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2" />
@@ -107,18 +147,18 @@ export default function IssuesPage() {
                 <Label htmlFor="title" className="text-right">
                   Title
                 </Label>
-                <Input id="title" placeholder="e.g., Office AC not working" className="col-span-3" />
+                <Input id="title" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g., Office AC not working" className="col-span-3" />
               </div>
               <div className="grid grid-cols-4 items-start gap-4">
                 <Label htmlFor="description" className="text-right pt-2">
                   Description
                 </Label>
-                <Textarea id="description" placeholder="Provide more details..." className="col-span-3" />
+                <Textarea id="description" value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Provide more details..." className="col-span-3" />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline">Cancel</Button>
-              <Button>Submit Issue</Button>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateIssue}>Submit Issue</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -135,7 +175,9 @@ export default function IssuesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {issueData.map((issue) => (
+              {isLoading ? (
+                <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading issues...</TableCell></TableRow>
+              ) : (issueData || []).map((issue) => (
                 <TableRow key={issue.id}>
                   <TableCell className="font-medium">{issue.title}</TableCell>
                   {isAdmin && <TableCell>{issue.submittedBy}</TableCell>}
@@ -220,3 +262,5 @@ export default function IssuesPage() {
     </>
   );
 }
+
+    

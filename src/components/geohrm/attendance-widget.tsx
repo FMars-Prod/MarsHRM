@@ -37,9 +37,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { format } from "date-fns";
+
 
 type AttendanceStatus = "out" | "in" | "break";
 
@@ -49,7 +51,6 @@ interface Location {
   maxDistanceKm?: number;
 }
 
-// Haversine formula to calculate distance between two lat/lon points in km
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
   if (!loc1 || !loc2) return Infinity;
   const R = 6371; // Radius of the Earth in km
@@ -79,7 +80,6 @@ export function AttendanceWidget() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  // Get user role
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
     [user, firestore]
@@ -88,7 +88,6 @@ export function AttendanceWidget() {
   const userRole = (userData as any)?.role || 'Member';
   const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
-  // Get office location from Firestore
   const officeLocationDocRef = useMemoFirebase(
     () => doc(firestore, "settings", "location"),
     [firestore]
@@ -111,6 +110,38 @@ export function AttendanceWidget() {
     }
   }, [officeLocation])
 
+  const getTodaysAttendanceRef = useMemoFirebase(() => {
+      if (!user) return null;
+      const todayId = format(new Date(), 'yyyy-MM-dd');
+      return doc(firestore, `users/${user.uid}/attendances`, todayId);
+  }, [user, firestore]);
+
+  const {data: todaysAttendance} = useDoc(getTodaysAttendanceRef);
+
+  useEffect(() => {
+    if (todaysAttendance) {
+        if (todaysAttendance.checkOutTime) {
+            setStatus("out");
+            setHasClockedOutToday(true);
+            const workDuration = (todaysAttendance.checkOutTime.toMillis() - todaysAttendance.checkInTime.toMillis()) / 1000;
+            setTimer(workDuration - (todaysAttendance.totalBreakDuration || 0));
+            setTotalBreakTime(todaysAttendance.totalBreakDuration || 0);
+        } else {
+            setStatus("in");
+            setHasClockedOutToday(false);
+            setLastClockInTime(todaysAttendance.checkInTime.toDate());
+            const secondsSinceClockIn = (new Date().getTime() - todaysAttendance.checkInTime.toMillis()) / 1000;
+            setTimer(secondsSinceClockIn);
+            setTotalBreakTime(todaysAttendance.totalBreakDuration || 0);
+        }
+    } else {
+        setStatus("out");
+        setHasClockedOutToday(false);
+        setTimer(0);
+        setTotalBreakTime(0);
+    }
+  }, [todaysAttendance]);
+
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -128,90 +159,84 @@ export function AttendanceWidget() {
     return () => clearInterval(breakInterval);
   }, [status]);
   
-  useEffect(() => {
-    if (typeof window !== 'undefined' && status === 'in' && lastClockInTime === null) {
-      setLastClockInTime(new Date());
-    }
-    if (status === 'out') {
-      setLastClockInTime(null);
-    }
-  }, [status]);
-
-
   const handleClockIn = () => {
-    if (!officeLocation) {
+    if (!officeLocation || !user) {
         toast({
             variant: "destructive",
-            title: "Office Location Not Set",
-            description: "An administrator must set the office location before clocking in.",
+            title: "Cannot Clock In",
+            description: "Office location not set or user not logged in.",
         });
         return;
     }
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+    navigator.geolocation.getCurrentPosition(
         (position) => {
-          const userLocation: Location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-          
+          const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
           const dist = getDistanceInKm(userLocation, officeLocation);
           setDistance(dist);
 
           if (dist > maxDistanceKm) {
-            toast({
-              variant: "destructive",
-              title: "Clock-In Failed",
-              description: `You are ${dist.toFixed(
-                2
-              )} km away from the office. You must be within ${maxDistanceKm} km.`,
-            });
+            toast({ variant: "destructive", title: "Clock-In Failed", description: `You are ${dist.toFixed(2)} km away. Must be within ${maxDistanceKm} km.` });
             return;
           }
 
           setCurrentUserLocation(userLocation);
+          const now = new Date();
+          const clockInTime = serverTimestamp();
+          
+          if (getTodaysAttendanceRef) {
+              setDocumentNonBlocking(getTodaysAttendanceRef, {
+                  id: format(now, 'yyyy-MM-dd'),
+                  employeeId: user.uid,
+                  checkInTime: clockInTime,
+                  status: now.getHours() > 9 ? 'late' : 'present',
+                  totalBreakDuration: 0,
+                  locationCheckInLatitude: userLocation.latitude,
+                  locationCheckInLongitude: userLocation.longitude,
+              }, { merge: true });
+          }
+
           setStatus("in");
-          setLastClockInTime(new Date());
+          setLastClockInTime(now);
           setTimer(0);
           setBreakTimer(0);
           setTotalBreakTime(0);
           setHasClockedOutToday(false);
-          toast({
-            title: "Clocked In",
-            description: `Your location has been recorded, ${dist.toFixed(
-              2
-            )} km from the office.`,
-          });
+          toast({ title: "Clocked In", description: `Location recorded, ${dist.toFixed(2)} km from office.` });
         },
-        (error) => {
-          console.error("Geolocation error:", error);
-          toast({
-            variant: "destructive",
-            title: "Location Error",
-            description: "Could not get location. Please enable location services.",
-          });
-        }
-      );
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Geolocation Not Supported",
-        description: "Your browser does not support geolocation.",
-      });
-    }
+        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."})
+    );
   };
 
   const handleClockOut = () => {
-    setStatus("out");
-    setHasClockedOutToday(true);
-    setCurrentUserLocation(null);
-    setDistance(null);
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+            if (getTodaysAttendanceRef) {
+                updateDoc(getTodaysAttendanceRef, {
+                    checkOutTime: serverTimestamp(),
+                    totalBreakDuration: totalBreakTime,
+                    locationCheckOutLatitude: userLocation.latitude,
+                    locationCheckOutLongitude: userLocation.longitude,
+                });
+            }
+            setStatus("out");
+            setHasClockedOutToday(true);
+            setCurrentUserLocation(null);
+            setDistance(null);
+        },
+        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."})
+    );
   };
 
   const handleBreak = () => {
     if (status === "break") {
       setTotalBreakTime((prev) => prev + breakTimer);
+      if (getTodaysAttendanceRef) {
+        updateDoc(getTodaysAttendanceRef, {
+            totalBreakDuration: totalBreakTime + breakTimer
+        });
+      }
       setBreakTimer(0);
       setStatus("in");
     } else {
@@ -225,38 +250,24 @@ export function AttendanceWidget() {
       const range = parseFloat(newMaxDistance);
 
       if (isNaN(lat) || isNaN(lon) || isNaN(range)) {
-          toast({
-              variant: "destructive",
-              title: "Invalid Input",
-              description: "Please enter valid numbers for latitude, longitude, and range."
-          });
+          toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers." });
           return;
       }
       
       if (officeLocationDocRef) {
         setDocumentNonBlocking(officeLocationDocRef, { latitude: lat, longitude: lon, maxDistanceKm: range }, { merge: true });
-        toast({
-            title: "Location Update Initiated",
-            description: "The office location and range are being updated."
-        });
+        toast({ title: "Location Update Initiated", description: "The office location and range are being updated." });
         setIsLocationDialogOpen(false);
       } else {
-        toast({
-          variant: "destructive",
-          title: "Update Failed",
-          description: "Could not save the new office location. Reference is missing."
-        });
+        toast({ variant: "destructive", title: "Update Failed", description: "Could not save the new office location." });
       }
   }
 
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-      2,
-      "0"
-    )}:${String(seconds).padStart(2, "0")}`;
+    const seconds = Math.floor(totalSeconds % 60);
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   };
 
   return (
@@ -420,8 +431,7 @@ export function AttendanceWidget() {
                     Are you sure you want to clock out?
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action will end your current work session. You can
-                    clock in again later if needed.
+                    This action will end your current work session.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -438,3 +448,4 @@ export function AttendanceWidget() {
     </Card>
   );
 }
+    

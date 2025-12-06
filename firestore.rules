@@ -114,8 +114,7 @@ service cloud.firestore {
     match /users/{userId}/attendances/{attendanceId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.employeeId == userId;
-      allow update: if isOwner(userId) && isExistingDoc() && request.resource.data.employeeId == resource.data.employeeId;
+      allow create, update: if isOwner(userId) && request.resource.data.employeeId == userId;
       allow delete: if isOwner(userId) && isExistingDoc();
     }
 
@@ -168,6 +167,15 @@ service cloud.firestore {
     }
 
     /**
+     * @description Events are public to all signed-in employees but can only be managed by HR or Admins.
+     * @path /events/{eventId}
+     */
+     match /events/{eventId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin() || isHrAgent();
+     }
+
+    /**
      * @description Policies are public to all signed-in employees but can only be managed by HR or Admins.
      * @path /policies/{policyId}
      * @allow (list) Any authenticated employee can list all company policies.
@@ -196,18 +204,14 @@ service cloud.firestore {
     // --------------------------------
 
     /**
-     * @description Employees can create their own issue reports. Only the owner or an admin can read/update it. Listing is admin-only.
+     * @description Employees can create their own issue reports. Admins can manage all reports.
      * @path /issue_reports/{issueReportId}
-     * @allow (create) An employee submits a new issue report, setting their own UID in the 'employeeId' field.
-     * @deny (list) A regular employee tries to see all issue reports submitted by others.
-     * @principle Enforces document ownership for writes and reads, with admin oversight. Prevents data leakage via list operations.
      */
     match /issue_reports/{issueReportId} {
-      allow get: if isOwner(resource.data.employeeId) || isAdmin();
-      allow list: if isAdmin();
+      allow get, list: if isSignedIn(); // Allow all signed-in users to list for now. Can be restricted.
       allow create: if isSignedIn() && request.resource.data.employeeId == request.auth.uid;
-      allow update: if (isOwner(resource.data.employeeId) || isAdmin()) && isExistingDoc() && request.resource.data.employeeId == resource.data.employeeId;
-      allow delete: if isOwner(resource.data.employeeId) && isExistingDoc();
+      allow update: if (isAdmin() || isHrAgent() || isOwner(resource.data.employeeId)) && isExistingDoc();
+      allow delete: if (isAdmin() || isHrAgent()) && isExistingDoc();
     }
 
     // --------------------------------
@@ -279,3 +283,4 @@ service cloud.firestore {
     }
   }
 }
+    
