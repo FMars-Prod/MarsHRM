@@ -188,7 +188,7 @@ service cloud.firestore {
      */
     match /settings/{settingId} {
         allow get, list: if isSignedIn();
-        allow create, update, delete: if isCeo() || isAdmin();
+        allow create, update, delete: if isCeo() || isAdmin() || isHrAgent();
     }
 
     // --------------------------------
