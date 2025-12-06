@@ -20,7 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown } from "lucide-react";
@@ -43,7 +42,10 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, getYear } from "date-fns";
+import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
 
 
 type LeaveRequest = (typeof initialLeaveData)[0] & { employee?: string };
@@ -123,14 +125,8 @@ export default function LeavePage() {
 
   const [leaveType, setLeaveType] = React.useState<string>("");
   const [leaveRequests, setLeaveRequests] = React.useState<LeaveRequest[]>(initialLeaveData);
+  const [date, setDate] = React.useState<DateRange | undefined>()
   
-  const [startDay, setStartDay] = React.useState<string>();
-  const [startMonth, setStartMonth] = React.useState<string>();
-  const [startYear, setStartYear] = React.useState<string>();
-  
-  const [endDay, setEndDay] = React.useState<string>();
-  const [endMonth, setEndMonth] = React.useState<string>();
-  const [endYear, setEndYear] = React.useState<string>();
   
   const handleRequestStatus = (requestId: string, newStatus: 'Pending HR Approval' | 'Rejected') => {
     setLeaveRequests(prev => prev.map(req => req.id === requestId ? {...req, status: newStatus} : req));
@@ -138,9 +134,6 @@ export default function LeavePage() {
 
   const allLeaveRequests = userRole === 'Team Lead' ? leaveRequests : leaveRequests.filter(r => r.employee === 'Jane Smith');
 
-  const years = Array.from({ length: 5 }, (_, i) => getYear(new Date()) + i);
-  const months = Array.from({ length: 12 }, (_, i) => ({ value: i, label: format(new Date(0, i), 'MMMM') }));
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
     <>
@@ -180,54 +173,48 @@ export default function LeavePage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="startDate" className="text-right">
-                  Start Date
+                <Label htmlFor="dates" className="text-right">
+                  Dates
                 </Label>
-                <div className="col-span-3 grid grid-cols-3 gap-2">
-                    <Select onValueChange={setStartYear} value={startYear}>
-                        <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                        <SelectContent>
-                            {years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select onValueChange={setStartMonth} value={startMonth}>
-                        <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                        <SelectContent>
-                            {months.map(month => <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select onValueChange={setStartDay} value={startDay}>
-                        <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                        <SelectContent>
-                            {days.map(day => <SelectItem key={day} value={String(day)}>{day}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                <div className={cn("col-span-3")}>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="date"
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date?.from ? (
+                          date.to ? (
+                            <>
+                              {format(date.from, "LLL dd, y")} -{" "}
+                              {format(date.to, "LLL dd, y")}
+                            </>
+                          ) : (
+                            format(date.from, "LLL dd, y")
+                          )
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={date?.from}
+                        selected={date}
+                        onSelect={setDate}
+                        numberOfMonths={2}
+                        fromDate={new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="endDate" className="text-right">
-                  End Date
-                </Label>
-                 <div className="col-span-3 grid grid-cols-3 gap-2">
-                    <Select onValueChange={setEndYear} value={endYear}>
-                        <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                        <SelectContent>
-                            {years.map(year => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select onValueChange={setEndMonth} value={endMonth}>
-                        <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                        <SelectContent>
-                            {months.map(month => <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select onValueChange={setEndDay} value={endDay}>
-                        <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                        <SelectContent>
-                            {days.map(day => <SelectItem key={day} value={String(day)}>{day}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                 </div>
               </div>
                <div className="grid grid-cols-4 items-start gap-4">
                 <Label htmlFor="reason" className="text-right pt-2">

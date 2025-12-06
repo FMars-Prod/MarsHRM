@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { events as eventData } from "@/lib/data";
-import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Briefcase, Building, Home, Milestone, Ship, Trophy } from "lucide-react";
+import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Briefcase, Building, Home, Milestone, Trophy, Ship } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -201,14 +200,14 @@ export default function EventsPage() {
                         Create Event
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-2xl">
+                <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                       <DialogTitle>{editingEvent ? 'Edit Event' : 'Create a New Event'}</DialogTitle>
                       <DialogDescription>
                           {editingEvent ? 'Update the details of the event.' : 'Add a birthday, work anniversary, or other event to the calendar.'}
                       </DialogDescription>
                   </DialogHeader>
-                  <ScrollArea className="max-h-[70vh]">
+                  <ScrollArea className="max-h-[70vh] -mx-6">
                     <div className="grid gap-4 py-4 px-6">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">Person's Name</Label>
@@ -253,6 +252,7 @@ export default function EventsPage() {
                                     mode="single"
                                     selected={date}
                                     onSelect={setDate}
+                                    fromDate={new Date()}
                                     initialFocus
                                     />
                                 </PopoverContent>
@@ -369,3 +369,5 @@ export default function EventsPage() {
     </>
   );
 }
+
+    
