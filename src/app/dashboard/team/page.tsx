@@ -38,6 +38,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 type Report = { id: string; date: string; summary: string };
 type TeamMember = { id: string; name: string; jobTitle: string; reports: Report[] };
@@ -58,14 +59,14 @@ export default function TeamPage() {
         toast({
             variant: "destructive",
             title: "Report already submitted",
-            description: "A report for this team member has already been submitted today.",
+            description: "A team member can only submit one report per day.",
         });
         return;
     }
 
     const newReport: Report = {
         id: `r${Date.now()}`,
-        date: new Date().toLocaleString(), // Includes date and time
+        date: new Date().toISOString(), // Use ISO string for full timestamp
         summary,
     };
 
@@ -101,7 +102,7 @@ export default function TeamPage() {
     const csvRows = [
         headers.join(','),
         ...selectedMember.reports.map(report => {
-            const date = `"${report.date}"`;
+            const date = `"${format(new Date(report.date), "PPpp")}"`;
             const summary = `"${report.summary.replace(/"/g, '""')}"`;
             return [date, summary].join(',');
         })
@@ -139,7 +140,7 @@ export default function TeamPage() {
                 const row = [
                     `"${member.name}"`,
                     `"${member.jobTitle}"`,
-                    `"${report.date}"`,
+                    `"${format(new Date(report.date), "PPpp")}"`,
                     `"${report.summary.replace(/"/g, '""')}"`
                 ];
                 csvRows.push(row.join(','));
@@ -298,14 +299,16 @@ export default function TeamPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Date</TableHead>
+                                    <TableHead>Date & Time</TableHead>
                                     <TableHead>Summary</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {selectedMember.reports.map(report => (
                                     <TableRow key={report.id}>
-                                        <TableCell className="text-sm text-muted-foreground">{report.date}</TableCell>
+                                        <TableCell className="text-sm text-muted-foreground">
+                                          {format(new Date(report.date), "MMM d, yyyy 'at' h:mm a")}
+                                        </TableCell>
                                         <TableCell>{report.summary}</TableCell>
                                     </TableRow>
                                 ))}
