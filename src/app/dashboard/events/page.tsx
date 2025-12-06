@@ -207,7 +207,7 @@ export default function EventsPage() {
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="time" className="text-right">Time (Optional)</Label>
-                            <Input id="time" value={newEventTime} onChange={(e) => setNewEventTime(e.target.value)} className="col-span-3" placeholder="e.g., 2:00 PM" />
+                            <Input id="time" type="time" value={newEventTime} onChange={(e) => setNewEventTime(e.target.value)} className="col-span-3" />
                         </div>
                         <div className="grid grid-cols-4 items-start gap-4">
                             <Label className="text-right pt-2">Icon</Label>
@@ -288,5 +288,3 @@ export default function EventsPage() {
     </>
   );
 }
-
-    
