@@ -130,11 +130,25 @@ export default function LeavePage() {
   const [endMonth, setEndMonth] = React.useState<number | undefined>();
   const [endDay, setEndDay] = React.useState<number | undefined>();
   
-  const handleRequestStatus = (requestId: string, newStatus: 'Pending HR Approval' | 'Rejected') => {
+  const handleRequestStatus = (requestId: string, newStatus: 'Pending HR Approval' | 'Approved' | 'Rejected') => {
     setLeaveRequests(prev => prev.map(req => req.id === requestId ? {...req, status: newStatus} : req));
   }
 
-  const allLeaveRequests = userRole === 'Team Lead' ? leaveRequests : leaveRequests.filter(r => r.employee === 'Jane Smith');
+  const getVisibleRequests = () => {
+    switch (userRole) {
+      case 'HR Manager':
+      case 'CEO/Admin':
+        return leaveRequests;
+      case 'Team Lead':
+        return leaveRequests; // Team lead sees all for now, can be filtered to their team later
+      case 'Member':
+      default:
+        // Assuming the logged in member is 'Jane Smith' for demo purposes
+        return leaveRequests.filter(r => r.employee === 'John Doe' || r.employee === 'Jane Smith');
+    }
+  }
+
+  const allLeaveRequests = getVisibleRequests();
 
   const today = startOfToday();
   const currentYear = today.getFullYear();
@@ -280,7 +294,7 @@ export default function LeavePage() {
         <Table>
           <TableHeader>
             <TableRow>
-              {userRole === 'Team Lead' && <TableHead>Employee</TableHead>}
+              {(userRole === 'Team Lead' || userRole === 'HR Manager' || userRole === 'CEO/Admin') && <TableHead>Employee</TableHead>}
               <TableHead>Dates</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
@@ -290,7 +304,7 @@ export default function LeavePage() {
           <TableBody>
             {allLeaveRequests.map((request) => (
               <TableRow key={request.id}>
-                {userRole === 'Team Lead' && <TableCell className="font-medium">{request.employee}</TableCell>}
+                {(userRole === 'Team Lead' || userRole === 'HR Manager' || userRole === 'CEO/Admin') && <TableCell className="font-medium">{request.employee}</TableCell>}
                 <TableCell className="font-medium">{`${request.startDate} - ${request.endDate}`}</TableCell>
                 <TableCell>{request.type}</TableCell>
                 <TableCell>
@@ -300,9 +314,19 @@ export default function LeavePage() {
                 </TableCell>
                 <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
-                        {userRole === 'Team Lead' && request.status === 'Pending' && request.employee !== 'Jane Smith' && (
+                        {userRole === 'Team Lead' && request.status === 'Pending' && (
                             <>
                                 <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Pending HR Approval')}>
+                                    <ThumbsUp className="mr-2 h-4 w-4"/> Approve
+                                </Button>
+                                <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected')}>
+                                    <ThumbsDown className="mr-2 h-4 w-4"/> Reject
+                                </Button>
+                            </>
+                        )}
+                         {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && request.status === 'Pending HR Approval' && (
+                            <>
+                                <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Approved')}>
                                     <ThumbsUp className="mr-2 h-4 w-4"/> Approve
                                 </Button>
                                 <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected')}>
