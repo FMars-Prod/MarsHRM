@@ -179,7 +179,12 @@ const AnalyticsPage = () => {
   const handlePresetChange = (value: string) => {
       setPreset(value);
       const now = new Date();
-      if (value === 'last-7-days') {
+      if (value === 'today') {
+          setDateRange({ from: now, to: now });
+      } else if (value === 'yesterday') {
+          const yesterday = subDays(now, 1);
+          setDateRange({ from: yesterday, to: yesterday });
+      } else if (value === 'last-7-days') {
           setDateRange({ from: subDays(now, 6), to: now });
       } else if (value === 'this-month') {
           setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
@@ -213,6 +218,8 @@ const AnalyticsPage = () => {
               <SelectValue placeholder="Select a preset" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="yesterday">Yesterday</SelectItem>
               <SelectItem value="last-7-days">Last 7 days</SelectItem>
               <SelectItem value="this-month">This month</SelectItem>
               <SelectItem value="last-month">Last month</SelectItem>
@@ -421,5 +428,3 @@ const AnalyticsPage = () => {
 };
 
 export default AnalyticsPage;
-
-    
