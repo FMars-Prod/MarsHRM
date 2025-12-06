@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { events as eventData } from "@/lib/data";
-import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Briefcase, Building, Home, Milestone, Trophy, Ship } from "lucide-react";
+import { Cake, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Briefcase, Building, Home, Milestone, Trophy, Ship } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,8 +31,9 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Textarea } from "@/components/ui/textarea";
-import { format, parse, getDaysInMonth } from "date-fns";
+import { format, parse, getDaysInMonth, startOfToday } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'Briefcase' | 'Building' | 'Home' | 'Milestone' | 'Trophy';
 
@@ -46,6 +47,11 @@ const colorOptions = [
     { id: 'chart-1', value: 'hsl(var(--chart-1))', className: 'bg-chart-1' },
     { id: 'chart-2', value: 'hsl(var(--chart-2))', className: 'bg-chart-2' },
     { id: 'chart-3', value: 'hsl(var(--chart-3))', className: 'bg-chart-3' },
+    { id: 'chart-4', value: 'hsl(var(--chart-4))', className: 'bg-chart-4' },
+    { id: 'chart-5', value: 'hsl(var(--chart-5))', className: 'bg-chart-5' },
+    { id: 'destructive', value: 'hsl(var(--destructive))', className: 'bg-destructive' },
+    { id: 'green-500', value: '#10B981', className: 'bg-green-500' },
+    { id: 'blue-500', value: '#3B82F6', className: 'bg-blue-500' },
 ];
 
 type EventItem = { 
@@ -64,6 +70,7 @@ type EventItem = {
 export default function EventsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
@@ -87,6 +94,7 @@ export default function EventsPage() {
   const [newEventColor, setNewEventColor] = React.useState<string>('hsl(var(--primary))');
   const [newEventTime, setNewEventTime] = React.useState("");
   
+  const today = startOfToday();
   const [year, setYear] = React.useState<number | undefined>();
   const [month, setMonth] = React.useState<number | undefined>();
   const [day, setDay] = React.useState<number | undefined>();
@@ -123,7 +131,11 @@ export default function EventsPage() {
   const handleCreateOrUpdateEvent = () => {
     const eventType = newEventType === "Other" ? otherEventType : newEventType;
     if (!newEventName || !eventType || !year || month === undefined || !day) {
-        console.error("All fields are required");
+        toast({
+            variant: "destructive",
+            title: "Missing Information",
+            description: "Please fill out all required fields: name, event type, and full date.",
+        });
         return;
     }
     
@@ -143,8 +155,10 @@ export default function EventsPage() {
     
     if (editingEvent) {
       setEvents(prev => prev.map(e => e.id === editingEvent.id ? eventPayload : e));
+      toast({ title: "Event Updated", description: "The event has been successfully updated." });
     } else {
       setEvents(prev => [eventPayload, ...prev]);
+      toast({ title: "Event Created", description: "The new event has been added to the calendar." });
     }
     
     resetForm();
@@ -173,6 +187,7 @@ export default function EventsPage() {
 
   const handleDeleteEvent = (eventId: string) => {
       setEvents(prev => prev.filter(e => e.id !== eventId));
+      toast({ title: "Event Deleted", description: "The event has been removed." });
   }
 
 
@@ -181,18 +196,18 @@ export default function EventsPage() {
     return <IconComponent {...props} />;
   }
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const currentDay = today.getDate();
+
   const years = Array.from({ length: 10 }, (_, i) => currentYear + i);
   const months = Array.from({ length: 12 }, (_, i) => ({ label: format(new Date(0, i), 'MMMM'), value: i }));
+  
   const daysInMonth = (year && month !== undefined) ? getDaysInMonth(new Date(year, month)) : 31;
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  const isPastMonth = (m: number) => {
-      return year === currentYear && m < new Date().getMonth();
-  }
-  const isPastDay = (d: number) => {
-      return year === currentYear && month === new Date().getMonth() && d < new Date().getDate();
-  }
+  const isPastMonth = (m: number) => year === currentYear && m < currentMonth;
+  const isPastDay = (d: number) => year === currentYear && month === currentMonth && d < currentDay;
 
   return (
     <>
