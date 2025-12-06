@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, isSameDay, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -22,8 +22,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { WithId } from '@/firebase/firestore/use-collection';
-import { DateRange } from 'react-day-picker';
-
 
 type User = {
   firstName: string;
@@ -54,11 +52,7 @@ const AnalyticsPage = () => {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
-    from: subDays(new Date(), 6),
-    to: new Date(),
-  });
-  const [preset, setPreset] = React.useState<string>('last-7-days');
+  const [date, setDate] = React.useState<Date | undefined>(new Date());
 
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
@@ -67,17 +61,30 @@ const AnalyticsPage = () => {
   const selectedUser = users?.find(u => u.id === selectedUserId);
 
   const attendanceQuery = useMemoFirebase(() => {
-    if (!selectedUserId || !dateRange?.from) return null;
-    // Use the end of the day for the 'to' date to include all records on that day
-    const toDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+    if (!selectedUserId || !date) return null;
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
     return query(
       collection(firestore, `users/${selectedUserId}/attendances`),
-      where('checkInTime', '>=', startOfDay(dateRange.from)),
-      where('checkInTime', '<=', toDate),
+      where('checkInTime', '>=', dayStart),
+      where('checkInTime', '<=', dayEnd),
       orderBy('checkInTime', 'desc')
     );
-  }, [firestore, selectedUserId, dateRange]);
+  }, [firestore, selectedUserId, date]);
   const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
+
+  const weeklyChartQuery = useMemoFirebase(() => {
+    if(!selectedUserId) return null;
+    const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
+    const today = endOfDay(new Date());
+    return query(
+        collection(firestore, `users/${selectedUserId}/attendances`),
+        where('checkInTime', '>=', sevenDaysAgo),
+        where('checkInTime', '<=', today),
+        orderBy('checkInTime', 'asc')
+    );
+  }, [firestore, selectedUserId]);
+  const {data: weeklyAttendance} = useCollection<AttendanceRecord>(weeklyChartQuery);
 
 
   const stats = React.useMemo(() => {
@@ -101,14 +108,11 @@ const AnalyticsPage = () => {
   }, [attendanceData]);
 
   const chartData = React.useMemo(() => {
-      if (!attendanceData) return [];
+      if (!weeklyAttendance) return [];
       
-      const rangeStart = dateRange?.from ? startOfDay(dateRange.from) : startOfDay(new Date());
-      const rangeEnd = dateRange?.to ? endOfDay(dateRange.to) : endOfDay(new Date());
-
       const dataMap = new Map<string, { work: number, break: number }>();
 
-      (attendanceData || []).forEach(rec => {
+      weeklyAttendance.forEach(rec => {
           if (rec.checkInTime) {
               const day = format(rec.checkInTime.toDate(), 'yyyy-MM-dd');
               let workHours = 0, breakHours = 0;
@@ -129,7 +133,7 @@ const AnalyticsPage = () => {
           work: parseFloat(values.work.toFixed(2)),
           break: parseFloat(values.break.toFixed(2)),
       })).reverse();
-  }, [attendanceData, dateRange]);
+  }, [weeklyAttendance]);
 
 
   const userAvatar = PlaceHolderImages.find((image) => image.id === 'user-avatar-1');
@@ -169,34 +173,16 @@ const AnalyticsPage = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    const datePart = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : 'export';
+    const datePart = date ? format(date, 'yyyy-MM-dd') : 'export';
     link.setAttribute('download', `${selectedUser?.firstName}_${selectedUser?.lastName}_attendance_${datePart}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
   
-  const handlePresetChange = (value: string) => {
-      setPreset(value);
-      const now = new Date();
-      if (value === 'today') {
-          setDateRange({ from: now, to: now });
-      } else if (value === 'yesterday') {
-          const yesterday = subDays(now, 1);
-          setDateRange({ from: yesterday, to: yesterday });
-      } else if (value === 'last-7-days') {
-          setDateRange({ from: subDays(now, 6), to: now });
-      } else if (value === 'this-month') {
-          setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
-      } else if (value === 'last-month') {
-          const lastMonth = subMonths(now, 1);
-          setDateRange({ from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) });
-      }
-  }
-
   return (
     <>
-      <PageHeader title="Employee Analytics" description="Select an employee and a date range to view their performance and attendance." />
+      <PageHeader title="Employee Analytics" description="Select an employee and a date to view their performance and attendance." />
 
       <div className="flex flex-wrap items-center gap-4 mb-6">
         <div className="w-full sm:w-auto sm:min-w-64">
@@ -213,54 +199,29 @@ const AnalyticsPage = () => {
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
-           <Select value={preset} onValueChange={handlePresetChange}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Select a preset" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="yesterday">Yesterday</SelectItem>
-              <SelectItem value="last-7-days">Last 7 days</SelectItem>
-              <SelectItem value="this-month">This month</SelectItem>
-              <SelectItem value="last-month">Last month</SelectItem>
-            </SelectContent>
-          </Select>
+          <Button variant={isSameDay(date || new Date(), new Date()) ? 'default' : 'outline'} onClick={() => setDate(new Date())}>Today</Button>
+          <Button variant={isSameDay(date || new Date(), subDays(new Date(), 1)) ? 'default' : 'outline'} onClick={() => setDate(subDays(new Date(), 1))}>Yesterday</Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 id="date"
                 variant={"outline"}
                 className={cn(
-                  "w-full md:w-[300px] justify-start text-left font-normal",
-                  !dateRange && "text-muted-foreground"
+                  "w-full md:w-[260px] justify-start text-left font-normal",
+                  !date && "text-muted-foreground"
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange?.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "LLL dd, y")} -{" "}
-                      {format(dateRange.to, "LLL dd, y")}
-                    </>
-                  ) : (
-                    format(dateRange.from, "LLL dd, y")
-                  )
-                ) : (
-                  <span>Pick a date</span>
-                )}
+                {date ? format(date, "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 initialFocus
-                mode="range"
-                defaultMonth={dateRange?.from}
-                selected={dateRange}
-                onSelect={(range) => {
-                    setDateRange(range);
-                    setPreset('custom');
-                }}
-                numberOfMonths={2}
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                disabled={(d) => d > new Date() || d < new Date("1900-01-01")}
               />
             </PopoverContent>
           </Popover>
@@ -305,7 +266,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalHours} hrs</div>
-                    <p className="text-xs text-muted-foreground">in selected period</p>
+                    <p className="text-xs text-muted-foreground">on selected day</p>
                 </CardContent>
             </Card>
             <Card>
@@ -315,7 +276,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalBreakHours} hrs</div>
-                    <p className="text-xs text-muted-foreground">in selected period</p>
+                     <p className="text-xs text-muted-foreground">on selected day</p>
                 </CardContent>
             </Card>
             <Card>
@@ -324,18 +285,18 @@ const AnalyticsPage = () => {
                     <CalendarOff className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalLeaves} days</div>
-                    <p className="text-xs text-muted-foreground">in selected period</p>
+                    <div className="text-2xl font-bold">{stats.totalLeaves > 0 ? 'Yes' : 'No'}</div>
+                    <p className="text-xs text-muted-foreground">on selected day</p>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Late Days</CardTitle>
+                    <CardTitle className="text-sm font-medium">Late Entry</CardTitle>
                     <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.lateDays} days</div>
-                    <p className="text-xs text-muted-foreground">in selected period</p>
+                    <div className="text-2xl font-bold">{stats.lateDays > 0 ? 'Yes' : 'No'}</div>
+                     <p className="text-xs text-muted-foreground">on selected day</p>
                 </CardContent>
             </Card>
         </div>
@@ -344,8 +305,8 @@ const AnalyticsPage = () => {
             <div className="lg:col-span-2">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Weekly Work Hours</CardTitle>
-                        <CardDescription>Work vs. Break hours over the selected period.</CardDescription>
+                        <CardTitle>Last 7 Days Work Hours</CardTitle>
+                        <CardDescription>Work vs. Break hours over the last 7 days.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
@@ -368,7 +329,7 @@ const AnalyticsPage = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Attendance Log</CardTitle>
-                        <CardDescription>Activity for the selected period.</CardDescription>
+                        <CardDescription>Activity for the selected day.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -414,7 +375,7 @@ const AnalyticsPage = () => {
                         </Table>
                          {(!attendanceData || attendanceData.length === 0) && (
                             <div className="text-center py-10 text-muted-foreground">
-                                No attendance records found for the selected period.
+                                No attendance records found for the selected day.
                             </div>
                          )}
                     </CardContent>
