@@ -42,7 +42,7 @@ const iconComponents: Record<IconName, React.FC<React.SVGProps<SVGSVGElement>>> 
 
 const colorOptions = [
     { id: 'primary', value: 'hsl(var(--primary))', className: 'bg-primary' },
-    { id: 'accent', value: 'hsl(var(--accent))', className: 'bg-accent' },
+    { id: 'accent', value: 'hsl(var(--accent))', className: 'bg-chart-2' },
     { id: 'chart-2', value: 'hsl(var(--chart-2))', className: 'bg-chart-2' },
     { id: 'chart-3', value: 'hsl(var(--chart-3))', className: 'bg-chart-3' },
     { id: 'chart-5', value: 'hsl(var(--chart-5))', className: 'bg-chart-5' },
@@ -189,7 +189,7 @@ export default function EventsPage() {
                                             {newEventDate ? format(newEventDate, "PPP") : <span>Pick a date</span>}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                                         <Calendar
                                             mode="single"
                                             selected={newEventDate}
