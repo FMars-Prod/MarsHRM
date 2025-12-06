@@ -78,12 +78,6 @@ export default function PoliciesPage() {
                   </Label>
                   <Input id="title" placeholder="e.g., Employee Handbook" className="col-span-3" />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="version" className="text-right">
-                    Version
-                  </Label>
-                  <Input id="version" placeholder="e.g., v1.0" className="col-span-3" />
-                </div>
                 <div className="grid grid-cols-4 items-start gap-4">
                   <Label htmlFor="content" className="text-right pt-2">
                     Content
