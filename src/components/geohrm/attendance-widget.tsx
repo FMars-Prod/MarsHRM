@@ -18,6 +18,7 @@ type AttendanceStatus = "out" | "in" | "break";
 export function AttendanceWidget() {
   const [status, setStatus] = useState<AttendanceStatus>("out");
   const [timer, setTimer] = useState(0);
+  const [breakTimer, setBreakTimer] = useState(0);
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -34,6 +35,18 @@ export function AttendanceWidget() {
     return () => clearInterval(interval);
   }, [status]);
   
+  useEffect(() => {
+    let breakInterval: NodeJS.Timeout | undefined;
+    if (status === 'break') {
+      breakInterval = setInterval(() => {
+        setBreakTimer(prev => prev + 1);
+      }, 1000);
+    } else {
+      setBreakTimer(0); // Reset break timer when not on break
+    }
+    return () => clearInterval(breakInterval);
+  }, [status]);
+
   useEffect(() => {
     // This effect runs only on the client to avoid hydration mismatch for Date
     if (status === 'in' && lastClockInTime === null) {
@@ -93,8 +106,18 @@ export function AttendanceWidget() {
           {status === "out" && <CheckCircle2 className="size-5" />}
           You are currently Clocked {status === "break" ? "on a Break" : status.charAt(0).toUpperCase() + status.slice(1)}
         </div>
-        <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter">
-          {formatTime(timer)}
+        <div className="flex items-center gap-4">
+            <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter">
+            {formatTime(timer)}
+            </div>
+            {status === 'break' && (
+                <div className="flex flex-col items-center">
+                    <span className="text-sm text-muted-foreground">Break</span>
+                    <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
+                        {formatTime(breakTimer)}
+                    </div>
+                </div>
+            )}
         </div>
         {lastClockInTime && status !== 'out' && (
              <p className="text-sm text-muted-foreground">
