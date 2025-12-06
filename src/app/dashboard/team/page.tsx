@@ -29,11 +29,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, FileText } from "lucide-react";
+import { PlusCircle, FileText, Download } from "lucide-react";
 import { teamData as initialTeamData } from "@/lib/data";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -86,6 +85,39 @@ export default function TeamPage() {
     setIsAddReportDialogOpen(false);
   };
 
+  const handleExport = () => {
+    if (!selectedMember || selectedMember.reports.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No reports to export",
+        });
+        return;
+    }
+
+    const headers = ["Date", "Summary"];
+    const csvRows = [
+        headers.join(','),
+        ...selectedMember.reports.map(report => {
+            const date = `"${report.date}"`;
+            const summary = `"${report.summary.replace(/"/g, '""')}"`;
+            return [date, summary].join(',');
+        })
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.href) {
+        URL.revokeObjectURL(link.href);
+    }
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `${selectedMember.name.replace(/\s/g, '_')}_reports.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
 
   return (
     <>
@@ -131,43 +163,49 @@ export default function TeamPage() {
             </SheetHeader>
             <Separator className="my-4" />
             <div className="space-y-4">
-              <Dialog open={isAddReportDialogOpen} onOpenChange={setIsAddReportDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <PlusCircle className="mr-2" />
-                    Add New Report
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <form onSubmit={(e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.currentTarget);
-                        const summary = formData.get("summary") as string;
-                        if (summary && selectedMember) {
-                            handleAddReport(selectedMember.id, summary);
-                        }
-                    }}>
-                        <DialogHeader>
-                            <DialogTitle>New Report for {selectedMember.name}</DialogTitle>
-                            <DialogDescription>
-                            Enter the details of the work report below.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                            <Label htmlFor="summary">Report Summary</Label>
-                            <Textarea id="summary" name="summary" placeholder="Describe the work accomplished..." required />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button type="button" variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <Button type="submit">Save Report</Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-              </Dialog>
+              <div className="flex gap-2">
+                <Dialog open={isAddReportDialogOpen} onOpenChange={setIsAddReportDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <PlusCircle className="mr-2" />
+                      Add New Report
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                      <form onSubmit={(e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.currentTarget);
+                          const summary = formData.get("summary") as string;
+                          if (summary && selectedMember) {
+                              handleAddReport(selectedMember.id, summary);
+                          }
+                      }}>
+                          <DialogHeader>
+                              <DialogTitle>New Report for {selectedMember.name}</DialogTitle>
+                              <DialogDescription>
+                              Enter the details of the work report below.
+                              </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                              <div className="grid gap-2">
+                              <Label htmlFor="summary">Report Summary</Label>
+                              <Textarea id="summary" name="summary" placeholder="Describe the work accomplished..." required />
+                              </div>
+                          </div>
+                          <DialogFooter>
+                              <DialogClose asChild>
+                                  <Button type="button" variant="outline">Cancel</Button>
+                              </DialogClose>
+                              <Button type="submit">Save Report</Button>
+                          </DialogFooter>
+                      </form>
+                  </DialogContent>
+                </Dialog>
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="mr-2"/>
+                    Export as CSV
+                </Button>
+              </div>
 
               <div className="mt-4 space-y-4">
                 <h4 className="font-semibold">Existing Reports</h4>
