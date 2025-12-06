@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Download } from 'lucide-react';
@@ -38,6 +38,18 @@ type AttendanceRecord = {
   totalBreakDuration?: number;
   status: 'present' | 'late' | 'absent' | 'on_leave';
 };
+
+const chartConfig = {
+  work: {
+    label: "Work",
+    color: "hsl(var(--primary))",
+  },
+  break: {
+    label: "Break",
+    color: "hsl(var(--muted-foreground))",
+  },
+} satisfies React.ComponentProps<typeof ChartContainer>['config'];
+
 
 const AnalyticsPage = () => {
   const firestore = useFirestore();
@@ -281,19 +293,19 @@ const AnalyticsPage = () => {
                         <CardDescription>Work vs. Break hours over the last 7 days.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={chartData}>
+                        <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                            <BarChart accessibilityLayer data={chartData}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
                                 <YAxis unit="h" />
-                                 <Tooltip 
-                                    cursor={{ fill: 'hsl(var(--muted))' }}
-                                    content={<ChartTooltipContent formatter={(value) => `${value}h`} indicator="dot" />}
+                                 <ChartTooltip 
+                                    cursor={false}
+                                    content={<ChartTooltipContent formatter={(value) => `${value}h`} />}
                                 />
-                                <Bar dataKey="work" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Work" />
-                                <Bar dataKey="break" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} name="Break" />
+                                <Bar dataKey="work" fill="var(--color-work)" radius={[4, 4, 0, 0]} name="Work" />
+                                <Bar dataKey="break" fill="var(--color-break)" radius={[4, 4, 0, 0]} name="Break" />
                             </BarChart>
-                        </ResponsiveContainer>
+                        </ChartContainer>
                     </CardContent>
                 </Card>
             </div>
@@ -361,3 +373,5 @@ const AnalyticsPage = () => {
 };
 
 export default AnalyticsPage;
+
+    
