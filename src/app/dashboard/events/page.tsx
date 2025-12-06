@@ -25,6 +25,10 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+
 
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'HelpCircle';
 
@@ -60,16 +64,18 @@ export default function EventsPage() {
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
   const [events, setEvents] = React.useState<EventItem[]>(
-    eventData.map((e) => ({ ...e, likes: Math.floor(Math.random() * 25), liked: false, icon: e.event === "Birthday" ? 'Cake' : 'PartyPopper', color: 'hsl(var(--primary))' }))
+    eventData.map((e) => ({ ...e, likes: Math.floor(Math.random() * 25), liked: false, icon: e.event === "Birthday" ? 'Cake' : 'PartyPopper', color: 'hsl(var(--primary))', time: e.event === 'Birthday' ? '12:00 PM' : undefined }))
   );
   
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [newEventName, setNewEventName] = React.useState("");
-  const [newEventDate, setNewEventDate] = React.useState<string>("");
+  const [newEventDate, setNewEventDate] = React.useState<Date | undefined>();
   const [newEventType, setNewEventType] = React.useState("");
   const [otherEventType, setOtherEventType] = React.useState("");
   const [newEventIcon, setNewEventIcon] = React.useState<IconName>('HelpCircle');
   const [newEventColor, setNewEventColor] = React.useState<string>('hsl(var(--primary))');
+  const [newEventTime, setNewEventTime] = React.useState("");
+
 
   const handleLike = (id: string) => {
     setEvents((prevEvents) =>
@@ -98,22 +104,24 @@ export default function EventsPage() {
         id: `evt-${Date.now()}`,
         name: newEventName,
         event: eventType,
-        date: newEventDate,
+        date: format(newEventDate, "MMMM do"),
         likes: 0,
         liked: false,
         icon: newEventIcon,
         color: newEventColor,
+        time: newEventTime || undefined,
     };
 
     setEvents(prev => [newEvent, ...prev]);
 
     // Reset form and close dialog
     setNewEventName("");
-    setNewEventDate("");
+    setNewEventDate(undefined);
     setNewEventType("");
     setOtherEventType("");
     setNewEventIcon('HelpCircle');
     setNewEventColor('hsl(var(--primary))');
+    setNewEventTime("");
     setIsDialogOpen(false);
   }
 
@@ -169,7 +177,32 @@ export default function EventsPage() {
                         )}
                         <div className="grid grid-cols-4 items-center gap-4">
                              <Label htmlFor="date" className="text-right">Date</Label>
-                             <Input id="date" value={newEventDate} onChange={(e) => setNewEventDate(e.target.value)} className="col-span-3" placeholder="e.g., August 5th" />
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                      "col-span-3 justify-start text-left font-normal",
+                                      !newEventDate && "text-muted-foreground"
+                                    )}
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {newEventDate ? format(newEventDate, "PPP") : <span>Pick a date</span>}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                                  <Calendar
+                                    mode="single"
+                                    selected={newEventDate}
+                                    onSelect={setNewEventDate}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="time" className="text-right">Time (Optional)</Label>
+                            <Input id="time" value={newEventTime} onChange={(e) => setNewEventTime(e.target.value)} className="col-span-3" placeholder="e.g., 2:00 PM" />
                         </div>
                         <div className="grid grid-cols-4 items-start gap-4">
                             <Label className="text-right pt-2">Icon</Label>
