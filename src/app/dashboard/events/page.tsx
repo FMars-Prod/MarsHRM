@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { events as eventData } from "@/lib/data";
-import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Anchor, AppWindow, Armchair, Baby, BadgeCheck, Banana, BarChart, Beer, Bike, Bomb, Bone, Book, Bot, Box, Brain, Briefcase, Brush, Bug, Building, Bus, Camera, CandlestickChart, Car, Carrot, Castle, Cat, Check, ChefHat, Cherry, Church, Citrus, Clipboard, Cloud, Code, Cog, Coins, Compass, Computer, Cone, Construction, Contact, Contrast, Cookie, Copy, Crown, CupSoda, Currency, Database, Diamond, Dice5, Dna, Dog, DollarSign, Donut, DoorClosed, DraftingCompass, Dribbble, Dumbbell, Ear, Egg, Euro, Eye, Factory, Fan, Feather, FerrisWheel, Figma, File, Film, Filter, Fingerprint, FireExtinguisher, Flag, Flame, Flashlight, FlaskConical, Flower, Folder, Goal, Forklift, Framer, Gamepad2, Gauge, Gavel, Gem, Ghost, GitBranch, GitCommit, GitFork, GitMerge, GitPullRequest, Github, Gitlab, GlassWater, Glasses, Globe, Grab, GraduationCap, Grape, Grid, Hammer, Hand, HardHat, Hash, Haze, Heading, Headphones, HeartPulse, Heater, Hexagon, Highlighter, History, Home, Hop, Hourglass, IceCream, Image as ImageIcon, Inbox, Indent, IndianRupee, Infinity, Info, InspectionPanel, Instagram, Italic, IterationCcw, IterationCw, JapaneseYen, Joystick, Kanban, Key, Keyboard, Lamp, Landmark, Laptop, Lasso, Laugh, Layers, Layout, Leaf, Library, LifeBuoy, Lightbulb, Link, Linkedin, List, Locate, Lock, LogIn, LogOut, Luggage, Magnet, Mail, Map, Martini, Medal, Megaphone, Menu, MessageCircle, MessageSquare, Mic, Microscope, Microwave, Milestone, Milk, Minus, Monitor, Moon, Mouse, Move, Music, Navigation, Network, Newspaper, Nut, Orbit, Package, Paintbrush, Palette, Paperclip, ParkingCircle, Pause, PcCase, Pen, Pencil, Percent, PersonStanding, Phone, PieChart, Pilcrow, Pin, Plane, Plug, Pocket, Podcast, Pointer, PoundSterling, Power, Presentation, Printer, Projector, Puzzle, Quote, Radio, Recycle, Redo, Regex, RemoveFormatting, Repeat, Reply, Rocket, Rows, Rss, Ruler, RussianRuble, Sailboat, Save, Scale, Scan, School, Scissors, ScreenShare, Scroll, Search, Send, SeparatorHorizontal, Server, Share, Shield, Ship, ShoppingBag, ShoppingCart, Shovel, ShowerHead, Sigma, Signal, Siren, Skull, Slack, Slice, Sliders, Smartphone, Smile, Snowflake, SortAsc, SortDesc, Speaker, Spline, Sprout, Square, Star, Stethoscope, Sticker, StickyNote, Strikethrough, Subscript, Sun, Superscript, SwissFranc, SwitchCamera, Sword, Swords, Syringe, Table, Tablet, Tag, Target, Tent, Terminal, TestTube, Text, ThumbsDown, ThumbsUp, Ticket, Timer, ToyBrick, Train, Trash, TreePine, Trophy, Truck, Tv, Twitter, Underline, UnfoldHorizontal, UnfoldVertical, Unlink, Upload, Usb, Video, View, Voicemail, Volume, Wallet, Wand, Watch, Waves, Webcam, Webhook, Weight, Wheat, Wifi, Wind, Wine, Wrench, Youtube, Zap } from "lucide-react";
+import { Cake, Heart, PartyPopper, PlusCircle, Calendar as CalendarIcon, HelpCircle, Users, Gift, Award, MoreVertical, Edit, Trash2, Briefcase, Building, Home, Milestone, Ship, Trophy } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,24 +32,29 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Textarea } from "@/components/ui/textarea";
-import { format, getYear, getMonth, getDate, parse } from "date-fns";
+import { format, parse } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
-type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'HelpCircle' | 'Anchor' | 'AppWindow' | 'Armchair' | 'Baby' | 'BadgeCheck' | 'Banana' | 'BarChart' | 'Beer' | 'Bike' | 'Bomb' | 'Bone' | 'Book' | 'Bot' | 'Box' | 'Brain' | 'Briefcase' | 'Brush' | 'Bug' | 'Building' | 'Bus' | 'Camera' | 'CandlestickChart' | 'Car' | 'Carrot' | 'Castle' | 'Cat' | 'Check' | 'ChefHat' | 'Cherry' | 'Church' | 'Citrus' | 'Clipboard' | 'Cloud' | 'Code' | 'Cog' | 'Coins' | 'Compass' | 'Computer' | 'Cone' | 'Construction' | 'Contact' | 'Contrast' | 'Cookie' | 'Copy' | 'Crown' | 'CupSoda' | 'Currency' | 'Database' | 'Diamond' | 'Dice5' | 'Dna' | 'Dog' | 'DollarSign' | 'Donut' | 'DoorClosed' | 'DraftingCompass' | 'Dribbble' | 'Dumbbell' | 'Ear' | 'Egg' | 'Euro' | 'Eye' | 'Factory' | 'Fan' | 'Feather' | 'FerrisWheel' | 'Figma' | 'File' | 'Film' | 'Filter' | 'Fingerprint' | 'FireExtinguisher' | 'Flag' | 'Flame' | 'Flashlight' | 'FlaskConical' | 'Flower' | 'Folder' | 'Goal' | 'Forklift' | 'Framer' | 'Gamepad2' | 'Gauge' | 'Gavel' | 'Gem' | 'Ghost' | 'GitBranch' | 'GitCommit' | 'GitFork' | 'GitMerge' | 'GitPullRequest' | 'Github' | 'Gitlab' | 'GlassWater' | 'Glasses' | 'Globe' | 'Grab' | 'GraduationCap' | 'Grape' | 'Grid' | 'Hammer' | 'Hand' | 'HardHat' | 'Hash' | 'Haze' | 'Heading' | 'Headphones' | 'HeartPulse' | 'Heater' | 'Hexagon' | 'Highlighter' | 'History' | 'Home' | 'Hop' | 'Hourglass' | 'IceCream' | 'ImageIcon' | 'Inbox' | 'Indent' | 'IndianRupee' | 'Infinity' | 'Info' | 'InspectionPanel' | 'Instagram' | 'Italic' | 'IterationCcw' | 'IterationCw' | 'JapaneseYen' | 'Joystick' | 'Kanban' | 'Key' | 'Keyboard' | 'Lamp' | 'Landmark' | 'Laptop' | 'Lasso' | 'Laugh' | 'Layers' | 'Layout' | 'Leaf' | 'Library' | 'LifeBuoy' | 'Lightbulb' | 'Link' | 'Linkedin' | 'List' | 'Locate' | 'Lock' | 'LogIn' | 'LogOut' | 'Luggage' | 'Magnet' | 'Mail' | 'Map' | 'Martini' | 'Medal' | 'Megaphone' | 'Menu' | 'MessageCircle' | 'MessageSquare' | 'Mic' | 'Microscope' | 'Microwave' | 'Milestone' | 'Milk' | 'Minus' | 'Monitor' | 'Moon' | 'Mouse' | 'Move' | 'Music' | 'Navigation' | 'Network' | 'Newspaper' | 'Nut' | 'Orbit' | 'Package' | 'Paintbrush' | 'Palette' | 'Paperclip' | 'ParkingCircle' | 'Pause' | 'PcCase' | 'Pen' | 'Pencil' | 'Percent' | 'PersonStanding' | 'Phone' | 'PieChart' | 'Pilcrow' | 'Pin' | 'Plane' | 'Plug' | 'Pocket' | 'Podcast' | 'Pointer' | 'PoundSterling' | 'Power' | 'Presentation' | 'Printer' | 'Projector' | 'Puzzle' | 'Quote' | 'Radio' | 'Recycle' | 'Redo' | 'Regex' | 'RemoveFormatting' | 'Repeat' | 'Reply' | 'Rocket' | 'Rows' | 'Rss' | 'Ruler' | 'RussianRuble' | 'Sailboat' | 'Save' | 'Scale' | 'Scan' | 'School' | 'Scissors' | 'ScreenShare' | 'Scroll' | 'Search' | 'Send' | 'SeparatorHorizontal' | 'Server' | 'Share' | 'Shield' | 'Ship' | 'ShoppingBag' | 'ShoppingCart' | 'Shovel' | 'ShowerHead' | 'Sigma' | 'Signal' | 'Siren' | 'Skull' | 'Slack' | 'Slice' | 'Sliders' | 'Smartphone' | 'Smile' | 'Snowflake' | 'SortAsc' | 'SortDesc' | 'Speaker' | 'Spline' | 'Sprout' | 'Square' | 'Star' | 'Stethoscope' | 'Sticker' | 'StickyNote' | 'Strikethrough' | 'Subscript' | 'Sun' | 'Superscript' | 'SwissFranc' | 'SwitchCamera' | 'Sword' | 'Swords' | 'Syringe' | 'Table' | 'Tablet' | 'Tag' | 'Target' | 'Tent' | 'Terminal' | 'TestTube' | 'Text' | 'ThumbsDown' | 'ThumbsUp' | 'Ticket' | 'Timer' | 'ToyBrick' | 'Train' | 'Trash' | 'TreePine' | 'Trophy' | 'Truck' | 'Tv' | 'Twitter' | 'Underline' | 'UnfoldHorizontal' | 'UnfoldVertical' | 'Unlink' | 'Upload' | 'Usb' | 'Video' | 'View' | 'Voicemail' | 'Volume' | 'Wallet' | 'Wand' | 'Watch' | 'Waves' | 'Webcam' | 'Webhook' | 'Weight' | 'Wheat' | 'Wifi' | 'Wind' | 'Wine' | 'Wrench' | 'Youtube' | 'Zap';
+type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'Briefcase' | 'Building' | 'Home' | 'Milestone' | 'Trophy';
 
 const iconComponents: Record<IconName, React.FC<React.SVGProps<SVGSVGElement>>> = {
-    Cake, PartyPopper, Users, Gift, Award, HelpCircle, Anchor, AppWindow, Armchair, Baby, BadgeCheck, Banana, BarChart, Beer, Bike, Bomb, Bone, Book, Bot, Box, Brain, Briefcase, Brush, Bug, Building, Bus, Camera, CandlestickChart, Car, Carrot, Castle, Cat, Check, ChefHat, Cherry, Church, Citrus, Clipboard, Cloud, Code, Cog, Coins, Compass, Computer, Cone, Construction, Contact, Contrast, Cookie, Copy, Crown, CupSoda, Currency, Database, Diamond, Dice5, Dna, Dog, DollarSign, Donut, DoorClosed, DraftingCompass, Dribbble, Dumbbell, Ear, Egg, Euro, Eye, Factory, Fan, Feather, FerrisWheel, Figma, File, Film, Filter, Fingerprint, FireExtinguisher, Flag, Flame, Flashlight, FlaskConical, Flower, Folder, Goal, Forklift, Framer, Gamepad2, Gauge, Gavel, Gem, Ghost, GitBranch, GitCommit, GitFork, GitMerge, GitPullRequest, Github, Gitlab, GlassWater, Glasses, Globe, Grab, GraduationCap, Grape, Grid, Hammer, Hand, HardHat, Hash, Haze, Heading, Headphones, HeartPulse, Heater, Hexagon, Highlighter, History, Home, Hop, Hourglass, IceCream, ImageIcon, Inbox, Indent, IndianRupee, Infinity, Info, InspectionPanel, Instagram, Italic, IterationCcw, IterationCw, JapaneseYen, Joystick, Kanban, Key, Keyboard, Lamp, Landmark, Laptop, Lasso, Laugh, Layers, Layout, Leaf, Library, LifeBuoy, Lightbulb, Link, Linkedin, List, Locate, Lock, LogIn, LogOut, Luggage, Magnet, Mail, Map, Martini, Medal, Megaphone, Menu, MessageCircle, MessageSquare, Mic, Microscope, Microwave, Milestone, Milk, Minus, Monitor, Moon, Mouse, Move, Music, Navigation, Network, Newspaper, Nut, Orbit, Package, Paintbrush, Palette, Paperclip, ParkingCircle, Pause, PcCase, Pen, Pencil, Percent, PersonStanding, Phone, PieChart, Pilcrow, Pin, Plane, Plug, Pocket, Podcast, Pointer, PoundSterling, Power, Presentation, Printer, Projector, Puzzle, Quote, Radio, Recycle, Redo, Regex, RemoveFormatting, Repeat, Reply, Rocket, Rows, Rss, Ruler, RussianRuble, Sailboat, Save, Scale, Scan, School, Scissors, ScreenShare, Scroll, Search, Send, SeparatorHorizontal, Server, Share, Shield, Ship, ShoppingBag, ShoppingCart, Shovel, ShowerHead, Sigma, Signal, Siren, Skull, Slack, Slice, Sliders, Smartphone, Smile, Snowflake, SortAsc, SortDesc, Speaker, Spline, Sprout, Square, Star, Stethoscope, Sticker, StickyNote, Strikethrough, Subscript, Sun, Superscript, SwissFranc, SwitchCamera, Sword, Swords, Syringe, Table, Tablet, Tag, Target, Tent, Terminal, TestTube, Text, ThumbsDown, ThumbsUp, Ticket, Timer, ToyBrick, Train, Trash, TreePine, Trophy, Truck, Tv, Twitter, Underline, UnfoldHorizontal, UnfoldVertical, Unlink, Upload, Usb, Video, View, Voicemail, Volume, Wallet, Wand, Watch, Waves, Webcam, Webhook, Weight, Wheat, Wifi, Wind, Wine, Wrench, Youtube, Zap,
+    Cake, PartyPopper, Users, Gift, Award, Briefcase, Building, Home, Milestone, Trophy
 };
 
 const colorOptions = [
     { id: 'primary', value: 'hsl(var(--primary))', className: 'bg-primary' },
+    { id: 'accent', value: 'hsl(var(--accent))', className: 'bg-accent' },
     { id: 'chart-1', value: 'hsl(var(--chart-1))', className: 'bg-chart-1' },
     { id: 'chart-2', value: 'hsl(var(--chart-2))', className: 'bg-chart-2' },
     { id: 'chart-3', value: 'hsl(var(--chart-3))', className: 'bg-chart-3' },
     { id: 'chart-4', value: 'hsl(var(--chart-4))', className: 'bg-chart-4' },
     { id: 'chart-5', value: 'hsl(var(--chart-5))', className: 'bg-chart-5' },
+    { id: 'destructive', value: 'hsl(var(--destructive))', className: 'bg-destructive' },
+    { id: 'blue-500', value: 'hsl(217, 91%, 60%)', className: 'bg-blue-500' },
+    { id: 'purple-500', value: 'hsl(262, 83%, 58%)', className: 'bg-purple-500' },
 ];
 
 type EventItem = { 
@@ -87,7 +92,7 @@ export default function EventsPage() {
   const [newEventName, setNewEventName] = React.useState("");
   const [newEventType, setNewEventType] = React.useState("");
   const [otherEventType, setOtherEventType] = React.useState("");
-  const [newEventIcon, setNewEventIcon] = React.useState<IconName>('HelpCircle');
+  const [newEventIcon, setNewEventIcon] = React.useState<IconName>('PartyPopper');
   const [newEventColor, setNewEventColor] = React.useState<string>('hsl(var(--primary))');
   const [newEventTime, setNewEventTime] = React.useState("");
   const [date, setDate] = React.useState<Date>();
@@ -112,7 +117,7 @@ export default function EventsPage() {
     setNewEventName("");
     setNewEventType("");
     setOtherEventType("");
-    setNewEventIcon('HelpCircle');
+    setNewEventIcon('PartyPopper');
     setNewEventColor('hsl(var(--primary))');
     setNewEventTime("");
     setDate(undefined);
@@ -197,13 +202,14 @@ export default function EventsPage() {
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>{editingEvent ? 'Edit Event' : 'Create a New Event'}</DialogTitle>
-                        <DialogDescription>
-                            {editingEvent ? 'Update the details of the event.' : 'Add a birthday, work anniversary, or other event to the calendar.'}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                  <DialogHeader>
+                      <DialogTitle>{editingEvent ? 'Edit Event' : 'Create a New Event'}</DialogTitle>
+                      <DialogDescription>
+                          {editingEvent ? 'Update the details of the event.' : 'Add a birthday, work anniversary, or other event to the calendar.'}
+                      </DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="max-h-[70vh]">
+                    <div className="grid gap-4 py-4 px-6">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">Person's Name</Label>
                             <Input id="name" value={newEventName} onChange={(e) => setNewEventName(e.target.value)} className="col-span-3" placeholder="e.g., John Doe" />
@@ -258,7 +264,7 @@ export default function EventsPage() {
                         </div>
                         <div className="grid grid-cols-4 items-start gap-4">
                             <Label className="text-right pt-2">Icon</Label>
-                            <div className="col-span-3 grid grid-cols-6 gap-2">
+                            <div className="col-span-3 grid grid-cols-5 gap-2">
                                 {Object.keys(iconComponents).map(iconKey => {
                                     const iconName = iconKey as IconName;
                                     return (
@@ -277,7 +283,7 @@ export default function EventsPage() {
                         </div>
                          <div className="grid grid-cols-4 items-start gap-4">
                             <Label className="text-right pt-2">Color</Label>
-                            <div className="col-span-3 flex gap-2">
+                            <div className="col-span-3 grid grid-cols-5 gap-2">
                                 {colorOptions.map(color => (
                                     <Button
                                         key={color.id}
@@ -286,16 +292,17 @@ export default function EventsPage() {
                                         className={cn("h-8 w-8", newEventColor === color.value && "ring-2 ring-primary")}
                                         onClick={() => setNewEventColor(color.value)}
                                     >
-                                        <div className={cn("h-5 w-5 rounded-sm", color.className)} />
+                                        <div className={cn("h-5 w-5 rounded-sm", color.className)} style={{backgroundColor: newEventColor !== color.value ? color.value : undefined}} />
                                     </Button>
                                 ))}
                             </div>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={resetForm}>Cancel</Button>
-                        <Button onClick={handleCreateOrUpdateEvent}>{editingEvent ? 'Save Changes' : 'Create Event'}</Button>
-                    </DialogFooter>
+                  </ScrollArea>
+                  <DialogFooter className="px-6 pb-4 pt-2 border-t">
+                      <Button variant="outline" onClick={resetForm}>Cancel</Button>
+                      <Button onClick={handleCreateOrUpdateEvent}>{editingEvent ? 'Save Changes' : 'Create Event'}</Button>
+                  </DialogFooter>
                 </DialogContent>
             </Dialog>
         )}
@@ -362,5 +369,3 @@ export default function EventsPage() {
     </>
   );
 }
-
-    
