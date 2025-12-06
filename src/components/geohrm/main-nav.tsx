@@ -17,25 +17,21 @@ import {
 } from "lucide-react";
 
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/attendance", label: "Attendance", icon: Clock },
-  { href: "/dashboard/leave", label: "Leave", icon: CalendarOff },
-  { href: "/dashboard/issues", label: "Issues", icon: MessageSquareWarning },
-  { href: "/dashboard/policies", label: "Policies", icon: ShieldCheck },
-  { href: "/dashboard/audit-log", label: "Audit Log", icon: BookUser, adminOnly: true },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/leave", label: "Leave", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/issues", label: "Issues", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/policies", label: "Policies", icon: ShieldCheck, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/audit-log", label: "Audit Log", icon: BookUser, roles: ['CEO/Admin', 'HR Manager'] },
 ];
 
-export function MainNav() {
+export function MainNav({ userRole }: { userRole: string }) {
   const pathname = usePathname();
-
-  // For this scaffold, we'll assume an admin role to show all links.
-  // In a real app, this would come from a user session.
-  const userRole = 'admin';
 
   return (
     <SidebarMenu>
       {links.map((link) => {
-        if (link.adminOnly && userRole !== 'admin') {
+        if (!link.roles.includes(userRole)) {
           return null;
         }
         const isActive = pathname === link.href;

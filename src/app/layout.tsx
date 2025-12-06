@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 const fontBody = Inter({ subsets: ["latin"], variable: "--font-body" });
 const fontHeadline = Space_Grotesk({
@@ -29,7 +30,9 @@ export default function RootLayout({
           fontHeadline.variable
         )}
       >
-        {children}
+        <FirebaseClientProvider>
+          {children}
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>
