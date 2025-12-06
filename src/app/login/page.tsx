@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,9 @@ import { signInAnonymously, User } from 'firebase/auth';
 import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import Autoplay from "embla-carousel-autoplay"
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+import Image from 'next/image';
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
 
@@ -61,6 +64,10 @@ export default function LoginPage() {
   const { toast } = useToast();
   const auth = useAuth();
   const firestore = useFirestore();
+
+  const plugin = useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: false, stopOnMouseEnter: true })
+  )
 
   const handleLogin = async (role: Role) => {
     setIsLoading(role);
@@ -135,53 +142,86 @@ export default function LoginPage() {
     }
   };
 
+  const carouselImages = [
+    { id: 1, src: "https://picsum.photos/seed/1/1200/800", alt: "Modern office interior", hint: "office interior" },
+    { id: 2, src: "https://picsum.photos/seed/2/1200/800", alt: "Team collaborating", hint: "team collaboration" },
+    { id: 3, src: "https://picsum.photos/seed/3/1200/800", alt: "Person working on a laptop", hint: "person working" },
+    { id: 4, src: "https://picsum.photos/seed/4/1200/800", alt: "City skyline", hint: "city skyline" }
+  ];
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mb-4 flex justify-center">
-            <div className="bg-primary text-primary-foreground p-3 rounded-lg">
-              <Building2 className="h-8 w-8" />
+    <div className="w-full min-h-screen grid grid-cols-1 lg:grid-cols-2">
+       <div className="hidden lg:block relative">
+        <Carousel
+          className="w-full h-full"
+          plugins={[plugin.current]}
+          onMouseEnter={plugin.current.stop}
+          onMouseLeave={plugin.current.reset}
+        >
+          <CarouselContent className="h-full">
+            {carouselImages.map(image => (
+              <CarouselItem key={image.id} className="h-full">
+                <Image 
+                  src={image.src} 
+                  alt={image.alt}
+                  data-ai-hint={image.hint}
+                  fill
+                  style={{ objectFit: 'cover' }}
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
+
+      <div className="flex items-center justify-center p-6 bg-background">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="bg-primary text-primary-foreground p-3 rounded-lg">
+                <Building2 className="h-8 w-8" />
+              </div>
             </div>
-          </div>
-          <CardTitle className="font-headline text-2xl">GeoHRM Login</CardTitle>
-          <CardDescription>
-            Select a role to log in.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            <Button
-              onClick={() => handleLogin('Member')}
-              className="w-full"
-              disabled={!!isLoading}
-            >
-              {isLoading === 'Member' ? 'Logging in...' : 'Login as Employee'}
-            </Button>
-            <Button
-              onClick={() => handleLogin('Team Lead')}
-              className="w-full"
-              disabled={!!isLoading}
-            >
-              {isLoading === 'Team Lead' ? 'Logging in...' : 'Login as Team Lead'}
-            </Button>
-            <Button
-              onClick={() => handleLogin('HR Manager')}
-              className="w-full"
-              disabled={!!isLoading}
-            >
-              {isLoading === 'HR Manager' ? 'Logging in...' : 'Login as Admin'}
-            </Button>
-            <Button
-              onClick={() => handleLogin('CEO/Admin')}
-              className="w-full"
-              disabled={!!isLoading}
-            >
-              {isLoading === 'CEO/Admin' ? 'Logging in...' : 'Login as CEO'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            <CardTitle className="font-headline text-2xl">GeoHRM Login</CardTitle>
+            <CardDescription>
+              Select a role to log in.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <Button
+                onClick={() => handleLogin('Member')}
+                className="w-full"
+                disabled={!!isLoading}
+              >
+                {isLoading === 'Member' ? 'Logging in...' : 'Login as Employee'}
+              </Button>
+              <Button
+                onClick={() => handleLogin('Team Lead')}
+                className="w-full"
+                disabled={!!isLoading}
+              >
+                {isLoading === 'Team Lead' ? 'Logging in...' : 'Login as Team Lead'}
+              </Button>
+              <Button
+                onClick={() => handleLogin('HR Manager')}
+                className="w-full"
+                disabled={!!isLoading}
+              >
+                {isLoading === 'HR Manager' ? 'Logging in...' : 'Login as Admin'}
+              </Button>
+              <Button
+                onClick={() => handleLogin('CEO/Admin')}
+                className="w-full"
+                disabled={!!isLoading}
+              >
+                {isLoading === 'CEO/Admin' ? 'Logging in...' : 'Login as CEO'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
