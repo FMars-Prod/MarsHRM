@@ -5,24 +5,118 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUser } from "@/firebase";
+import { useAuth, useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { doc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { Camera, Edit, Building2 } from "lucide-react";
 import Image from "next/image";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { updateProfile, updateEmail, updatePassword } from "firebase/auth";
+import { useToast } from "@/hooks/use-toast";
+import * as React from "react";
+
+const profileFormSchema = z.object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    email: z.string().email("Invalid email address"),
+    password: z.string().optional(),
+    confirmPassword: z.string().optional(),
+}).refine(data => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function ProfilePage() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
+    const auth = useAuth();
+    const { toast } = useToast();
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+
 
     const userDocRef = useMemoFirebase(
         () => (user ? doc(firestore, "users", user.uid) : null),
         [user, firestore]
     );
     const { data: employee, isLoading: isEmployeeLoading } = useDoc(userDocRef);
+
+    const form = useForm<ProfileFormValues>({
+        resolver: zodResolver(profileFormSchema),
+        defaultValues: {
+            firstName: "",
+            lastName: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+        },
+    });
+
+    React.useEffect(() => {
+        if (employee) {
+            form.reset({
+                firstName: (employee as any).firstName || '',
+                lastName: (employee as any).lastName || '',
+                email: (employee as any).email || '',
+                password: '',
+                confirmPassword: '',
+            });
+        }
+    }, [employee, form]);
     
+    async function onSubmit(data: ProfileFormValues) {
+        setIsSubmitting(true);
+        if (!user || !auth.currentUser) {
+            toast({ variant: "destructive", title: "Error", description: "You must be logged in to update your profile." });
+            setIsSubmitting(false);
+            return;
+        }
+
+        try {
+            // Update Firestore document
+            if (userDocRef) {
+                await updateDoc(userDocRef, {
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    email: data.email,
+                });
+            }
+
+            // Update Auth display name
+            await updateProfile(auth.currentUser, {
+                displayName: `${data.firstName} ${data.lastName}`,
+            });
+
+            // Update Auth email if changed
+            if (auth.currentUser.email !== data.email) {
+                await updateEmail(auth.currentUser, data.email);
+            }
+
+            // Update password if provided
+            if (data.password) {
+                await updatePassword(auth.currentUser, data.password);
+            }
+
+            toast({ title: "Success", description: "Profile updated successfully." });
+            setIsDialogOpen(false);
+        } catch (error: any) {
+            console.error("Error updating profile:", error);
+            toast({ variant: "destructive", title: "Update Failed", description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
 
     const userAvatar = PlaceHolderImages.find(
         (image) => image.id === "user-avatar-1"
@@ -85,9 +179,100 @@ export default function ProfilePage() {
                          <CardDescription>{(employee as any).jobTitle}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <Button className="w-full">
-                            <Edit className="mr-2 h-4 w-4"/> Edit Profile
-                         </Button>
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="w-full">
+                                    <Edit className="mr-2 h-4 w-4"/> Edit Profile
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Edit Profile</DialogTitle>
+                                    <DialogDescription>
+                                        Make changes to your profile here. Click save when you're done.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <Form {...form}>
+                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <FormField
+                                                control={form.control}
+                                                name="firstName"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>First Name</FormLabel>
+                                                        <FormControl>
+                                                            <Input placeholder="John" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="lastName"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Last Name</FormLabel>
+                                                        <FormControl>
+                                                            <Input placeholder="Doe" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                        <FormField
+                                            control={form.control}
+                                            name="email"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Email</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="email" placeholder="john.doe@example.com" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="password"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>New Password (optional)</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="password" placeholder="••••••••" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="confirmPassword"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Confirm New Password</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="password" placeholder="••••••••" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <DialogFooter>
+                                            <DialogClose asChild>
+                                                <Button type="button" variant="outline">Cancel</Button>
+                                            </DialogClose>
+                                            <Button type="submit" disabled={isSubmitting}>
+                                                {isSubmitting ? "Saving..." : "Save Changes"}
+                                            </Button>
+                                        </DialogFooter>
+                                    </form>
+                                </Form>
+                            </DialogContent>
+                        </Dialog>
                     </CardContent>
                 </Card>
                 <Card className="md:col-span-2">
@@ -136,3 +321,5 @@ export default function ProfilePage() {
         </>
     )
 }
+
+    
