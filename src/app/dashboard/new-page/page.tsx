@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay } from 'date-fns';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -50,15 +50,42 @@ const chartConfig = {
   },
 } satisfies React.ComponentProps<typeof ChartContainer>['config'];
 
+const dateRanges = {
+  'last-7-days': { from: subDays(new Date(), 6), to: new Date() },
+  'last-30-days': { from: subDays(new Date(), 29), to: new Date() },
+  'this-month': { from: startOfMonth(new Date()), to: endOfMonth(new Date()) },
+  'last-month': {
+    from: startOfMonth(subMonths(new Date(), 1)),
+    to: endOfMonth(subMonths(new Date(), 1)),
+  },
+};
+
+type PredefinedRange = keyof typeof dateRanges | 'custom';
 
 const AnalyticsPage = () => {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
-    from: subDays(new Date(), 30),
+  const [selectedRange, setSelectedRange] = React.useState<PredefinedRange>('last-30-days');
+  const [customDateRange, setCustomDateRange] = React.useState<DateRange | undefined>({
+    from: subDays(new Date(), 29),
     to: new Date(),
   });
+
+  const dateRange = selectedRange === 'custom' ? customDateRange : dateRanges[selectedRange];
+
+  const handlePredefinedRangeChange = (value: PredefinedRange) => {
+    setSelectedRange(value);
+    if (value !== 'custom') {
+      setCustomDateRange(dateRanges[value]);
+    }
+  };
+
+  const handleCustomDateChange = (range: DateRange | undefined) => {
+    setSelectedRange('custom');
+    setCustomDateRange(range);
+  };
+
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
@@ -66,11 +93,12 @@ const AnalyticsPage = () => {
   const selectedUser = users?.find(u => u.id === selectedUserId);
 
   const attendanceQuery = useMemoFirebase(() => {
-    if (!selectedUserId || !dateRange?.from || !dateRange?.to) return null;
+    if (!selectedUserId || !dateRange?.from) return null;
+    const toDate = dateRange.to || dateRange.from; // if `to` is not set, use `from`
     return query(
       collection(firestore, `users/${selectedUserId}/attendances`),
       where('checkInTime', '>=', startOfDay(dateRange.from)),
-      where('checkInTime', '<=', endOfDay(dateRange.to)),
+      where('checkInTime', '<=', endOfDay(toDate)),
       orderBy('checkInTime', 'desc')
     );
   }, [firestore, selectedUserId, dateRange]);
@@ -179,12 +207,24 @@ const AnalyticsPage = () => {
                 </SelectContent>
             </Select>
         </div>
+        <Select value={selectedRange} onValueChange={handlePredefinedRangeChange}>
+          <SelectTrigger className="w-full md:w-[180px]">
+            <SelectValue placeholder="Select a range" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="last-7-days">Last 7 days</SelectItem>
+            <SelectItem value="last-30-days">Last 30 days</SelectItem>
+            <SelectItem value="this-month">This month</SelectItem>
+            <SelectItem value="last-month">Last month</SelectItem>
+            <SelectItem value="custom">Custom Range</SelectItem>
+          </SelectContent>
+        </Select>
         <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant={"outline"}
                 className={cn(
-                  "w-full md:w-[300px] justify-start text-left font-normal",
+                  "w-full md:w-auto justify-start text-left font-normal",
                   !dateRange && "text-muted-foreground"
                 )}
               >
@@ -196,7 +236,7 @@ const AnalyticsPage = () => {
                     format(dateRange.from, "LLL dd, y")
                   )
                 ) : (
-                  <span>Pick a date range</span>
+                  <span>Pick a date</span>
                 )}
               </Button>
             </PopoverTrigger>
@@ -204,9 +244,9 @@ const AnalyticsPage = () => {
               <Calendar
                 initialFocus
                 mode="range"
-                defaultMonth={dateRange?.from}
-                selected={dateRange}
-                onSelect={setDateRange}
+                defaultMonth={customDateRange?.from}
+                selected={customDateRange}
+                onSelect={handleCustomDateChange}
                 numberOfMonths={2}
               />
             </PopoverContent>
@@ -373,5 +413,3 @@ const AnalyticsPage = () => {
 };
 
 export default AnalyticsPage;
-
-    
