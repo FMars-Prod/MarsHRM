@@ -179,6 +179,18 @@ service cloud.firestore {
       allow create, update, delete: if (isAdmin() || isHrAgent());
     }
 
+    /**
+     * @description App settings can be read by any authenticated user but only written by a CEO/Admin.
+     * @path /settings/{settingId}
+     * @allow (get) Any authenticated user can read settings like office location.
+     * @deny (create) A regular employee tries to change a setting.
+     * @principle Centralizes configuration and secures it to top-level admins.
+     */
+    match /settings/{settingId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isCeo() || isAdmin();
+    }
+
     // --------------------------------
     // Top-Level Functional Collections
     // --------------------------------
@@ -267,3 +279,4 @@ service cloud.firestore {
     }
   }
 }
+    
