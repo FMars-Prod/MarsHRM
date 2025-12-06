@@ -144,7 +144,7 @@ export default function EventsPage() {
                         Create Event
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Create a New Event</DialogTitle>
                         <DialogDescription>
