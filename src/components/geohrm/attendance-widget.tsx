@@ -87,7 +87,7 @@ export function AttendanceWidget() {
   );
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
-  const isAdmin = userRole === 'CEO/Admin';
+  const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
   // Get office location from Firestore
   const officeLocationDocRef = useMemoFirebase(
@@ -432,5 +432,3 @@ export function AttendanceWidget() {
     </Card>
   );
 }
-
-    
