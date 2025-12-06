@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -26,12 +27,6 @@ const events = [
 
 type Status = "present" | "late" | "absent" | "permission";
 
-const statusStyles: Record<Status, string> = {
-  present: "bg-green-100 text-green-800 border-green-200",
-  late: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  absent: "bg-red-100 text-red-800 border-red-200",
-  permission: "bg-blue-100 text-blue-800 border-blue-200",
-};
 
 export default function AttendancePage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
@@ -47,6 +42,21 @@ export default function AttendancePage() {
       },
       { present: 0, late: 0, absent: 0, permission: 0 }
     );
+  }, []);
+
+  const modifiers = React.useMemo(() => {
+    const modifiers: Record<string, Date[]> = {
+        present: [],
+        late: [],
+        absent: [],
+        permission: []
+    };
+    events.forEach(event => {
+        if (modifiers[event.status]) {
+            modifiers[event.status].push(event.date);
+        }
+    });
+    return modifiers;
   }, []);
 
   return (
@@ -66,31 +76,18 @@ export default function AttendancePage() {
                 month={currentMonth}
                 onMonthChange={setCurrentMonth}
                 className="p-3"
+                modifiers={modifiers}
+                modifiersClassNames={{
+                    present: 'bg-green-100 text-green-800 rounded-lg',
+                    late: 'bg-yellow-100 text-yellow-800 rounded-lg',
+                    absent: 'bg-red-100 text-red-800 rounded-lg',
+                    permission: 'bg-blue-100 text-blue-800 rounded-lg'
+                }}
                 classNames={{
                     day: cn(
                         "relative h-12 w-12 rounded-lg transition-colors hover:bg-accent/50 focus-within:relative focus-within:z-20"
                     ),
                     day_selected: "bg-primary text-primary-foreground hover:bg-primary",
-                }}
-                components={{
-                  DayContent: ({ date }) => {
-                    const event = events.find((e) => isSameDay(e.date, date));
-                    return (
-                      <div className="relative h-full w-full">
-                        <span>{format(date, "d")}</span>
-                        {event && (
-                          <div
-                            className={cn(
-                              "absolute bottom-1 left-1/2 -translate-x-1/2 h-2 w-2 rounded-full",
-                              event.status === 'present' && 'bg-green-500',
-                              event.status === 'late' && 'bg-yellow-500',
-                              event.status === 'absent' && 'bg-red-500',
-                            )}
-                          />
-                        )}
-                      </div>
-                    );
-                  },
                 }}
               />
             </CardContent>
@@ -128,19 +125,19 @@ export default function AttendancePage() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded-full bg-green-500" />
+                        <div className="h-4 w-4 rounded-full bg-green-100 border border-green-200" />
                         <span className="text-sm">Present</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded-full bg-yellow-500" />
+                        <div className="h-4 w-4 rounded-full bg-yellow-100 border border-yellow-200" />
                         <span className="text-sm">Late</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded-full bg-red-500" />
+                        <div className="h-4 w-4 rounded-full bg-red-100 border border-red-200" />
                         <span className="text-sm">Absent</span>
                     </div>
                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded-full bg-blue-500" />
+                        <div className="h-4 w-4 rounded-full bg-blue-100 border border-blue-200" />
                         <span className="text-sm">Permission</span>
                     </div>
                 </CardContent>
@@ -150,3 +147,4 @@ export default function AttendancePage() {
     </>
   );
 }
+
