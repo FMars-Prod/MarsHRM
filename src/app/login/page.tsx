@@ -19,6 +19,41 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
 
+const employeeData: Record<Role, any> = {
+    'Member': {
+        firstName: 'John',
+        lastName: 'Doe',
+        jobTitle: 'Software Engineer',
+        department: 'Technology',
+        hireDate: '2022-01-15',
+        email: 'john.doe@geohrm.com'
+    },
+    'Team Lead': {
+        firstName: 'Jane',
+        lastName: 'Smith',
+        jobTitle: 'Team Lead',
+        department: 'Technology',
+        hireDate: '2020-05-20',
+        email: 'jane.smith@geohrm.com'
+    },
+    'HR Manager': {
+        firstName: 'Peter',
+        lastName: 'Jones',
+        jobTitle: 'HR Manager',
+        department: 'Human Resources',
+        hireDate: '2019-03-10',
+        email: 'peter.jones@geohrm.com'
+    },
+    'CEO/Admin': {
+        firstName: 'Mary',
+        lastName: 'Johnson',
+        jobTitle: 'CEO',
+        department: 'Executive',
+        hireDate: '2015-08-01',
+        email: 'mary.johnson@geohrm.com'
+    }
+}
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState<Role | null>(null);
   const router = useRouter();
@@ -39,15 +74,24 @@ export default function LoginPage() {
     }
 
     try {
+      // It's better to sign out previous user
+      if (auth.currentUser) {
+        await auth.signOut();
+      }
       const userCredential = await signInAnonymously(auth);
       const user = userCredential.user;
 
       // Set the user's role in Firestore
       const userDocRef = doc(firestore, 'users', user.uid);
+      
+      const roleSpecificData = employeeData[role];
+      
       const userData = {
         id: user.uid,
         employeeId: user.uid, // Using uid as employeeId for dummy user
         role: role,
+        ...roleSpecificData,
+        email: user.uid + '@geohrm.com' // Make email unique for anonymous users
       };
 
       setDoc(userDocRef, userData, { merge: true })

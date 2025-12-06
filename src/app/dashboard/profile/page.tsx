@@ -22,20 +22,15 @@ export default function ProfilePage() {
         [user, firestore]
     );
     const { data: userData } = useDoc(userDocRef);
-    const userRole = (userData as any)?.role || 'Member';
+    
+    const employee = userData as any;
 
     const userAvatar = PlaceHolderImages.find(
         (image) => image.id === "user-avatar-1"
     );
 
-    // Placeholder data
-    const employee = {
-        firstName: 'John',
-        lastName: 'Doe',
-        email: user?.email || 'john.doe@example.com',
-        jobTitle: 'Software Engineer',
-        department: 'Technology',
-        hireDate: '2022-01-15',
+    if (!employee) {
+        return null;
     }
 
     return (
@@ -118,11 +113,11 @@ export default function ProfilePage() {
                          <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Hire Date</p>
-                                <p className="font-semibold">{employee.hireDate}</p>
+                                <p className="font-semibold">{new Date(employee.hireDate).toLocaleDateString()}</p>
                             </div>
                              <div>
                                 <p className="text-sm font-medium text-muted-foreground">Role</p>
-                                <p className="font-semibold">{userRole}</p>
+                                <p className="font-semibold">{employee.role}</p>
                             </div>
                         </div>
                     </CardContent>
