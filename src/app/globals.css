@@ -10,33 +10,33 @@
     --card-foreground: 215 28% 17%;
     --popover: 0 0% 100%;
     --popover-foreground: 215 28% 17%;
-    --primary: 217 33% 32%; /* Dark Blue */
+    --primary: 217 91% 60%; /* A brighter, more modern blue */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 15% 90%;
     --secondary-foreground: 210 22% 9%;
     --muted: 210 15% 90%;
     --muted-foreground: 210 15% 45%;
-    --accent: 25 80% 50%; /* Dark Orange */
+    --accent: 25 95% 53%; /* A vibrant orange */
     --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 210 10% 85%;
     --input: 210 10% 88%;
-    --ring: 217 33% 42%; /* Darker Blue for ring */
-    --chart-1: 217 33% 32%; /* Dark Blue */
-    --chart-2: 25 80% 50%; /* Dark Orange */
+    --ring: 217 91% 70%; /* A lighter blue for ring */
+    --chart-1: 217 91% 60%; /* Brighter Blue */
+    --chart-2: 25 95% 53%; /* Vibrant Orange */
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 217 33% 32%; /* Dark Blue */
+    --sidebar-background: 217 33% 32%; /* Dark Blue for sidebar */
     --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 25 80% 55%; /* Dark Orange for sidebar primary */
+    --sidebar-primary: 25 95% 53%; /* Orange for sidebar primary actions */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 42%; /* Slightly lighter blue for hover */
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 42%;
-    --sidebar-ring: 25 80% 60%;
+    --sidebar-ring: 25 95% 55%;
   }
 
   .dark {
@@ -46,32 +46,32 @@
     --card-foreground: 210 40% 98%;
     --popover: 210 15% 10%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
+    --primary: 217 91% 60%;
     --primary-foreground: 210 22% 15%;
     --secondary: 210 15% 20%;
     --secondary-foreground: 210 40% 98%;
     --muted: 210 15% 20%;
     --muted-foreground: 210 15% 65%;
-    --accent: 25 80% 50%;
+    --accent: 25 95% 53%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 210 15% 25%;
     --input: 210 15% 25%;
-    --ring: 25 80% 55%;
-    --chart-1: 217 33% 32%;
-    --chart-2: 25 80% 50%;
+    --ring: 217 91% 70%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 25 95% 53%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
     --sidebar-background: 217 33% 32%; /* Dark Blue */
     --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 25 80% 55%; /* Dark Orange for sidebar primary */
+    --sidebar-primary: 25 95% 53%; /* Orange */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 42%; /* Slightly lighter blue for hover */
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 42%;
-    --sidebar-ring: 25 80% 60%;
+    --sidebar-ring: 25 95% 55%;
   }
 }
 
