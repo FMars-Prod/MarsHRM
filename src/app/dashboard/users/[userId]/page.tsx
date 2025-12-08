@@ -219,7 +219,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
                                  <Tooltip 
                                     cursor={{ fill: 'hsl(var(--muted))' }}
                                     content={<ChartTooltipContent
-                                        formatter={(value, name) => `${value}h`}
+                                        formatter={(value, name) => `${(value as number).toFixed(1)}h`}
                                         indicator="dot"
                                         />}
                                 />
@@ -317,3 +317,5 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
 };
 
 export default UserAnalyticsPage;
+
+    
