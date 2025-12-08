@@ -3,7 +3,8 @@
 
 import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { collection, doc, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,17 +12,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse } from 'date-fns';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { WithId } from '@/firebase/firestore/use-collection';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type User = {
   firstName: string;
@@ -37,6 +39,13 @@ type AttendanceRecord = {
   status: 'present' | 'late' | 'absent' | 'on_leave';
 };
 
+type EditableAttendance = {
+    status: 'present' | 'late' | 'absent' | 'on_leave';
+    checkInTime: string;
+    checkOutTime: string;
+    totalBreakDuration: string;
+}
+
 const chartConfig = {
   work: {
     label: "Work",
@@ -49,12 +58,26 @@ const chartConfig = {
 } satisfies React.ComponentProps<typeof ChartContainer>['config'];
 
 const AnalyticsPage = () => {
+  const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
   const [date, setDate] = React.useState<Date>(new Date());
   const [showAll, setShowAll] = React.useState(false);
 
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [editableAttendance, setEditableAttendance] = React.useState<EditableAttendance>({
+      status: 'present',
+      checkInTime: '',
+      checkOutTime: '',
+      totalBreakDuration: '0',
+  });
+
+  const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
+  const { data: currentUserData } = useDoc(currentUserDocRef);
+  const currentUserRole = (currentUserData as any)?.role;
+  const isAdmin = currentUserRole === 'CEO/Admin' || currentUserRole === 'HR Manager';
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
@@ -93,6 +116,20 @@ const AnalyticsPage = () => {
     );
   }, [firestore, selectedUserId]);
   const {data: weeklyAttendance} = useCollection<AttendanceRecord>(weeklyChartQuery);
+
+  React.useEffect(() => {
+      if (attendanceData && attendanceData.length > 0) {
+          const record = attendanceData[0];
+          setEditableAttendance({
+              status: record.status,
+              checkInTime: record.checkInTime ? format(record.checkInTime.toDate(), 'HH:mm') : '',
+              checkOutTime: record.checkOutTime ? format(record.checkOutTime.toDate(), 'HH:mm') : '',
+              totalBreakDuration: record.totalBreakDuration ? (record.totalBreakDuration / 60).toString() : '0',
+          });
+      } else {
+          setEditableAttendance({ status: 'absent', checkInTime: '', checkOutTime: '', totalBreakDuration: '0' });
+      }
+  }, [attendanceData, isEditDialogOpen]);
 
 
   const stats = React.useMemo(() => {
@@ -187,6 +224,29 @@ const AnalyticsPage = () => {
     link.click();
     document.body.removeChild(link);
   }
+
+  const handleAttendanceUpdate = () => {
+      if (!selectedUserId || !date) return;
+
+      const attendanceId = format(date, 'yyyy-MM-dd');
+      const attendanceRef = doc(firestore, `users/${selectedUserId}/attendances/${attendanceId}`);
+      
+      const checkInDateTime = editableAttendance.checkInTime ? parse(editableAttendance.checkInTime, 'HH:mm', date) : null;
+      const checkOutDateTime = editableAttendance.checkOutTime ? parse(editableAttendance.checkOutTime, 'HH:mm', date) : null;
+
+      const payload: any = {
+          id: attendanceId,
+          employeeId: selectedUserId,
+          status: editableAttendance.status,
+          checkInTime: checkInDateTime ? Timestamp.fromDate(checkInDateTime) : null,
+          checkOutTime: checkOutDateTime ? Timestamp.fromDate(checkOutDateTime) : null,
+          totalBreakDuration: parseInt(editableAttendance.totalBreakDuration) * 60 || 0,
+      };
+
+      setDocumentNonBlocking(attendanceRef, payload, { merge: true });
+      toast({ title: "Attendance Updated", description: "The record has been saved." });
+      setIsEditDialogOpen(false);
+  }
   
   return (
     <>
@@ -221,10 +281,62 @@ const AnalyticsPage = () => {
           </Popover>
           <Button variant={showAll ? 'default' : 'outline'} onClick={() => setShowAll(!showAll)}>{showAll ? "Viewing Full History" : "View Full History"}</Button>
         </div>
-        <Button className="w-full sm:w-auto" onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
-            <Download className="mr-2 h-4 w-4"/>
-            Export CSV
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+            {isAdmin && selectedUserId && !showAll && (
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="secondary">
+                            <Edit className="mr-2 h-4 w-4"/>
+                            Edit Attendance
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Edit Attendance for {selectedUser?.firstName}</DialogTitle>
+                            <DialogDescription>
+                                Manually adjust the record for {format(date, "PPP")}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="check-in">Clock In Time</Label>
+                                    <Input id="check-in" type="time" value={editableAttendance.checkInTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInTime: e.target.value}))}/>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="check-out">Clock Out Time</Label>
+                                    <Input id="check-out" type="time" value={editableAttendance.checkOutTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutTime: e.target.value}))}/>
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="break">Total Break (minutes)</Label>
+                                <Input id="break" type="number" value={editableAttendance.totalBreakDuration} onChange={(e) => setEditableAttendance(prev => ({...prev, totalBreakDuration: e.target.value}))}/>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="status">Status</Label>
+                                <Select value={editableAttendance.status} onValueChange={(value) => setEditableAttendance(prev => ({...prev, status: value as any}))}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="present">Present</SelectItem>
+                                        <SelectItem value="late">Late</SelectItem>
+                                        <SelectItem value="absent">Absent</SelectItem>
+                                        <SelectItem value="on_leave">On Leave</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                            <Button onClick={handleAttendanceUpdate}>Save Changes</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
+            <Button onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
+                <Download className="mr-2 h-4 w-4"/>
+                Export CSV
+            </Button>
+        </div>
       </div>
 
       {!selectedUserId ? (
@@ -385,3 +497,5 @@ const AnalyticsPage = () => {
 };
 
 export default AnalyticsPage;
+
+    
