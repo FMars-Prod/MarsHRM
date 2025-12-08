@@ -30,15 +30,15 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Users, Trash, Edit, MoreHorizontal, User, UserPlus } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDoc, deleteDoc, writeBatch } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { collection, query, writeBatch, doc } from "firebase/firestore";
+import { collection, query, doc } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -108,11 +108,18 @@ export default function TeamsPage() {
             const teamRef = doc(firestore, 'teams', editingTeam.id);
             batch.update(teamRef, { name: teamName, teamLeadId: teamLead, memberIds: allMemberIds });
             
-            // This is simplified. A real implementation would handle members removed from the team.
             allMemberIds.forEach(memberId => {
                 const userRef = doc(firestore, 'users', memberId);
                 batch.update(userRef, { teamId: editingTeam.id });
             });
+            
+            // Handle removed members
+            const removedMembers = editingTeam.memberIds.filter(id => !allMemberIds.includes(id));
+            removedMembers.forEach(memberId => {
+                 const userRef = doc(firestore, 'users', memberId);
+                batch.update(userRef, { teamId: null });
+            });
+
 
             toast({ title: 'Team Updated' });
         } else {
@@ -156,7 +163,7 @@ export default function TeamsPage() {
         toast({ title: 'Team Deleted', description: 'The team has been removed and members are unassigned.' });
     }
 
-    const availableMembers = users?.filter(u => u.role === 'Member' && (!u.teamId || (editingTeam && u.teamId === editingTeam.id) || u.id === teamLead));
+    const availableMembers = users?.filter(u => u.role === 'Member' && (!u.teamId || (editingTeam && u.teamId === editingTeam.id)));
     const potentialLeads = users?.filter(u => u.role === 'Team Lead');
 
     return (
@@ -217,36 +224,34 @@ export default function TeamsPage() {
                     </Dialog>
                 )}
             </PageHeader>
-            <div className="border rounded-lg">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Team Name</TableHead>
-                            <TableHead>Team Leader</TableHead>
-                            <TableHead>Members</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {teamsLoading ? (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading teams...</TableCell></TableRow>
-                        ) : teams?.map(team => (
-                            <TableRow key={team.id}>
-                                <TableCell className="font-medium">{team.name}</TableCell>
-                                <TableCell>{getTeamLeadName(team.teamLeadId)}</TableCell>
-                                <TableCell>{team.memberIds.length}</TableCell>
-                                <TableCell className="text-right">
-                                    <Sheet onOpenChange={(isOpen) => !isOpen && setSelectedTeamForSheet(null)}>
+            <Sheet open={!!selectedTeamForSheet} onOpenChange={(isOpen) => !isOpen && setSelectedTeamForSheet(null)}>
+                <div className="border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Team Name</TableHead>
+                                <TableHead>Team Leader</TableHead>
+                                <TableHead>Members</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {teamsLoading ? (
+                                <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading teams...</TableCell></TableRow>
+                            ) : teams?.map(team => (
+                                <TableRow key={team.id}>
+                                    <TableCell className="font-medium">{team.name}</TableCell>
+                                    <TableCell>{getTeamLeadName(team.teamLeadId)}</TableCell>
+                                    <TableCell>{team.memberIds.length}</TableCell>
+                                    <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent>
-                                                <SheetTrigger asChild>
-                                                    <DropdownMenuItem onClick={() => setSelectedTeamForSheet(team)}>
-                                                        <Users className="mr-2 h-4 w-4"/> View Members
-                                                    </DropdownMenuItem>
-                                                </SheetTrigger>
+                                                <DropdownMenuItem onClick={() => setSelectedTeamForSheet(team)}>
+                                                    <Users className="mr-2 h-4 w-4"/> View Members
+                                                </DropdownMenuItem>
                                                 {canManageTeams && (
                                                     <>
                                                     <DropdownMenuItem onClick={() => handleOpenEditDialog(team)}>
@@ -259,38 +264,38 @@ export default function TeamsPage() {
                                                 )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
-                                        {selectedTeamForSheet?.id === team.id && (
-                                        <SheetContent>
-                                            <SheetHeader>
-                                                <SheetTitle>{selectedTeamForSheet.name}</SheetTitle>
-                                                <SheetDescription>Members of this team.</SheetDescription>
-                                            </SheetHeader>
-                                            <div className="py-4">
-                                                {selectedTeamForSheet.memberIds.map(memberId => {
-                                                    const member = users?.find(u => u.id === memberId);
-                                                    if (!member) return null;
-                                                    return (
-                                                        <div key={memberId} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
-                                                            <Avatar>
-                                                                <AvatarFallback>{member.firstName[0]}{member.lastName[0]}</AvatarFallback>
-                                                            </Avatar>
-                                                            <div>
-                                                                <p className="font-semibold">{member.firstName} {member.lastName}</p>
-                                                                <p className="text-sm text-muted-foreground">{member.role}</p>
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        </SheetContent>
-                                        )}
-                                    </Sheet>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                {selectedTeamForSheet && (
+                    <SheetContent>
+                        <SheetHeader>
+                            <SheetTitle>{selectedTeamForSheet.name}</SheetTitle>
+                            <SheetDescription>Members of this team.</SheetDescription>
+                        </SheetHeader>
+                        <div className="py-4">
+                            {selectedTeamForSheet.memberIds.map(memberId => {
+                                const member = users?.find(u => u.id === memberId);
+                                if (!member) return null;
+                                return (
+                                    <div key={memberId} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                        <Avatar>
+                                            <AvatarFallback>{member.firstName?.[0]}{member.lastName?.[0]}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-semibold">{member.firstName} {member.lastName}</p>
+                                            <p className="text-sm text-muted-foreground">{member.role}</p>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </SheetContent>
+                )}
+            </Sheet>
         </>
     );
 }
