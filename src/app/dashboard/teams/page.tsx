@@ -256,8 +256,7 @@ export default function TeamsPage() {
                             {teamsLoading ? (
                                 <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading teams...</TableCell></TableRow>
                             ) : (teams || []).map(team => {
-                                const isTeamLead = currentUser?.uid === team.teamLeadId;
-                                const canEdit = canManageAllTeams || isTeamLead;
+                                const canEdit = canManageAllTeams;
                                 return (
                                 <TableRow key={team.id}>
                                     <TableCell className="font-medium">{team.name}</TableCell>
