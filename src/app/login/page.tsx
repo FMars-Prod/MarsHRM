@@ -26,30 +26,6 @@ import { cn } from '@/lib/utils';
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
 
 const employeeData: Record<Role, any> = {
-    'Member': {
-        firstName: 'John',
-        lastName: 'Doe',
-        jobTitle: 'Software Engineer',
-        department: 'Technology',
-        hireDate: '2022-01-15',
-        email: 'john.doe@geohrm.com'
-    },
-    'Team Lead': {
-        firstName: 'Jane',
-        lastName: 'Smith',
-        jobTitle: 'Team Lead',
-        department: 'Technology',
-        hireDate: '2020-05-20',
-        email: 'jane.smith@geohrm.com'
-    },
-    'HR Manager': {
-        firstName: 'Peter',
-        lastName: 'Jones',
-        jobTitle: 'HR Manager',
-        department: 'Human Resources',
-        hireDate: '2019-03-10',
-        email: 'peter.jones@geohrm.com'
-    },
     'CEO/Admin': {
         firstName: 'Mary',
         lastName: 'Johnson',
@@ -57,7 +33,10 @@ const employeeData: Record<Role, any> = {
         department: 'Executive',
         hireDate: '2015-08-01',
         email: 'mary.johnson@geohrm.com'
-    }
+    },
+    'Member': {},
+    'Team Lead': {},
+    'HR Manager': {}
 }
 
 const carouselItems = [
@@ -240,27 +219,6 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="flex-grow">
             <div className="grid gap-4">
-              <Button
-                onClick={() => handleLogin('Member')}
-                className="w-full"
-                disabled={!!isLoading}
-              >
-                {isLoading === 'Member' ? 'Logging in...' : 'Login as Employee'}
-              </Button>
-              <Button
-                onClick={() => handleLogin('Team Lead')}
-                className="w-full"
-                disabled={!!isLoading}
-              >
-                {isLoading === 'Team Lead' ? 'Logging in...' : 'Login as Team Lead'}
-              </Button>
-              <Button
-                onClick={() => handleLogin('HR Manager')}
-                className="w-full"
-                disabled={!!isLoading}
-              >
-                {isLoading === 'HR Manager' ? 'Logging in...' : 'Login as Admin'}
-              </Button>
               <Button
                 onClick={() => handleLogin('CEO/Admin')}
                 className="w-full"
