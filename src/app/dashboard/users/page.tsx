@@ -172,6 +172,15 @@ export default function UsersPage() {
 
         } else {
             // Create user logic - NOTE: This only creates a Firestore record, not a Firebase Auth user.
+            const ceoExists = users?.some(user => user.role === 'CEO/Admin');
+            if (values.role === 'CEO/Admin' && ceoExists) {
+                toast({
+                    variant: "destructive",
+                    title: "Operation Forbidden",
+                    description: "A user with the CEO/Admin role already exists.",
+                });
+                return;
+            }
             const newUserId = doc(collection(firestore, 'temp')).id;
             const userDocRef = doc(firestore, 'users', newUserId);
             const newUserPayload = {
