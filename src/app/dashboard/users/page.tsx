@@ -107,6 +107,10 @@ export default function UsersPage() {
         toast({ variant: "destructive", title: "Cannot delete yourself." });
         return;
     }
+    if (userToDelete.role === 'CEO/Admin') {
+        toast({ variant: "destructive", title: "Permission Denied", description: "The CEO account cannot be deleted." });
+        return;
+    }
      if (!canModify(userToDelete.role)) {
         toast({ variant: "destructive", title: "Permission Denied", description: "You cannot delete this user." });
         return;
@@ -330,3 +334,5 @@ export default function UsersPage() {
     </>
   );
 }
+
+    
