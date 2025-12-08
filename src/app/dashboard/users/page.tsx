@@ -136,8 +136,6 @@ export default function UsersPage() {
   const onSubmit = async (values: UserFormValues) => {
     if (!firestore) return;
     
-    form.formState.isSubmitting = true;
-
     try {
         if (editingUser) {
             // Update user logic
@@ -202,8 +200,6 @@ export default function UsersPage() {
         resetDialog();
     } catch (error: any) {
         toast({ variant: "destructive", title: "Operation Failed", description: error.message });
-    } finally {
-        form.formState.isSubmitting = false;
     }
   };
 
@@ -299,7 +295,7 @@ export default function UsersPage() {
           <TableBody>
             {isLoading ? (
                 <TableRow><TableCell colSpan={4} className="text-center h-24">Loading users...</TableCell></TableRow>
-            ) : users?.map((user) => (
+            ) : users?.filter(u => u.id !== 'ceo-placeholder').map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                 <TableCell>{user.jobTitle}</TableCell>
@@ -334,5 +330,3 @@ export default function UsersPage() {
     </>
   );
 }
-
-    
