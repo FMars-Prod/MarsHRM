@@ -36,7 +36,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useUser, useFirestore, useMemoFirebase, useCollection, addDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, useCollection, addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, serverTimestamp, orderBy, query } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -69,10 +69,27 @@ export default function AnnouncementsPage() {
     [firestore]
   );
   const { data: announcements, isLoading } = useCollection<Announcement>(announcementsQuery);
+  
+  const readAnnouncementsQuery = useMemoFirebase(
+    () => user ? collection(firestore, `users/${user.uid}/readAnnouncements`) : null,
+    [user, firestore]
+  );
+  const { data: readAnnouncements } = useCollection<{id: string}>(readAnnouncementsQuery);
 
-  const [announcementStatus, setAnnouncementStatus] = React.useState<
-    Record<string, "Read" | "Unread">
-  >({});
+  const [announcementStatus, setAnnouncementStatus] = React.useState<Record<string, "Read" | "Unread">>({});
+  
+  React.useEffect(() => {
+      if (announcements && readAnnouncements) {
+        const readIds = new Set(readAnnouncements.map(a => a.id));
+        const newStatus: Record<string, "Read" | "Unread"> = {};
+        announcements.forEach(ann => {
+            newStatus[ann.id] = readIds.has(ann.id) ? "Read" : "Unread";
+        });
+        setAnnouncementStatus(newStatus);
+      }
+  }, [announcements, readAnnouncements]);
+
+
   const [selectedAnnouncement, setSelectedAnnouncement] =
     React.useState<AnnouncementWithStatus | null>(null);
   
@@ -81,6 +98,9 @@ export default function AnnouncementsPage() {
   const [newContent, setNewContent] = React.useState("");
 
   const handleMarkAsRead = (id: string) => {
+    if (!user) return;
+    const readDocRef = doc(firestore, `users/${user.uid}/readAnnouncements`, id);
+    setDocumentNonBlocking(readDocRef, { id, readAt: serverTimestamp() }, { merge: true });
     setAnnouncementStatus((prev) => ({ ...prev, [id]: "Read" }));
   };
 
@@ -250,5 +270,3 @@ export default function AnnouncementsPage() {
     </>
   );
 }
-
-    

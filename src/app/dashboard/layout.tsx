@@ -1,3 +1,4 @@
+
 'use client';
 import {
   SidebarProvider,
@@ -11,12 +12,22 @@ import {
 import { MainNav } from '@/components/geohrm/main-nav';
 import { UserNav } from '@/components/geohrm/user-nav';
 import { Building2 } from 'lucide-react';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { doc } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
+import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
+import { isToday } from 'date-fns';
+
+type LeaveRequest = {
+  status: string;
+};
+type Announcement = {
+  id: string;
+};
+type EventItem = {
+  date: Timestamp;
+}
 
 export default function DashboardLayout({
   children,
@@ -26,12 +37,63 @@ export default function DashboardLayout({
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
     [user, firestore]
   );
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
+  
+  const userRole = (userData as any)?.role || 'Member';
+
+  const leaveRequestsQuery = useMemoFirebase(() => {
+    if (!user || !userRole) return null;
+    let q = query(collection(firestore, "leave_requests"));
+    if (userRole === 'Team Lead') {
+      q = query(q, where("status", "==", "Pending"));
+    } else if (userRole === 'HR Manager') {
+      q = query(q, where("status", "in", ["Pending HR Approval"]));
+    } else if (userRole === 'CEO/Admin') {
+       q = query(q, where("status", "in", ["Pending", "Pending HR Approval"]));
+    } else {
+      return null; // Members don't see a count
+    }
+    return q;
+  }, [firestore, user, userRole]);
+
+  const { data: leaveRequests } = useCollection<LeaveRequest>(leaveRequestsQuery);
+  const pendingLeaveCount = leaveRequests?.length || 0;
+
+  const allAnnouncementsQuery = useMemoFirebase(
+    () => collection(firestore, 'announcements'),
+    [firestore]
+  );
+  const { data: allAnnouncements } = useCollection<Announcement>(allAnnouncementsQuery);
+  
+  const readAnnouncementsQuery = useMemoFirebase(
+    () => user ? collection(firestore, `users/${user.uid}/readAnnouncements`) : null,
+    [user, firestore]
+  );
+  const { data: readAnnouncements } = useCollection<{id: string}>(readAnnouncementsQuery);
+
+  useEffect(() => {
+    if (allAnnouncements && readAnnouncements) {
+      const readIds = new Set(readAnnouncements.map(a => a.id));
+      const unreadCount = allAnnouncements.filter(a => !readIds.has(a.id)).length;
+      setUnreadAnnouncements(unreadCount);
+    }
+  }, [allAnnouncements, readAnnouncements]);
+
+  const eventsQuery = useMemoFirebase(
+    () => collection(firestore, 'events'),
+    [firestore]
+  );
+  const { data: events } = useCollection<EventItem>(eventsQuery);
+  const todaysEventsCount = useMemo(() => {
+    if (!events) return 0;
+    return events.filter(e => e.date && isToday(e.date.toDate())).length;
+  }, [events]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -50,8 +112,6 @@ export default function DashboardLayout({
     );
   }
 
-  const userRole = (userData as any)?.role || 'Member';
-
   return (
     <SidebarProvider>
       <Sidebar>
@@ -64,7 +124,12 @@ export default function DashboardLayout({
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <MainNav userRole={userRole} />
+          <MainNav 
+            userRole={userRole}
+            pendingLeaveCount={pendingLeaveCount}
+            unreadAnnouncementsCount={unreadAnnouncements}
+            todaysEventsCount={todaysEventsCount}
+          />
         </SidebarContent>
         <SidebarFooter>
           <UserNav user={user} />
