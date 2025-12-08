@@ -206,13 +206,14 @@ export default function LoginPage() {
         >
           <CarouselContent className="h-full">
             {carouselItems.map((item, index) => (
-              <CarouselItem key={item.id} className={cn("h-full opacity-0 transition-opacity duration-1000", current === index && "opacity-100")}>
+              <CarouselItem key={item.id} className="h-full relative">
                 <Image 
                   src={item.src} 
                   alt={item.alt}
                   data-ai-hint={item.hint}
                   fill
                   style={{ objectFit: 'cover' }}
+                  className={cn("transition-opacity duration-1000", current === index ? "opacity-100" : "opacity-0")}
                 />
               </CarouselItem>
             ))}
@@ -279,3 +280,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

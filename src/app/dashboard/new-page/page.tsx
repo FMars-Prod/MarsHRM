@@ -205,7 +205,7 @@ const AnalyticsPage = () => {
                 </SelectContent>
             </Select>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant={!showAll && date && format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setShowAll(false); }}>Today</Button>
           <Button variant={!showAll && date && format(date, 'yyyy-MM-dd') === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setShowAll(false); }}>Yesterday</Button>
           <Popover>
@@ -219,9 +219,9 @@ const AnalyticsPage = () => {
               <Calendar mode="single" selected={date} onSelect={(d) => { if(d) setDate(d); setShowAll(false); }} initialFocus />
             </PopoverContent>
           </Popover>
+          <Button variant={showAll ? 'default' : 'outline'} onClick={() => setShowAll(!showAll)}>{showAll ? "Viewing Full History" : "View Full History"}</Button>
         </div>
-        <Button variant="ghost" onClick={() => setShowAll(!showAll)}>{showAll ? "View Daily Activity" : "View Full Activity"}</Button>
-        <Button onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
+        <Button className="w-full sm:w-auto" onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
             <Download className="mr-2 h-4 w-4"/>
             Export CSV
         </Button>
@@ -239,12 +239,12 @@ const AnalyticsPage = () => {
       <div className="grid gap-6">
         {selectedUser && (
           <Card>
-            <CardHeader className="flex flex-col sm:flex-row items-center gap-4 space-y-0">
+            <CardHeader className="flex flex-col sm:flex-row items-center gap-4 space-y-0 p-4 sm:p-6">
               <Avatar className="h-20 w-20">
                 {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={selectedUser.firstName} />}
                 <AvatarFallback>{selectedUser.firstName?.[0]}{selectedUser.lastName?.[0]}</AvatarFallback>
               </Avatar>
-              <div>
+              <div className="text-center sm:text-left">
                 <CardTitle className="text-2xl">{selectedUser.firstName} {selectedUser.lastName}</CardTitle>
                 <CardDescription>{selectedUser.jobTitle} - {selectedUser.department}</CardDescription>
               </div>
@@ -302,8 +302,8 @@ const AnalyticsPage = () => {
                         <CardTitle>Last 7 Days Work Hours</CardTitle>
                         <CardDescription>Work vs. Break hours over the last 7 days.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                       <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+                    <CardContent className="pl-2">
+                       <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
                             <BarChart accessibilityLayer data={chartData}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
@@ -326,47 +326,49 @@ const AnalyticsPage = () => {
                         <CardDescription>{showAll ? "Full activity history for the selected employee." : `Activity for ${date ? format(date, 'PPP') : 'the selected day'}.`}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Clock In/Out</TableHead>
-                                    <TableHead>Work</TableHead>
-                                    <TableHead>Break</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {attendanceData?.map((rec) => {
-                                    let workDuration = 0;
-                                    if (rec.checkInTime && rec.checkOutTime) {
-                                        workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
-                                    }
-                                    return (
-                                    <TableRow key={rec.id}>
-                                        <TableCell className="font-medium">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
-                                        <TableCell>
-                                          {rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}
-                                          {' / '}
-                                          {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
-                                        </TableCell>
-                                        <TableCell>{formatDuration(workDuration)}</TableCell>
-                                        <TableCell>{formatDuration(rec.totalBreakDuration || 0)}</TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant="outline"
-                                                className={cn(
-                                                    rec.status === 'present' && 'text-green-600 border-green-600/50',
-                                                    rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
-                                                    rec.status === 'absent' && 'text-red-600 border-red-600/50',
-                                                    rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
-                                                )}
-                                            >{rec.status}</Badge>
-                                        </TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Clock In/Out</TableHead>
+                                        <TableHead>Work</TableHead>
+                                        <TableHead>Break</TableHead>
+                                        <TableHead>Status</TableHead>
                                     </TableRow>
-                                )})}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {attendanceData?.map((rec, index) => {
+                                        let workDuration = 0;
+                                        if (rec.checkInTime && rec.checkOutTime) {
+                                            workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+                                        }
+                                        return (
+                                        <TableRow key={`${rec.id}-${index}`}>
+                                            <TableCell className="font-medium whitespace-nowrap">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                                            <TableCell className="whitespace-nowrap">
+                                            {rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}
+                                            {' / '}
+                                            {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
+                                            </TableCell>
+                                            <TableCell>{formatDuration(workDuration)}</TableCell>
+                                            <TableCell>{formatDuration(rec.totalBreakDuration || 0)}</TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                        rec.status === 'present' && 'text-green-600 border-green-600/50',
+                                                        rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
+                                                        rec.status === 'absent' && 'text-red-600 border-red-600/50',
+                                                        rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
+                                                    )}
+                                                >{rec.status}</Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    )})}
+                                </TableBody>
+                            </Table>
+                        </div>
                          {(!attendanceData || attendanceData.length === 0) && (
                             <div className="text-center py-10 text-muted-foreground">
                                 No attendance records found for this period.
@@ -383,3 +385,5 @@ const AnalyticsPage = () => {
 };
 
 export default AnalyticsPage;
+
+    
