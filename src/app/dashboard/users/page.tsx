@@ -304,7 +304,7 @@ export default function UsersPage() {
           <TableBody>
             {isLoading ? (
                 <TableRow><TableCell colSpan={4} className="text-center h-24">Loading users...</TableCell></TableRow>
-            ) : users?.filter(u => u.id !== 'ceo-placeholder').map((user) => (
+            ) : users?.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                 <TableCell>{user.jobTitle}</TableCell>

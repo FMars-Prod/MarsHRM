@@ -27,8 +27,8 @@ type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
 
 const employeeData: Record<Role, any> = {
     'CEO/Admin': {
-        firstName: 'Mary',
-        lastName: 'Johnson',
+        firstName: 'CEO',
+        lastName: 'Admin',
         jobTitle: 'CEO',
         department: 'Executive',
         hireDate: '2015-08-01',
