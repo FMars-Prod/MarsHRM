@@ -31,10 +31,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
-import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -43,9 +42,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Link from "next/link";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
@@ -64,7 +62,7 @@ type UserFormValues = z.infer<typeof userSchema>;
 type UserData = UserFormValues & { id: string };
 
 export default function UsersPage() {
-  const { user } = useUser();
+  const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -74,7 +72,7 @@ export default function UsersPage() {
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
   const { data: users, isLoading } = useCollection<UserData>(usersQuery);
 
-  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
+  const userDocRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
   const { data: currentUserData } = useDoc(userDocRef);
   const currentUserRole = (currentUserData as any)?.role;
 
@@ -102,22 +100,28 @@ export default function UsersPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteUser = (userToDelete: UserData) => {
-    if (!firestore) return;
+  const handleDeleteUser = async (userToDelete: UserData) => {
+    if (!firestore || !currentUser) return;
+    if (userToDelete.id === currentUser.uid) {
+        toast({ variant: "destructive", title: "Cannot delete yourself." });
+        return;
+    }
+     if (!canModify(userToDelete.role)) {
+        toast({ variant: "destructive", title: "Permission Denied", description: "You cannot delete this user." });
+        return;
+    }
+
     const batch = writeBatch(firestore);
     const userDocRef = doc(firestore, 'users', userToDelete.id);
     batch.delete(userDocRef);
     
-    if (userToDelete.role === 'CEO/Admin') {
-        batch.delete(doc(firestore, 'roles_ceo', userToDelete.id));
-        batch.delete(doc(firestore, 'roles_admin', userToDelete.id));
-    } else if (userToDelete.role === 'HR Manager') {
-        batch.delete(doc(firestore, 'roles_hr_agent', userToDelete.id));
-    } else if (userToDelete.role === 'Team Lead') {
-        batch.delete(doc(firestore, 'roles_team_lead', userToDelete.id));
-    }
+    // Delete from all potential role collections
+    batch.delete(doc(firestore, 'roles_ceo', userToDelete.id));
+    batch.delete(doc(firestore, 'roles_admin', userToDelete.id));
+    batch.delete(doc(firestore, 'roles_hr_agent', userToDelete.id));
+    batch.delete(doc(firestore, 'roles_team_lead', userToDelete.id));
     
-    batch.commit().then(() => {
+    await batch.commit().then(() => {
         toast({ title: "User Deleted", description: "The user has been removed." });
     }).catch(e => {
         toast({ variant: "destructive", title: "Error", description: e.message });
@@ -126,13 +130,43 @@ export default function UsersPage() {
 
   const onSubmit = async (values: UserFormValues) => {
     if (!firestore) return;
+    
+    form.formState.isSubmitting = true;
 
     try {
         if (editingUser) {
             // Update user logic
+            if (!canModify(editingUser.role) || !canModify(values.role)) {
+                 toast({ variant: "destructive", title: "Permission Denied", description: "You cannot modify this user's role." });
+                 return;
+            }
+            
+            const batch = writeBatch(firestore);
             const userDocRef = doc(firestore, 'users', editingUser.id);
-            await updateDocumentNonBlocking(userDocRef, values);
+            batch.update(userDocRef, values);
+
+            // Handle role change
+            if (editingUser.role !== values.role) {
+                // Delete old role docs
+                batch.delete(doc(firestore, 'roles_ceo', editingUser.id));
+                batch.delete(doc(firestore, 'roles_admin', editingUser.id));
+                batch.delete(doc(firestore, 'roles_hr_agent', editingUser.id));
+                batch.delete(doc(firestore, 'roles_team_lead', editingUser.id));
+                
+                // Add new role docs
+                if (values.role === 'CEO/Admin') {
+                    batch.set(doc(firestore, 'roles_ceo', editingUser.id), { employeeId: editingUser.id });
+                    batch.set(doc(firestore, 'roles_admin', editingUser.id), { employeeId: editingUser.id });
+                } else if (values.role === 'HR Manager') {
+                    batch.set(doc(firestore, 'roles_hr_agent', editingUser.id), { employeeId: editingUser.id });
+                } else if (values.role === 'Team Lead') {
+                    batch.set(doc(firestore, 'roles_team_lead', editingUser.id), { employeeId: editingUser.id });
+                }
+            }
+            
+            await batch.commit();
             toast({ title: "User Updated", description: "User details have been saved." });
+
         } else {
             // Create user logic - NOTE: This only creates a Firestore record, not a Firebase Auth user.
             const newUserId = doc(collection(firestore, 'temp')).id;
@@ -163,12 +197,14 @@ export default function UsersPage() {
         resetDialog();
     } catch (error: any) {
         toast({ variant: "destructive", title: "Operation Failed", description: error.message });
+    } finally {
+        form.formState.isSubmitting = false;
     }
   };
 
   const canModify = (role: Role) => {
       if (currentUserRole !== 'CEO/Admin') return false;
-      return !['CEO/Admin', 'HR Manager'].includes(role);
+      return true; // CEO/Admin can modify any role for now, real app would have stricter checks
   }
 
   return (
@@ -179,7 +215,7 @@ export default function UsersPage() {
       >
         <Dialog open={isDialogOpen} onOpenChange={(open) => !open && resetDialog()}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={() => setIsDialogOpen(true)} disabled={currentUserRole !== 'CEO/Admin'}>
               <PlusCircle className="mr-2" />
               Add User
             </Button>
@@ -215,7 +251,7 @@ export default function UsersPage() {
                 <FormField control={form.control} name="role" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Role</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={editingUser?.id === currentUser?.uid}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select a role" />
