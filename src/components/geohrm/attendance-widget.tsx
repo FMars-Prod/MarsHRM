@@ -40,7 +40,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { Textarea } from "../ui/textarea";
 
 
@@ -50,6 +50,8 @@ interface Location {
   latitude: number;
   longitude: number;
   maxDistanceKm?: number;
+  shiftStartTime?: string;
+  shiftEndTime?: string;
 }
 
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
@@ -98,10 +100,12 @@ export function AttendanceWidget() {
   const officeLocation = officeLocationData;
   const maxDistanceKm = officeLocation?.maxDistanceKm || 2;
 
-  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [newLatitude, setNewLatitude] = useState("");
   const [newLongitude, setNewLongitude] = useState("");
   const [newMaxDistance, setNewMaxDistance] = useState("");
+  const [newShiftStart, setNewShiftStart] = useState("");
+  const [newShiftEnd, setNewShiftEnd] = useState("");
   
   const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
@@ -109,9 +113,11 @@ export function AttendanceWidget() {
   
   useEffect(() => {
     if (officeLocation) {
-        setNewLatitude(officeLocation.latitude.toString());
-        setNewLongitude(officeLocation.longitude.toString());
+        setNewLatitude(officeLocation.latitude?.toString() || "");
+        setNewLongitude(officeLocation.longitude?.toString() || "");
         setNewMaxDistance((officeLocation.maxDistanceKm || 2).toString());
+        setNewShiftStart(officeLocation.shiftStartTime || "09:00");
+        setNewShiftEnd(officeLocation.shiftEndTime || "17:00");
     }
   }, [officeLocation])
 
@@ -171,12 +177,20 @@ export function AttendanceWidget() {
       const now = new Date();
       const clockInTime = serverTimestamp();
       
+      let attendanceStatus = 'present';
+      if (officeLocation?.shiftStartTime) {
+          const shiftStart = parse(officeLocation.shiftStartTime, 'HH:mm', new Date());
+          if (now > shiftStart) {
+              attendanceStatus = 'late';
+          }
+      }
+      
       if (getTodaysAttendanceRef) {
           const attendancePayload: any = {
               id: format(now, 'yyyy-MM-dd'),
               employeeId: user!.uid,
               checkInTime: clockInTime,
-              status: now.getHours() > 9 ? 'late' : 'present',
+              status: attendanceStatus,
               totalBreakDuration: 0,
               locationCheckInLatitude: userLocation.latitude,
               locationCheckInLongitude: userLocation.longitude,
@@ -284,22 +298,28 @@ export function AttendanceWidget() {
     }
   };
 
-  const handleSetLocation = async () => {
+  const handleSaveSettings = async () => {
       const lat = parseFloat(newLatitude);
       const lon = parseFloat(newLongitude);
       const range = parseFloat(newMaxDistance);
 
-      if (isNaN(lat) || isNaN(lon) || isNaN(range)) {
-          toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers." });
+      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd) {
+          toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
       
       if (officeLocationDocRef) {
-        setDocumentNonBlocking(officeLocationDocRef, { latitude: lat, longitude: lon, maxDistanceKm: range }, { merge: true });
-        toast({ title: "Location Update Initiated", description: "The office location and range are being updated." });
-        setIsLocationDialogOpen(false);
+        setDocumentNonBlocking(officeLocationDocRef, { 
+            latitude: lat, 
+            longitude: lon, 
+            maxDistanceKm: range,
+            shiftStartTime: newShiftStart,
+            shiftEndTime: newShiftEnd
+        }, { merge: true });
+        toast({ title: "Settings Update Initiated", description: "The office settings are being updated." });
+        setIsSettingsDialogOpen(false);
       } else {
-        toast({ variant: "destructive", title: "Update Failed", description: "Could not save the new office location." });
+        toast({ variant: "destructive", title: "Update Failed", description: "Could not save the new settings." });
       }
   }
   
@@ -332,7 +352,7 @@ export function AttendanceWidget() {
             Geolocation Attendance
             </CardTitle>
             {isAdmin && (
-                <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+                <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
                     <DialogTrigger asChild>
                         <Button variant="ghost" size="icon">
                             <Settings className="size-5" />
@@ -340,30 +360,40 @@ export function AttendanceWidget() {
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Set Office Location</DialogTitle>
+                            <DialogTitle>Company Settings</DialogTitle>
                             <DialogDescription>
-                                Enter the coordinates for the main office and the allowed clock-in radius.
+                                Set global settings for attendance and location.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                            <div className="grid gap-2">
-                                <Label htmlFor="latitude">Latitude</Label>
+                                <Label htmlFor="latitude">Office Latitude</Label>
                                 <Input id="latitude" value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} placeholder="e.g., 37.7749" />
                            </div>
                            <div className="grid gap-2">
-                                <Label htmlFor="longitude">Longitude</Label>
+                                <Label htmlFor="longitude">Office Longitude</Label>
                                 <Input id="longitude" value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} placeholder="e.g., -122.4194" />
                            </div>
                            <div className="grid gap-2">
                                 <Label htmlFor="range">Clock-in Range (km)</Label>
                                 <Input id="range" type="number" value={newMaxDistance} onChange={(e) => setNewMaxDistance(e.target.value)} placeholder="e.g., 2" />
                            </div>
+                           <div className="grid grid-cols-2 gap-4">
+                             <div className="grid gap-2">
+                                  <Label htmlFor="shift-start">Shift Start Time</Label>
+                                  <Input id="shift-start" type="time" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)} />
+                             </div>
+                             <div className="grid gap-2">
+                                  <Label htmlFor="shift-end">Shift End Time</Label>
+                                  <Input id="shift-end" type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
+                             </div>
+                           </div>
                         </div>
                         <DialogFooter>
                             <DialogClose asChild>
                                 <Button variant="outline">Cancel</Button>
                             </DialogClose>
-                            <Button onClick={handleSetLocation}>Save Location</Button>
+                            <Button onClick={handleSaveSettings}>Save Settings</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -525,3 +555,5 @@ export function AttendanceWidget() {
     </Card>
   );
 }
+
+    
