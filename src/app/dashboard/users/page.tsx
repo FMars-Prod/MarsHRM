@@ -34,7 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +45,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Link from "next/link";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
@@ -56,7 +57,21 @@ const userSchema = z.object({
   jobTitle: z.string().min(1, "Job title is required"),
   department: z.string().min(1, "Department is required"),
   role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/Admin']),
+  password: z.string().optional(),
+  confirmPassword: z.string().optional(),
+}).refine(data => {
+    if (data.password && data.password.length < 6) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Password must be at least 6 characters long.",
+    path: ["password"],
+}).refine(data => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
+
 
 type UserFormValues = z.infer<typeof userSchema>;
 
@@ -65,6 +80,7 @@ type UserData = UserFormValues & { id: string };
 export default function UsersPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -86,13 +102,24 @@ export default function UsersPage() {
       jobTitle: "",
       department: "",
       role: "Member",
+      password: "",
+      confirmPassword: "",
     },
   });
 
   const resetDialog = () => {
     setIsDialogOpen(false);
     setEditingUser(null);
-    form.reset();
+    form.reset({
+      firstName: "",
+      lastName: "",
+      email: "",
+      jobTitle: "",
+      department: "",
+      role: "Member",
+      password: "",
+      confirmPassword: "",
+    });
   };
 
   const handleEditUser = (userToEdit: UserData) => {
@@ -116,6 +143,7 @@ export default function UsersPage() {
         return;
     }
 
+    // Note: This does not delete the Firebase Auth user. That would require a backend function.
     const batch = writeBatch(firestore);
     const userDocRef = doc(firestore, 'users', userToDelete.id);
     batch.delete(userDocRef);
@@ -134,7 +162,7 @@ export default function UsersPage() {
   };
 
   const onSubmit = async (values: UserFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !auth) return;
     
     try {
         if (editingUser) {
@@ -146,7 +174,8 @@ export default function UsersPage() {
             
             const batch = writeBatch(firestore);
             const userDocRef = doc(firestore, 'users', editingUser.id);
-            batch.update(userDocRef, values);
+            const { password, confirmPassword, ...updateData } = values;
+            batch.update(userDocRef, updateData);
 
             // Handle role change
             if (editingUser.role !== values.role) {
@@ -171,7 +200,11 @@ export default function UsersPage() {
             toast({ title: "User Updated", description: "User details have been saved." });
 
         } else {
-            // Create user logic - NOTE: This only creates a Firestore record, not a Firebase Auth user.
+            // Create user logic
+            if (!values.password) {
+              form.setError("password", { type: "manual", message: "Password is required for new users." });
+              return;
+            }
             const ceoExists = users?.some(user => user.role === 'CEO/Admin');
             if (values.role === 'CEO/Admin' && ceoExists) {
                 toast({
@@ -181,13 +214,19 @@ export default function UsersPage() {
                 });
                 return;
             }
-            const newUserId = doc(collection(firestore, 'temp')).id;
+            
+            // Create Firebase Auth user
+            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+            const newUserId = userCredential.user.uid;
+
             const userDocRef = doc(firestore, 'users', newUserId);
+            const { password, confirmPassword, ...userData } = values;
+            
             const newUserPayload = {
               id: newUserId,
               employeeId: newUserId,
               hireDate: new Date().toISOString(),
-              ...values
+              ...userData
             }
             
             const batch = writeBatch(firestore);
@@ -244,14 +283,14 @@ export default function UsersPage() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="firstName" render={({ field }) => (
-                        <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} placeholder="John" /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="lastName" render={({ field }) => (
-                        <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} placeholder="Doe" /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
                 <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} placeholder="john.doe@example.com" /></FormControl><FormMessage /></FormItem>
                 )} />
                  <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="jobTitle" render={({ field }) => (
@@ -280,6 +319,32 @@ export default function UsersPage() {
                         <FormMessage />
                     </FormItem>
                 )} />
+                <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Password {editingUser ? '(Optional)' : ''}</FormLabel>
+                            <FormControl>
+                                <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Confirm Password</FormLabel>
+                            <FormControl>
+                                <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <DialogFooter>
                   <DialogClose asChild><Button type="button" variant="outline" onClick={resetDialog}>Cancel</Button></DialogClose>
                   <Button type="submit" disabled={form.formState.isSubmitting}>
@@ -339,3 +404,5 @@ export default function UsersPage() {
     </>
   );
 }
+
+    
