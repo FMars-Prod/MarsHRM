@@ -29,7 +29,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBl
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, serverTimestamp, arrayUnion, arrayRemove, orderBy, query, deleteDoc } from "firebase/firestore";
 import { Textarea } from "@/components/ui/textarea";
-import { format, parse, startOfToday, isSameDay } from "date-fns";
+import { format, parse, startOfToday, isSameDay, getDaysInMonth, getYear, getMonth, getDate } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -97,11 +97,15 @@ export default function EventsPage() {
   const [newEventColor, setNewEventColor] = React.useState<string>('hsl(var(--primary))');
   const [newEventTime, setNewEventTime] = React.useState("");
   
-  const [date, setDate] = React.useState<Date>();
-  
-  const fromYear = new Date().getFullYear();
-  const toYear = fromYear + 10;
+  const [day, setDay] = React.useState<string>();
+  const [month, setMonth] = React.useState<string>();
+  const [year, setYear] = React.useState<string>();
 
+  const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() + i);
+  const months = Array.from({ length: 12 }, (_, i) => ({ value: i, name: format(new Date(0, i), 'MMMM') }));
+  const daysInMonth = (year && month) ? getDaysInMonth(new Date(parseInt(year), parseInt(month))) : 31;
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  
   const handleLike = (id: string) => {
     if (!user) return;
     const eventRef = doc(firestore, 'events', id);
@@ -121,14 +125,16 @@ export default function EventsPage() {
     setNewEventIcon('PartyPopper');
     setNewEventColor('hsl(var(--primary))');
     setNewEventTime("");
-    setDate(undefined);
+    setDay(undefined);
+    setMonth(undefined);
+    setYear(undefined);
     setEditingEvent(null);
     setIsDialogOpen(false);
   }
 
   const handleCreateOrUpdateEvent = () => {
     const eventType = newEventType === "Other" ? otherEventType : newEventType;
-    if (!newEventName || !eventType || !date) {
+    if (!newEventName || !eventType || !day || !month || !year) {
         toast({
             variant: "destructive",
             title: "Missing Information",
@@ -137,10 +143,12 @@ export default function EventsPage() {
         return;
     }
 
+    const eventDate = new Date(parseInt(year), parseInt(month), parseInt(day));
+
     const eventPayload = {
         name: newEventName,
         event: eventType,
-        date: date,
+        date: eventDate,
         icon: newEventIcon,
         color: newEventColor,
         time: newEventTime || undefined,
@@ -176,7 +184,9 @@ export default function EventsPage() {
     }
     
     const eventDate = event.date.toDate();
-    setDate(eventDate);
+    setDay(getDate(eventDate).toString());
+    setMonth(getMonth(eventDate).toString());
+    setYear(getYear(eventDate).toString());
     
     setNewEventTime(event.time || "");
     setNewEventIcon(event.icon);
@@ -220,7 +230,7 @@ export default function EventsPage() {
                         Create Event
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-lg">
                   <DialogHeader>
                       <DialogTitle>{editingEvent ? 'Edit Event' : 'Create a New Event'}</DialogTitle>
                       <DialogDescription>
@@ -252,35 +262,28 @@ export default function EventsPage() {
                                 <Textarea id="other-type" value={otherEventType} onChange={(e) => setOtherEventType(e.target.value)} className="col-span-3" placeholder="e.g., Project Launch" />
                             </div>
                         )}
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="date" className="text-right">Date</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        id="date"
-                                        variant={"outline"}
-                                        className={cn(
-                                            "col-span-3 justify-start text-left font-normal",
-                                            !date && "text-muted-foreground"
-                                        )}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={date}
-                                        onSelect={setDate}
-                                        disabled={(date) => date < startOfToday() && !isSameDay(date, startOfToday())}
-                                        initialFocus
-                                        captionLayout="dropdown-buttons"
-                                        fromYear={fromYear}
-                                        toYear={toYear}
-                                    />
-                                </PopoverContent>
-                            </Popover>
+                        <div className="grid grid-cols-4 items-start gap-4">
+                            <Label className="text-right pt-2">Date</Label>
+                            <div className="col-span-3 grid grid-cols-3 gap-2">
+                                <Select onValueChange={setYear} value={year}>
+                                    <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                                    <SelectContent>
+                                        {years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select onValueChange={setMonth} value={month} disabled={!year}>
+                                    <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+                                    <SelectContent>
+                                        {months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select onValueChange={setDay} value={day} disabled={!month || !year}>
+                                    <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
+                                    <SelectContent>
+                                        {days.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="time" className="text-right">Time (Optional)</Label>
