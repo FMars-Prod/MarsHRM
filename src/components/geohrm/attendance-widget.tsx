@@ -41,6 +41,7 @@ import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { Textarea } from "../ui/textarea";
 
 
 type AttendanceStatus = "out" | "in" | "break";
@@ -102,6 +103,10 @@ export function AttendanceWidget() {
   const [newLongitude, setNewLongitude] = useState("");
   const [newMaxDistance, setNewMaxDistance] = useState("");
   
+  const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
+  const [outOfRangeReason, setOutOfRangeReason] = useState("");
+  const [outOfRangeAction, setOutOfRangeAction] = useState<(() => void) | null>(null);
+  
   useEffect(() => {
     if (officeLocation) {
         setNewLatitude(officeLocation.latitude.toString());
@@ -161,6 +166,36 @@ export function AttendanceWidget() {
     return () => clearInterval(breakInterval);
   }, [status]);
   
+  const proceedWithClockIn = (userLocation: Location, dist: number, reason?: string) => {
+      setCurrentUserLocation(userLocation);
+      const now = new Date();
+      const clockInTime = serverTimestamp();
+      
+      if (getTodaysAttendanceRef) {
+          const attendancePayload: any = {
+              id: format(now, 'yyyy-MM-dd'),
+              employeeId: user!.uid,
+              checkInTime: clockInTime,
+              status: now.getHours() > 9 ? 'late' : 'present',
+              totalBreakDuration: 0,
+              locationCheckInLatitude: userLocation.latitude,
+              locationCheckInLongitude: userLocation.longitude,
+          };
+          if (reason) {
+            attendancePayload.checkInNotes = reason;
+          }
+          setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
+      }
+
+      setStatus("in");
+      setLastClockInTime(now);
+      setTimer(0);
+      setBreakTimer(0);
+      setTotalBreakTime(0);
+      setHasClockedOutToday(false);
+      toast({ title: "Clocked In", description: `Location recorded, ${dist.toFixed(2)} km from office.` });
+  }
+
   const handleClockIn = () => {
     if (!officeLocation || !user) {
         toast({
@@ -178,54 +213,51 @@ export function AttendanceWidget() {
           setDistance(dist);
 
           if (dist > maxDistanceKm) {
-            toast({ variant: "destructive", title: "Clock-In Failed", description: `You are ${dist.toFixed(2)} km away. Must be within ${maxDistanceKm} km.` });
-            return;
+              setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, dist, outOfRangeReason));
+              setIsOutOfRangeReasonDialogOpen(true);
+          } else {
+              proceedWithClockIn(userLocation, dist);
           }
-
-          setCurrentUserLocation(userLocation);
-          const now = new Date();
-          const clockInTime = serverTimestamp();
-          
-          if (getTodaysAttendanceRef) {
-              setDocumentNonBlocking(getTodaysAttendanceRef, {
-                  id: format(now, 'yyyy-MM-dd'),
-                  employeeId: user.uid,
-                  checkInTime: clockInTime,
-                  status: now.getHours() > 9 ? 'late' : 'present',
-                  totalBreakDuration: 0,
-                  locationCheckInLatitude: userLocation.latitude,
-                  locationCheckInLongitude: userLocation.longitude,
-              }, { merge: true });
-          }
-
-          setStatus("in");
-          setLastClockInTime(now);
-          setTimer(0);
-          setBreakTimer(0);
-          setTotalBreakTime(0);
-          setHasClockedOutToday(false);
-          toast({ title: "Clocked In", description: `Location recorded, ${dist.toFixed(2)} km from office.` });
         },
         () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."})
     );
   };
+  
+  const proceedWithClockOut = (userLocation: Location, reason?: string) => {
+      if (getTodaysAttendanceRef) {
+          const payload: any = {
+              checkOutTime: serverTimestamp(),
+              totalBreakDuration: totalBreakTime,
+              locationCheckOutLatitude: userLocation.latitude,
+              locationCheckOutLongitude: userLocation.longitude,
+          };
+          if (reason) {
+            payload.checkOutNotes = reason;
+          }
+          updateDocumentNonBlocking(getTodaysAttendanceRef, payload);
+      }
+      setStatus("out");
+      setHasClockedOutToday(true);
+      setCurrentUserLocation(null);
+      setDistance(null);
+  }
 
   const handleClockOut = () => {
+    if (!officeLocation || !user) {
+      toast({ variant: "destructive", title: "Cannot Clock Out" });
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
         (position) => {
             const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-            if (getTodaysAttendanceRef) {
-                updateDocumentNonBlocking(getTodaysAttendanceRef, {
-                    checkOutTime: serverTimestamp(),
-                    totalBreakDuration: totalBreakTime,
-                    locationCheckOutLatitude: userLocation.latitude,
-                    locationCheckOutLongitude: userLocation.longitude,
-                });
+            const dist = getDistanceInKm(userLocation, officeLocation);
+
+            if (dist > maxDistanceKm) {
+                setOutOfRangeAction(() => () => proceedWithClockOut(userLocation, outOfRangeReason));
+                setIsOutOfRangeReasonDialogOpen(true);
+            } else {
+                proceedWithClockOut(userLocation);
             }
-            setStatus("out");
-            setHasClockedOutToday(true);
-            setCurrentUserLocation(null);
-            setDistance(null);
         },
         () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."})
     );
@@ -269,6 +301,19 @@ export function AttendanceWidget() {
       } else {
         toast({ variant: "destructive", title: "Update Failed", description: "Could not save the new office location." });
       }
+  }
+  
+  const handleOutOfRangeSubmit = () => {
+      if (!outOfRangeReason) {
+          toast({ variant: "destructive", title: "Reason required", description: "Please provide a reason for being out of range."});
+          return;
+      }
+      if (outOfRangeAction) {
+          outOfRangeAction();
+      }
+      setIsOutOfRangeReasonDialogOpen(false);
+      setOutOfRangeReason("");
+      setOutOfRangeAction(null);
   }
 
   const formatTime = (totalSeconds: number) => {
@@ -453,6 +498,30 @@ export function AttendanceWidget() {
           </>
         )}
       </CardFooter>
+
+        <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Out of Range</DialogTitle>
+                    <DialogDescription>
+                        You are outside the designated office radius. Please provide a reason to continue.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <Label htmlFor="reason">Reason</Label>
+                    <Textarea 
+                        id="reason" 
+                        value={outOfRangeReason}
+                        onChange={(e) => setOutOfRangeReason(e.target.value)}
+                        placeholder="e.g., Working from a client's office" 
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsOutOfRangeReasonDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleOutOfRangeSubmit}>Submit</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </Card>
   );
 }
