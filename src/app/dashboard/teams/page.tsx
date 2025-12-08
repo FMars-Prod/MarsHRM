@@ -64,7 +64,6 @@ export default function TeamsPage() {
     const { toast } = useToast();
 
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-    const [editingTeam, setEditingTeam] = React.useState<WithId<Team> | null>(null);
     const [teamName, setTeamName] = React.useState("");
     const [teamLeadId, setTeamLeadId] = React.useState<string | undefined>();
     const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([]);
@@ -87,13 +86,12 @@ export default function TeamsPage() {
 
     const resetDialog = () => {
         setIsDialogOpen(false);
-        setEditingTeam(null);
         setTeamName("");
         setTeamLeadId(undefined);
         setSelectedMemberIds([]);
     }
 
-    const handleCreateOrUpdateTeam = async () => {
+    const handleCreateTeam = async () => {
         if (!teamName || !teamLeadId) {
             toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please provide a team name and a leader.' });
             return;
@@ -103,46 +101,18 @@ export default function TeamsPage() {
         
         const allMemberIdsForTeam = Array.from(new Set([teamLeadId, ...selectedMemberIds]));
         
-        if (editingTeam) {
-            const teamRef = doc(firestore, 'teams', editingTeam.id);
-            batch.update(teamRef, { name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
-            
-            const originalMembers = editingTeam.memberIds || [];
-            const removedMembers = originalMembers.filter(id => !allMemberIdsForTeam.includes(id));
-            removedMembers.forEach(memberId => {
-                const userRef = doc(firestore, 'users', memberId);
-                batch.update(userRef, { teamId: null });
-            });
+        const newTeamRef = doc(collection(firestore, 'teams'));
+        batch.set(newTeamRef, { id: newTeamRef.id, name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
 
-            allMemberIdsForTeam.forEach(memberId => {
-                const userRef = doc(firestore, 'users', memberId);
-                batch.update(userRef, { teamId: editingTeam.id });
-            });
-            
-            toast({ title: 'Team Updated' });
+        allMemberIdsForTeam.forEach(memberId => {
+            const userRef = doc(firestore, 'users', memberId);
+            batch.update(userRef, { teamId: newTeamRef.id });
+        });
 
-        } else {
-            const newTeamRef = doc(collection(firestore, 'teams'));
-            batch.set(newTeamRef, { id: newTeamRef.id, name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
-
-            allMemberIdsForTeam.forEach(memberId => {
-                const userRef = doc(firestore, 'users', memberId);
-                batch.update(userRef, { teamId: newTeamRef.id });
-            });
-
-            toast({ title: 'Team Created' });
-        }
+        toast({ title: 'Team Created' });
         
         await batch.commit();
         resetDialog();
-    }
-
-    const handleOpenEditDialog = (team: WithId<Team>) => {
-        setEditingTeam(team);
-        setTeamName(team.name);
-        setTeamLeadId(team.teamLeadId);
-        setSelectedMemberIds(team.memberIds.filter(id => id !== team.teamLeadId) || []);
-        setIsDialogOpen(true);
     }
     
     const handleDeleteTeam = async (team: WithId<Team>) => {
@@ -159,24 +129,11 @@ export default function TeamsPage() {
         toast({ title: 'Team Deleted', description: 'The team has been removed and members are unassigned.' });
     }
 
-    const availableMembersForSelection = users?.filter(u => {
-        if (u.role !== 'Member') return false;
-        // If not editing, show all members without a team
-        if (!editingTeam) return !u.teamId;
-        // If editing, show members of the current team OR members without a team
-        return !u.teamId || u.teamId === editingTeam.id;
-    });
+    const availableMembersForSelection = users?.filter(u => u.role === 'Member' && !u.teamId);
 
     const potentialLeads = users?.filter(u => {
         if (u.role !== 'Team Lead') return false;
-        
-        // If editing, always include the current leader of the team being edited
-        if (editingTeam && u.id === editingTeam.teamLeadId) {
-            return true;
-        }
-
-        // Exclude leads who are already leading another team
-        const isAlreadyLeadOfAnotherTeam = teams?.some(team => team.id !== editingTeam?.id && team.teamLeadId === u.id);
+        const isAlreadyLeadOfAnotherTeam = teams?.some(team => team.teamLeadId === u.id);
         return !isAlreadyLeadOfAnotherTeam;
     });
 
@@ -195,7 +152,7 @@ export default function TeamsPage() {
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-lg">
                             <DialogHeader>
-                                <DialogTitle>{editingTeam ? 'Edit Team' : 'Create New Team'}</DialogTitle>
+                                <DialogTitle>Create New Team</DialogTitle>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="grid gap-2">
@@ -235,7 +192,7 @@ export default function TeamsPage() {
                             </div>
                             <DialogFooter>
                                 <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                                <Button onClick={handleCreateOrUpdateTeam}>Save Team</Button>
+                                <Button onClick={handleCreateTeam}>Save Team</Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
@@ -271,11 +228,6 @@ export default function TeamsPage() {
                                                 <DropdownMenuItem onClick={() => setSelectedTeamForSheet(team)}>
                                                     <Users className="mr-2 h-4 w-4"/> View Members
                                                 </DropdownMenuItem>
-                                                {(canManageAllTeams || isTeamLead) && (
-                                                    <DropdownMenuItem onClick={() => handleOpenEditDialog(team)}>
-                                                        <Edit className="mr-2 h-4 w-4"/> Edit Team
-                                                    </DropdownMenuItem>
-                                                )}
                                                 {canManageAllTeams && (
                                                     <DropdownMenuItem onClick={() => handleDeleteTeam(team)} className="text-destructive">
                                                         <Trash className="mr-2 h-4 w-4"/> Delete Team
@@ -319,5 +271,3 @@ export default function TeamsPage() {
         </>
     );
 }
-
-    
