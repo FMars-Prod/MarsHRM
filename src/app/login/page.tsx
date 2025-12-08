@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore } from '@/firebase';
-import { signInAnonymously, User } from 'firebase/auth';
-import { doc, writeBatch } from 'firebase/firestore';
+import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, writeBatch, getDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import Autoplay from "embla-carousel-autoplay"
@@ -32,12 +32,33 @@ const employeeData: Record<Role, any> = {
         jobTitle: 'CEO',
         department: 'Executive',
         hireDate: '2015-08-01',
-        email: 'mary.johnson@geohrm.com'
+        email: 'ceo@geohrm.com'
     },
-    'Member': {},
-    'Team Lead': {},
-    'HR Manager': {}
-}
+    'HR Manager': {
+        firstName: 'Patricia',
+        lastName: 'Williams',
+        jobTitle: 'HR Manager',
+        department: 'Human Resources',
+        hireDate: '2018-03-15',
+        email: 'hr@geohrm.com'
+    },
+    'Team Lead': {
+        firstName: 'Robert',
+        lastName: 'Brown',
+        jobTitle: 'Engineering Lead',
+        department: 'Technology',
+        hireDate: '2019-11-01',
+        email: 'lead@geohrm.com'
+    },
+    'Member': {
+        firstName: 'John',
+        lastName: 'Smith',
+        jobTitle: 'Software Engineer',
+        department: 'Technology',
+        hireDate: '2021-07-22',
+        email: 'member@geohrm.com'
+    }
+};
 
 const carouselItems = [
   { 
@@ -107,53 +128,64 @@ export default function LoginPage() {
             description: 'Firebase not initialized.',
           });
         setIsLoading(null);
-        return
+        return;
     }
 
+    const { email } = employeeData[role];
+    const password = 'password'; // Use a consistent, simple password for all demo accounts
+
     try {
-      // It's better to sign out previous user
-      if (auth.currentUser) {
+      if (auth.currentUser && auth.currentUser.email !== email) {
         await auth.signOut();
       }
-      const userCredential = await signInAnonymously(auth);
+      
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+          userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        } else {
+          throw error;
+        }
+      }
+      
       const user = userCredential.user;
 
-      const batch = writeBatch(firestore);
-
-      // 1. Set the user's main document
+      // Check if user data already exists in Firestore to avoid overwriting
       const userDocRef = doc(firestore, 'users', user.uid);
-      const roleSpecificData = employeeData[role];
-      const userData = {
-        id: user.uid,
-        employeeId: user.uid, // Using uid as employeeId for dummy user
-        role: role,
-        ...roleSpecificData,
-        email: user.uid + '@geohrm.com' // Make email unique for anonymous users
-      };
-      batch.set(userDocRef, userData, { merge: true });
+      const userDocSnap = await getDoc(userDocRef);
 
-      // 2. Set the role document for security rules
-      if (role === 'CEO/Admin') {
-        const ceoRoleRef = doc(firestore, 'roles_ceo', user.uid);
-        const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
-        batch.set(ceoRoleRef, { employeeId: user.uid });
-        batch.set(adminRoleRef, { employeeId: user.uid });
-      } else if (role === 'HR Manager') {
-        const hrRoleRef = doc(firestore, 'roles_hr_agent', user.uid);
-        batch.set(hrRoleRef, { employeeId: user.uid });
-      } else if (role === 'Team Lead') {
-        const tlRoleRef = doc(firestore, 'roles_team_lead', user.uid);
-        batch.set(tlRoleRef, { employeeId: user.uid });
+      if (!userDocSnap.exists()) {
+        const batch = writeBatch(firestore);
+        const roleSpecificData = employeeData[role];
+        const userData = {
+          id: user.uid,
+          employeeId: user.uid,
+          role: role,
+          ...roleSpecificData,
+        };
+        batch.set(userDocRef, userData, { merge: true });
+
+        // Set the role document for security rules
+        if (role === 'CEO/Admin') {
+          batch.set(doc(firestore, 'roles_ceo', user.uid), { employeeId: user.uid });
+          batch.set(doc(firestore, 'roles_admin', user.uid), { employeeId: user.uid });
+        } else if (role === 'HR Manager') {
+          batch.set(doc(firestore, 'roles_hr_agent', user.uid), { employeeId: user.uid });
+        } else if (role === 'Team Lead') {
+          batch.set(doc(firestore, 'roles_team_lead', user.uid), { employeeId: user.uid });
+        }
+
+        await batch.commit().catch((serverError) => {
+              const permissionError = new FirestorePermissionError({
+                path: `batch write for user ${user.uid}`,
+                operation: 'write',
+                requestResourceData: userData,
+              });
+              errorEmitter.emit('permission-error', permissionError);
+        });
       }
-
-      await batch.commit().catch((serverError) => {
-            const permissionError = new FirestorePermissionError({
-              path: `batch write for user ${user.uid}`,
-              operation: 'write',
-              requestResourceData: userData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-      });
 
 
       toast({
@@ -162,12 +194,14 @@ export default function LoginPage() {
       });
       router.push('/dashboard');
     } catch (error: any) {
+      console.error("Login failed:", error);
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message,
+        description: error.message || 'An unexpected error occurred.',
       });
-      setIsLoading(null);
+    } finally {
+        setIsLoading(null);
     }
   };
 
@@ -224,7 +258,28 @@ export default function LoginPage() {
                 className="w-full"
                 disabled={!!isLoading}
               >
-                {isLoading === 'CEO/Admin' ? 'Logging in...' : 'Login as CEO'}
+                {isLoading === 'CEO/Admin' ? 'Logging in...' : 'Login as CEO/Admin'}
+              </Button>
+               <Button
+                onClick={() => handleLogin('HR Manager')}
+                className="w-full"
+                disabled={!!isLoading}
+              >
+                {isLoading === 'HR Manager' ? 'Logging in...' : 'Login as HR Manager'}
+              </Button>
+               <Button
+                onClick={() => handleLogin('Team Lead')}
+                className="w-full"
+                disabled={!!isLoading}
+              >
+                {isLoading === 'Team Lead' ? 'Logging in...' : 'Login as Team Lead'}
+              </Button>
+               <Button
+                onClick={() => handleLogin('Member')}
+                className="w-full"
+                disabled={!!isLoading}
+              >
+                {isLoading === 'Member' ? 'Logging in...' : 'Login as Member'}
               </Button>
             </div>
           </CardContent>
@@ -238,5 +293,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    
