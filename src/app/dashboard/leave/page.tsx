@@ -40,10 +40,8 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBl
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, startOfToday } from "date-fns";
+import { format, startOfToday, getDaysInMonth, getYear, getMonth, getDate } from "date-fns";
 import { DateRange } from "react-day-picker";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import type { WithId } from "@/firebase/firestore/use-collection";
 
@@ -166,8 +164,24 @@ export default function LeavePage() {
 
   const [leaveType, setLeaveType] = React.useState<string>("");
   const [reason, setReason] = React.useState("");
-  const [date, setDate] = React.useState<DateRange | undefined>({ from: undefined, to: undefined });
   const [isRequesting, setIsRequesting] = React.useState(false);
+  
+  const currentYear = getYear(new Date());
+  const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
+  const months = Array.from({ length: 12 }, (_, i) => ({ value: i, name: format(new Date(0, i), 'MMMM') }));
+
+  const [startDay, setStartDay] = React.useState<string | undefined>();
+  const [startMonth, setStartMonth] = React.useState<string | undefined>();
+  const [startYear, setStartYear] = React.useState<string | undefined>(currentYear.toString());
+  
+  const [endDay, setEndDay] = React.useState<string | undefined>();
+  const [endMonth, setEndMonth] = React.useState<string | undefined>();
+  const [endYear, setEndYear] = React.useState<string | undefined>(currentYear.toString());
+
+  const startDaysInMonth = (startYear && startMonth) ? getDaysInMonth(new Date(parseInt(startYear), parseInt(startMonth))) : 31;
+  const endDaysInMonth = (endYear && endMonth) ? getDaysInMonth(new Date(parseInt(endYear), parseInt(endMonth))) : 31;
+  const startDays = Array.from({ length: startDaysInMonth }, (_, i) => i + 1);
+  const endDays = Array.from({ length: endDaysInMonth }, (_, i) => i + 1);
 
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -204,18 +218,27 @@ export default function LeavePage() {
   }
 
   const handleCreateRequest = () => {
-    if (!user || !userData || !leaveType || !date?.from || !date?.to || !reason) {
+    if (!user || !userData || !leaveType || !reason || !startDay || !startMonth || !startYear || !endDay || !endMonth || !endYear) {
         toast({ variant: "destructive", title: "Missing Information", description: "Please fill out all fields."});
         return;
     }
     setIsRequesting(true);
+    
+    const fromDate = new Date(parseInt(startYear), parseInt(startMonth), parseInt(startDay));
+    const toDate = new Date(parseInt(endYear), parseInt(endMonth), parseInt(endDay));
+
+    if (toDate < fromDate) {
+        toast({ variant: "destructive", title: "Invalid Date Range", description: "End date cannot be before the start date."});
+        setIsRequesting(false);
+        return;
+    }
 
     const newRequest: LeaveRequest = {
         employeeId: user.uid,
         employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
         employeeJobTitle: (userData as any).jobTitle,
-        startDate: date.from,
-        endDate: date.to,
+        startDate: fromDate,
+        endDate: toDate,
         leaveType,
         reason,
         status: 'Pending',
@@ -227,7 +250,8 @@ export default function LeavePage() {
           toast({ title: "Request Submitted", description: "Your leave request has been submitted for approval."});
           setLeaveType("");
           setReason("");
-          setDate({from: undefined, to: undefined});
+          setStartDay(undefined); setStartMonth(undefined); setStartYear(currentYear.toString());
+          setEndDay(undefined); setEndMonth(undefined); setEndYear(currentYear.toString());
           setIsRequesting(false);
       })
       .catch((e) => {
@@ -255,7 +279,7 @@ export default function LeavePage() {
                 New Leave Request
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Submit a Leave Request</DialogTitle>
                 <DialogDescription>
@@ -279,46 +303,55 @@ export default function LeavePage() {
                       </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="dates" className="text-right">Dates</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <Button
-                            id="dates"
-                            variant={"outline"}
-                            className={cn(
-                            "col-span-3 justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date?.from ? (
-                            date.to ? (
-                                <>
-                                {format(date.from, "LLL dd, y")} -{" "}
-                                {format(date.to, "LLL dd, y")}
-                                </>
-                            ) : (
-                                format(date.from, "LLL dd, y")
-                            )
-                            ) : (
-                            <span>Pick a date range</span>
-                            )}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={date?.from}
-                            selected={date}
-                            onSelect={setDate}
-                            numberOfMonths={2}
-                            disabled={(d) => d < startOfToday()}
-                        />
-                        </PopoverContent>
-                    </Popover>
+                
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label className="text-right pt-2">Start Date</Label>
+                  <div className="col-span-3 grid grid-cols-3 gap-2">
+                    <Select onValueChange={setStartYear} value={startYear}>
+                      <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                      <SelectContent>
+                        {years.map(y => <SelectItem key={`start-year-${y}`} value={y.toString()}>{y}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select onValueChange={setStartMonth} value={startMonth}>
+                      <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+                      <SelectContent>
+                        {months.map(m => <SelectItem key={`start-month-${m.value}`} value={m.value.toString()}>{m.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth || !startYear}>
+                      <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
+                      <SelectContent>
+                        {startDays.map(d => <SelectItem key={`start-day-${d}`} value={d.toString()}>{d}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label className="text-right pt-2">End Date</Label>
+                  <div className="col-span-3 grid grid-cols-3 gap-2">
+                    <Select onValueChange={setEndYear} value={endYear}>
+                      <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                      <SelectContent>
+                        {years.map(y => <SelectItem key={`end-year-${y}`} value={y.toString()}>{y}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select onValueChange={setEndMonth} value={endMonth}>
+                      <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+                      <SelectContent>
+                        {months.map(m => <SelectItem key={`end-month-${m.value}`} value={m.value.toString()}>{m.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth || !endYear}>
+                      <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
+                      <SelectContent>
+                        {endDays.map(d => <SelectItem key={`end-day-${d}`} value={d.toString()}>{d}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                  <div className="grid grid-cols-4 items-start gap-4">
                   <Label htmlFor="reason" className="text-right pt-2">
                     Reason
@@ -452,5 +485,3 @@ export default function LeavePage() {
     </>
   );
 }
-
-    
