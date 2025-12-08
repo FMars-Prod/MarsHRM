@@ -22,6 +22,7 @@ import {
   Users,
   Building,
   BarChart2,
+  FileText,
 } from "lucide-react";
 import React from "react";
 
@@ -33,7 +34,8 @@ const links = [
   { href: "/dashboard/announcements", label: "Announcements", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
   { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
   { href: "/dashboard/issues", label: "Issues", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-  { href: "/dashboard/team", label: "Team", icon: Users, roles: ['Team Lead'] },
+  { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Team Lead'] },
+  { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ['Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/policies", label: "Policies", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },

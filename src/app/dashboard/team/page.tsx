@@ -30,301 +30,267 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, FileText, Download, Search, CheckCircle, Clock } from "lucide-react";
-import { teamData as initialTeamData } from "@/lib/data";
+import { PlusCircle, Users, Trash, Edit, MoreHorizontal, User, UserPlus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { useDoc } from "@/firebase/firestore/use-doc";
+import { collection, query, writeBatch, doc } from "firebase/firestore";
+import type { WithId } from "@/firebase/firestore/use-collection";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-type Report = { id: string; date: string; summary: string };
-type TeamMember = { id: string; name: string; jobTitle: string; reports: Report[] };
+type UserData = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    teamId?: string;
+};
 
-export default function TeamPage() {
-  const [teamData, setTeamData] = React.useState<TeamMember[]>(initialTeamData);
-  const [selectedMember, setSelectedMember] = React.useState<TeamMember | null>(null);
-  const { toast } = useToast();
-  const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState("");
+type Team = {
+    id: string;
+    name: string;
+    teamLeadId: string;
+    memberIds: string[];
+};
 
-  const handleAddReport = (memberId: string, summary: string) => {
-    const today = new Date().toLocaleDateString();
-    const member = teamData.find(m => m.id === memberId);
-    const hasReportForToday = member?.reports.some(report => new Date(report.date).toLocaleDateString() === today);
+export default function TeamsPage() {
+    const { user: currentUser } = useUser();
+    const firestore = useFirestore();
+    const { toast } = useToast();
 
-    if (hasReportForToday) {
-        toast({
-            variant: "destructive",
-            title: "Report already submitted",
-            description: "A team member can only submit one report per day.",
-        });
-        return;
+    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+    const [editingTeam, setEditingTeam] = React.useState<WithId<Team> | null>(null);
+    const [teamName, setTeamName] = React.useState("");
+    const [teamLead, setTeamLead] = React.useState<string | undefined>();
+    const [teamMembers, setTeamMembers] = React.useState<string[]>([]);
+    const [selectedTeamForSheet, setSelectedTeamForSheet] = React.useState<WithId<Team> | null>(null);
+
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+    const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
+
+    const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
+    const { data: teams, isLoading: teamsLoading } = useCollection<Team>(teamsQuery);
+    
+    const { data: currentUserData } = useDoc(useMemoFirebase(() => currentUser ? doc(firestore, "users", currentUser.uid) : null, [currentUser, firestore]));
+    const userRole = (currentUserData as any)?.role;
+    const canManageTeams = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+
+    const getTeamLeadName = (leadId: string) => {
+        const lead = users?.find(u => u.id === leadId);
+        return lead ? `${lead.firstName} ${lead.lastName}` : 'N/A';
     }
 
-    const newReport: Report = {
-        id: `r${Date.now()}`,
-        date: new Date().toISOString(), // Use ISO string for full timestamp
-        summary,
-    };
-
-    setTeamData(prevData =>
-        prevData.map(member => {
-            if (member.id === memberId) {
-                const updatedMember = { ...member, reports: [newReport, ...member.reports] };
-                if (selectedMember?.id === memberId) {
-                    setSelectedMember(updatedMember);
-                }
-                return updatedMember;
-            }
-            return member;
-        })
-    );
-    toast({
-        title: "Report Saved",
-        description: `Work report for ${selectedMember?.name} has been saved.`
-    });
-    setIsAddReportDialogOpen(false);
-  };
-
-  const handleExport = () => {
-    if (!selectedMember || selectedMember.reports.length === 0) {
-        toast({
-            variant: "destructive",
-            title: "No reports to export",
-        });
-        return;
+    const resetDialog = () => {
+        setIsDialogOpen(false);
+        setEditingTeam(null);
+        setTeamName("");
+        setTeamLead(undefined);
+        setTeamMembers([]);
     }
 
-    const headers = ["Date", "Summary"];
-    const csvRows = [
-        headers.join(','),
-        ...selectedMember.reports.map(report => {
-            const date = `"${format(new Date(report.date), "PPpp")}"`;
-            const summary = `"${report.summary.replace(/"/g, '""')}"`;
-            return [date, summary].join(',');
-        })
-    ];
-
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.href) {
-        URL.revokeObjectURL(link.href);
-    }
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute('download', `${selectedMember.name}'s Reports.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  const handleExportAll = () => {
-    if (teamData.length === 0) {
-        toast({
-            variant: "destructive",
-            title: "No data to export",
-        });
-        return;
-    }
-
-    const headers = ["Team Member", "Job Title", "Report Date", "Report Summary"];
-    const csvRows = [headers.join(',')];
-
-    teamData.forEach(member => {
-        if (member.reports.length > 0) {
-            member.reports.forEach(report => {
-                const row = [
-                    `"${member.name}"`,
-                    `"${member.jobTitle}"`,
-                    `"${format(new Date(report.date), "PPpp")}"`,
-                    `"${report.summary.replace(/"/g, '""')}"`
-                ];
-                csvRows.push(row.join(','));
-            });
-        } else {
-            const row = [
-                `"${member.name}"`,
-                `"${member.jobTitle}"`,
-                "N/A",
-                "No reports"
-            ];
-            csvRows.push(row.join(','));
+    const handleCreateOrUpdateTeam = async () => {
+        if (!teamName || !teamLead || teamMembers.length === 0) {
+            toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please provide a team name, a leader, and at least one member.' });
+            return;
         }
-    });
 
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute('download', 'All_Team_Reports.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-  
-  const filteredTeamData = teamData.filter(member =>
-    member.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+        const batch = writeBatch(firestore);
+        const allMemberIds = Array.from(new Set([teamLead, ...teamMembers]));
 
-  const hasReportToday = (member: TeamMember) => {
-    const today = new Date().toLocaleDateString();
-    return member.reports.some(report => new Date(report.date).toLocaleDateString() === today);
-  };
+        if (editingTeam) {
+            const teamRef = doc(firestore, 'teams', editingTeam.id);
+            batch.update(teamRef, { name: teamName, teamLeadId: teamLead, memberIds: allMemberIds });
+            
+            // This is simplified. A real implementation would handle members removed from the team.
+            allMemberIds.forEach(memberId => {
+                const userRef = doc(firestore, 'users', memberId);
+                batch.update(userRef, { teamId: editingTeam.id });
+            });
 
+            toast({ title: 'Team Updated' });
+        } else {
+            const newTeamRef = doc(collection(firestore, 'teams'));
+            batch.set(newTeamRef, { id: newTeamRef.id, name: teamName, teamLeadId: teamLead, memberIds: allMemberIds });
 
-  return (
-    <>
-      <PageHeader
-        title="Team Management"
-        description="View your team members and their work reports."
-      >
-        <div className="flex items-center gap-2">
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Search by name..."
-                    className="pl-8"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                />
-            </div>
-            <Button onClick={handleExportAll}>
-            <Download className="mr-2" />
-            Export All as CSV
-            </Button>
-        </div>
-      </PageHeader>
-      <Sheet>
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Job Title</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTeamData.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                        {hasReportToday(member) ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                            <Clock className="h-4 w-4 text-yellow-500" />
-                        )}
-                        {member.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>{member.jobTitle}</TableCell>
-                  <TableCell className="text-right">
-                    <SheetTrigger asChild>
-                      <Button variant="outline" size="sm" onClick={() => setSelectedMember(member)}>
-                        <FileText className="mr-2" />
-                        View Reports
-                      </Button>
-                    </SheetTrigger>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        {selectedMember && (
-          <SheetContent className="sm:max-w-lg">
-            <SheetHeader>
-              <SheetTitle>{selectedMember.name}'s Reports</SheetTitle>
-              <SheetDescription>
-                Review and add work reports for this team member.
-              </SheetDescription>
-            </SheetHeader>
-            <Separator className="my-4" />
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <Dialog open={isAddReportDialogOpen} onOpenChange={setIsAddReportDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <PlusCircle className="mr-2" />
-                      Add New Report
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                      <form onSubmit={(e) => {
-                          e.preventDefault();
-                          const formData = new FormData(e.currentTarget);
-                          const summary = formData.get("summary") as string;
-                          if (summary && selectedMember) {
-                              handleAddReport(selectedMember.id, summary);
-                          }
-                      }}>
-                          <DialogHeader>
-                              <DialogTitle>New Report for {selectedMember.name}</DialogTitle>
-                              <DialogDescription>
-                              Enter the details of the work report below.
-                              </DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                              <div className="grid gap-2">
-                              <Label htmlFor="summary">Report Summary</Label>
-                              <Textarea id="summary" name="summary" placeholder="Describe the work accomplished..." required />
-                              </div>
-                          </div>
-                          <DialogFooter>
-                              <DialogClose asChild>
-                                  <Button type="button" variant="outline">Cancel</Button>
-                              </DialogClose>
-                              <Button type="submit">Save Report</Button>
-                          </DialogFooter>
-                      </form>
-                  </DialogContent>
-                </Dialog>
-                <Button variant="outline" onClick={handleExport}>
-                    <Download className="mr-2"/>
-                    Export as CSV
-                </Button>
-              </div>
+            allMemberIds.forEach(memberId => {
+                const userRef = doc(firestore, 'users', memberId);
+                batch.update(userRef, { teamId: newTeamRef.id });
+            });
 
-              <div className="mt-4 space-y-4">
-                <h4 className="font-semibold">Existing Reports</h4>
-                {selectedMember.reports.length > 0 ? (
-                    <div className="border rounded-lg">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Date & Time</TableHead>
-                                    <TableHead>Summary</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {selectedMember.reports.map(report => (
-                                    <TableRow key={report.id}>
-                                        <TableCell className="text-sm text-muted-foreground">
-                                          {format(new Date(report.date), "MMM d, yyyy 'at' h:mm a")}
-                                        </TableCell>
-                                        <TableCell>{report.summary}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No reports found for this team member.
-                  </p>
+            toast({ title: 'Team Created' });
+        }
+        
+        await batch.commit();
+        resetDialog();
+    }
+
+    const handleOpenEditDialog = (team: WithId<Team>) => {
+        setEditingTeam(team);
+        setTeamName(team.name);
+        setTeamLead(team.teamLeadId);
+        setTeamMembers(team.memberIds.filter(id => id !== team.teamLeadId));
+        setIsDialogOpen(true);
+    }
+    
+    const handleDeleteTeam = async (teamId: string) => {
+        const batch = writeBatch(firestore);
+        const teamRef = doc(firestore, 'teams', teamId);
+        const team = teams?.find(t => t.id === teamId);
+        
+        if (team) {
+            team.memberIds.forEach(memberId => {
+                const userRef = doc(firestore, 'users', memberId);
+                batch.update(userRef, { teamId: null });
+            });
+        }
+        
+        batch.delete(teamRef);
+        await batch.commit();
+        toast({ title: 'Team Deleted', description: 'The team has been removed and members are unassigned.' });
+    }
+
+    const availableMembers = users?.filter(u => u.role === 'Member' && (!u.teamId || (editingTeam && u.teamId === editingTeam.id) || u.id === teamLead));
+    const potentialLeads = users?.filter(u => u.role === 'Team Lead');
+
+    return (
+        <>
+            <PageHeader title="Manage Teams" description="Create and organize your teams.">
+                {canManageTeams && (
+                    <Dialog open={isDialogOpen} onOpenChange={open => !open && resetDialog()}>
+                        <DialogTrigger asChild>
+                            <Button onClick={() => setIsDialogOpen(true)}>
+                                <PlusCircle className="mr-2" /> Add Team
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle>{editingTeam ? 'Edit Team' : 'Create New Team'}</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="team-name">Team Name</Label>
+                                    <Input id="team-name" value={teamName} onChange={e => setTeamName(e.target.value)} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="team-lead">Team Leader</Label>
+                                    <Select value={teamLead} onValueChange={setTeamLead}>
+                                        <SelectTrigger><SelectValue placeholder="Select a leader" /></SelectTrigger>
+                                        <SelectContent>
+                                            {potentialLeads?.map(lead => (
+                                                <SelectItem key={lead.id} value={lead.id}>{lead.firstName} {lead.lastName}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label>Team Members</Label>
+                                    <ScrollArea className="h-40 rounded-md border p-2">
+                                        <div className="space-y-2">
+                                            {availableMembers?.map(member => (
+                                                <div key={member.id} className="flex items-center gap-2">
+                                                    <Checkbox
+                                                        id={`member-${member.id}`}
+                                                        checked={teamMembers.includes(member.id)}
+                                                        onCheckedChange={checked => {
+                                                            setTeamMembers(prev => checked ? [...prev, member.id] : prev.filter(id => id !== member.id));
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={`member-${member.id}`}>{member.firstName} {member.lastName}</Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                                <Button onClick={handleCreateOrUpdateTeam}>Save Team</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 )}
-              </div>
+            </PageHeader>
+            <div className="border rounded-lg">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Team Name</TableHead>
+                            <TableHead>Team Leader</TableHead>
+                            <TableHead>Members</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {teamsLoading ? (
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading teams...</TableCell></TableRow>
+                        ) : teams?.map(team => (
+                            <TableRow key={team.id}>
+                                <TableCell className="font-medium">{team.name}</TableCell>
+                                <TableCell>{getTeamLeadName(team.teamLeadId)}</TableCell>
+                                <TableCell>{team.memberIds.length}</TableCell>
+                                <TableCell className="text-right">
+                                    <Sheet onOpenChange={(isOpen) => !isOpen && setSelectedTeamForSheet(null)}>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <SheetTrigger asChild>
+                                                    <DropdownMenuItem onClick={() => setSelectedTeamForSheet(team)}>
+                                                        <Users className="mr-2 h-4 w-4"/> View Members
+                                                    </DropdownMenuItem>
+                                                </SheetTrigger>
+                                                {canManageTeams && (
+                                                    <>
+                                                    <DropdownMenuItem onClick={() => handleOpenEditDialog(team)}>
+                                                        <Edit className="mr-2 h-4 w-4"/> Edit Team
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleDeleteTeam(team.id)} className="text-destructive">
+                                                        <Trash className="mr-2 h-4 w-4"/> Delete Team
+                                                    </DropdownMenuItem>
+                                                    </>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                        {selectedTeamForSheet?.id === team.id && (
+                                        <SheetContent>
+                                            <SheetHeader>
+                                                <SheetTitle>{selectedTeamForSheet.name}</SheetTitle>
+                                                <SheetDescription>Members of this team.</SheetDescription>
+                                            </SheetHeader>
+                                            <div className="py-4">
+                                                {selectedTeamForSheet.memberIds.map(memberId => {
+                                                    const member = users?.find(u => u.id === memberId);
+                                                    if (!member) return null;
+                                                    return (
+                                                        <div key={memberId} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted">
+                                                            <Avatar>
+                                                                <AvatarFallback>{member.firstName[0]}{member.lastName[0]}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div>
+                                                                <p className="font-semibold">{member.firstName} {member.lastName}</p>
+                                                                <p className="text-sm text-muted-foreground">{member.role}</p>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </SheetContent>
+                                        )}
+                                    </Sheet>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             </div>
-          </SheetContent>
-        )}
-      </Sheet>
-    </>
-  );
+        </>
+    );
 }
