@@ -36,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { collection, query, doc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
+import { collection, query, doc, writeBatch } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -48,7 +48,7 @@ type UserData = {
     firstName: string;
     lastName: string;
     role: string;
-    teamId?: string;
+    teamId?: string | null;
 };
 
 type Team = {
@@ -66,8 +66,8 @@ export default function TeamsPage() {
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
     const [editingTeam, setEditingTeam] = React.useState<WithId<Team> | null>(null);
     const [teamName, setTeamName] = React.useState("");
-    const [teamLead, setTeamLead] = React.useState<string | undefined>();
-    const [teamMembers, setTeamMembers] = React.useState<string[]>([]);
+    const [teamLeadId, setTeamLeadId] = React.useState<string | undefined>();
+    const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([]);
     const [selectedTeamForSheet, setSelectedTeamForSheet] = React.useState<WithId<Team> | null>(null);
 
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
@@ -89,42 +89,46 @@ export default function TeamsPage() {
         setIsDialogOpen(false);
         setEditingTeam(null);
         setTeamName("");
-        setTeamLead(undefined);
-        setTeamMembers([]);
+        setTeamLeadId(undefined);
+        setSelectedMemberIds([]);
     }
 
     const handleCreateOrUpdateTeam = async () => {
-        if (!teamName || !teamLead || teamMembers.length === 0) {
-            toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please provide a team name, a leader, and at least one member.' });
+        if (!teamName || !teamLeadId) {
+            toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please provide a team name and a leader.' });
             return;
         }
 
         const batch = writeBatch(firestore);
-        const allMemberIds = Array.from(new Set([teamLead, ...teamMembers]));
-
+        
+        // All members including the lead
+        const allMemberIdsForTeam = Array.from(new Set([teamLeadId, ...selectedMemberIds]));
+        
         if (editingTeam) {
             const teamRef = doc(firestore, 'teams', editingTeam.id);
-            batch.update(teamRef, { name: teamName, teamLeadId: teamLead, memberIds: allMemberIds });
+            batch.update(teamRef, { name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
             
-            allMemberIds.forEach(memberId => {
+            // Unassign members who were removed from the team
+            const originalMembers = editingTeam.memberIds || [];
+            const removedMembers = originalMembers.filter(id => !allMemberIdsForTeam.includes(id));
+            removedMembers.forEach(memberId => {
+                const userRef = doc(firestore, 'users', memberId);
+                batch.update(userRef, { teamId: null });
+            });
+
+            // Assign new or existing members to the team
+            allMemberIdsForTeam.forEach(memberId => {
                 const userRef = doc(firestore, 'users', memberId);
                 batch.update(userRef, { teamId: editingTeam.id });
             });
             
-            // Handle removed members
-            const removedMembers = editingTeam.memberIds.filter(id => !allMemberIds.includes(id));
-            removedMembers.forEach(memberId => {
-                 const userRef = doc(firestore, 'users', memberId);
-                batch.update(userRef, { teamId: null });
-            });
-
-
             toast({ title: 'Team Updated' });
-        } else {
-            const newTeamRef = doc(collection(firestore, 'teams'));
-            batch.set(newTeamRef, { id: newTeamRef.id, name: teamName, teamLeadId: teamLead, memberIds: allMemberIds });
 
-            allMemberIds.forEach(memberId => {
+        } else { // Creating a new team
+            const newTeamRef = doc(collection(firestore, 'teams'));
+            batch.set(newTeamRef, { id: newTeamRef.id, name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
+
+            allMemberIdsForTeam.forEach(memberId => {
                 const userRef = doc(firestore, 'users', memberId);
                 batch.update(userRef, { teamId: newTeamRef.id });
             });
@@ -139,30 +143,42 @@ export default function TeamsPage() {
     const handleOpenEditDialog = (team: WithId<Team>) => {
         setEditingTeam(team);
         setTeamName(team.name);
-        setTeamLead(team.teamLeadId);
-        setTeamMembers(team.memberIds.filter(id => id !== team.teamLeadId));
+        setTeamLeadId(team.teamLeadId);
+        setSelectedMemberIds(team.memberIds || []);
         setIsDialogOpen(true);
     }
     
-    const handleDeleteTeam = async (teamId: string) => {
+    const handleDeleteTeam = async (team: WithId<Team>) => {
         const batch = writeBatch(firestore);
-        const teamRef = doc(firestore, 'teams', teamId);
-        const team = teams?.find(t => t.id === teamId);
+        const teamRef = doc(firestore, 'teams', team.id);
         
-        if (team) {
-            team.memberIds.forEach(memberId => {
-                const userRef = doc(firestore, 'users', memberId);
-                batch.update(userRef, { teamId: null });
-            });
-        }
+        // Unassign all members from the team
+        (team.memberIds || []).forEach(memberId => {
+            const userRef = doc(firestore, 'users', memberId);
+            batch.update(userRef, { teamId: null });
+        });
         
         batch.delete(teamRef);
         await batch.commit();
         toast({ title: 'Team Deleted', description: 'The team has been removed and members are unassigned.' });
     }
 
-    const availableMembers = users?.filter(u => u.role === 'Member' && (!u.teamId || (editingTeam && u.teamId === editingTeam.id)));
-    const potentialLeads = users?.filter(u => u.role === 'Team Lead');
+    // Users available to be selected as members. For a new team, it's unassigned members. For an existing team, it's unassigned members plus current team members.
+    const availableMembersForSelection = users?.filter(u => 
+        u.role === 'Member' && (!u.teamId || (editingTeam && u.teamId === editingTeam.id))
+    );
+
+    // Users with 'Team Lead' role who are not already leading another team, or are the leader of the current team being edited.
+    const potentialLeads = users?.filter(u => {
+        const isTeamLeadRole = u.role === 'Team Lead';
+        const isAlreadyLead = teams?.some(team => team.teamLeadId === u.id);
+        
+        if (editingTeam) {
+            return isTeamLeadRole && (!isAlreadyLead || u.id === editingTeam.teamLeadId);
+        }
+        
+        return isTeamLeadRole && !isAlreadyLead;
+    });
 
     return (
         <>
@@ -185,7 +201,7 @@ export default function TeamsPage() {
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="team-lead">Team Leader</Label>
-                                    <Select value={teamLead} onValueChange={setTeamLead}>
+                                    <Select value={teamLeadId} onValueChange={setTeamLeadId}>
                                         <SelectTrigger><SelectValue placeholder="Select a leader" /></SelectTrigger>
                                         <SelectContent>
                                             {potentialLeads?.map(lead => (
@@ -196,18 +212,18 @@ export default function TeamsPage() {
                                 </div>
                                 <div className="grid gap-2">
                                     <Label>Team Members</Label>
-                                    <ScrollArea className="h-40 rounded-md border p-2">
-                                        <div className="space-y-2">
-                                            {availableMembers?.map(member => (
-                                                <div key={member.id} className="flex items-center gap-2">
+                                    <ScrollArea className="h-40 rounded-md border">
+                                        <div className="p-2 space-y-1">
+                                            {availableMembersForSelection?.map(member => (
+                                                <div key={member.id} className="flex items-center gap-2 p-1 rounded-md hover:bg-muted">
                                                     <Checkbox
                                                         id={`member-${member.id}`}
-                                                        checked={teamMembers.includes(member.id)}
+                                                        checked={selectedMemberIds.includes(member.id)}
                                                         onCheckedChange={checked => {
-                                                            setTeamMembers(prev => checked ? [...prev, member.id] : prev.filter(id => id !== member.id));
+                                                            setSelectedMemberIds(prev => checked ? [...prev, member.id] : prev.filter(id => id !== member.id));
                                                         }}
                                                     />
-                                                    <Label htmlFor={`member-${member.id}`}>{member.firstName} {member.lastName}</Label>
+                                                    <Label htmlFor={`member-${member.id}`} className="font-normal flex-1 cursor-pointer">{member.firstName} {member.lastName}</Label>
                                                 </div>
                                             ))}
                                         </div>
@@ -236,7 +252,7 @@ export default function TeamsPage() {
                         <TableBody>
                             {teamsLoading ? (
                                 <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading teams...</TableCell></TableRow>
-                            ) : teams?.map(team => (
+                            ) : (teams || []).map(team => (
                                 <TableRow key={team.id}>
                                     <TableCell className="font-medium">{team.name}</TableCell>
                                     <TableCell>{getTeamLeadName(team.teamLeadId)}</TableCell>
@@ -255,7 +271,7 @@ export default function TeamsPage() {
                                                     <DropdownMenuItem onClick={() => handleOpenEditDialog(team)}>
                                                         <Edit className="mr-2 h-4 w-4"/> Edit Team
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDeleteTeam(team.id)} className="text-destructive">
+                                                    <DropdownMenuItem onClick={() => handleDeleteTeam(team)} className="text-destructive">
                                                         <Trash className="mr-2 h-4 w-4"/> Delete Team
                                                     </DropdownMenuItem>
                                                     </>
