@@ -159,20 +159,24 @@ export default function TeamsPage() {
         toast({ title: 'Team Deleted', description: 'The team has been removed and members are unassigned.' });
     }
 
-    const availableMembersForSelection = users?.filter(u => 
-        u.role === 'Member' && (!u.teamId || (editingTeam && u.teamId === editingTeam.id))
-    );
+    const availableMembersForSelection = users?.filter(u => {
+        if (u.role !== 'Member') return false;
+        // If not editing, show all members without a team
+        if (!editingTeam) return !u.teamId;
+        // If editing, show members of the current team OR members without a team
+        return !u.teamId || u.teamId === editingTeam.id;
+    });
 
     const potentialLeads = users?.filter(u => {
-        const isTeamLeadRole = u.role === 'Team Lead';
-        if (!isTeamLeadRole) return false;
+        if (u.role !== 'Team Lead') return false;
         
+        // If editing, always include the current leader of the team being edited
         if (editingTeam && u.id === editingTeam.teamLeadId) {
-            return true; // Always include the current leader of the team being edited
+            return true;
         }
 
+        // Exclude leads who are already leading another team
         const isAlreadyLeadOfAnotherTeam = teams?.some(team => team.teamLeadId === u.id);
-        
         return !isAlreadyLeadOfAnotherTeam;
     });
 
@@ -180,9 +184,12 @@ export default function TeamsPage() {
         <>
             <PageHeader title="Manage Teams" description="Create and organize your teams.">
                 {canManageAllTeams && (
-                    <Dialog open={isDialogOpen} onOpenChange={open => !open && resetDialog()}>
+                    <Dialog open={isDialogOpen} onOpenChange={open => {
+                        if (!open) resetDialog();
+                        else setIsDialogOpen(true);
+                    }}>
                         <DialogTrigger asChild>
-                            <Button onClick={() => setIsDialogOpen(true)}>
+                            <Button>
                                 <PlusCircle className="mr-2" /> Add Team
                             </Button>
                         </DialogTrigger>
