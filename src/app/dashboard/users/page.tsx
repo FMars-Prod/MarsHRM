@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import { use } from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -203,9 +204,12 @@ export default function UsersPage() {
   };
 
   const canModify = (role: Role) => {
-      if (currentUserRole !== 'CEO/Admin') return false;
-      return true; // CEO/Admin can modify any role for now, real app would have stricter checks
+      if (currentUserRole === 'CEO/Admin') return true;
+      if (currentUserRole === 'HR Manager' && role !== 'CEO/Admin') return true;
+      return false;
   }
+  
+  const canAddUser = currentUserRole === 'CEO/Admin' || currentUserRole === 'HR Manager';
 
   return (
     <>
@@ -215,7 +219,7 @@ export default function UsersPage() {
       >
         <Dialog open={isDialogOpen} onOpenChange={(open) => !open && resetDialog()}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)} disabled={currentUserRole !== 'CEO/Admin'}>
+            <Button onClick={() => setIsDialogOpen(true)} disabled={!canAddUser}>
               <PlusCircle className="mr-2" />
               Add User
             </Button>
@@ -251,7 +255,7 @@ export default function UsersPage() {
                 <FormField control={form.control} name="role" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Role</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={editingUser?.id === currentUser?.uid}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={editingUser?.id === currentUser?.uid || !canModify(field.value)}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select a role" />
@@ -261,7 +265,7 @@ export default function UsersPage() {
                                 <SelectItem value="Member">Member</SelectItem>
                                 <SelectItem value="Team Lead">Team Lead</SelectItem>
                                 <SelectItem value="HR Manager">HR Manager</SelectItem>
-                                <SelectItem value="CEO/Admin">CEO/Admin</SelectItem>
+                                {currentUserRole === 'CEO/Admin' && <SelectItem value="CEO/Admin">CEO/Admin</SelectItem>}
                             </SelectContent>
                         </Select>
                         <FormMessage />
@@ -312,7 +316,7 @@ export default function UsersPage() {
                       <DropdownMenuItem onClick={() => handleEditUser(user)} disabled={!canModify(user.role)}>
                         <Edit className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDeleteUser(user)} disabled={!canModify(user.role)} className="text-destructive">
+                      <DropdownMenuItem onClick={() => handleDeleteUser(user)} disabled={!canModify(user.role) || user.id === currentUser?.uid} className="text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
