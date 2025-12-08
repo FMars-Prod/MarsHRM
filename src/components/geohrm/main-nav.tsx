@@ -35,7 +35,7 @@ const links = [
   { href: "/dashboard/issues", label: "Issues", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/team", label: "Team", icon: Users, roles: ['Team Lead'] },
   { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
-  { href: "/dashboard/new-page", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/policies", label: "Policies", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/audit-log", label: "Audit Log", icon: BookUser, roles: ['CEO/Admin'] },
 ];
