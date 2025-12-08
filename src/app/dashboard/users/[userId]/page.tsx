@@ -32,7 +32,7 @@ type Report = {
 
 const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
   const firestore = useFirestore();
-  const { userId } = params;
+  const { userId } = React.use(params);
 
   const userDocRef = useMemoFirebase(
     () => doc(firestore, 'users', userId),
@@ -317,5 +317,3 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
 };
 
 export default UserAnalyticsPage;
-
-    
