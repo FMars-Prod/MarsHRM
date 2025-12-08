@@ -18,7 +18,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import {
   Dialog,
@@ -35,10 +34,9 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, Users, Trash, Edit, MoreHorizontal, User, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDoc, deleteDoc, writeBatch } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { collection, query, doc } from "firebase/firestore";
+import { collection, query, doc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
