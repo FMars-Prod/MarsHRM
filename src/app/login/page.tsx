@@ -15,50 +15,19 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore } from '@/firebase';
 import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, writeBatch, getDoc } from 'firebase/firestore';
+import { doc, writeBatch, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import Autoplay from "embla-carousel-autoplay"
 import { Carousel, CarouselApi, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
-
-const employeeData: Record<Role, any> = {
-    'CEO/Admin': {
-        firstName: 'CEO',
-        lastName: 'Admin',
-        jobTitle: 'CEO',
-        department: 'Executive',
-        hireDate: '2015-08-01',
-        email: 'ceo@geohrm.com'
-    },
-    'HR Manager': {
-        firstName: 'Patricia',
-        lastName: 'Williams',
-        jobTitle: 'HR Manager',
-        department: 'Human Resources',
-        hireDate: '2018-03-15',
-        email: 'hr@geohrm.com'
-    },
-    'Team Lead': {
-        firstName: 'Robert',
-        lastName: 'Brown',
-        jobTitle: 'Engineering Lead',
-        department: 'Technology',
-        hireDate: '2019-11-01',
-        email: 'lead@geohrm.com'
-    },
-    'Member': {
-        firstName: 'John',
-        lastName: 'Smith',
-        jobTitle: 'Software Engineer',
-        department: 'Technology',
-        hireDate: '2021-07-22',
-        email: 'member@geohrm.com'
-    }
-};
 
 const carouselItems = [
   { 
@@ -93,11 +62,18 @@ const carouselItems = [
 
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState<Role | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
   const firestore = useFirestore();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<Role>('Member');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
 
@@ -107,67 +83,68 @@ export default function LoginPage() {
   
   useEffect(() => {
     if (!api) return;
+    setCurrent(api.selectedScrollSnap());
+    const onSelect = () => setCurrent(api.selectedScrollSnap());
+    api.on("select", onSelect);
+    return () => api.off("select", onSelect);
+  }, [api]);
 
-    setCurrent(api.selectedScrollSnap())
-    const onSelect = () => {
-      setCurrent(api.selectedScrollSnap())
-    }
-    api.on("select", onSelect)
-    return () => {
-      api.off("select", onSelect)
-    }
-  }, [api])
+  const handleSignIn = async () => {
+      setIsLoading(true);
+      if (!auth) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Firebase not initialized.' });
+          setIsLoading(false);
+          return;
+      }
+      try {
+          await signInWithEmailAndPassword(auth, email, password);
+          toast({ title: 'Success', description: 'Logged in successfully.' });
+          router.push('/dashboard');
+      } catch (error: any) {
+          toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
+      } finally {
+          setIsLoading(false);
+      }
+  }
 
-
-  const handleLogin = async (role: Role) => {
-    setIsLoading(role);
+  const handleCreateAccount = async () => {
+    setIsLoading(true);
     if (!auth || !firestore) {
-        toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description: 'Firebase not initialized.',
-          });
-        setIsLoading(null);
+        toast({ variant: 'destructive', title: 'Error', description: 'Firebase not initialized.' });
+        setIsLoading(false);
         return;
     }
 
-    const { email } = employeeData[role];
-    const password = 'password'; // Use a consistent, simple password for all demo accounts
+    if (role === 'CEO/Admin') {
+        const ceoQuery = query(collection(firestore, 'users'), where('role', '==', 'CEO/Admin'));
+        const ceoSnapshot = await getDocs(ceoQuery);
+        if (!ceoSnapshot.empty) {
+            toast({ variant: 'destructive', title: 'Creation Failed', description: 'A CEO/Admin account already exists.' });
+            setIsLoading(false);
+            return;
+        }
+    }
 
     try {
-      if (auth.currentUser && auth.currentUser.email !== email) {
-        await auth.signOut();
-      }
-      
-      let userCredential;
-      try {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-      } catch (error: any) {
-        if (error.code === 'auth/user-not-found') {
-          userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        } else {
-          throw error;
-        }
-      }
-      
-      const user = userCredential.user;
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-      // Check if user data already exists in Firestore to avoid overwriting
-      const userDocRef = doc(firestore, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (!userDocSnap.exists()) {
         const batch = writeBatch(firestore);
-        const roleSpecificData = employeeData[role];
+        const userDocRef = doc(firestore, 'users', user.uid);
+        
         const userData = {
-          id: user.uid,
-          employeeId: user.uid,
-          role: role,
-          ...roleSpecificData,
+            id: user.uid,
+            employeeId: user.uid,
+            role: role,
+            email: email,
+            firstName: firstName || role,
+            lastName: lastName || 'User',
+            jobTitle: `${role}`,
+            department: 'General',
+            hireDate: new Date().toISOString(),
         };
-        batch.set(userDocRef, userData, { merge: true });
+        batch.set(userDocRef, userData);
 
-        // Set the role document for security rules
         if (role === 'CEO/Admin') {
           batch.set(doc(firestore, 'roles_ceo', user.uid), { employeeId: user.uid });
           batch.set(doc(firestore, 'roles_admin', user.uid), { employeeId: user.uid });
@@ -176,35 +153,17 @@ export default function LoginPage() {
         } else if (role === 'Team Lead') {
           batch.set(doc(firestore, 'roles_team_lead', user.uid), { employeeId: user.uid });
         }
+        
+        await batch.commit();
 
-        await batch.commit().catch((serverError) => {
-              const permissionError = new FirestorePermissionError({
-                path: `batch write for user ${user.uid}`,
-                operation: 'write',
-                requestResourceData: userData,
-              });
-              errorEmitter.emit('permission-error', permissionError);
-        });
-      }
-
-
-      toast({
-        title: 'Success',
-        description: `Logged in as ${role}.`,
-      });
-      router.push('/dashboard');
+        toast({ title: 'Account Created', description: `Successfully created ${role} account.` });
+        router.push('/dashboard');
     } catch (error: any) {
-      console.error("Login failed:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
+        toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
     } finally {
-        setIsLoading(null);
+        setIsLoading(false);
     }
-  };
-
+  }
 
   return (
     <div className="w-full min-h-screen grid grid-cols-1 lg:grid-cols-2">
@@ -246,42 +205,72 @@ export default function LoginPage() {
                 <Building2 className="h-8 w-8" />
               </div>
             </div>
-            <CardTitle className="font-headline text-2xl">GeoHRM Login</CardTitle>
+            <CardTitle className="font-headline text-2xl">GeoHRM</CardTitle>
             <CardDescription>
-              Select a role to log in.
+              Sign in or create an account.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
-            <div className="grid gap-4">
-              <Button
-                onClick={() => handleLogin('CEO/Admin')}
-                className="w-full"
-                disabled={!!isLoading}
-              >
-                {isLoading === 'CEO/Admin' ? 'Logging in...' : 'Login as CEO/Admin'}
-              </Button>
-               <Button
-                onClick={() => handleLogin('HR Manager')}
-                className="w-full"
-                disabled={!!isLoading}
-              >
-                {isLoading === 'HR Manager' ? 'Logging in...' : 'Login as HR Manager'}
-              </Button>
-               <Button
-                onClick={() => handleLogin('Team Lead')}
-                className="w-full"
-                disabled={!!isLoading}
-              >
-                {isLoading === 'Team Lead' ? 'Logging in...' : 'Login as Team Lead'}
-              </Button>
-               <Button
-                onClick={() => handleLogin('Member')}
-                className="w-full"
-                disabled={!!isLoading}
-              >
-                {isLoading === 'Member' ? 'Logging in...' : 'Login as Member'}
-              </Button>
-            </div>
+            <Tabs defaultValue="signin">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="signin">Sign In</TabsTrigger>
+                    <TabsTrigger value="signup">Create Account</TabsTrigger>
+                </TabsList>
+                <TabsContent value="signin">
+                    <div className="grid gap-4 pt-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="email-signin">Email</Label>
+                            <Input id="email-signin" type="email" placeholder="m@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="password-signin">Password</Label>
+                            <Input id="password-signin" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                        </div>
+                        <Button onClick={handleSignIn} className="w-full mt-2" disabled={isLoading}>
+                            {isLoading ? 'Signing In...' : 'Sign In'}
+                        </Button>
+                    </div>
+                </TabsContent>
+                <TabsContent value="signup">
+                    <div className="grid gap-4 pt-4">
+                        <div className='grid grid-cols-2 gap-4'>
+                             <div className="grid gap-2">
+                                <Label htmlFor="firstName-signup">First Name</Label>
+                                <Input id="firstName-signup" placeholder="John" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+                            </div>
+                             <div className="grid gap-2">
+                                <Label htmlFor="lastName-signup">Last Name</Label>
+                                <Input id="lastName-signup" placeholder="Doe" value={lastName} onChange={e => setLastName(e.target.value)} required />
+                            </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="email-signup">Email</Label>
+                            <Input id="email-signup" type="email" placeholder="m@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="password-signup">Password</Label>
+                            <Input id="password-signup" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="role-signup">Role</Label>
+                          <Select onValueChange={(value: Role) => setRole(value)} defaultValue={role}>
+                            <SelectTrigger id="role-signup">
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Member">Member</SelectItem>
+                                <SelectItem value="Team Lead">Team Lead</SelectItem>
+                                <SelectItem value="HR Manager">HR Manager</SelectItem>
+                                <SelectItem value="CEO/Admin">CEO/Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button onClick={handleCreateAccount} className="w-full mt-2" disabled={isLoading}>
+                             {isLoading ? 'Creating Account...' : 'Create Account'}
+                        </Button>
+                    </div>
+                </TabsContent>
+            </Tabs>
           </CardContent>
           <CardFooter>
             <p className="w-full text-center text-xs text-muted-foreground">
