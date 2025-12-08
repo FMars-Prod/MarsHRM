@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Users, Trash, Edit, MoreHorizontal, User, UserPlus } from "lucide-react";
+import { PlusCircle, Users, Trash, Edit, MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -41,7 +41,7 @@ import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type UserData = {
     id: string;
@@ -64,6 +64,8 @@ export default function TeamsPage() {
     const { toast } = useToast();
 
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+    const [editingTeam, setEditingTeam] = React.useState<WithId<Team> | null>(null);
+    
     const [teamName, setTeamName] = React.useState("");
     const [teamLeadId, setTeamLeadId] = React.useState<string | undefined>();
     const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([]);
@@ -86,12 +88,13 @@ export default function TeamsPage() {
 
     const resetDialog = () => {
         setIsDialogOpen(false);
+        setEditingTeam(null);
         setTeamName("");
         setTeamLeadId(undefined);
         setSelectedMemberIds([]);
     }
 
-    const handleCreateTeam = async () => {
+    const handleCreateOrUpdateTeam = async () => {
         if (!teamName || !teamLeadId) {
             toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please provide a team name and a leader.' });
             return;
@@ -100,16 +103,37 @@ export default function TeamsPage() {
         const batch = writeBatch(firestore);
         
         const allMemberIdsForTeam = Array.from(new Set([teamLeadId, ...selectedMemberIds]));
-        
-        const newTeamRef = doc(collection(firestore, 'teams'));
-        batch.set(newTeamRef, { id: newTeamRef.id, name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
 
-        allMemberIdsForTeam.forEach(memberId => {
-            const userRef = doc(firestore, 'users', memberId);
-            batch.update(userRef, { teamId: newTeamRef.id });
-        });
+        if (editingTeam) {
+            // Logic for updating an existing team
+            const teamRef = doc(firestore, 'teams', editingTeam.id);
+            batch.update(teamRef, { name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
+            
+            // Unassign old members no longer in the team
+            const oldMemberIds = editingTeam.memberIds || [];
+            oldMemberIds.filter(id => !allMemberIdsForTeam.includes(id)).forEach(id => {
+                const userRef = doc(firestore, 'users', id);
+                batch.update(userRef, { teamId: null });
+            });
+            
+            // Assign new members to the team
+            allMemberIdsForTeam.forEach(memberId => {
+                const userRef = doc(firestore, 'users', memberId);
+                batch.update(userRef, { teamId: editingTeam.id });
+            });
+            toast({ title: 'Team Updated' });
 
-        toast({ title: 'Team Created' });
+        } else {
+            // Logic for creating a new team
+            const newTeamRef = doc(collection(firestore, 'teams'));
+            batch.set(newTeamRef, { id: newTeamRef.id, name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
+
+            allMemberIdsForTeam.forEach(memberId => {
+                const userRef = doc(firestore, 'users', memberId);
+                batch.update(userRef, { teamId: newTeamRef.id });
+            });
+            toast({ title: 'Team Created' });
+        }
         
         await batch.commit();
         resetDialog();
@@ -129,12 +153,31 @@ export default function TeamsPage() {
         toast({ title: 'Team Deleted', description: 'The team has been removed and members are unassigned.' });
     }
 
-    const availableMembersForSelection = users?.filter(u => u.role === 'Member' && !u.teamId);
+    const handleEditClick = (team: WithId<Team>) => {
+        setEditingTeam(team);
+        setTeamName(team.name);
+        setTeamLeadId(team.teamLeadId);
+        // Exclude the team lead from the list of selectable members initially
+        setSelectedMemberIds(team.memberIds.filter(id => id !== team.teamLeadId));
+        setIsDialogOpen(true);
+    };
 
+    // Users available for the team leader dropdown
     const potentialLeads = users?.filter(u => {
         if (u.role !== 'Team Lead') return false;
-        const isAlreadyLeadOfAnotherTeam = teams?.some(team => team.teamLeadId === u.id);
-        return !isAlreadyLeadOfAnotherTeam;
+        // If editing a team, the current leader of that team is a potential lead.
+        if (editingTeam && u.id === editingTeam.teamLeadId) return true;
+        // Otherwise, only leads not assigned to any other team are potential leads.
+        return !teams?.some(team => team.teamLeadId === u.id);
+    });
+
+    // Users available for the members checkbox list
+    const availableMembers = users?.filter(u => {
+        if (u.role !== 'Member') return false;
+        // If editing a team, members of that team are available.
+        if (editingTeam && editingTeam.memberIds.includes(u.id)) return true;
+        // Otherwise, only members not assigned to any team are available.
+        return !u.teamId;
     });
 
     return (
@@ -152,7 +195,7 @@ export default function TeamsPage() {
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-lg">
                             <DialogHeader>
-                                <DialogTitle>Create New Team</DialogTitle>
+                                <DialogTitle>{editingTeam ? 'Edit Team' : 'Create New Team'}</DialogTitle>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="grid gap-2">
@@ -174,7 +217,7 @@ export default function TeamsPage() {
                                     <Label>Team Members</Label>
                                     <ScrollArea className="h-40 rounded-md border">
                                         <div className="p-2 space-y-1">
-                                            {availableMembersForSelection?.map(member => (
+                                            {availableMembers?.map(member => (
                                                 <div key={member.id} className="flex items-center gap-2 p-1 rounded-md hover:bg-muted">
                                                     <Checkbox
                                                         id={`member-${member.id}`}
@@ -192,7 +235,7 @@ export default function TeamsPage() {
                             </div>
                             <DialogFooter>
                                 <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                                <Button onClick={handleCreateTeam}>Save Team</Button>
+                                <Button onClick={handleCreateOrUpdateTeam}>Save Team</Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
@@ -214,6 +257,7 @@ export default function TeamsPage() {
                                 <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading teams...</TableCell></TableRow>
                             ) : (teams || []).map(team => {
                                 const isTeamLead = currentUser?.uid === team.teamLeadId;
+                                const canEdit = canManageAllTeams || isTeamLead;
                                 return (
                                 <TableRow key={team.id}>
                                     <TableCell className="font-medium">{team.name}</TableCell>
@@ -228,6 +272,11 @@ export default function TeamsPage() {
                                                 <DropdownMenuItem onClick={() => setSelectedTeamForSheet(team)}>
                                                     <Users className="mr-2 h-4 w-4"/> View Members
                                                 </DropdownMenuItem>
+                                                {canEdit && (
+                                                    <DropdownMenuItem onClick={() => handleEditClick(team)}>
+                                                        <Edit className="mr-2 h-4 w-4"/> Edit Team
+                                                    </DropdownMenuItem>
+                                                )}
                                                 {canManageAllTeams && (
                                                     <DropdownMenuItem onClick={() => handleDeleteTeam(team)} className="text-destructive">
                                                         <Trash className="mr-2 h-4 w-4"/> Delete Team
