@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch } from "firebase/firestore";
@@ -46,6 +46,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
@@ -85,6 +86,8 @@ export default function UsersPage() {
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<UserData | null>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
   const { data: users, isLoading } = useCollection<UserData>(usersQuery);
@@ -272,13 +275,15 @@ export default function UsersPage() {
               Add User
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>{editingUser ? "Edit User" : "Add New User"}</DialogTitle>
               <DialogDescription>
                 {editingUser ? "Update the details for this user." : "Fill in the form to create a new user."}
               </DialogDescription>
             </DialogHeader>
+            <ScrollArea className="max-h-[70vh] -mx-6">
+            <div className="px-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -325,9 +330,14 @@ export default function UsersPage() {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Password {editingUser ? '(Optional)' : ''}</FormLabel>
-                            <FormControl>
-                                <Input type="password" placeholder="••••••••" {...field} />
-                            </FormControl>
+                            <div className="relative">
+                                <FormControl>
+                                    <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                                </FormControl>
+                                <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
+                                    {showPassword ? <EyeOff /> : <Eye />}
+                                </Button>
+                            </div>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -338,14 +348,19 @@ export default function UsersPage() {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Confirm Password</FormLabel>
+                            <div className="relative">
                             <FormControl>
-                                <Input type="password" placeholder="••••••••" {...field} />
+                                <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
                             </FormControl>
+                             <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                    {showConfirmPassword ? <EyeOff /> : <Eye />}
+                                </Button>
+                            </div>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
-                <DialogFooter>
+                <DialogFooter className="pt-4">
                   <DialogClose asChild><Button type="button" variant="outline" onClick={resetDialog}>Cancel</Button></DialogClose>
                   <Button type="submit" disabled={form.formState.isSubmitting}>
                     {form.formState.isSubmitting ? 'Saving...' : 'Save User'}
@@ -353,6 +368,8 @@ export default function UsersPage() {
                 </DialogFooter>
               </form>
             </Form>
+            </div>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       </PageHeader>
