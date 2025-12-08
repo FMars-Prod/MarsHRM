@@ -98,6 +98,9 @@ export default function EventsPage() {
   const [newEventTime, setNewEventTime] = React.useState("");
   
   const [date, setDate] = React.useState<Date>();
+  
+  const fromYear = new Date().getFullYear();
+  const toYear = fromYear + 10;
 
   const handleLike = (id: string) => {
     if (!user) return;
@@ -272,6 +275,9 @@ export default function EventsPage() {
                                         onSelect={setDate}
                                         disabled={(date) => date < startOfToday() && !isSameDay(date, startOfToday())}
                                         initialFocus
+                                        captionLayout="dropdown-buttons"
+                                        fromYear={fromYear}
+                                        toYear={toYear}
                                     />
                                 </PopoverContent>
                             </Popover>
@@ -389,5 +395,7 @@ export default function EventsPage() {
     </>
   );
 }
+
+    
 
     
