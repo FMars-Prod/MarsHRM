@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, isSameDay, startOfMonth } from "date-fns";
+import { format, isSameDay, startOfMonth, eachDayOfInterval, isWithinInterval } from "date-fns";
 import { CheckCircle, XCircle, AlertTriangle, Briefcase } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
@@ -18,6 +18,12 @@ type AttendanceRecord = {
   checkInTime?: any; 
   checkOutTime?: any;
 };
+
+type LeaveRequest = {
+    startDate: any;
+    endDate: any;
+    status: string;
+}
 
 const statusDetails = {
     present: { Icon: CheckCircle, className: "text-green-600", label: "Present" },
@@ -43,26 +49,63 @@ export default function AttendancePage() {
     );
   }, [user, firestore, currentMonth]);
 
-  const { data: attendanceData, isLoading } = useCollection<AttendanceRecord>(attendanceQuery);
+  const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
+  
+  const leaveQuery = useMemoFirebase(() => {
+      if(!user) return null;
+      return query(
+          collection(firestore, 'leave_requests'),
+          where('employeeId', '==', user.uid),
+          where('status', '==', 'Approved')
+      );
+  }, [user, firestore]);
+  
+  const { data: leaveData, isLoading: isLeaveLoading } = useCollection<LeaveRequest>(leaveQuery);
 
   const events = React.useMemo(() => {
-    return (attendanceData || []).map(record => ({
+    const dailyRecords = new Map<string, {date: Date, status: Status, clockIn: string, clockOut: string}>();
+
+    // Process attendance records
+    (attendanceData || []).forEach(record => {
+      const day = format(record.checkInTime.toDate(), 'yyyy-MM-dd');
+      dailyRecords.set(day, {
         date: record.checkInTime.toDate(),
         status: record.status,
         clockIn: record.checkInTime ? format(record.checkInTime.toDate(), 'p') : '-',
         clockOut: record.checkOutTime ? format(record.checkOutTime.toDate(), 'p') : '-',
-    }));
-  }, [attendanceData]);
+      });
+    });
+
+    // Process approved leave days
+    (leaveData || []).forEach(leave => {
+        const interval = { start: leave.startDate.toDate(), end: leave.endDate.toDate() };
+        eachDayOfInterval(interval).forEach(day => {
+            const dayStr = format(day, 'yyyy-MM-dd');
+            // Only add if no other record exists for that day, or if the leave is the primary status
+            if (!dailyRecords.has(dayStr)) {
+                dailyRecords.set(dayStr, {
+                    date: day,
+                    status: 'on_leave',
+                    clockIn: '-',
+                    clockOut: '-'
+                });
+            }
+        })
+    });
+    
+    return Array.from(dailyRecords.values());
+
+  }, [attendanceData, leaveData]);
 
   const statusCounts = React.useMemo(() => {
-    return (attendanceData || []).reduce(
+    return events.reduce(
       (acc, event) => {
         acc[event.status]++;
         return acc;
       },
       { present: 0, late: 0, absent: 0, on_leave: 0 }
     );
-  }, [attendanceData]);
+  }, [events]);
 
   const selectedDayEvent = React.useMemo(() => {
       if (!date) return null;
@@ -90,6 +133,8 @@ export default function AttendancePage() {
     absent: 'bg-red-500/20 text-red-700',
     on_leave: 'bg-blue-500/20 text-blue-700',
   };
+  
+  const isLoading = isAttendanceLoading || isLeaveLoading;
 
   return (
     <>
@@ -185,3 +230,5 @@ export default function AttendancePage() {
     </>
   );
 }
+
+    
