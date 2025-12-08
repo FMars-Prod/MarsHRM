@@ -176,7 +176,7 @@ export default function TeamsPage() {
         }
 
         // Exclude leads who are already leading another team
-        const isAlreadyLeadOfAnotherTeam = teams?.some(team => team.teamLeadId === u.id);
+        const isAlreadyLeadOfAnotherTeam = teams?.some(team => team.id !== editingTeam?.id && team.teamLeadId === u.id);
         return !isAlreadyLeadOfAnotherTeam;
     });
 
@@ -319,3 +319,5 @@ export default function TeamsPage() {
         </>
     );
 }
+
+    
