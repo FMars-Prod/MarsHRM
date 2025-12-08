@@ -197,28 +197,32 @@ export default function LeavePage() {
 
   const { data: teamsLed } = useCollection<Team>(teamLeadQuery);
   const teamMemberIds = React.useMemo(() => {
-    if (userRole !== 'Team Lead' || !teamsLed || teamsLed.length === 0) return null;
-    return teamsLed[0].memberIds;
+    if (userRole !== 'Team Lead' || !teamsLed || teamsLed.length === 0) return [];
+    // Ensure the team lead is also included to see their own requests if needed
+    return teamsLed.flatMap(team => team.memberIds);
   }, [userRole, teamsLed]);
 
   const leaveRequestsQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    
-    let q = query(collection(firestore, "leave_requests"));
+    if (!user || !userRole) return null;
+    const baseQuery = collection(firestore, 'leave_requests');
 
-    switch(userRole) {
-        case 'Member':
-            return query(q, where("employeeId", "==", user.uid));
-        case 'Team Lead':
-             if (!teamMemberIds || teamMemberIds.length === 0) return null; // No members, no requests
-             // Firestore 'in' query is limited to 30 elements. For more, you'd need a different approach.
-            return query(q, where("employeeId", "in", teamMemberIds));
-        case 'HR Manager':
-        case 'CEO/Admin':
-            return q; // HR and CEO see all requests
+    switch (userRole) {
+      case 'Member':
+        return query(baseQuery, where('employeeId', '==', user.uid));
+      case 'Team Lead':
+        if (teamMemberIds.length > 0) {
+          return query(baseQuery, where('employeeId', 'in', teamMemberIds));
+        }
+        // If a team lead has no members, they should still see their own requests.
+        return query(baseQuery, where('employeeId', '==', user.uid));
+      case 'HR Manager':
+      case 'CEO/Admin':
+        return query(baseQuery);
+      default:
+        return null;
     }
-    return null; // Default to no query
   }, [firestore, user, userRole, teamMemberIds]);
+
 
   const { data: leaveRequests, isLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
   
@@ -275,13 +279,13 @@ export default function LeavePage() {
   }
 
   const allLeaveRequests = (leaveRequests || []).filter(req => {
-      if (userRole === 'Team Lead') {
-          return req.status === 'Pending';
-      }
-      if (userRole === 'HR Manager') {
-          return ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(req.status);
-      }
-      return true;
+    if (userRole === 'Team Lead') {
+      return req.status === 'Pending' || req.employeeId === user?.uid;
+    }
+    if (userRole === 'HR Manager') {
+      return ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(req.status);
+    }
+    return true;
   });
 
   const formatDate = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'PP') : '';
@@ -405,10 +409,8 @@ export default function LeavePage() {
           <TableBody>
             {isLoading ? (
                 <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading requests...</TableCell></TableRow>
-            ) : allLeaveRequests.length === 0 ? (
-                 <TableRow><TableCell colSpan={5} className="h-24 text-center">No leave requests found.</TableCell></TableRow>
-            ) : (
-              allLeaveRequests.map((request) => (
+            ) : leaveRequests && leaveRequests.length > 0 ? (
+              leaveRequests.map((request) => (
                 <TableRow key={request.id}>
                   {(userRole === 'Team Lead' || userRole === 'HR Manager' || userRole === 'CEO/Admin') && <TableCell className="font-medium">{request.employeeName}</TableCell>}
                   <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
@@ -500,6 +502,8 @@ export default function LeavePage() {
                   </TableCell>
                 </TableRow>
               ))
+            ) : (
+                 <TableRow><TableCell colSpan={5} className="h-24 text-center">No leave requests found.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
