@@ -166,8 +166,12 @@ export default function TeamsPage() {
     const potentialLeads = users?.filter(u => {
         const isTeamLeadRole = u.role === 'Team Lead';
         if (!isTeamLeadRole) return false;
+        
+        if (editingTeam && u.id === editingTeam.teamLeadId) {
+            return true; // Always include the current leader of the team being edited
+        }
 
-        const isAlreadyLeadOfAnotherTeam = teams?.some(team => team.id !== editingTeam?.id && team.teamLeadId === u.id);
+        const isAlreadyLeadOfAnotherTeam = teams?.some(team => team.teamLeadId === u.id);
         
         return !isAlreadyLeadOfAnotherTeam;
     });
