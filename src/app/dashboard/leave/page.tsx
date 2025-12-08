@@ -65,6 +65,13 @@ type LeaveRequest = {
 
 type LeaveRequestWithId = WithId<LeaveRequest>;
 
+type Team = {
+    id: string;
+    name: string;
+    teamLeadId: string;
+    memberIds: string[];
+}
+
 
 const LeaveStatusTracker = ({ request }: { request: LeaveRequestWithId }) => {
     const isSubmitted = true;
@@ -183,6 +190,17 @@ export default function LeavePage() {
   const startDays = Array.from({ length: startDaysInMonth }, (_, i) => i + 1);
   const endDays = Array.from({ length: endDaysInMonth }, (_, i) => i + 1);
 
+  const teamLeadQuery = useMemoFirebase(() => {
+    if (!user || userRole !== 'Team Lead') return null;
+    return query(collection(firestore, 'teams'), where('teamLeadId', '==', user.uid));
+  }, [firestore, user, userRole]);
+
+  const { data: teamsLed } = useCollection<Team>(teamLeadQuery);
+  const teamMemberIds = React.useMemo(() => {
+    if (userRole !== 'Team Lead' || !teamsLed || teamsLed.length === 0) return null;
+    return teamsLed[0].memberIds;
+  }, [userRole, teamsLed]);
+
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     
@@ -190,21 +208,17 @@ export default function LeavePage() {
 
     switch(userRole) {
         case 'Member':
-            q = query(q, where("employeeId", "==", user.uid));
-            break;
+            return query(q, where("employeeId", "==", user.uid));
         case 'Team Lead':
-            q = query(q, where("status", "==", "Pending"));
-            // In a real app, you'd add: where("teamLeadId", "==", user.uid)
-            break;
+             if (!teamMemberIds || teamMemberIds.length === 0) return null; // No members, no requests
+             // Firestore 'in' query is limited to 30 elements. For more, you'd need a different approach.
+            return query(q, where("employeeId", "in", teamMemberIds));
         case 'HR Manager':
-            q = query(q, where("status", "in", ["Pending HR Approval", "Approved", "Rejected by HR"]));
-            break;
         case 'CEO/Admin':
-            // CEO sees all requests
-            break;
+            return q; // HR and CEO see all requests
     }
-    return q;
-  }, [firestore, user, userRole]);
+    return null; // Default to no query
+  }, [firestore, user, userRole, teamMemberIds]);
 
   const { data: leaveRequests, isLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
   
@@ -260,7 +274,15 @@ export default function LeavePage() {
       });
   }
 
-  const allLeaveRequests = leaveRequests || [];
+  const allLeaveRequests = (leaveRequests || []).filter(req => {
+      if (userRole === 'Team Lead') {
+          return req.status === 'Pending';
+      }
+      if (userRole === 'HR Manager') {
+          return ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(req.status);
+      }
+      return true;
+  });
 
   const formatDate = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'PP') : '';
 
