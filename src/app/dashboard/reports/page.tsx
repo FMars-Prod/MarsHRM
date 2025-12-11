@@ -32,11 +32,14 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, FileText, Download, Search } from "lucide-react";
+import { PlusCircle, FileText, Download, Search, Calendar as CalendarIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format, startOfDay, endOfDay } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc } from "@/firebase";
 import { collection, query, where, orderBy, doc, getDocs } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
@@ -50,10 +53,11 @@ export default function ReportsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [teamMembers, setTeamMembers] = React.useState<UserData[]>([]);
   const [selectedMember, setSelectedMember] = React.useState<UserData | null>(null);
   const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [filterDate, setFilterDate] = React.useState<Date | undefined>(undefined);
+
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc(userDocRef);
@@ -86,9 +90,16 @@ export default function ReportsPage() {
   const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(membersQuery);
 
   const reportsQuery = useMemoFirebase(() => {
-      if (!selectedMember) return null;
-      return query(collection(firestore, `users/${selectedMember.id}/reports`), orderBy('date', 'desc'));
-  }, [firestore, selectedMember]);
+    if (!selectedMember) return null;
+    let q = query(collection(firestore, `users/${selectedMember.id}/reports`), orderBy('date', 'desc'));
+    if (filterDate) {
+        q = query(q, 
+            where('date', '>=', startOfDay(filterDate)),
+            where('date', '<=', endOfDay(filterDate))
+        );
+    }
+    return q;
+  }, [firestore, selectedMember, filterDate]);
   
   const { data: memberReports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
 
@@ -260,7 +271,7 @@ export default function ReportsPage() {
             </SheetHeader>
             <Separator className="my-4" />
             <div className="space-y-4">
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Dialog open={isAddReportDialogOpen} onOpenChange={setIsAddReportDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
@@ -302,10 +313,26 @@ export default function ReportsPage() {
                     <Download className="mr-2 h-4 w-4"/>
                     Export as CSV
                 </Button>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button id="date" variant={"outline"} className={cn("w-full sm:w-[200px] justify-start text-left font-normal", !filterDate && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {filterDate ? format(filterDate, "MMMM do, yyyy") : <span>Filter by date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={filterDate} onSelect={setFilterDate} initialFocus />
+                    </PopoverContent>
+                </Popover>
+                {filterDate && (
+                    <Button variant="ghost" onClick={() => setFilterDate(undefined)}>Clear</Button>
+                )}
               </div>
 
               <div className="mt-4 space-y-4">
-                <h4 className="font-semibold">Existing Reports</h4>
+                <h4 className="font-semibold">
+                    {filterDate ? `Reports for ${format(filterDate, "PPP")}` : 'Existing Reports'}
+                </h4>
                 {areReportsLoading ? (<p>Loading reports...</p>) : 
                 memberReports && memberReports.length > 0 ? (
                     <div className="border rounded-lg">
@@ -330,7 +357,7 @@ export default function ReportsPage() {
                     </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    No reports found for this team member.
+                    No reports found for this period.
                   </p>
                 )}
               </div>
