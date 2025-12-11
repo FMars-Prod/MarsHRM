@@ -49,6 +49,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBl
 import { collection, query, where, orderBy, doc, getDocs } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Report = { id: string; date: any; summary: string; rating: number };
 type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; averageRating?: number };
@@ -340,7 +341,7 @@ export default function ReportsPage() {
           </Table>
         </div>
         {selectedMember && (
-          <SheetContent className="sm:max-w-lg">
+          <SheetContent className="sm:max-w-lg flex flex-col">
             <SheetHeader>
                 <div className="flex justify-between items-start">
                     <div>
@@ -355,7 +356,6 @@ export default function ReportsPage() {
                     )}
                 </div>
             </SheetHeader>
-            <Separator className="my-4" />
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 <Dialog open={isAddReportDialogOpen} onOpenChange={(isOpen) => {
@@ -450,42 +450,48 @@ export default function ReportsPage() {
                 </DropdownMenu>
 
               </div>
+            </div>
+            
+            <Separator className="my-4" />
 
-              <div className="mt-4 space-y-4">
-                <h4 className="font-semibold">
+            <div className="flex-1 flex flex-col min-h-0">
+                <h4 className="font-semibold text-sm shrink-0">
                     {filterDate ? `Reports for ${format(filterDate, "PPP")}` : 'Existing Reports'}
                 </h4>
-                {areReportsLoading ? (<p>Loading reports...</p>) : 
-                memberReports && memberReports.length > 0 ? (
-                    <div className="border rounded-lg">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Date & Time</TableHead>
-                                    <TableHead>Summary</TableHead>
-                                    <TableHead>Rating</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {memberReports.map(report => (
-                                    <TableRow key={report.id}>
-                                        <TableCell className="text-sm text-muted-foreground">
-                                          {format(new Date(report.date.toDate()), "MMM d, yyyy 'at' h:mm a")}
-                                        </TableCell>
-                                        <TableCell>{report.summary}</TableCell>
-                                        <TableCell><StarRating rating={report.rating} /></TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                <ScrollArea className="mt-2 -mx-6">
+                    <div className="px-6">
+                        {areReportsLoading ? (<p>Loading reports...</p>) : 
+                        memberReports && memberReports.length > 0 ? (
+                            <div className="border rounded-lg">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date & Time</TableHead>
+                                            <TableHead>Summary</TableHead>
+                                            <TableHead>Rating</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {memberReports.map(report => (
+                                            <TableRow key={report.id}>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                  {format(new Date(report.date.toDate()), "MMM d, yyyy 'at' h:mm a")}
+                                                </TableCell>
+                                                <TableCell>{report.summary}</TableCell>
+                                                <TableCell><StarRating rating={report.rating} /></TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            No reports found for this period.
+                          </p>
+                        )}
                     </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No reports found for this period.
-                  </p>
-                )}
+                </ScrollArea>
               </div>
-            </div>
           </SheetContent>
         )}
       </Sheet>
@@ -493,4 +499,3 @@ export default function ReportsPage() {
   );
 }
 
-    
