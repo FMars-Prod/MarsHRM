@@ -4,16 +4,28 @@ function isOwner(userId) {
   return request.auth != null && request.auth.uid == userId;
 }
 
-function isRole(role) {
-  return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+function isCEO() {
+  return exists(/databases/$(database)/documents/roles_ceo/$(request.auth.uid));
+}
+
+function isHR() {
+  return exists(/databases/$(database)/documents/roles_hr_agent/$(request.auth.uid));
+}
+
+function isTeamLead() {
+  return exists(/databases/$(database)/documents/roles_team_lead/$(request.auth.uid));
 }
 
 function isTeamLeadOf(employeeId) {
-    let teamId = get(/databases/$(database)/documents/users/$(employeeId)).data.teamId;
-    if (teamId == null) {
-      return false;
+    if (!isTeamLead()) {
+        return false;
     }
-    let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
+    let employeeTeamId = get(/databases/$(database)/documents/users/$(employeeId)).data.teamId;
+    if (employeeTeamId == null) {
+        return false;
+    }
+    // Check if the team lead is the lead of the employee's team.
+    let team = get(/databases/$(database)/documents/teams/$(employeeTeamId)).data;
     return team.teamLeadId == request.auth.uid;
 }
 
@@ -21,40 +33,40 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isRole('CEO/Admin') || isRole('HR Manager') || isTeamLeadOf(userId);
-      allow write: if isOwner(userId) || isRole('CEO/Admin') || isRole('HR Manager');
+      allow read: if isOwner(userId) || isCEO() || isHR() || isTeamLeadOf(userId);
+      allow write: if isOwner(userId) || isCEO() || isHR();
     }
 
     match /teams/{teamId} {
-      allow read: if isRole('CEO/Admin') || isRole('HR Manager') || get(/databases/$(database)/documents/teams/$(teamId)).data.teamLeadId == request.auth.uid;
-      allow write: if isRole('CEO/Admin') || isRole('HR Manager');
+      allow read: if isCEO() || isHR() || get(/databases/$(database)/documents/teams/$(teamId)).data.teamLeadId == request.auth.uid;
+      allow write: if isCEO() || isHR();
     }
 
     match /users/{userId}/attendances/{attendanceId} {
-      allow read, write: if isOwner(userId) || isRole('CEO/Admin') || isRole('HR Manager') || isTeamLeadOf(userId);
+      allow read, write: if isOwner(userId) || isCEO() || isHR() || isTeamLeadOf(userId);
     }
     
     match /users/{userId}/leave_requests/{leaveRequestId} {
-      allow read, write: if isOwner(userId) || isRole('CEO/Admin') || isRole('HR Manager') || isTeamLeadOf(userId);
+      allow read, write: if isOwner(userId) || isCEO() || isHR() || isTeamLeadOf(userId);
     }
 
     match /users/{userId}/reports/{reportId} {
-      allow read, write: if isOwner(userId) || isRole('CEO/Admin') || isRole('HR Manager') || isTeamLeadOf(userId);
+      allow read, write: if isOwner(userId) || isCEO() || isHR() || isTeamLeadOf(userId);
     }
     
     match /announcements/{announcementId} {
         allow read: if request.auth != null;
-        allow write: if isRole('CEO/Admin') || isRole('HR Manager');
+        allow write: if isCEO() || isHR();
     }
     
     match /events/{eventId} {
         allow read: if request.auth != null;
-        allow write: if isRole('CEO/Admin') || isRole('HR Manager');
+        allow write: if isCEO() || isHR();
     }
     
     match /policies/{policyId} {
         allow read: if request.auth != null;
-        allow write: if isRole('CEO/Admin') || isRole('HR Manager');
+        allow write: if isCEO() || isHR();
     }
     
     match /users/{userId}/policy_acknowledgments/{acknowledgmentId} {
@@ -62,30 +74,30 @@ service cloud.firestore {
     }
     
     match /issue_reports/{issueReportId} {
-        allow read, write: if isOwner(get(/databases/$(database)/documents/issue_reports/$(issueReportId)).data.employeeId) || isRole('CEO/Admin') || isRole('HR Manager');
+        allow read, write: if isOwner(get(/databases/$(database)/documents/issue_reports/$(issueReportId)).data.employeeId) || isCEO() || isHR();
     }
 
     match /audit_logs/{auditLogId} {
-        allow read, write: if isRole('CEO/Admin');
+        allow read, write: if isCEO();
     }
     
     match /settings/{settingId} {
         allow read: if request.auth != null;
-        allow write: if isRole('CEO/Admin') || isRole('HR Manager');
+        allow write: if isCEO() || isHR();
     }
 
     // Role documents for quick checks
     match /roles_ceo/{userId} {
-      allow read, write: if isRole('CEO/Admin');
+      allow read, write: if isCEO();
     }
     match /roles_admin/{userId} {
-      allow read, write: if isRole('CEO/Admin');
+      allow read, write: if isCEO();
     }
     match /roles_hr_agent/{userId} {
-       allow read, write: if isRole('CEO/Admin') || isRole('HR Manager');
+       allow read, write: if isCEO() || isHR();
     }
     match /roles_team_lead/{userId} {
-      allow read, write: if isRole('CEO/Admin') || isRole('HR Manager');
+      allow read, write: if isCEO() || isHR();
     }
   }
 }
