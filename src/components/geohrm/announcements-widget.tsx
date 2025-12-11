@@ -1,5 +1,7 @@
+
 "use client";
 
+import * as React from "react";
 import {
   Card,
   CardContent,
@@ -7,31 +9,72 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Megaphone } from "lucide-react";
-import { announcements } from "@/lib/data";
+import { Megaphone, FileText } from "lucide-react";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, orderBy, limit } from "firebase/firestore";
+import Link from "next/link";
+import { Button } from "../ui/button";
+
+type Announcement = {
+  title: string;
+  content: string;
+  publishDate: any;
+};
 
 export function AnnouncementsWidget() {
+  const firestore = useFirestore();
+  const announcementsQuery = useMemoFirebase(
+    () => query(collection(firestore, "announcements"), orderBy("publishDate", "desc"), limit(3)),
+    [firestore]
+  );
+  const { data: announcements, isLoading } = useCollection<Announcement>(announcementsQuery);
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return 'Just now';
+    return new Date(timestamp.toDate()).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  };
+
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <Megaphone className="size-5" />
           Announcements
         </CardTitle>
         <CardDescription>
-          Stay up-to-date with the latest company news.
+          The latest company news and updates.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {announcements.map((item) => (
-            <div key={item.id} className="flex flex-col">
-              <span className="font-semibold">{item.title}</span>
-              <p className="text-sm text-muted-foreground">{item.content}</p>
-              <span className="text-xs text-muted-foreground pt-1">{item.date}</span>
-            </div>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex flex-col space-y-1.5">
+                <div className="h-5 w-3/4 rounded-md bg-muted animate-pulse" />
+                <div className="h-4 w-1/2 rounded-md bg-muted animate-pulse" />
+                <div className="h-3 w-1/4 rounded-md bg-muted animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : announcements && announcements.length > 0 ? (
+          <div className="space-y-4">
+            {announcements.map((item) => (
+              <div key={item.id} className="flex flex-col">
+                <span className="font-semibold">{item.title}</span>
+                <p className="text-sm text-muted-foreground line-clamp-2">{item.content}</p>
+                <span className="text-xs text-muted-foreground pt-1">{formatDate(item.publishDate)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-8">
+            <FileText className="size-8 mb-2" />
+            <p>No announcements yet.</p>
+          </div>
+        )}
+        <Button variant="outline" className="w-full mt-4" asChild>
+          <Link href="/dashboard/announcements">View All</Link>
+        </Button>
       </CardContent>
     </Card>
   );
