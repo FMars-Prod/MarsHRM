@@ -212,15 +212,6 @@ export default function UsersPage() {
               form.setError("password", { type: "manual", message: "Password is required for new users." });
               return;
             }
-            const ceoExists = users?.some(user => user.role === 'CEO/Admin');
-            if (values.role === 'CEO/Admin' && ceoExists) {
-                toast({
-                    variant: "destructive",
-                    title: "Operation Forbidden",
-                    description: "A user with the CEO/Admin role already exists.",
-                });
-                return;
-            }
             
             // Create Firebase Auth user
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
