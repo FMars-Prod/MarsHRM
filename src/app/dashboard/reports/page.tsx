@@ -60,7 +60,7 @@ const StarRating = ({ rating, onRatingChange, interactive = false }: { rating: n
             <Star
                 key={i}
                 className={cn("h-5 w-5", i < rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground", interactive && "hover:scale-125 transition-transform")}
-                onClick={() => onRatingChange?.(i + 1)}
+                onClick={() => onRatingChange?.(i + 1 === rating ? 0 : i + 1)}
             />
         ))}
     </div>
@@ -158,8 +158,8 @@ export default function ReportsPage() {
 
 
   const handleAddReport = async (memberId: string, summary: string, rating: number) => {
-    if (!summary || !rating) {
-        toast({ variant: 'destructive', title: 'Summary and rating are required' });
+    if (!summary) {
+        toast({ variant: 'destructive', title: 'Summary is required' });
         return;
     }
     const reportPayload = {
@@ -380,10 +380,8 @@ export default function ReportsPage() {
                           e.preventDefault();
                           const formData = new FormData(e.currentTarget);
                           const summary = formData.get("summary") as string;
-                          if (summary && newReportRating > 0 && selectedMember) {
+                          if (summary && selectedMember) {
                               handleAddReport(selectedMember.id, summary, newReportRating);
-                          } else {
-                              toast({ variant: 'destructive', title: 'Rating is required' });
                           }
                       }}>
                           <DialogHeader>
@@ -516,5 +514,3 @@ export default function ReportsPage() {
     </>
   );
 }
-
-    
