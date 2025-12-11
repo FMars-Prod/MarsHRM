@@ -4,7 +4,6 @@ import { AnnouncementsWidget } from "@/components/geohrm/announcements-widget";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { EventsWidget } from "@/components/geohrm/events-widget";
 import { PageHeader } from "@/components/geohrm/page-header";
-import { ResetClockIn } from "@/components/geohrm/reset-clock-in";
 import { TeamOverviewWidget } from "@/components/geohrm/team-overview-widget";
 
 export default function DashboardPage() {
@@ -14,7 +13,6 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Welcome back, here's your overview for today."
       >
-        <ResetClockIn />
       </PageHeader>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1 space-y-6">

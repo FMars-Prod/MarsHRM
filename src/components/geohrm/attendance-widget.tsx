@@ -340,13 +340,6 @@ export function AttendanceWidget() {
       setOutOfRangeAction(null);
   }
 
-  const handleReset = () => {
-    if (getTodaysAttendanceRef) {
-        deleteDocumentNonBlocking(getTodaysAttendanceRef);
-        toast({ title: "Attendance Reset", description: "Today's clock-in has been cleared." });
-    }
-  }
-
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -539,34 +532,6 @@ export function AttendanceWidget() {
           </>
         )}
       </CardFooter>
-      {(status !== 'out' || hasClockedOutToday) && (
-        <CardFooter className="border-t pt-4">
-             <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" className="w-full">
-                    <RotateCcw className="mr-2" />
-                    Reset Clock In
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    Are you sure you want to reset?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will delete today's entire attendance record, including clock-in, clock-out, and break times. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleReset}>
-                    Confirm Reset
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-        </CardFooter>
-      )}
 
         <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
             <DialogContent>
