@@ -404,7 +404,7 @@ export function AttendanceWidget() {
             )}
         </div>
         <CardDescription>
-          Your real-time attendance and break tracker.
+          Your real-time attendance and break tracker. Please enable location services on your device.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col items-center justify-center gap-4 text-center">
