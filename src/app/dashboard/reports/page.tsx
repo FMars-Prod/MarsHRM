@@ -32,37 +32,58 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, FileText, Download, Search, CheckCircle, Clock } from "lucide-react";
+import { PlusCircle, FileText, Download, Search } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc } from "@/firebase";
 import { collection, query, where, orderBy, doc, getDocs } from "firebase/firestore";
+import type { WithId } from "@/firebase/firestore/use-collection";
 
 type Report = { id: string; date: any; summary: string };
-type TeamMember = { id: string; firstName: string; lastName: string; jobTitle: string; };
+type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string };
+type Team = { id: string; memberIds: string[] };
 
 export default function ReportsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [teamMembers, setTeamMembers] = React.useState<TeamMember[]>([]);
-  const [selectedMember, setSelectedMember] = React.useState<TeamMember | null>(null);
+  const [teamMembers, setTeamMembers] = React.useState<UserData[]>([]);
+  const [selectedMember, setSelectedMember] = React.useState<UserData | null>(null);
   const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // This should get the current user's team members
-  const teamMembersQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    // For a Team Lead, this query would be more complex, e.g., querying users by teamId
-    // For now, we'll just show all users as an example of the UI
-    return query(collection(firestore, "users"), where('role', '!=', 'CEO/Admin'));
-  }, [firestore, user]);
+  const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+  const { data: currentUserData } = useDoc(userDocRef);
+  const userRole = (currentUserData as any)?.role;
 
-  const { data: usersData, isLoading: areUsersLoading } = useCollection<TeamMember>(teamMembersQuery);
+  const teamQuery = useMemoFirebase(() => {
+    if (!user || userRole !== 'Team Lead') return null;
+    return query(collection(firestore, 'teams'), where('teamLeadId', '==', user.uid));
+  }, [firestore, user, userRole]);
+
+  const { data: teamsData, isLoading: areTeamsLoading } = useCollection<Team>(teamQuery);
+
+  const teamMemberIds = React.useMemo(() => {
+    if (!teamsData || teamsData.length === 0) return [];
+    return teamsData.flatMap(team => team.memberIds.filter(id => id !== user?.uid)); // Team lead doesn't report on themselves
+  }, [teamsData, user]);
+
+  const membersQuery = useMemoFirebase(() => {
+    if (userRole === 'Team Lead') {
+      if (teamMemberIds.length === 0) return null;
+      return query(collection(firestore, "users"), where('id', 'in', teamMemberIds));
+    }
+    if (userRole === 'HR Manager' || userRole === 'CEO/Admin') {
+      // HR/CEO can see reports of Team Leads and Members.
+      return query(collection(firestore, "users"), where('role', 'in', ['Team Lead', 'Member']));
+    }
+    return null;
+  }, [firestore, userRole, teamMemberIds]);
+
+  const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(membersQuery);
 
   const reportsQuery = useMemoFirebase(() => {
       if (!selectedMember) return null;
@@ -111,19 +132,18 @@ export default function ReportsPage() {
     const csvContent = csvRows.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    if (link.href) {
-        URL.revokeObjectURL(link.href);
-    }
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.setAttribute('download', `${selectedMember.firstName}'s Reports.csv`);
+    link.setAttribute('download', `${selectedMember.firstName}_${selectedMember.lastName}_Reports.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   const handleExportAll = async () => {
-    if (!usersData || usersData.length === 0) {
+    const usersToExport = filteredUserData;
+    if (!usersToExport || usersToExport.length === 0) {
         toast({ variant: "destructive", title: "No data to export" });
         return;
     }
@@ -131,7 +151,7 @@ export default function ReportsPage() {
     const headers = ["Team Member", "Job Title", "Report Date", "Report Summary"];
     const csvRows = [headers.join(',')];
 
-    for (const member of usersData) {
+    for (const member of usersToExport) {
         const reportsSnapshot = await getDocs(query(collection(firestore, `users/${member.id}/reports`), orderBy('date', 'desc')));
         const reports = reportsSnapshot.docs.map(d => d.data() as Report);
         
@@ -150,12 +170,11 @@ export default function ReportsPage() {
                 `"${member.firstName} ${member.lastName}"`,
                 `"${member.jobTitle}"`,
                 "N/A",
-                "No reports"
+                "No reports submitted"
             ];
             csvRows.push(row.join(','));
         }
     }
-
 
     const csvContent = csvRows.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -172,7 +191,6 @@ export default function ReportsPage() {
   const filteredUserData = usersData?.filter(member =>
     `${member.firstName} ${member.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
 
   return (
     <>
@@ -191,13 +209,13 @@ export default function ReportsPage() {
                     onChange={e => setSearchQuery(e.target.value)}
                 />
             </div>
-            <Button onClick={handleExportAll}>
-            <Download className="mr-2" />
-            Export All as CSV
+            <Button onClick={handleExportAll} disabled={!usersData || usersData.length === 0}>
+              <Download className="mr-2 h-4 w-4" />
+              Export All
             </Button>
         </div>
       </PageHeader>
-      <Sheet>
+      <Sheet open={!!selectedMember} onOpenChange={(isOpen) => !isOpen && setSelectedMember(null)}>
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
@@ -208,9 +226,10 @@ export default function ReportsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {areUsersLoading ? (
+              {areUsersLoading || areTeamsLoading ? (
                 <TableRow><TableCell colSpan={3} className="text-center h-24">Loading team members...</TableCell></TableRow>
-              ) : filteredUserData?.map((member) => (
+              ) : filteredUserData && filteredUserData.length > 0 ? (
+                filteredUserData.map((member) => (
                 <TableRow key={member.id}>
                   <TableCell className="font-medium">
                      {member.firstName} {member.lastName}
@@ -219,20 +238,22 @@ export default function ReportsPage() {
                   <TableCell className="text-right">
                     <SheetTrigger asChild>
                       <Button variant="outline" size="sm" onClick={() => setSelectedMember(member)}>
-                        <FileText className="mr-2" />
+                        <FileText className="mr-2 h-4 w-4" />
                         View Reports
                       </Button>
                     </SheetTrigger>
                   </TableCell>
                 </TableRow>
-              ))}
+              ))) : (
+                <TableRow><TableCell colSpan={3} className="text-center h-24">No team members found.</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
         {selectedMember && (
           <SheetContent className="sm:max-w-lg">
             <SheetHeader>
-              <SheetTitle>{selectedMember.firstName}'s Reports</SheetTitle>
+              <SheetTitle>{selectedMember.firstName} {selectedMember.lastName}'s Reports</SheetTitle>
               <SheetDescription>
                 Review and add work reports for this team member.
               </SheetDescription>
@@ -243,7 +264,7 @@ export default function ReportsPage() {
                 <Dialog open={isAddReportDialogOpen} onOpenChange={setIsAddReportDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
-                      <PlusCircle className="mr-2" />
+                      <PlusCircle className="mr-2 h-4 w-4" />
                       Add New Report
                     </Button>
                   </DialogTrigger>
@@ -277,8 +298,8 @@ export default function ReportsPage() {
                       </form>
                   </DialogContent>
                 </Dialog>
-                <Button variant="outline" onClick={handleExport}>
-                    <Download className="mr-2"/>
+                <Button variant="outline" onClick={handleExport} disabled={!memberReports || memberReports.length === 0}>
+                    <Download className="mr-2 h-4 w-4"/>
                     Export as CSV
                 </Button>
               </div>
