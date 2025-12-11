@@ -18,7 +18,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
 import { isToday } from 'date-fns';
-import { NotificationManager } from '@/components/NotificationManager';
 
 type LeaveRequest = {
   status: string;
@@ -115,7 +114,6 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <NotificationManager />
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2">

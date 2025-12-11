@@ -522,10 +522,6 @@
         "role": {
           "type": "string",
           "description": "Role of the user within the system (e.g., Member, Team Lead, HR Manager, CEO/Admin)."
-        },
-        "fcmToken": {
-          "type": "string",
-          "description": "Firebase Cloud Messaging token for push notifications."
         }
       },
       "required": [
