@@ -9,7 +9,7 @@ import { useAuth, useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, updateDoc } from "firebase/firestore";
-import { Edit, Building2 } from "lucide-react";
+import { Edit, Building2, Smile } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,9 +24,14 @@ import * as React from "react";
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
-    email: z.string().email("Invalid email address"),
     password: z.string().optional(),
     confirmPassword: z.string().optional(),
+}).refine(data => {
+    if (data.password && data.password.length > 0 && data.password.length < 6) return false;
+    return true;
+}, {
+    message: "Password must be at least 6 characters.",
+    path: ["password"],
 }).refine(data => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
@@ -34,13 +39,23 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+const emojiCategories = {
+    "Smileys & People": ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠"],
+    "Animals & Nature": ["🙈", "🙉", "🙊", "🐵", "🐶", "🐺", "🐱", "🦁", "🐯", "🦒", "🦊", "🦝", "🐮", "🐷", "🐗", "🐭", "🐹", "🐰", "🐻", "🐨", "🐼", "🐸", "🦓", "🐴", "🦄", "🐔", "🐲", "🐢", "🐍"],
+    "Food & Drink": ["🍎", "🍊", "🍉", "🍇", "🍓", "🍒", "🍑", "🍍", "🥥", "🥝", "🥑", "🍆", "🌶️", "🌽", "🥕", "🥐", "🍞", "🥖", "🥨", "🥯", "🥞", "🧇", "🧀", "🍗", "🍖", "🥩", "🍔", "🍟", "🍕", "🌭"],
+    "Travel & Places": ["🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐", "🚚", "🚛", "🚜", "🚀", "✈️", "🛫", "🛬", "🛰️", "🛸", "🚁", "🚂", "🚆", "🚄", "🚅", "🚇", "🚉", "🏠", "🏡", "🏢", "🏣"],
+    "Objects": ["⌚️", "📱", "💻", "⌨️", "🖥️", "🖨️", "🖱️", "🖲️", "🕹️", "🗜️", "💾", "💿", "📀", "📼", "📷", "📹", "🎥", "📞", "☎️", "📟", "📠", "📺", "📻", "🎙️", "💡", "🔦", "🏮", "💎", "💍", "🎁"]
+};
+
+
 export default function ProfilePage() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
     const auth = useAuth();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = React.useState(false);
-    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+    const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
+    const [isAvatarDialogOpen, setIsAvatarDialogOpen] = React.useState(false);
 
 
     const userDocRef = useMemoFirebase(
@@ -54,7 +69,6 @@ export default function ProfilePage() {
         defaultValues: {
             firstName: "",
             lastName: "",
-            email: "",
             password: "",
             confirmPassword: "",
         },
@@ -65,7 +79,6 @@ export default function ProfilePage() {
             form.reset({
                 firstName: (employee as any).firstName || '',
                 lastName: (employee as any).lastName || '',
-                email: (employee as any).email || '',
                 password: '',
                 confirmPassword: '',
             });
@@ -86,7 +99,6 @@ export default function ProfilePage() {
                 await updateDoc(userDocRef, {
                     firstName: data.firstName,
                     lastName: data.lastName,
-                    email: data.email,
                 });
             }
 
@@ -95,18 +107,13 @@ export default function ProfilePage() {
                 displayName: `${data.firstName} ${data.lastName}`,
             });
 
-            // Update Auth email if changed
-            if (auth.currentUser.email !== data.email) {
-                await updateEmail(auth.currentUser, data.email);
-            }
-
             // Update password if provided
             if (data.password) {
                 await updatePassword(auth.currentUser, data.password);
             }
 
             toast({ title: "Success", description: "Profile updated successfully." });
-            setIsDialogOpen(false);
+            setIsProfileDialogOpen(false);
         } catch (error: any) {
             console.error("Error updating profile:", error);
             toast({ variant: "destructive", title: "Update Failed", description: error.message });
@@ -114,6 +121,18 @@ export default function ProfilePage() {
             setIsSubmitting(false);
         }
     }
+    
+    const handleAvatarUpdate = async (emoji: string) => {
+        if (!userDocRef) return;
+        try {
+            await updateDoc(userDocRef, { avatar: emoji });
+            toast({ title: "Avatar updated!" });
+            setIsAvatarDialogOpen(false);
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Update failed", description: error.message });
+        }
+    }
+
 
     if (isUserLoading || isEmployeeLoading) {
         return (
@@ -130,6 +149,8 @@ export default function ProfilePage() {
         return <p>No employee data found.</p>;
     }
 
+    const employeeAvatar = (employee as any)?.avatar;
+
     return (
         <>
             <PageHeader
@@ -139,16 +160,50 @@ export default function ProfilePage() {
             <div className="grid gap-6 lg:grid-cols-3">
                 <Card className="lg:col-span-1">
                     <CardHeader className="items-center text-center">
-                        <Avatar className="h-24 w-24">
+                        <Avatar className="h-24 w-24 relative group">
+                           {employeeAvatar ? (
+                               <span className="text-6xl">{employeeAvatar}</span>
+                           ) : (
                             <AvatarFallback className="text-3xl">
                                 {(employee as any).firstName?.charAt(0)}{(employee as any).lastName?.charAt(0)}
                             </AvatarFallback>
+                           )}
+                           <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <button className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Smile className="h-8 w-8 text-white" />
+                                    </button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Choose Your Avatar</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="max-h-[50vh] overflow-y-auto">
+                                        {Object.entries(emojiCategories).map(([category, emojis]) => (
+                                            <div key={category}>
+                                                <h3 className="font-semibold text-lg sticky top-0 bg-background py-2">{category}</h3>
+                                                <div className="grid grid-cols-8 gap-2">
+                                                    {emojis.map(emoji => (
+                                                        <button 
+                                                            key={emoji} 
+                                                            onClick={() => handleAvatarUpdate(emoji)}
+                                                            className="text-3xl p-2 rounded-lg hover:bg-accent"
+                                                        >
+                                                            {emoji}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </DialogContent>
+                           </Dialog>
                         </Avatar>
                          <CardTitle className="font-headline text-2xl mt-4">{(employee as any).firstName} {(employee as any).lastName}</CardTitle>
                          <CardDescription>{(employee as any).jobTitle}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button className="w-full">
                                     <Edit className="mr-2 h-4 w-4"/> Edit Profile
@@ -191,19 +246,13 @@ export default function ProfilePage() {
                                                 )}
                                             />
                                         </div>
-                                        <FormField
-                                            control={form.control}
-                                            name="email"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Email</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="email" placeholder="john.doe@example.com" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                         <FormItem>
+                                            <FormLabel>Email</FormLabel>
+                                            <FormControl>
+                                                <Input type="email" placeholder="john.doe@example.com" value={(employee as any)?.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
                                         <FormField
                                             control={form.control}
                                             name="password"
@@ -290,3 +339,5 @@ export default function ProfilePage() {
         </>
     )
 }
+
+    

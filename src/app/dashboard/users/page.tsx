@@ -181,7 +181,7 @@ export default function UsersPage() {
             
             const batch = writeBatch(firestore);
             const userDocRef = doc(firestore, 'users', editingUser.id);
-            const { password, confirmPassword, ...updateData } = values;
+            const { password, confirmPassword, email, ...updateData } = values; // Exclude email from update
             batch.update(userDocRef, updateData);
 
             // Handle role change
@@ -290,7 +290,20 @@ export default function UsersPage() {
                     )} />
                 </div>
                 <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} placeholder="john.doe@example.com" /></FormControl><FormMessage /></FormItem>
+                    <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                            <Input 
+                                type="email" 
+                                {...field} 
+                                placeholder="john.doe@example.com"
+                                readOnly={!!editingUser}
+                                disabled={!!editingUser}
+                                className={editingUser ? "cursor-not-allowed bg-muted/50" : ""}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
                 )} />
                  <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="jobTitle" render={({ field }) => (

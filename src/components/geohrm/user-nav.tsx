@@ -34,15 +34,20 @@ export function UserNav({ user }: { user: User | null }) {
   };
 
   const employeeName = employee ? `${(employee as any).firstName} ${(employee as any).lastName}` : user?.displayName || 'User';
+  const employeeAvatar = (employee as any)?.avatar;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
+            {employeeAvatar ? (
+                <span className="text-2xl">{employeeAvatar}</span>
+            ) : (
             <AvatarFallback>
                 {employee ? `${(employee as any).firstName?.[0] || ''}${(employee as any).lastName?.[0] || ''}` : user?.email?.charAt(0)?.toUpperCase() || 'U'}
             </AvatarFallback>
+            )}
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -64,3 +69,5 @@ export function UserNav({ user }: { user: User | null }) {
     </DropdownMenu>
   );
 }
+
+    

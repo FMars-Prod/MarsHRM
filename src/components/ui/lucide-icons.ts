@@ -52,6 +52,7 @@ export {
   ChevronLeft,
   ChevronRight,
   Circle,
+  Smile
 } from "lucide-react";
 
     

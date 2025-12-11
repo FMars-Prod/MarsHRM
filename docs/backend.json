@@ -49,6 +49,10 @@
         "averageRating": {
             "type": "number",
             "description": "The average rating of the employee's work reports."
+        },
+        "avatar": {
+          "type": "string",
+          "description": "A single emoji character to be used as the user's avatar."
         }
       },
       "required": [
