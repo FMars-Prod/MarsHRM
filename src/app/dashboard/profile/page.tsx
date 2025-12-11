@@ -20,6 +20,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { updateProfile, updateEmail, updatePassword } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import * as React from "react";
+import { cn } from "@/lib/utils";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -157,7 +158,7 @@ export default function ProfilePage() {
             <div className="grid gap-6 lg:grid-cols-3">
                 <Card className="lg:col-span-1">
                     <CardHeader className="items-center text-center">
-                        <Avatar className="h-24 w-24 relative group">
+                        <Avatar className={cn("h-24 w-24 relative group", employeeAvatar && "items-center justify-center")}>
                            {employeeAvatar ? (
                                <span className="text-6xl">{employeeAvatar}</span>
                            ) : (
