@@ -45,6 +45,10 @@
         "teamId": {
           "type": "string",
           "description": "Reference to the Team entity. (Relationship: Team 1:N Employee). Null if employee is not part of a team"
+        },
+        "averageRating": {
+            "type": "number",
+            "description": "The average rating of the employee's work reports."
         }
       },
       "required": [
@@ -288,9 +292,13 @@
         "summary": {
           "type": "string",
           "description": "A summary of the work accomplished."
+        },
+        "rating": {
+            "type": "number",
+            "description": "A rating from 1 to 5 for the work report."
         }
       },
-      "required": ["id", "date", "summary"]
+      "required": ["id", "date", "summary", "rating"]
     },
     "Announcement": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -839,3 +847,5 @@
     "reasoning": "The Firestore structure is designed to support the GeoHRM application's requirements, focusing on security, scalability, and ease of debugging.  Authorization Independence is achieved by denormalizing relevant authorization data (roles) into documents where needed, avoiding costly and insecure `get()` calls in security rules. Segregation of data based on access levels (e.g., private user data vs. public announcements) simplifies security rules and improves query performance.  Access Modeling is consistently applied, leveraging path-based ownership for user-specific data (attendance, leave requests) and membership maps for collaborative or role-based access.  This structure ensures clear authorization intent and facilitates secure list operations (QAPs).  \n\nSpecifically:\n\n*   `/users/{userId}`: Stores user profiles. The `User.role` field determines the user's global role (Member, Team Lead, HR Manager, CEO/Admin).  This role is used for authorization across the application.\n*   `/teams/{teamId}`: Stores team information including name, lead, and members.\n*   `/users/{userId}/attendances/{attendanceId}`: Stores attendance records for each user. This path ensures that only the user (or an admin) can access their own attendance records. The 'employeeId' field within each attendance document is redundant, but essential to maintain Authorization Independence in security rules. Without it we need to fetch the parent document to check the user ID.\n*   `/users/{userId}/leave_requests/{leaveRequestId}`: Stores leave requests for each user. The path-based ownership ensures that only the user (or an authorized admin) can access these requests. The status field allows tracking the request's progress through the approval workflow (Member -> Team Lead -> HR).\n*   `/announcements/{announcementId}`: Stores company-wide announcements. These are accessible to all employees. HR/Admin roles will have write access. No employee ID is necessary, as it's a global resource.\n*   `/events/{eventId}`: Stores company-wide events like birthdays. Publicly readable, but only writable by admins.\n*   `/policies/{policyId}`: Stores company policies, accessible to all employees. HR/Admin roles will have write access.\n*   `/users/{userId}/policy_acknowledgments/{acknowledgmentId}`: Tracks which policies have been acknowledged by each employee.\n*   `/issue_reports/{issueReportId}`: Stores issue reports submitted by employees. The `employeeId` field links the report to the user. Admin/HR can access and update all reports.\n*   `/roles_team_lead/{userId}`, `/roles_hr_agent/{userId}`, `/roles_admin/{userId}`, `/roles_ceo/{userId}`: These collections are used for role-based authorization using Existence over Content. If a document exists for a user ID in one of these collections, the user has the corresponding role.  This is more secure and efficient than storing roles in a central user document and requiring `get()` calls.\n*   `/audit_logs/{auditLogId}`: Logs all user actions for auditing purposes. Access to this collection is restricted to admin roles.\n*   `/settings/{settingId}`: Stores global application settings. For instance, a document with ID 'location' will hold the office coordinates for geofencing. This centralizes configuration and allows admins to manage it."
   }
 }
+
+    
