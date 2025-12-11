@@ -39,14 +39,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, FileText, Download, Search, Calendar as CalendarIcon, Star, Filter, X } from "lucide-react";
+import { PlusCircle, FileText, Download, Search, Star, Filter, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay, getYear, getMonth, getDate, getDaysInMonth, isValid } from "date-fns";
+import { format, startOfDay, endOfDay, getYear, getMonth, getDaysInMonth, isValid } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, updateDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, orderBy, doc, getDocs, writeBatch } from "firebase/firestore";
+import { collection, query, where, orderBy, doc, getDocs } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -75,7 +75,6 @@ export default function ReportsPage() {
   const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
   const [newReportRating, setNewReportRating] = React.useState(0);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [filterRating, setFilterRating] = React.useState<number | undefined>(undefined);
 
   const [filterYear, setFilterYear] = React.useState<string | undefined>();
   const [filterMonth, setFilterMonth] = React.useState<string | undefined>();
@@ -112,7 +111,6 @@ export default function ReportsPage() {
 
   const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(membersQuery);
 
-  // Update filterDate when year, month, or day changes
   React.useEffect(() => {
     if (filterYear && filterMonth && filterDay) {
       const newDate = new Date(parseInt(filterYear), parseInt(filterMonth), parseInt(filterDay));
@@ -135,11 +133,8 @@ export default function ReportsPage() {
             where('date', '<=', endOfDay(filterDate))
         );
     }
-    if (filterRating) {
-        q = query(q, where('rating', '==', filterRating));
-    }
     return q;
-  }, [firestore, selectedMember, filterDate, filterRating]);
+  }, [firestore, selectedMember, filterDate]);
   
   const { data: memberReports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
 
@@ -170,7 +165,6 @@ export default function ReportsPage() {
     
     await addDocumentNonBlocking(collection(firestore, `users/${memberId}/reports`), reportPayload);
     
-    // Recalculate and update average rating
     const allReportsSnapshot = await getDocs(query(collection(firestore, `users/${memberId}/reports`)));
     const allReports = allReportsSnapshot.docs.map(d => d.data() as Report);
     const newAverage = allReports.reduce((acc, r) => acc + r.rating, 0) / allReports.length;
@@ -274,7 +268,6 @@ export default function ReportsPage() {
     setFilterYear(undefined);
     setFilterMonth(undefined);
     setFilterDay(undefined);
-    setFilterRating(undefined);
   }
 
   return (
@@ -444,12 +437,7 @@ export default function ReportsPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <DropdownMenuSeparator />
-                        <div className="px-2 py-1.5 text-sm font-semibold">Filter by Rating</div>
-                        <div className="p-2">
-                          <StarRating rating={filterRating || 0} onRatingChange={(r) => setFilterRating(r === 0 ? undefined : r)} interactive />
-                        </div>
-                        {(filterDate || filterRating || filterYear) && (
+                        {(filterDate || filterYear) && (
                             <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={clearFilters}>
@@ -504,3 +492,5 @@ export default function ReportsPage() {
     </>
   );
 }
+
+    
