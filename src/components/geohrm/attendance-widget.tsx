@@ -235,7 +235,8 @@ export function AttendanceWidget() {
               proceedWithClockIn(userLocation, dist);
           }
         },
-        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."})
+        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
   
@@ -275,7 +276,8 @@ export function AttendanceWidget() {
                 proceedWithClockOut(userLocation);
             }
         },
-        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."})
+        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."}),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
