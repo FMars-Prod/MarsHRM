@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2 } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -35,7 +35,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
@@ -151,7 +151,9 @@ export function AttendanceWidget() {
         setStatus("out");
         setHasClockedOutToday(false);
         setTimer(0);
+        setBreakTimer(0);
         setTotalBreakTime(0);
+        setLastClockInTime(null);
     }
   }, [todaysAttendance]);
 
@@ -334,6 +336,13 @@ export function AttendanceWidget() {
       setIsOutOfRangeReasonDialogOpen(false);
       setOutOfRangeReason("");
       setOutOfRangeAction(null);
+  }
+
+  const handleReset = () => {
+    if (getTodaysAttendanceRef) {
+        deleteDocumentNonBlocking(getTodaysAttendanceRef);
+        toast({ title: "Attendance Reset", description: "Today's clock-in has been cleared." });
+    }
   }
 
   const formatTime = (totalSeconds: number) => {
@@ -528,6 +537,34 @@ export function AttendanceWidget() {
           </>
         )}
       </CardFooter>
+      {(status !== 'out' || hasClockedOutToday) && (
+        <CardFooter className="border-t pt-4">
+             <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="w-full">
+                    <RotateCcw className="mr-2" />
+                    Reset Clock In
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Are you sure you want to reset?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will delete today's entire attendance record, including clock-in, clock-out, and break times. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleReset}>
+                    Confirm Reset
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+        </CardFooter>
+      )}
 
         <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
             <DialogContent>
@@ -555,5 +592,3 @@ export function AttendanceWidget() {
     </Card>
   );
 }
-
-    
