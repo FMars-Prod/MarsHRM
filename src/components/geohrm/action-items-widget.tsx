@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { List, CalendarOff, ShieldCheck, MessageSquareWarning, ArrowRight } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import Link from 'next/link';
 import type { WithId } from '@/firebase/firestore/use-collection';
 
@@ -38,7 +38,7 @@ export function ActionItemsWidget() {
     const { user: currentUser } = useUser();
     const firestore = useFirestore();
 
-    const currentUserDocRef = useMemoFirebase(() => currentUser ? collection(firestore, 'users').doc(currentUser.uid) : null, [currentUser, firestore]);
+    const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
     const { data: currentUserData } = useDoc(currentUserDocRef);
     const userRole = (currentUserData as any)?.role;
 
