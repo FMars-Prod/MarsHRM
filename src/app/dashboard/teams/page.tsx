@@ -80,7 +80,7 @@ export default function TeamsPage() {
     const { data: currentUserData } = useDoc(useMemoFirebase(() => currentUser ? doc(firestore, "users", currentUser.uid) : null, [currentUser, firestore]));
     const userRole = (currentUserData as any)?.role;
     const canManageAllTeams = userRole === 'HR Manager' || userRole === 'CEO/Admin';
-
+    
     const getTeamLeadName = (leadId: string) => {
         const lead = users?.find(u => u.id === leadId);
         return lead ? `${lead.firstName} ${lead.lastName}` : 'N/A';
@@ -173,6 +173,7 @@ export default function TeamsPage() {
 
     // Users available for the members checkbox list
     const availableMembers = users?.filter(u => {
+        // Only allow 'Member' roles to be added to a team
         if (u.role !== 'Member') return false;
         // If editing a team, members of that team are available.
         if (editingTeam && editingTeam.memberIds.includes(u.id)) return true;
