@@ -137,12 +137,16 @@ export default function UsersPage() {
         toast({ variant: "destructive", title: "Cannot delete yourself." });
         return;
     }
-    if (userToDelete.role === 'CEO/Admin') {
-        toast({ variant: "destructive", title: "Permission Denied", description: "The CEO account cannot be deleted." });
+     if (currentUserRole === 'CEO/Admin' && userToDelete.id === currentUser.uid) {
+        toast({ variant: "destructive", title: "Permission Denied", description: "You cannot delete your own CEO account." });
+        return;
+    }
+     if (currentUserRole !== 'CEO/Admin' && userToDelete.role === 'CEO/Admin') {
+        toast({ variant: "destructive", title: "Permission Denied", description: "Only the CEO can manage the CEO account." });
         return;
     }
      if (!canModify(userToDelete.role)) {
-        toast({ variant: "destructive", title: "Permission Denied", description: "You cannot delete this user." });
+        toast({ variant: "destructive", title: "Permission Denied", description: "You do not have permission to delete this user." });
         return;
     }
 
@@ -254,9 +258,9 @@ export default function UsersPage() {
     }
   };
 
-  const canModify = (role: Role) => {
+  const canModify = (targetRole: Role) => {
       if (currentUserRole === 'CEO/Admin') return true;
-      if (currentUserRole === 'HR Manager' && role !== 'CEO/Admin') return true;
+      if (currentUserRole === 'HR Manager' && targetRole !== 'CEO/Admin') return true;
       return false;
   }
   
@@ -407,7 +411,14 @@ export default function UsersPage() {
                       <DropdownMenuItem onClick={() => handleEditUser(user)} disabled={!canModify(user.role)}>
                         <Edit className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDeleteUser(user)} disabled={!canModify(user.role) || user.id === currentUser?.uid} className="text-destructive">
+                      <DropdownMenuItem 
+                        onClick={() => handleDeleteUser(user)} 
+                        disabled={
+                            user.id === currentUser?.uid ||
+                            (currentUserRole !== 'CEO/Admin' && user.role === 'CEO/Admin')
+                        } 
+                        className="text-destructive"
+                       >
                         <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
