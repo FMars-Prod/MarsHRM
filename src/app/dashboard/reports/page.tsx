@@ -72,7 +72,7 @@ export default function ReportsPage() {
   const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterDate, setFilterDate] = React.useState<Date | undefined>(undefined);
-  const [filterRating, setFilterRating] = React.useState<number | undefined>(undefined);
+  const [filterRating, setFilterRating] = React.useState<string | undefined>(undefined);
 
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
@@ -115,7 +115,7 @@ export default function ReportsPage() {
         );
     }
     if (filterRating) {
-        q = query(q, where('rating', '==', filterRating));
+        q = query(q, where('rating', '==', parseInt(filterRating)));
     }
     return q;
   }, [firestore, selectedMember, filterDate, filterRating]);
@@ -387,18 +387,18 @@ export default function ReportsPage() {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                         <Popover>
+                        <Popover>
                             <PopoverTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Button variant="ghost" className="w-full justify-start font-normal">
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {filterDate ? format(filterDate, "MMMM do, yyyy") : <span>Filter by date</span>}
-                                </DropdownMenuItem>
+                                </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar mode="single" selected={filterDate} onSelect={setFilterDate} initialFocus />
                             </PopoverContent>
                         </Popover>
-                         <Select onValueChange={(v) => setFilterRating(parseInt(v))}>
+                         <Select onValueChange={(v) => setFilterRating(v)}>
                             <SelectTrigger className="w-full border-0 focus:ring-0">
                                 <div className="flex items-center px-2 py-1.5 text-sm">
                                     <Star className="mr-2 h-4 w-4"/>
@@ -406,7 +406,11 @@ export default function ReportsPage() {
                                 </div>
                             </SelectTrigger>
                             <SelectContent>
-                                {[1,2,3,4,5].map(r => <SelectItem key={r} value={r.toString()}>{r} Star</SelectItem>)}
+                                <SelectItem value="1">1 Star</SelectItem>
+                                <SelectItem value="2">2 Stars</SelectItem>
+                                <SelectItem value="3">3 Stars</SelectItem>
+                                <SelectItem value="4">4 Stars</SelectItem>
+                                <SelectItem value="5">5 Stars</SelectItem>
                             </SelectContent>
                         </Select>
                         {(filterDate || filterRating) && (
@@ -464,5 +468,7 @@ export default function ReportsPage() {
     </>
   );
 }
+
+    
 
     
