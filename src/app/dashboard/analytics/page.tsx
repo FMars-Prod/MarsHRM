@@ -13,13 +13,14 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -33,10 +34,13 @@ type User = {
 }
 
 type AttendanceRecord = {
+  id: string;
   checkInTime?: Timestamp;
   checkOutTime?: Timestamp;
   totalBreakDuration?: number;
   status: 'present' | 'late' | 'absent' | 'on_leave';
+  checkInNotes?: string;
+  checkOutNotes?: string;
 };
 
 type EditableAttendance = {
@@ -77,7 +81,7 @@ const AnalyticsPage = () => {
   const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
   const { data: currentUserData } = useDoc(currentUserDocRef);
   const currentUserRole = (currentUserData as any)?.role;
-  const isAdmin = currentUserRole === 'CEO/Admin' || currentUserRole === 'HR Manager';
+  const isAdmin = currentUserRole === 'CEO/Admin' || currentUserRole === 'HR Manager' || currentUserRole === 'Team Lead';
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
@@ -184,6 +188,7 @@ const AnalyticsPage = () => {
   const userAvatar = PlaceHolderImages.find((image) => image.id === 'user-avatar-1');
 
   const formatDuration = (seconds: number) => {
+    if (seconds < 0) seconds = 0;
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
@@ -194,7 +199,7 @@ const AnalyticsPage = () => {
         toast({ variant: 'destructive', title: 'No data to export' });
         return;
     }
-    const headers = ['Date', 'Clock In', 'Clock Out', 'Work Duration', 'Break Duration', 'Status'];
+    const headers = ['Date', 'Clock In', 'Clock Out', 'Work Duration', 'Break Duration', 'Status', 'Clock In Notes', 'Clock Out Notes'];
     const csvRows = [
         headers.join(','),
         ...attendanceData.map(rec => {
@@ -209,6 +214,8 @@ const AnalyticsPage = () => {
                 `"${formatDuration(workDuration)}"`,
                 `"${formatDuration(rec.totalBreakDuration || 0)}"`,
                 `"${rec.status}"`,
+                `"${rec.checkInNotes || ''}"`,
+                `"${rec.checkOutNotes || ''}"`,
             ];
             return row.join(',');
         })
@@ -351,12 +358,12 @@ const AnalyticsPage = () => {
       <div className="grid gap-6">
         {selectedUser && (
           <Card>
-            <CardHeader className="flex flex-col sm:flex-row items-center gap-4 space-y-0 p-4 sm:p-6">
+            <CardHeader className="flex flex-col items-center text-center sm:flex-row sm:text-left gap-4 space-y-0 p-4 sm:p-6">
               <Avatar className="h-20 w-20">
                 {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={selectedUser.firstName} />}
                 <AvatarFallback>{selectedUser.firstName?.[0]}{selectedUser.lastName?.[0]}</AvatarFallback>
               </Avatar>
-              <div className="text-center sm:text-left">
+              <div>
                 <CardTitle className="text-2xl">{selectedUser.firstName} {selectedUser.lastName}</CardTitle>
                 <CardDescription>{selectedUser.jobTitle} - {selectedUser.department}</CardDescription>
               </div>
@@ -438,49 +445,69 @@ const AnalyticsPage = () => {
                         <CardDescription>{showAll ? "Full activity history for the selected employee." : `Activity for ${date ? format(date, 'PPP') : 'the selected day'}.`}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Clock In/Out</TableHead>
-                                        <TableHead>Work</TableHead>
-                                        <TableHead>Break</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {attendanceData?.map((rec, index) => {
-                                        let workDuration = 0;
-                                        if (rec.checkInTime && rec.checkOutTime) {
-                                            workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
-                                        }
-                                        return (
-                                        <TableRow key={`${rec.id}-${index}`}>
-                                            <TableCell className="font-medium whitespace-nowrap">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
-                                            <TableCell className="whitespace-nowrap">
-                                            {rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}
-                                            {' / '}
-                                            {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
-                                            </TableCell>
-                                            <TableCell>{formatDuration(workDuration)}</TableCell>
-                                            <TableCell>{formatDuration(rec.totalBreakDuration || 0)}</TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant="outline"
-                                                    className={cn(
-                                                        rec.status === 'present' && 'text-green-600 border-green-600/50',
-                                                        rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
-                                                        rec.status === 'absent' && 'text-red-600 border-red-600/50',
-                                                        rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
-                                                    )}
-                                                >{rec.status}</Badge>
-                                            </TableCell>
+                        <TooltipProvider>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Time (In/Out)</TableHead>
+                                            <TableHead>Duration (Work/Break)</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Notes</TableHead>
                                         </TableRow>
-                                    )})}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {attendanceData?.map((rec) => {
+                                            let workDuration = 0;
+                                            if (rec.checkInTime && rec.checkOutTime) {
+                                                workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+                                            }
+                                            const notes = (rec.checkInNotes ? `In: ${rec.checkInNotes}` : '') + 
+                                                          (rec.checkOutNotes ? `\nOut: ${rec.checkOutNotes}` : '');
+
+                                            return (
+                                            <TableRow key={rec.id}>
+                                                <TableCell className="font-medium whitespace-nowrap">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    <div>{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</div>
+                                                    <div>{rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div>{formatDuration(workDuration)}</div>
+                                                    <div className="text-xs text-muted-foreground">{formatDuration(rec.totalBreakDuration || 0)}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={cn(
+                                                            rec.status === 'present' && 'text-green-600 border-green-600/50',
+                                                            rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
+                                                            rec.status === 'absent' && 'text-red-600 border-red-600/50',
+                                                            rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
+                                                        )}
+                                                    >{rec.status}</Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {notes.trim() ? (
+                                                        <Tooltip>
+                                                            <TooltipTrigger>
+                                                                <StickyNote className="h-5 w-5 text-muted-foreground" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p className="whitespace-pre-wrap max-w-xs">{notes.trim()}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <span className="text-muted-foreground/50">-</span>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        )})}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </TooltipProvider>
                          {(!attendanceData || attendanceData.length === 0) && (
                             <div className="text-center py-10 text-muted-foreground">
                                 No attendance records found for this period.
