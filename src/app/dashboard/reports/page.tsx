@@ -75,7 +75,7 @@ export default function ReportsPage() {
   const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
   const [newReportRating, setNewReportRating] = React.useState(0);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [filterRating, setFilterRating] = React.useState<string | undefined>(undefined);
+  const [filterRating, setFilterRating] = React.useState<number | undefined>(undefined);
 
   const [filterYear, setFilterYear] = React.useState<string | undefined>();
   const [filterMonth, setFilterMonth] = React.useState<string | undefined>();
@@ -136,7 +136,7 @@ export default function ReportsPage() {
         );
     }
     if (filterRating) {
-        q = query(q, where('rating', '==', parseInt(filterRating)));
+        q = query(q, where('rating', '==', filterRating));
     }
     return q;
   }, [firestore, selectedMember, filterDate, filterRating]);
@@ -446,19 +446,9 @@ export default function ReportsPage() {
                         </div>
                         <DropdownMenuSeparator />
                         <div className="px-2 py-1.5 text-sm font-semibold">Filter by Rating</div>
-                         <Select onValueChange={(v) => setFilterRating(v === 'all' ? undefined : v)} value={filterRating}>
-                            <SelectTrigger className="w-[calc(100%-8px)] mx-1">
-                                <SelectValue placeholder="Select a rating" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Ratings</SelectItem>
-                                <SelectItem value="1">1 Star</SelectItem>
-                                <SelectItem value="2">2 Stars</SelectItem>
-                                <SelectItem value="3">3 Stars</SelectItem>
-                                <SelectItem value="4">4 Stars</SelectItem>
-                                <SelectItem value="5">5 Stars</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="p-2">
+                          <StarRating rating={filterRating || 0} onRatingChange={(r) => setFilterRating(r === 0 ? undefined : r)} interactive />
+                        </div>
                         {(filterDate || filterRating || filterYear) && (
                             <>
                                 <DropdownMenuSeparator />
