@@ -54,10 +54,14 @@ type Report = { id: string; date: any; summary: string; rating: number };
 type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; averageRating?: number };
 type Team = { id: string; memberIds: string[] };
 
-const StarRating = ({ rating }: { rating: number }) => (
-    <div className="flex items-center">
+const StarRating = ({ rating, onRatingChange, interactive = false }: { rating: number, onRatingChange?: (rating: number) => void, interactive?: boolean }) => (
+    <div className={cn("flex items-center", interactive && "cursor-pointer")}>
         {[...Array(5)].map((_, i) => (
-            <Star key={i} className={cn("h-4 w-4", i < rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")} />
+            <Star
+                key={i}
+                className={cn("h-5 w-5", i < rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground", interactive && "hover:scale-125 transition-transform")}
+                onClick={() => onRatingChange?.(i + 1)}
+            />
         ))}
     </div>
 );
@@ -69,6 +73,7 @@ export default function ReportsPage() {
   
   const [selectedMember, setSelectedMember] = React.useState<UserData | null>(null);
   const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
+  const [newReportRating, setNewReportRating] = React.useState(0);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filterRating, setFilterRating] = React.useState<string | undefined>(undefined);
 
@@ -177,6 +182,7 @@ export default function ReportsPage() {
         description: `Work report for ${selectedMember?.firstName} has been saved.`
     });
     setIsAddReportDialogOpen(false);
+    setNewReportRating(0);
   };
 
   const handleExport = () => {
@@ -359,7 +365,10 @@ export default function ReportsPage() {
             <Separator className="my-4" />
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                <Dialog open={isAddReportDialogOpen} onOpenChange={setIsAddReportDialogOpen}>
+                <Dialog open={isAddReportDialogOpen} onOpenChange={(isOpen) => {
+                    if (!isOpen) setNewReportRating(0);
+                    setIsAddReportDialogOpen(isOpen);
+                }}>
                   <DialogTrigger asChild>
                     <Button>
                       <PlusCircle className="mr-2 h-4 w-4" />
@@ -371,9 +380,10 @@ export default function ReportsPage() {
                           e.preventDefault();
                           const formData = new FormData(e.currentTarget);
                           const summary = formData.get("summary") as string;
-                          const rating = parseInt(formData.get("rating") as string);
-                          if (summary && rating && selectedMember) {
-                              handleAddReport(selectedMember.id, summary, rating);
+                          if (summary && newReportRating > 0 && selectedMember) {
+                              handleAddReport(selectedMember.id, summary, newReportRating);
+                          } else {
+                              toast({ variant: 'destructive', title: 'Rating is required' });
                           }
                       }}>
                           <DialogHeader>
@@ -388,13 +398,10 @@ export default function ReportsPage() {
                                 <Textarea id="summary" name="summary" placeholder="Describe the work accomplished..." required />
                               </div>
                               <div className="grid gap-2">
-                                <Label htmlFor="rating">Rating</Label>
-                                <Select name="rating" required>
-                                    <SelectTrigger><SelectValue placeholder="Select a rating"/></SelectTrigger>
-                                    <SelectContent>
-                                        {[1,2,3,4,5].map(r => <SelectItem key={r} value={r.toString()}>{r} Star</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Label>Rating</Label>
+                                <div className="flex items-center gap-1">
+                                    <StarRating rating={newReportRating} onRatingChange={setNewReportRating} interactive={true} />
+                                </div>
                               </div>
                           </div>
                           <DialogFooter>
