@@ -18,7 +18,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import {
   Dialog,
@@ -35,6 +34,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -42,10 +42,8 @@ import { PlusCircle, FileText, Download, Search, Calendar as CalendarIcon, Star,
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, getYear, getMonth, getDate, getDaysInMonth, isValid } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, orderBy, doc, getDocs, writeBatch } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
@@ -71,9 +69,12 @@ export default function ReportsPage() {
   const [selectedMember, setSelectedMember] = React.useState<UserData | null>(null);
   const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [filterDate, setFilterDate] = React.useState<Date | undefined>(undefined);
   const [filterRating, setFilterRating] = React.useState<string | undefined>(undefined);
 
+  const [filterYear, setFilterYear] = React.useState<string | undefined>();
+  const [filterMonth, setFilterMonth] = React.useState<string | undefined>();
+  const [filterDay, setFilterDay] = React.useState<string | undefined>();
+  const [filterDate, setFilterDate] = React.useState<Date | undefined>();
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc(userDocRef);
@@ -105,6 +106,20 @@ export default function ReportsPage() {
 
   const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(membersQuery);
 
+  // Update filterDate when year, month, or day changes
+  React.useEffect(() => {
+    if (filterYear && filterMonth && filterDay) {
+      const newDate = new Date(parseInt(filterYear), parseInt(filterMonth), parseInt(filterDay));
+      if (isValid(newDate) && newDate <= new Date()) {
+        setFilterDate(newDate);
+      } else {
+        setFilterDate(undefined);
+      }
+    } else {
+      setFilterDate(undefined);
+    }
+  }, [filterYear, filterMonth, filterDay]);
+
   const reportsQuery = useMemoFirebase(() => {
     if (!selectedMember) return null;
     let q = query(collection(firestore, `users/${selectedMember.id}/reports`), orderBy('date', 'desc'));
@@ -127,6 +142,14 @@ export default function ReportsPage() {
       const total = memberReports.reduce((acc, report) => acc + report.rating, 0);
       return total / memberReports.length;
   }, [memberReports]);
+  
+  const currentYear = getYear(new Date());
+  const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
+  const months = Array.from({ length: 12 }, (_, i) => ({ value: i.toString(), name: format(new Date(0, i), 'MMMM') }));
+
+  const daysInMonth = (filterYear && filterMonth) ? getDaysInMonth(new Date(parseInt(filterYear), parseInt(filterMonth))) : 31;
+  const days = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
+
 
   const handleAddReport = async (memberId: string, summary: string, rating: number) => {
     if (!summary || !rating) {
@@ -239,6 +262,13 @@ export default function ReportsPage() {
   const filteredUserData = usersData?.filter(member =>
     `${member.firstName} ${member.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  const clearFilters = () => {
+    setFilterYear(undefined);
+    setFilterMonth(undefined);
+    setFilterDay(undefined);
+    setFilterRating(undefined);
+  }
 
   return (
     <>
@@ -386,26 +416,36 @@ export default function ReportsPage() {
                             <Filter className="h-4 w-4"/>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="ghost" className="w-full justify-start font-normal">
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {filterDate ? format(filterDate, "MMMM do, yyyy") : <span>Filter by date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={filterDate} onSelect={setFilterDate} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                         <Select onValueChange={(v) => setFilterRating(v)}>
-                            <SelectTrigger className="w-full border-0 focus:ring-0">
-                                <div className="flex items-center px-2 py-1.5 text-sm">
-                                    <Star className="mr-2 h-4 w-4"/>
-                                    {filterRating ? `${filterRating} Star` : 'Filter by rating'}
-                                </div>
+                    <DropdownMenuContent className="w-56">
+                        <div className="px-2 py-1.5 text-sm font-semibold">Filter by Date</div>
+                        <div className="grid grid-cols-3 gap-1 px-1">
+                            <Select onValueChange={setFilterYear} value={filterYear}>
+                                <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                                <SelectContent>
+                                    {years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select onValueChange={setFilterMonth} value={filterMonth} disabled={!filterYear}>
+                                <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+                                <SelectContent>
+                                    {months.map(m => <SelectItem key={m.value} value={m.value}>{m.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                             <Select onValueChange={setFilterDay} value={filterDay} disabled={!filterMonth || !filterYear}>
+                                <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
+                                <SelectContent>
+                                    {days.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <DropdownMenuSeparator />
+                        <div className="px-2 py-1.5 text-sm font-semibold">Filter by Rating</div>
+                         <Select onValueChange={(v) => setFilterRating(v === 'all' ? undefined : v)} value={filterRating}>
+                            <SelectTrigger className="w-[calc(100%-8px)] mx-1">
+                                <SelectValue placeholder="Select a rating" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="all">All Ratings</SelectItem>
                                 <SelectItem value="1">1 Star</SelectItem>
                                 <SelectItem value="2">2 Stars</SelectItem>
                                 <SelectItem value="3">3 Stars</SelectItem>
@@ -413,10 +453,10 @@ export default function ReportsPage() {
                                 <SelectItem value="5">5 Stars</SelectItem>
                             </SelectContent>
                         </Select>
-                        {(filterDate || filterRating) && (
+                        {(filterDate || filterRating || filterYear) && (
                             <>
-                                <Separator />
-                                <DropdownMenuItem onClick={() => {setFilterDate(undefined); setFilterRating(undefined)}}>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={clearFilters}>
                                     <X className="mr-2 h-4 w-4" />
                                     Clear Filters
                                 </DropdownMenuItem>
@@ -468,7 +508,3 @@ export default function ReportsPage() {
     </>
   );
 }
-
-    
-
-    
