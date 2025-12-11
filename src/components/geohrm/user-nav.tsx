@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -5,31 +6,39 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { LogOut, Settings, User as UserIcon } from "lucide-react";
+import { LogOut } from "lucide-react";
 import Image from "next/image";
-import { useAuth } from "@/firebase";
 import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
-
+import { doc } from "firebase/firestore";
 
 export function UserNav({ user }: { user: User | null }) {
   const userAvatar = PlaceHolderImages.find(
     (image) => image.id === "user-avatar-1"
   );
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
+
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, "users", user.uid) : null),
+    [firestore, user]
+  );
+  const { data: employee } = useDoc(userDocRef);
 
   const handleLogout = () => {
     auth.signOut();
     router.push('/login');
   };
+
+  const employeeName = employee ? `${(employee as any).firstName} ${(employee as any).lastName}` : user?.displayName || 'User';
 
   return (
     <DropdownMenu>
@@ -39,7 +48,7 @@ export function UserNav({ user }: { user: User | null }) {
             {user?.photoURL ? (
               <Image
                 src={user.photoURL}
-                alt={user.displayName || 'User avatar'}
+                alt={employeeName}
                 width={40}
                 height={40}
                 className="object-cover"
@@ -54,14 +63,16 @@ export function UserNav({ user }: { user: User | null }) {
                 className="object-cover"
               />
             )}
-            <AvatarFallback>{user?.displayName?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+            <AvatarFallback>
+                {employee ? `${(employee as any).firstName?.[0] || ''}${(employee as any).lastName?.[0] || ''}` : user?.email?.charAt(0)?.toUpperCase() || 'U'}
+            </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.displayName || 'User'}</p>
+            <p className="text-sm font-medium leading-none">{employeeName}</p>
             <p className="text-xs leading-none text-muted-foreground">
               {user?.email}
             </p>
