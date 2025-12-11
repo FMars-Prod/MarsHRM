@@ -2,16 +2,14 @@
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth, useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, updateDoc } from "firebase/firestore";
-import { Camera, Edit, Building2 } from "lucide-react";
-import Image from "next/image";
+import { Edit, Building2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,11 +115,6 @@ export default function ProfilePage() {
         }
     }
 
-
-    const userAvatar = PlaceHolderImages.find(
-        (image) => image.id === "user-avatar-1"
-    );
-
     if (isUserLoading || isEmployeeLoading) {
         return (
             <div className="flex h-full w-full items-center justify-center">
@@ -146,35 +139,11 @@ export default function ProfilePage() {
             <div className="grid gap-6 lg:grid-cols-3">
                 <Card className="lg:col-span-1">
                     <CardHeader className="items-center text-center">
-                        <div className="relative">
-                            <Avatar className="h-24 w-24">
-                                {user?.photoURL ? (
-                                <Image
-                                    src={user.photoURL}
-                                    alt={user.displayName || 'User avatar'}
-                                    width={96}
-                                    height={96}
-                                    className="object-cover"
-                                />
-                                ) : userAvatar && (
-                                <Image
-                                    src={userAvatar.imageUrl}
-                                    alt={userAvatar.description}
-                                    width={96}
-                                    height={96}
-                                    data-ai-hint={userAvatar.imageHint}
-                                    className="object-cover"
-                                />
-                                )}
-                                <AvatarFallback className="text-3xl">
-                                    {(employee as any).firstName?.charAt(0)}{(employee as any).lastName?.charAt(0)}
-                                </AvatarFallback>
-                            </Avatar>
-                            <Button variant="outline" size="icon" className="absolute bottom-0 right-0 rounded-full">
-                                <Camera className="h-4 w-4" />
-                                <span className="sr-only">Change Photo</span>
-                            </Button>
-                        </div>
+                        <Avatar className="h-24 w-24">
+                            <AvatarFallback className="text-3xl">
+                                {(employee as any).firstName?.charAt(0)}{(employee as any).lastName?.charAt(0)}
+                            </AvatarFallback>
+                        </Avatar>
                          <CardTitle className="font-headline text-2xl mt-4">{(employee as any).firstName} {(employee as any).lastName}</CardTitle>
                          <CardDescription>{(employee as any).jobTitle}</CardDescription>
                     </CardHeader>
