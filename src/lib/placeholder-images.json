@@ -27,8 +27,8 @@
     {
       "id": "tutorial-teams",
       "description": "Screenshot of the team management page",
-      "imageUrl": "https://images.unsplash.com/photo-1664223308282-dcb887e70b49?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0ZWFtJTIwbGlzdHxlbnwwfHx8fDE3NjY3NDM4NTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "team list"
+      "imageUrl": "https://images.unsplash.com/photo-1758691737387-a89bb8adf768?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxNXx8dGVhbSUyMGdyb3VwfGVufDB8fHx8MTc2Njc0NTMyNXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "team group"
     },
     {
       "id": "tutorial-events",
