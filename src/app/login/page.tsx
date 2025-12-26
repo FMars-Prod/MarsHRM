@@ -22,37 +22,10 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-const carouselItems = [
-  { 
-    id: 1, 
-    src: "https://picsum.photos/seed/1/1200/800", 
-    alt: "Modern office interior", 
-    hint: "office interior",
-    quote: "The only way to do great work is to love what you do." 
-  },
-  { 
-    id: 2, 
-    src: "https://picsum.photos/seed/2/1200/800", 
-    alt: "Team collaborating", 
-    hint: "team collaboration",
-    quote: "Talent wins games, but teamwork and intelligence win championships."
-  },
-  { 
-    id: 3, 
-    src: "https://picsum.photos/seed/3/1200/800", 
-    alt: "Person working on a laptop", 
-    hint: "person working",
-    quote: "Success is not the key to happiness. Happiness is the key to success."
-  },
-  { 
-    id: 4, 
-    src: "https://picsum.photos/seed/4/1200/800", 
-    alt: "City skyline", 
-    hint: "city skyline",
-    quote: "The future belongs to those who believe in the beauty of their dreams."
-  }
-];
+const carouselImageIds = ["tutorial-dashboard", "tutorial-attendance", "tutorial-leave", "tutorial-teams"];
+const carouselItems = PlaceHolderImages.filter(img => carouselImageIds.includes(img.id));
 
 
 export default function LoginPage() {
@@ -68,7 +41,7 @@ export default function LoginPage() {
   const [current, setCurrent] = useState(0)
 
   const plugin = useRef(
-    Autoplay({ delay: 4000, stopOnInteraction: false, stopOnMouseEnter: true })
+    Autoplay({ delay: 4000, stopOnInteraction: true, stopOnMouseEnter: true })
   )
   
   useEffect(() => {
@@ -98,39 +71,34 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full min-h-screen grid grid-cols-1 lg:grid-cols-2">
-       <div className="hidden lg:block relative">
+    <div className="w-full min-h-screen lg:grid lg:grid-cols-2">
+       <div className="relative h-64 lg:h-full">
         <Carousel
           setApi={setApi}
           opts={{ loop: true }}
           className="w-full h-full"
           plugins={[plugin.current]}
-          onMouseEnter={plugin.current.stop}
-          onMouseLeave={plugin.current.reset}
         >
           <CarouselContent className="h-full">
             {carouselItems.map((item, index) => (
               <CarouselItem key={item.id} className="h-full relative">
                 <Image 
-                  src={item.src} 
-                  alt={item.alt}
-                  data-ai-hint={item.hint}
+                  src={item.imageUrl} 
+                  alt={item.description}
+                  data-ai-hint={item.imageHint}
                   fill
+                  priority={index === 0}
                   style={{ objectFit: 'cover' }}
-                  className={cn("transition-opacity duration-1000", current === index ? "opacity-100" : "opacity-0")}
                 />
               </CarouselItem>
             ))}
           </CarouselContent>
         </Carousel>
         <div className="absolute inset-0 bg-black/50" />
-        <div className="absolute bottom-10 left-10 right-10 text-white p-4 bg-black/30 rounded-lg backdrop-blur-sm">
-           <p className="text-lg italic text-center">"{carouselItems[current]?.quote}"</p>
-        </div>
       </div>
 
       <div className="flex items-center justify-center p-6 bg-background">
-        <Card className="w-full max-w-sm mx-auto flex flex-col">
+        <Card className="w-full max-w-sm mx-auto flex flex-col -mt-32 lg:mt-0 shadow-2xl lg:shadow-none border-none lg:border">
           <CardHeader className="text-center">
             <div className="mb-4 flex justify-center">
               <div className="bg-primary text-primary-foreground p-3 rounded-lg">
