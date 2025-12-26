@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse } from 'date-fns';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -61,6 +61,8 @@ const chartConfig = {
   },
 } satisfies React.ComponentProps<typeof ChartContainer>['config'];
 
+type FilterMode = "day" | "month" | "all";
+
 const AnalyticsPage = () => {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
@@ -68,7 +70,8 @@ const AnalyticsPage = () => {
   
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
   const [date, setDate] = React.useState<Date>(new Date());
-  const [showAll, setShowAll] = React.useState(false);
+  const [month, setMonth] = React.useState<Date | null>(null);
+  const [filterMode, setFilterMode] = React.useState<FilterMode>("day");
 
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editableAttendance, setEditableAttendance] = React.useState<EditableAttendance>({
@@ -90,21 +93,38 @@ const AnalyticsPage = () => {
 
   const attendanceQuery = useMemoFirebase(() => {
     if (!selectedUserId) return null;
-    if (showAll) {
-      return query(
-        collection(firestore, `users/${selectedUserId}/attendances`),
-        orderBy('checkInTime', 'desc')
-      );
+
+    let start: Date;
+    let end: Date;
+
+    switch (filterMode) {
+      case 'day':
+        if (!date) return null;
+        start = startOfDay(date);
+        end = endOfDay(date);
+        break;
+      case 'month':
+        if (!month) return null;
+        start = startOfMonth(month);
+        end = endOfMonth(month);
+        break;
+      case 'all':
+        return query(
+          collection(firestore, `users/${selectedUserId}/attendances`),
+          orderBy('checkInTime', 'desc')
+        );
+      default:
+        return null;
     }
     
-    const start = startOfDay(date);
-    const end = endOfDay(date);
     return query(
       collection(firestore, `users/${selectedUserId}/attendances`),
       where('checkInTime', '>=', start),
-      where('checkInTime', '<=', end)
+      where('checkInTime', '<=', end),
+      orderBy('checkInTime', 'desc')
     );
-  }, [firestore, selectedUserId, date, showAll]);
+  }, [firestore, selectedUserId, date, month, filterMode]);
+
 
   const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
   
@@ -122,7 +142,7 @@ const AnalyticsPage = () => {
   const {data: weeklyAttendance} = useCollection<AttendanceRecord>(weeklyChartQuery);
 
   React.useEffect(() => {
-      if (attendanceData && attendanceData.length > 0) {
+      if (attendanceData && attendanceData.length > 0 && filterMode === 'day') {
           const record = attendanceData[0];
           setEditableAttendance({
               status: record.status,
@@ -133,7 +153,7 @@ const AnalyticsPage = () => {
       } else {
           setEditableAttendance({ status: 'absent', checkInTime: '', checkOutTime: '', totalBreakDuration: '0' });
       }
-  }, [attendanceData, isEditDialogOpen]);
+  }, [attendanceData, isEditDialogOpen, filterMode]);
 
 
   const stats = React.useMemo(() => {
@@ -205,7 +225,7 @@ const AnalyticsPage = () => {
         ...attendanceData.map(rec => {
             let workDuration = 0;
             if (rec.checkInTime && rec.checkOutTime) {
-                workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+                workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkOutTime.toDate()) - (rec.totalBreakDuration || 0);
             }
             const row = [
                 rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "PP")}"` : "N/A",
@@ -225,7 +245,12 @@ const AnalyticsPage = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    const datePart = showAll ? 'all_time' : (date ? format(date, 'yyyy-MM-dd') : 'custom');
+    
+    let datePart = 'data';
+    if (filterMode === 'day' && date) datePart = format(date, 'yyyy-MM-dd');
+    if (filterMode === 'month' && month) datePart = format(month, 'yyyy-MM');
+    if (filterMode === 'all') datePart = 'all_time';
+
     link.setAttribute('download', `${selectedUser?.firstName}_${selectedUser?.lastName}_attendance_${datePart}.csv`);
     document.body.appendChild(link);
     link.click();
@@ -255,6 +280,13 @@ const AnalyticsPage = () => {
       setIsEditDialogOpen(false);
   }
   
+  const getFilterPeriodText = () => {
+      if (filterMode === 'day' && date) return format(date, 'MMM d, yyyy');
+      if (filterMode === 'month' && month) return format(month, 'MMMM yyyy');
+      if (filterMode === 'all') return 'All time';
+      return 'Selected period';
+  }
+  
   return (
     <>
       <PageHeader title="Employee Analytics" description="Select an employee to view their performance and attendance." />
@@ -273,23 +305,25 @@ const AnalyticsPage = () => {
             </Select>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant={!showAll && date && format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setShowAll(false); }}>Today</Button>
-          <Button variant={!showAll && date && format(date, 'yyyy-MM-dd') === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setShowAll(false); }}>Yesterday</Button>
+          <Button variant={filterMode === 'day' && date && format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setFilterMode('day'); }}>Today</Button>
+          <Button variant={filterMode === 'day' && date && format(date, 'yyyy-MM-dd') === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setFilterMode('day'); }}>Yesterday</Button>
+           <Button variant={filterMode === 'month' && month && format(month, 'yyyy-MM') === format(new Date(), 'yyyy-MM') ? 'default' : 'outline'} onClick={() => { setMonth(new Date()); setFilterMode('month'); }}>This Month</Button>
+          <Button variant={filterMode === 'month' && month && format(month, 'yyyy-MM') === format(subMonths(new Date(), 1), 'yyyy-MM') ? 'default' : 'outline'} onClick={() => { setMonth(subMonths(new Date(), 1)); setFilterMode('month'); }}>Last Month</Button>
           <Popover>
             <PopoverTrigger asChild>
-              <Button id="date" variant={"outline"} className={cn("w-full md:w-[200px] justify-start text-left font-normal", !date && "text-muted-foreground", showAll && "text-muted-foreground")}>
+              <Button id="date" variant={"outline"} className={cn("w-full md:w-[200px] justify-start text-left font-normal", filterMode !== 'day' && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {date && !showAll ? format(date, "MMMM do, yyyy") : <span>Pick a date</span>}
+                {date && filterMode === 'day' ? format(date, "MMMM do, yyyy") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={date} onSelect={(d) => { if(d) setDate(d); setShowAll(false); }} initialFocus />
+              <Calendar mode="single" selected={date} onSelect={(d) => { if(d) { setDate(d); setFilterMode('day'); } }} initialFocus />
             </PopoverContent>
           </Popover>
-          <Button variant={showAll ? 'default' : 'outline'} onClick={() => setShowAll(!showAll)}>{showAll ? "Viewing Full History" : "View Full History"}</Button>
+          <Button variant={filterMode === 'all' ? 'default' : 'outline'} onClick={() => setFilterMode('all')}>{filterMode === 'all' ? "Viewing Full History" : "View Full History"}</Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-            {isAdmin && selectedUserId && !showAll && (
+            {isAdmin && selectedUserId && filterMode === 'day' && (
                 <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                     <DialogTrigger asChild>
                         <Button variant="secondary">
@@ -301,7 +335,7 @@ const AnalyticsPage = () => {
                         <DialogHeader>
                             <DialogTitle>Edit Attendance for {selectedUser?.firstName}</DialogTitle>
                             <DialogDescription>
-                                Manually adjust the record for {format(date, "PPP")}.
+                                Manually adjust the record for {date && format(date, "PPP")}.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
@@ -379,7 +413,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalHours} hrs</div>
-                    <p className="text-xs text-muted-foreground">{showAll ? 'All time' : (date ? format(date, 'MMM d, yyyy') : 'Selected day')}</p>
+                    <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
                 </CardContent>
             </Card>
             <Card>
@@ -389,7 +423,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalBreakHours} hrs</div>
-                     <p className="text-xs text-muted-foreground">{showAll ? 'All time' : (date ? format(date, 'MMM d, yyyy') : 'Selected day')}</p>
+                     <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
                 </CardContent>
             </Card>
             <Card>
@@ -399,7 +433,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalLeaves}</div>
-                    <p className="text-xs text-muted-foreground">{showAll ? 'All time' : (date ? format(date, 'MMM d, yyyy') : 'Selected day')}</p>
+                    <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
                 </CardContent>
             </Card>
             <Card>
@@ -409,7 +443,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.lateDays}</div>
-                     <p className="text-xs text-muted-foreground">{showAll ? 'All time' : (date ? format(date, 'MMM d, yyyy') : 'Selected day')}</p>
+                     <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
                 </CardContent>
             </Card>
         </div>
@@ -442,7 +476,7 @@ const AnalyticsPage = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Attendance Log</CardTitle>
-                        <CardDescription>{showAll ? "Full activity history for the selected employee." : `Activity for ${date ? format(date, 'PPP') : 'the selected day'}.`}</CardDescription>
+                        <CardDescription>{filterMode === 'all' ? "Full activity history for the selected employee." : `Activity for ${getFilterPeriodText()}.`}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <TooltipProvider>
@@ -524,5 +558,3 @@ const AnalyticsPage = () => {
 };
 
 export default AnalyticsPage;
-
-    
