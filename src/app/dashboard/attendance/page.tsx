@@ -113,11 +113,12 @@ export default function AttendancePage() {
   }, [date, events]);
 
   const modifiers = React.useMemo(() => {
-    const modifiers: Record<string, Date[]> = {
+    const modifiers: Record<string, any> = {
         present: [],
         late: [],
         absent: [],
-        on_leave: []
+        on_leave: [],
+        sunday: { dayOfWeek: [0] } // 0 is Sunday
     };
     events.forEach(event => {
         if (modifiers[event.status]) {
@@ -132,6 +133,7 @@ export default function AttendancePage() {
     late: 'bg-yellow-500/20 text-yellow-700',
     absent: 'bg-red-500/20 text-red-700',
     on_leave: 'bg-blue-500/20 text-blue-700',
+    sunday: 'text-muted-foreground/50 bg-muted/20',
   };
   
   const isLoading = isAttendanceLoading || isLeaveLoading;
@@ -158,6 +160,7 @@ export default function AttendancePage() {
                     className="p-3"
                     modifiers={modifiers}
                     modifiersClassNames={modifiersClassNames}
+                    disabled={{ dayOfWeek: [0] }}
                 />
                )}
             </CardContent>
@@ -230,5 +233,3 @@ export default function AttendancePage() {
     </>
   );
 }
-
-    
