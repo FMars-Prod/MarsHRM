@@ -25,7 +25,7 @@ const tutorialSections = [
     {
         icon: CalendarOff,
         title: "Leave Management",
-        description: "Request time off, track your leave status, and view your leave history. Managers can approve or reject requests.",
+        description: "Request time off and track its approval status through a clear hierarchy. Stage 1: Employee submits a request. Stage 2: The Team Lead approves or rejects it. Stage 3: HR gives the final approval. You can view the progress at any time.",
         imageId: "tutorial-leave"
     },
     {
