@@ -8,6 +8,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ArrowLeft, LayoutDashboard, Clock, CalendarOff, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { LeaveHierarchyAnimation } from "@/components/geohrm/leave-hierarchy-animation";
 
 const tutorialSections = [
     {
@@ -25,7 +26,12 @@ const tutorialSections = [
     {
         icon: CalendarOff,
         title: "Leave Management",
-        description: "Request time off and track its approval status through a clear hierarchy. Stage 1: Employee submits a request. Stage 2: The Team Lead approves or rejects it. Stage 3: HR gives the final approval. You can view the progress at any time.",
+        description: [
+            "Employee submits a request.",
+            "The Team Lead approves or rejects it.",
+            "HR gives the final approval.",
+            "The employee can view progress at any time."
+        ],
         imageId: "tutorial-leave"
     },
     {
@@ -56,6 +62,8 @@ export default function TutorialPage() {
                     {tutorialSections.map(section => {
                         const Icon = section.icon;
                         const image = PlaceHolderImages.find(img => img.id === section.imageId);
+                        const isLeaveSection = section.title === "Leave Management";
+
                         return (
                             <Card key={section.title}>
                                 <CardHeader>
@@ -65,7 +73,11 @@ export default function TutorialPage() {
                                         </div>
                                         <CardTitle>{section.title}</CardTitle>
                                     </div>
-                                    <CardDescription>{section.description}</CardDescription>
+                                    {isLeaveSection && Array.isArray(section.description) ? (
+                                        <LeaveHierarchyAnimation stages={section.description} />
+                                    ) : (
+                                        <CardDescription>{section.description as string}</CardDescription>
+                                    )}
                                 </CardHeader>
                                 <CardContent>
                                     {image && (
