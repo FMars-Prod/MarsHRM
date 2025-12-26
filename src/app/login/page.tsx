@@ -151,10 +151,8 @@ export default function LoginPage() {
                 <div className="grid gap-2">
                     <div className="flex items-center">
                       <Label htmlFor="password-signin">Password</Label>
-                      <Link href="/forgot-password" passHref>
-                           <Button variant="link" className="ml-auto p-0 h-auto text-xs">
-                                Forgot password?
-                           </Button>
+                      <Link href="/forgot-password" className="ml-auto inline-block text-sm underline">
+                        Forgot password?
                       </Link>
                     </div>
                     <Input id="password-signin" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
