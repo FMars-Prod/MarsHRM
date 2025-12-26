@@ -71,34 +71,32 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full min-h-screen lg:grid lg:grid-cols-2">
-       <div className="relative h-64 lg:h-full">
-        <Carousel
-          setApi={setApi}
-          opts={{ loop: true }}
-          className="w-full h-full"
-          plugins={[plugin.current]}
-        >
-          <CarouselContent className="h-full">
-            {carouselItems.map((item, index) => (
-              <CarouselItem key={item.id} className="h-full relative">
-                <Image 
-                  src={item.imageUrl} 
-                  alt={item.description}
-                  data-ai-hint={item.imageHint}
-                  fill
-                  priority={index === 0}
-                  style={{ objectFit: 'cover' }}
-                />
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-        <div className="absolute inset-0 bg-black/50" />
-      </div>
+    <div className="relative w-full min-h-screen">
+       <Carousel
+        setApi={setApi}
+        opts={{ loop: true }}
+        className="absolute inset-0 w-full h-full"
+        plugins={[plugin.current]}
+      >
+        <CarouselContent className="h-full">
+          {carouselItems.map((item, index) => (
+            <CarouselItem key={item.id} className="h-full relative">
+              <Image 
+                src={item.imageUrl} 
+                alt={item.description}
+                data-ai-hint={item.imageHint}
+                fill
+                priority={index === 0}
+                style={{ objectFit: 'cover' }}
+              />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+      <div className="absolute inset-0 bg-black/60" />
 
-      <div className="flex items-center justify-center p-6 bg-background">
-        <Card className="w-full max-w-sm mx-auto flex flex-col -mt-32 lg:mt-0 shadow-2xl lg:shadow-none border-none lg:border">
+      <div className="relative flex items-center justify-center min-h-screen p-6">
+        <Card className="w-full max-w-sm mx-auto bg-background/90 backdrop-blur-sm">
           <CardHeader className="text-center">
             <div className="mb-4 flex justify-center">
               <div className="bg-primary text-primary-foreground p-3 rounded-lg">
@@ -110,7 +108,7 @@ export default function LoginPage() {
               Sign in to your account.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow">
+          <CardContent>
             <div className="grid gap-4 pt-4">
                 <div className="grid gap-2">
                     <Label htmlFor="email-signin">Email</Label>
