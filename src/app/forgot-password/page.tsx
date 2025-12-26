@@ -26,7 +26,8 @@ export default function ForgotPasswordPage() {
   const auth = useAuth();
   const router = useRouter();
 
-  const handlePasswordReset = async () => {
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!email) {
       toast({ variant: 'destructive', title: 'Email required', description: 'Please enter your email address.' });
       return;
@@ -58,15 +59,15 @@ export default function ForgotPasswordPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4">
+          <form onSubmit={handlePasswordReset} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="reset-email">Email</Label>
-              <Input id="reset-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your.email@example.com" />
+              <Input id="reset-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your.email@example.com" required />
             </div>
-            <Button onClick={handlePasswordReset} className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Sending...' : 'Send Reset Link'}
             </Button>
-          </div>
+          </form>
         </CardContent>
         <CardFooter className="flex-col gap-4">
             <Link href="/login" passHref className="w-full">
