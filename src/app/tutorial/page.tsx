@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { ArrowLeft, LayoutDashboard, Clock, CalendarOff, Users } from "lucide-react";
+import { ArrowLeft, LayoutDashboard, Clock, CalendarOff, Users, Megaphone, PartyPopper, FileText, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { LeaveHierarchyAnimation } from "@/components/geohrm/leave-hierarchy-animation";
@@ -33,6 +33,30 @@ const tutorialSections = [
             "The employee can view progress at any time."
         ],
         imageId: "tutorial-leave"
+    },
+     {
+        icon: PartyPopper,
+        title: "Company Events",
+        description: "Celebrate birthdays, work anniversaries, and other company milestones. HR and Admins can create events, and all employees can see and interact with them.",
+        imageId: "tutorial-events"
+    },
+    {
+        icon: Megaphone,
+        title: "Announcements",
+        description: "Stay informed with company-wide announcements published by HR and Admins. Employees receive notifications for new announcements and can view them at any time.",
+        imageId: "tutorial-announcements"
+    },
+    {
+        icon: FileText,
+        title: "Team Reports",
+        description: "Team Leads can create daily work reports for their members, including a summary and a performance rating. This helps track progress and provide feedback.",
+        imageId: "tutorial-reports"
+    },
+    {
+        icon: ShieldCheck,
+        title: "Company Policies",
+        description: "Access and acknowledge important company policies. HR and Admins can publish new policies, and employees are required to review and acknowledge them.",
+        imageId: "tutorial-policies"
     },
     {
         icon: Users,

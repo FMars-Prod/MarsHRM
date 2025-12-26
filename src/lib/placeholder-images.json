@@ -29,6 +29,30 @@
       "description": "Screenshot of the team management page",
       "imageUrl": "https://images.unsplash.com/photo-1664223308282-dcb887e70b49?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0ZWFtJTIwbGlzdHxlbnwwfHx8fDE3NjY3NDM4NTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "team list"
+    },
+    {
+      "id": "tutorial-events",
+      "description": "Screenshot of the events page showing birthdays and anniversaries",
+      "imageUrl": "https://images.unsplash.com/photo-1597768164194-b804b42bd61a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8ZXZlbnRzJTIwY2FsZW5kYXJ8ZW58MHx8fHwxNzY2NzQ0NDczfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "events calendar"
+    },
+    {
+      "id": "tutorial-announcements",
+      "description": "Screenshot of the announcements list",
+      "imageUrl": "https://images.unsplash.com/photo-1738504063777-10c42a376600?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxhbm5vdW5jZW1lbnQlMjBsaXN0fGVufDB8fHx8MTc2Njc0NDQ3M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "announcement list"
+    },
+    {
+      "id": "tutorial-reports",
+      "description": "Screenshot of a work report being filled out",
+      "imageUrl": "https://images.unsplash.com/photo-1632216498026-6afe200f13d2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx3b3JrJTIwcmVwb3J0fGVufDB8fHx8MTc2Njc0NDQ3M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "work report"
+    },
+    {
+      "id": "tutorial-policies",
+      "description": "Screenshot of a user acknowledging a company policy",
+      "imageUrl": "https://images.unsplash.com/photo-1637763723578-79a4ca9225f7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxwb2xpY3klMjBkb2N1bWVudHxlbnwwfHx8fDE3NjY3NDQ0NzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "policy document"
     }
   ]
 }
