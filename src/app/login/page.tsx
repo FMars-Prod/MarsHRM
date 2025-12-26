@@ -160,6 +160,11 @@ export default function LoginPage() {
                 <Button onClick={handleSignIn} className="w-full mt-2" disabled={isLoading}>
                     {isLoading ? 'Signing In...' : 'Sign In'}
                 </Button>
+                <Link href="/tutorial" passHref>
+                  <Button variant="outline" className="w-full">
+                    View Tutorial
+                  </Button>
+                </Link>
             </div>
           </CardContent>
           <CardFooter>

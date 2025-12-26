@@ -5,6 +5,30 @@
       "description": "Profile picture of an employee",
       "imageUrl": "https://images.unsplash.com/photo-1521119989659-a83eee488004?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjQ5MjI1MDh8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "person portrait"
+    },
+    {
+      "id": "tutorial-dashboard",
+      "description": "Screenshot of the main dashboard",
+      "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxkYXNoYm9hcmQlMjB1aXxlbnwwfHx8fDE3NjY3MzMxNjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "dashboard ui"
+    },
+    {
+      "id": "tutorial-attendance",
+      "description": "Screenshot of the attendance widget",
+      "imageUrl": "https://images.unsplash.com/photo-1592780319783-9ac6388bc9a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtb2JpbGUlMjBhdHRlbmRhbmNlfGVufDB8fHx8MTc2Njc0Mzg1Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mobile attendance"
+    },
+    {
+      "id": "tutorial-leave",
+      "description": "Screenshot of the leave management page",
+      "imageUrl": "https://images.unsplash.com/photo-1697823553820-efcd7fa51f0e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYWxlbmRhciUyMGxlYXZlfGVufDB8fHx8MTc2Njc0Mzg1Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "calendar leave"
+    },
+    {
+      "id": "tutorial-teams",
+      "description": "Screenshot of the team management page",
+      "imageUrl": "https://images.unsplash.com/photo-1664223308282-dcb887e70b49?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0ZWFtJTIwbGlzdHxlbnwwfHx8fDE3NjY3NDM4NTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "team list"
     }
   ]
 }
