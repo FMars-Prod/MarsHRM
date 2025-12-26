@@ -74,78 +74,87 @@ type Team = {
 
 
 const LeaveStatusTracker = ({ request }: { request: LeaveRequestWithId }) => {
-    const isSubmitted = true;
-    const isFinalRejected = request.status === 'Rejected' || request.status.startsWith('Rejected by');
-    const isApprovedByLead = ['Pending HR Approval', 'Approved'].includes(request.status);
-    const isRejectedByLead = request.status === 'Rejected by Team Lead';
-    const isApprovedByHR = request.status === 'Approved';
-    const isRejectedByHR = request.status === 'Rejected by HR';
+  const isSubmitted = true;
+  const isFinalRejected = request.status.startsWith('Rejected');
+  const isApprovedByLead = ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(request.status);
+  const isRejectedByLead = request.status === 'Rejected by Team Lead';
+  const isApprovedByHR = request.status === 'Approved';
+  const isRejectedByHR = request.status === 'Rejected by HR';
 
-    return (
-        <div className="space-y-4">
-          <div className="flex items-center">
-            <div className="flex flex-col items-center mr-4">
-              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white", isFinalRejected ? "bg-red-500" : "bg-green-500")}>
-                {isFinalRejected ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
-              </div>
-              <div className={cn("h-12 w-0.5", (isApprovedByLead || isRejectedByLead || isFinalRejected) ? 'bg-primary/20' : 'bg-gray-200')}></div>
-            </div>
-            <div>
-              <h4 className={cn("font-semibold", isFinalRejected && "text-red-500")}>{isFinalRejected ? "Rejected" : "Submitted"}</h4>
-              <p className="text-sm text-muted-foreground">Request submitted on {format(request.createdAt.toDate(), "PP")}.</p>
-            </div>
+  const isPendingLead = request.status === 'Pending';
+  const isPendingHR = request.status === 'Pending HR Approval';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center">
+        <div className="flex flex-col items-center mr-4">
+          <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white", "bg-green-500")}>
+            <Check className="h-4 w-4" />
           </div>
-          <div className="flex items-center">
-            <div className="flex flex-col items-center mr-4">
-              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
-                isApprovedByLead && !isFinalRejected && 'bg-green-500',
-                (isRejectedByLead || (isFinalRejected && !isApprovedByLead)) && 'bg-red-500',
-                !isApprovedByLead && !isRejectedByLead && !isFinalRejected && 'bg-yellow-500'
-              )}>
-                {(isApprovedByLead && !isFinalRejected) && <Check className="h-4 w-4" />}
-                {(isRejectedByLead || (isFinalRejected && !isApprovedByLead)) && <X className="h-4 w-4" />}
-                {!isApprovedByLead && !isRejectedByLead && !isFinalRejected && <Clock className="h-4 w-4" />}
-              </div>
-              <div className={cn("h-12 w-0.5", (isApprovedByHR || isRejectedByHR || isFinalRejected) ? 'bg-primary/20' : 'bg-gray-200')}></div>
-            </div>
-            <div>
-              <h4 className={cn("font-semibold", (isRejectedByLead || isFinalRejected) && "text-red-500")}>Team Lead Approval</h4>
-              <p className="text-sm text-muted-foreground">
-                {isApprovedByLead && 'Approved by Team Lead.'}
-                {isRejectedByLead && `Rejected by Team Lead. ${request.rejectionReason || ''}`}
-                {isFinalRejected && !isApprovedByLead && !isRejectedByLead && 'Rejected by higher authority.'}
-                {!isApprovedByLead && !isRejectedByLead && !isFinalRejected && 'Pending approval.'}
-              </p>
-            </div>
+          <div className="h-12 w-0.5 bg-primary/20"></div>
+        </div>
+        <div>
+          <h4 className="font-semibold">Submitted</h4>
+          <p className="text-sm text-muted-foreground">Request submitted on {format(request.createdAt.toDate(), "PP")}.</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center">
+        <div className="flex flex-col items-center mr-4">
+          <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
+            isApprovedByLead && 'bg-green-500',
+            isRejectedByLead && 'bg-red-500',
+            isPendingLead && 'bg-yellow-500'
+          )}>
+            {isApprovedByLead && <Check className="h-4 w-4" />}
+            {isRejectedByLead && <X className="h-4 w-4" />}
+            {isPendingLead && <Clock className="h-4 w-4" />}
           </div>
-           <div className="flex items-center">
-            <div className="flex flex-col items-center mr-4">
-              <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
-                isApprovedByHR && 'bg-green-500',
-                isRejectedByHR && 'bg-red-500',
-                isFinalRejected && !isRejectedByHR && 'bg-red-500',
-                isApprovedByLead && !isApprovedByHR && !isRejectedByHR && 'bg-yellow-500',
-                !isApprovedByLead && 'bg-gray-300',
-              )}>
-                {isApprovedByHR && <Check className="h-4 w-4" />}
-                {(isRejectedByHR || (isFinalRejected && !isRejectedByHR)) && <X className="h-4 w-4" />}
-                {!(isApprovedByHR || isRejectedByHR || isFinalRejected) && <Clock className="h-4 w-4" />}
-              </div>
-            </div>
-            <div>
-              <h4 className={cn("font-semibold", isRejectedByHR && "text-red-500", !isApprovedByLead && "text-muted-foreground")}>HR Approval</h4>
-              <p className="text-sm text-muted-foreground">
-                {isApprovedByHR && 'Approved by HR.'}
-                {isRejectedByHR && `Rejected by HR. ${request.rejectionReason || ''}`}
-                {isApprovedByLead && !isApprovedByHR && !isRejectedByHR && 'Pending HR approval.'}
-                {!isApprovedByLead && !isRejectedByLead && 'Waiting for Team Lead approval.'}
-                 {isRejectedByLead && 'Not applicable.'}
-              </p>
-            </div>
+          <div className={cn("h-12 w-0.5", (isApprovedByLead || isRejectedByLead) ? 'bg-primary/20' : 'bg-gray-200')}></div>
+        </div>
+        <div>
+          <h4 className={cn("font-semibold", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
+          <p className="text-sm text-muted-foreground">
+            {isApprovedByLead && 'Approved by Team Lead.'}
+            {isRejectedByLead && `Rejected by Team Lead. ${request.rejectionReason || ''}`}
+            {isPendingLead && 'Pending approval.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center">
+        <div className="flex flex-col items-center mr-4">
+          <div className={cn("flex items-center justify-center h-6 w-6 rounded-full",
+            !isApprovedByLead && !isRejectedByLead && "bg-gray-300 text-white",
+            isPendingHR && "bg-yellow-500 text-white",
+            isApprovedByHR && "bg-green-500 text-white",
+            isRejectedByHR && "bg-red-500 text-white",
+            isRejectedByLead && "bg-gray-300 text-white"
+          )}>
+            {isApprovedByHR && <Check className="h-4 w-4" />}
+            {isRejectedByHR && <X className="h-4 w-4" />}
+            {(isPendingHR || isPendingLead) && <Clock className="h-4 w-4" />}
+            {isRejectedByLead && <X className="h-4 w-4" />}
           </div>
         </div>
-    )
+        <div>
+          <h4 className={cn("font-semibold", 
+              isRejectedByHR && "text-red-500",
+              !isApprovedByLead && !isRejectedByLead && "text-muted-foreground"
+          )}>HR Approval</h4>
+          <p className="text-sm text-muted-foreground">
+            {isApprovedByHR && 'Approved by HR.'}
+            {isRejectedByHR && `Rejected by HR. ${request.rejectionReason || ''}`}
+            {isPendingHR && 'Pending HR approval.'}
+            {isPendingLead && 'Waiting for Team Lead approval.'}
+            {isRejectedByLead && 'Not applicable.'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
+
 
 const statusVariantMap: { [key in LeaveStatus]: string } = {
     'Approved': 'bg-green-500/20 text-green-700 border-transparent hover:bg-green-500/30',
@@ -198,7 +207,6 @@ export default function LeavePage() {
   const { data: teamsLed } = useCollection<Team>(teamLeadQuery);
   const teamMemberIds = React.useMemo(() => {
     if (userRole !== 'Team Lead' || !teamsLed || teamsLed.length === 0) return [];
-    // Ensure the team lead is also included to see their own requests if needed
     return teamsLed.flatMap(team => team.memberIds);
   }, [userRole, teamsLed]);
 
@@ -213,7 +221,6 @@ export default function LeavePage() {
         if (teamMemberIds.length > 0) {
           return query(baseQuery, where('employeeId', 'in', teamMemberIds));
         }
-        // If a team lead has no members, they should still see their own requests.
         return query(baseQuery, where('employeeId', '==', user.uid));
       case 'HR Manager':
       case 'CEO/Admin':
@@ -280,12 +287,17 @@ export default function LeavePage() {
 
   const allLeaveRequests = (leaveRequests || []).filter(req => {
     if (userRole === 'Team Lead') {
-      return req.status === 'Pending' || req.employeeId === user?.uid;
+      // Show team members' pending requests, and all of own requests
+      if (req.employeeId !== user?.uid) {
+        return req.status === 'Pending';
+      }
+      return true;
     }
     if (userRole === 'HR Manager') {
+      // Show requests pending HR approval, and ones they've already actioned
       return ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(req.status);
     }
-    return true;
+    return true; // Members and Admins see everything they are allowed to by rules
   });
 
   const formatDate = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'PP') : '';
@@ -409,8 +421,8 @@ export default function LeavePage() {
           <TableBody>
             {isLoading ? (
                 <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading requests...</TableCell></TableRow>
-            ) : leaveRequests && leaveRequests.length > 0 ? (
-              leaveRequests.map((request) => (
+            ) : allLeaveRequests && allLeaveRequests.length > 0 ? (
+              allLeaveRequests.map((request) => (
                 <TableRow key={request.id}>
                   {(userRole === 'Team Lead' || userRole === 'HR Manager' || userRole === 'CEO/Admin') && <TableCell className="font-medium">{request.employeeName}</TableCell>}
                   <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
@@ -422,7 +434,7 @@ export default function LeavePage() {
                   </TableCell>
                   <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
-                          {userRole === 'CEO/Admin' && !['Approved', 'Rejected'].includes(request.status) && (
+                          {userRole === 'CEO/Admin' && !['Approved', 'Rejected'].some(s => request.status.includes(s)) && (
                                <>
                                   <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>
                                       <ThumbsUp className="mr-2 h-4 w-4"/> Approve
@@ -432,7 +444,7 @@ export default function LeavePage() {
                                   </Button>
                               </>
                           )}
-                          {userRole === 'Team Lead' && request.status === 'Pending' && (
+                          {userRole === 'Team Lead' && request.status === 'Pending' && request.employeeId !== user?.uid && (
                               <>
                                   <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')}>
                                       <ThumbsUp className="mr-2 h-4 w-4"/> Approve
@@ -511,3 +523,5 @@ export default function LeavePage() {
     </>
   );
 }
+
+    
