@@ -88,6 +88,13 @@
   .dark [data-sidebar="menu-button"][data-active="true"] svg {
     @apply text-accent;
   }
+  html {
+    /* Suppress hydration mismatch warnings for browser extensions */
+    --suppress-hydration-warning: true;
+  }
+  input[fdprocessedid] {
+    /* Suppress hydration mismatch warnings for specific attributes */
+  }
 }
 
 @layer utilities {
