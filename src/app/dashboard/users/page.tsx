@@ -127,7 +127,15 @@ export default function UsersPage() {
 
   const handleEditUser = (userToEdit: UserData) => {
     setEditingUser(userToEdit);
-    form.reset(userToEdit);
+    form.reset({
+      ...userToEdit,
+      firstName: userToEdit.firstName || "",
+      lastName: userToEdit.lastName || "",
+      email: userToEdit.email || "",
+      jobTitle: userToEdit.jobTitle || "",
+      department: userToEdit.department || "",
+      role: userToEdit.role || "Member",
+    });
     setIsDialogOpen(true);
   };
 
@@ -436,5 +444,3 @@ export default function UsersPage() {
     </>
   );
 }
-
-    
