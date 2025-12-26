@@ -14,16 +14,23 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore } from '@/firebase';
-import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, writeBatch, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { User, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import Autoplay from "embla-carousel-autoplay"
 import { Carousel, CarouselApi, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 const carouselItems = [
   { 
@@ -66,6 +73,9 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+
 
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
@@ -98,6 +108,24 @@ export default function LoginPage() {
       } finally {
           setIsLoading(false);
       }
+  }
+
+  const handlePasswordReset = async () => {
+    if (!resetEmail) {
+        toast({ variant: 'destructive', title: 'Email required', description: 'Please enter your email address.' });
+        return;
+    }
+    setIsLoading(true);
+    try {
+        await sendPasswordResetEmail(auth, resetEmail);
+        toast({ title: 'Password Reset Email Sent', description: 'Check your inbox for instructions to reset your password.' });
+        setIsResetDialogOpen(false);
+        setResetEmail('');
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } finally {
+        setIsLoading(false);
+    }
   }
 
   return (
@@ -152,7 +180,36 @@ export default function LoginPage() {
                     <Input id="email-signin" type="email" placeholder="m@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
                 </div>
                 <div className="grid gap-2">
-                    <Label htmlFor="password-signin">Password</Label>
+                    <div className="flex items-center">
+                      <Label htmlFor="password-signin">Password</Label>
+                      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                        <DialogTrigger asChild>
+                           <Button variant="link" className="ml-auto p-0 h-auto text-xs">
+                                Forgot password?
+                           </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Forgot Password</DialogTitle>
+                                <DialogDescription>
+                                    Enter your email address and we'll send you a link to reset your password.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="reset-email">Email</Label>
+                                    <Input id="reset-email" type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} placeholder="your.email@example.com" />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button variant="outline" disabled={isLoading}>Cancel</Button></DialogClose>
+                                <Button onClick={handlePasswordReset} disabled={isLoading}>
+                                    {isLoading ? 'Sending...' : 'Send Reset Link'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                     <Input id="password-signin" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
                 </div>
                 <Button onClick={handleSignIn} className="w-full mt-2" disabled={isLoading}>
