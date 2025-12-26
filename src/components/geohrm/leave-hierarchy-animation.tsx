@@ -28,20 +28,20 @@ export function LeaveHierarchyAnimation({ stages }: LeaveHierarchyAnimationProps
               });
             }, index * 400); // Stagger the animation
           });
-          // Disconnect observer after animation starts to prevent re-triggering
           observer.disconnect();
         }
       },
-      { threshold: 0.5 } // Trigger when 50% of the element is visible
+      { threshold: 0.5 }
     );
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
+    const currentRef = containerRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
     }
 
     return () => {
-      if (containerRef.current) {
-        observer.unobserve(containerRef.current);
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
   }, [stages]);
@@ -54,7 +54,7 @@ export function LeaveHierarchyAnimation({ stages }: LeaveHierarchyAnimationProps
           <div
             key={index}
             className={cn(
-              'flex items-start gap-3 transition-opacity duration-500',
+              'relative flex items-start gap-3 transition-opacity duration-500',
               visibleStages[index] ? 'opacity-100' : 'opacity-0'
             )}
           >
@@ -72,7 +72,7 @@ export function LeaveHierarchyAnimation({ stages }: LeaveHierarchyAnimationProps
                 <p className="text-sm text-muted-foreground">{stage}</p>
             </div>
             {index < stages.length - 1 && (
-                 <div className="absolute left-3 top-[3.1rem] h-8 w-0.5 -translate-x-1/2">
+                 <div className="absolute left-3 top-[1.8rem] h-[calc(100%-0.5rem)] w-0.5 -translate-x-1/2">
                     <div className={cn("h-full w-full bg-border transition-transform origin-top", visibleStages[index] ? "animate-fill-down" : "scale-y-0")} style={{ animationDelay: `${index * 400 + 200}ms` }}/>
                 </div>
             )}

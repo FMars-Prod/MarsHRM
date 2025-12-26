@@ -14,13 +14,13 @@ const tutorialSections = [
     {
         icon: LayoutDashboard,
         title: "Dashboard Overview",
-        description: "Get a quick glance at your daily summary, including action items, announcements, and company events.",
+        description: "Get a quick glance at your daily summary, including action items, announcements, and company events. The dashboard is your central hub for all important updates.",
         imageId: "tutorial-dashboard"
     },
     {
         icon: Clock,
         title: "Attendance Tracking",
-        description: "Clock in and out with geolocation. Your location is verified to ensure you are within the designated office radius.",
+        description: "Clock in and out with geolocation. Your location is verified to ensure you are within the designated office radius. If you're outside the radius, you'll be prompted to provide a reason, which will be visible to your manager.",
         imageId: "tutorial-attendance"
     },
     {
@@ -37,7 +37,7 @@ const tutorialSections = [
     {
         icon: Users,
         title: "Team & User Management",
-        description: "Admins can create and manage teams, assign team leads, and manage all user accounts in the system.",
+        description: "Admins and HR Managers can create and manage teams, assign team leads, and manage all user accounts in the system, including setting roles and permissions.",
         imageId: "tutorial-teams"
     }
 ];
@@ -58,14 +58,14 @@ export default function TutorialPage() {
                     </Button>
                 </PageHeader>
 
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="flex flex-col gap-8">
                     {tutorialSections.map(section => {
                         const Icon = section.icon;
                         const image = PlaceHolderImages.find(img => img.id === section.imageId);
                         const isLeaveSection = section.title === "Leave Management";
 
                         return (
-                            <Card key={section.title}>
+                            <Card key={section.title} className="animate-fade-in-up">
                                 <CardHeader>
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="bg-primary/10 p-2 rounded-lg">
@@ -76,7 +76,7 @@ export default function TutorialPage() {
                                     {isLeaveSection && Array.isArray(section.description) ? (
                                         <LeaveHierarchyAnimation stages={section.description} />
                                     ) : (
-                                        <CardDescription>{section.description as string}</CardDescription>
+                                        <CardDescription className="text-base">{section.description as string}</CardDescription>
                                     )}
                                 </CardHeader>
                                 <CardContent>
