@@ -24,10 +24,6 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
 
 const carouselItems = [
   { 
@@ -70,9 +66,6 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<Role>('Member');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
 
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
@@ -105,64 +98,6 @@ export default function LoginPage() {
       } finally {
           setIsLoading(false);
       }
-  }
-
-  const handleCreateAccount = async () => {
-    setIsLoading(true);
-    if (!auth || !firestore) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Firebase not initialized.' });
-        setIsLoading(false);
-        return;
-    }
-
-    if (role === 'CEO/Admin') {
-        const ceoQuery = query(collection(firestore, 'users'), where('role', '==', 'CEO/Admin'));
-        const ceoSnapshot = await getDocs(ceoQuery);
-        if (!ceoSnapshot.empty) {
-            toast({ variant: 'destructive', title: 'Creation Failed', description: 'A CEO/Admin account already exists.' });
-            setIsLoading(false);
-            return;
-        }
-    }
-
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        const batch = writeBatch(firestore);
-        const userDocRef = doc(firestore, 'users', user.uid);
-        
-        const userData = {
-            id: user.uid,
-            employeeId: user.uid,
-            role: role,
-            email: email,
-            firstName: firstName || role,
-            lastName: lastName || 'User',
-            jobTitle: `${role}`,
-            department: 'General',
-            hireDate: new Date().toISOString(),
-        };
-        batch.set(userDocRef, userData);
-
-        if (role === 'CEO/Admin') {
-          batch.set(doc(firestore, 'roles_ceo', user.uid), { employeeId: user.uid });
-          batch.set(doc(firestore, 'roles_admin', user.uid), { employeeId: user.uid });
-        } else if (role === 'HR Manager') {
-          batch.set(doc(firestore, 'roles_hr_agent', user.uid), { employeeId: user.uid });
-        } else if (role === 'Team Lead') {
-          batch.set(doc(firestore, 'roles_team_lead', user.uid), { employeeId: user.uid });
-        }
-        
-        await batch.commit();
-
-        toast({ title: 'Account Created', description: `Successfully created ${role} account.` });
-        router.push('/dashboard');
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Creation Failed', description: error.message });
-    } finally {
-        setIsLoading(false);
-    }
   }
 
   return (
@@ -207,70 +142,23 @@ export default function LoginPage() {
             </div>
             <CardTitle className="font-headline text-2xl">GeoHRM</CardTitle>
             <CardDescription>
-              Sign in or create an account.
+              Sign in to your account.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
-            <Tabs defaultValue="signin">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="signin">Sign In</TabsTrigger>
-                    <TabsTrigger value="signup">Create Account</TabsTrigger>
-                </TabsList>
-                <TabsContent value="signin">
-                    <div className="grid gap-4 pt-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="email-signin">Email</Label>
-                            <Input id="email-signin" type="email" placeholder="m@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="password-signin">Password</Label>
-                            <Input id="password-signin" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-                        </div>
-                        <Button onClick={handleSignIn} className="w-full mt-2" disabled={isLoading}>
-                            {isLoading ? 'Signing In...' : 'Sign In'}
-                        </Button>
-                    </div>
-                </TabsContent>
-                <TabsContent value="signup">
-                    <div className="grid gap-4 pt-4">
-                        <div className='grid grid-cols-2 gap-4'>
-                             <div className="grid gap-2">
-                                <Label htmlFor="firstName-signup">First Name</Label>
-                                <Input id="firstName-signup" placeholder="John" value={firstName} onChange={e => setFirstName(e.target.value)} required />
-                            </div>
-                             <div className="grid gap-2">
-                                <Label htmlFor="lastName-signup">Last Name</Label>
-                                <Input id="lastName-signup" placeholder="Doe" value={lastName} onChange={e => setLastName(e.target.value)} required />
-                            </div>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="email-signup">Email</Label>
-                            <Input id="email-signup" type="email" placeholder="m@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="password-signup">Password</Label>
-                            <Input id="password-signup" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="role-signup">Role</Label>
-                          <Select onValueChange={(value: Role) => setRole(value)} defaultValue={role}>
-                            <SelectTrigger id="role-signup">
-                                <SelectValue placeholder="Select a role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Member">Member</SelectItem>
-                                <SelectItem value="Team Lead">Team Lead</SelectItem>
-                                <SelectItem value="HR Manager">HR Manager</SelectItem>
-                                <SelectItem value="CEO/Admin">CEO/Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button onClick={handleCreateAccount} className="w-full mt-2" disabled={isLoading}>
-                             {isLoading ? 'Creating Account...' : 'Create Account'}
-                        </Button>
-                    </div>
-                </TabsContent>
-            </Tabs>
+            <div className="grid gap-4 pt-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="email-signin">Email</Label>
+                    <Input id="email-signin" type="email" placeholder="m@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="password-signin">Password</Label>
+                    <Input id="password-signin" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                </div>
+                <Button onClick={handleSignIn} className="w-full mt-2" disabled={isLoading}>
+                    {isLoading ? 'Signing In...' : 'Sign In'}
+                </Button>
+            </div>
           </CardContent>
           <CardFooter>
             <p className="w-full text-center text-xs text-muted-foreground">
