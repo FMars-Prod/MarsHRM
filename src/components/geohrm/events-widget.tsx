@@ -35,9 +35,9 @@ type EventItem = {
 export function EventsWidget() {
   const firestore = useFirestore();
 
-  const todayStart = startOfToday();
-  const todayEnd = endOfDay(todayStart);
-
+  const todayStart = React.useMemo(() => startOfToday(), []);
+  const todayEnd = React.useMemo(() => endOfDay(todayStart), [todayStart]);
+  
   const todaysEventsQuery = useMemoFirebase(() => 
     query(
         collection(firestore, "events"), 
@@ -130,7 +130,7 @@ export function EventsWidget() {
                 </div>
             )}
             
-            {(!todaysEvents || todaysEvents.length === 0) && (!upcomingEvents || upcomingEvents.length === 0) && (
+            {(!todaysEvents || todaysEvents.length === 0) && (!upcomingEvents || upcomingEvents.length === 0) && !isLoading && (
                  <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-8">
                     <PartyPopper className="size-8 mb-2" />
                     <p>No events scheduled soon.</p>
