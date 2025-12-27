@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth, useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { Edit, Building2, Smile } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -17,10 +17,11 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { updateProfile, updateEmail, updatePassword } from "firebase/auth";
+import { updateProfile, updatePassword } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { updateDocumentNonBlocking } from "@/firebase";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -94,7 +95,7 @@ export default function ProfilePage() {
         try {
             // Update Firestore document
             if (userDocRef) {
-                await updateDoc(userDocRef, {
+                updateDocumentNonBlocking(userDocRef, {
                     firstName: data.firstName,
                     lastName: data.lastName,
                 });
@@ -120,15 +121,11 @@ export default function ProfilePage() {
         }
     }
     
-    const handleAvatarUpdate = async (emoji: string) => {
+    const handleAvatarUpdate = (emoji: string) => {
         if (!userDocRef) return;
-        try {
-            await updateDoc(userDocRef, { avatar: emoji });
-            toast({ title: "Avatar updated!" });
-            setIsAvatarDialogOpen(false);
-        } catch (error: any) {
-            toast({ variant: "destructive", title: "Update failed", description: error.message });
-        }
+        updateDocumentNonBlocking(userDocRef, { avatar: emoji });
+        toast({ title: "Avatar updated!" });
+        setIsAvatarDialogOpen(false);
     }
 
 
@@ -158,7 +155,7 @@ export default function ProfilePage() {
             <div className="grid gap-6 lg:grid-cols-3">
                 <Card className="lg:col-span-1">
                     <CardHeader className="items-center text-center">
-                        <Avatar className={cn("h-24 w-24 relative group", employeeAvatar && "items-center justify-center")}>
+                        <Avatar className={cn("h-24 w-24 relative group", employeeAvatar && "bg-transparent")}>
                            {employeeAvatar ? (
                                <span className="text-6xl">{employeeAvatar}</span>
                            ) : (

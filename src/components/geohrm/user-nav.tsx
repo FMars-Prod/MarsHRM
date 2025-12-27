@@ -16,6 +16,7 @@ import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
 import { doc } from "firebase/firestore";
+import { cn } from "@/lib/utils";
 
 export function UserNav({ user }: { user: User | null }) {
   const auth = useAuth();
@@ -40,7 +41,7 @@ export function UserNav({ user }: { user: User | null }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10">
+          <Avatar className={cn("h-10 w-10", employeeAvatar && "bg-transparent")}>
             {employeeAvatar ? (
                 <span className="text-2xl">{employeeAvatar}</span>
             ) : (
@@ -69,5 +70,3 @@ export function UserNav({ user }: { user: User | null }) {
     </DropdownMenu>
   );
 }
-
-    
