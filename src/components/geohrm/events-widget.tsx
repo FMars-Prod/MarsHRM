@@ -9,13 +9,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PartyPopper, HelpCircle, Gift, Users, Award, Cake } from "lucide-react";
+import { PartyPopper, HelpCircle, Gift, Users, Award, Cake, CalendarClock } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, Timestamp } from "firebase/firestore";
-import { startOfToday, endOfDay, format } from "date-fns";
+import { startOfToday, endOfDay, format, addDays } from "date-fns";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Separator } from "../ui/separator";
 
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award';
 
@@ -34,18 +35,30 @@ type EventItem = {
 export function EventsWidget() {
   const firestore = useFirestore();
 
-  const eventsQuery = useMemoFirebase(() => {
-    const todayStart = startOfToday();
-    const todayEnd = endOfDay(todayStart);
-    return query(
+  const todayStart = startOfToday();
+  const todayEnd = endOfDay(todayStart);
+
+  const todaysEventsQuery = useMemoFirebase(() => 
+    query(
         collection(firestore, "events"), 
         where("date", ">=", todayStart),
         where("date", "<=", todayEnd),
         orderBy("date", "asc")
-    );
-  }, [firestore]);
+    ), [firestore, todayStart, todayEnd]);
   
-  const { data: events, isLoading } = useCollection<EventItem>(eventsQuery);
+  const upcomingEventsQuery = useMemoFirebase(() => {
+    const tomorrow = addDays(todayStart, 1);
+    const thirtyDaysFromNow = addDays(todayStart, 30);
+    return query(
+        collection(firestore, "events"), 
+        where("date", ">=", tomorrow),
+        where("date", "<=", thirtyDaysFromNow),
+        orderBy("date", "asc")
+    );
+  }, [firestore, todayStart]);
+  
+  const { data: todaysEvents, isLoading: todaysLoading } = useCollection<EventItem>(todaysEventsQuery);
+  const { data: upcomingEvents, isLoading: upcomingLoading } = useCollection<EventItem>(upcomingEventsQuery);
 
   const renderIcon = (iconName: IconName, props: React.SVGProps<SVGSVGElement>) => {
     const IconComponent = iconComponents[iconName] || HelpCircle;
@@ -57,19 +70,35 @@ export function EventsWidget() {
     return format(timestamp.toDate(), "MMMM do");
   }
 
+  const isLoading = todaysLoading || upcomingLoading;
+
+  const EventListItem = ({ item }: { item: EventItem }) => (
+     <div key={item.id} className="flex items-center gap-4">
+        <div className="p-3 rounded-full" style={{ backgroundColor: item.color + '1A' }}>
+          {renderIcon(item.icon, { className: "size-5", style: { color: item.color } })}
+        </div>
+        <div className="flex flex-col">
+          <span className="font-semibold">{item.name}</span>
+          <p className="text-sm text-muted-foreground">
+            {item.event} on {formatDate(item.date)}
+          </p>
+        </div>
+      </div>
+  );
+
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <PartyPopper className="size-5" />
-          Today's Events
+          Company Events
         </CardTitle>
-        <CardDescription>Birthdays and work anniversaries.</CardDescription>
+        <CardDescription>Birthdays, anniversaries, and upcoming events.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 space-y-4">
          {isLoading ? (
           <div className="space-y-4">
-            {[...Array(2)].map((_, i) => (
+            {[...Array(3)].map((_, i) => (
               <div key={i} className="flex items-center gap-4">
                  <div className="h-12 w-12 rounded-full bg-muted animate-pulse" />
                  <div className="space-y-2">
@@ -79,33 +108,42 @@ export function EventsWidget() {
               </div>
             ))}
           </div>
-        ) : events && events.length > 0 ? (
-          <div className="space-y-4">
-            {events.map((item) => (
-              <div key={item.id} className="flex items-center gap-4">
-                <div className="p-3 rounded-full" style={{ backgroundColor: item.color + '1A' }}>
-                  {renderIcon(item.icon, { className: "size-5", style: { color: item.color } })}
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-semibold">{item.name}</span>
-                  <p className="text-sm text-muted-foreground">
-                    {item.event} on {formatDate(item.date)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-8">
-            <PartyPopper className="size-8 mb-2" />
-            <p>No events scheduled for today.</p>
-          </div>
+          <>
+            {todaysEvents && todaysEvents.length > 0 ? (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm">Today's Events</h4>
+                {todaysEvents.map((item) => <EventListItem key={item.id} item={item} />)}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-4">
+                <p>No events scheduled for today.</p>
+              </div>
+            )}
+            
+            {(todaysEvents && todaysEvents.length > 0 && upcomingEvents && upcomingEvents.length > 0) && <Separator />}
+
+            {upcomingEvents && upcomingEvents.length > 0 && (
+                 <div className="space-y-4">
+                    <h4 className="font-semibold text-sm flex items-center gap-2"><CalendarClock className="size-4" /> Upcoming</h4>
+                    {upcomingEvents.slice(0, 3).map((item) => <EventListItem key={item.id} item={item} />)}
+                </div>
+            )}
+            
+            {(!todaysEvents || todaysEvents.length === 0) && (!upcomingEvents || upcomingEvents.length === 0) && (
+                 <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-8">
+                    <PartyPopper className="size-8 mb-2" />
+                    <p>No events scheduled soon.</p>
+                </div>
+            )}
+          </>
         )}
+      </CardContent>
+      <div className="p-6 pt-0">
         <Button variant="outline" className="w-full mt-4" asChild>
           <Link href="/dashboard/events">View All Events</Link>
         </Button>
-      </CardContent>
+      </div>
     </Card>
   );
 }
-

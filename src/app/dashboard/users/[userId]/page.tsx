@@ -13,7 +13,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Hourglass, Coffee, FileText } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Hourglass, Coffee, FileText, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { WithId } from '@/firebase/firestore/use-collection';
@@ -32,40 +32,40 @@ type Report = {
 
 const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
   const firestore = useFirestore();
-  const { userId } = React.use(params);
+  const { userId } = params;
 
   const userDocRef = useMemoFirebase(
-    () => doc(firestore, 'users', userId),
+    () => userId ? doc(firestore, 'users', userId) : null,
     [firestore, userId]
   );
   const { data: user, isLoading: isUserLoading } = useDoc(userDocRef);
 
   const thirtyDaysAgo = subDays(new Date(), 30);
   const attendanceQuery = useMemoFirebase(
-    () => query(
+    () => userId ? query(
       collection(firestore, `users/${userId}/attendances`),
       where('checkInTime', '>=', thirtyDaysAgo),
       orderBy('checkInTime', 'desc')
-    ),
+    ) : null,
     [firestore, userId]
   );
   const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
   
   const reportsQuery = useMemoFirebase(
-    () => query(
+    () => userId ? query(
         collection(firestore, `users/${userId}/reports`),
         orderBy('date', 'desc')
-    ),
+    ) : null,
     [firestore, userId]
   );
   const { data: reportsData, isLoading: isReportsLoading } = useCollection<Report>(reportsQuery);
 
   const weeklyAttendanceQuery = useMemoFirebase(
-      () => query(
+      () => userId ? query(
         collection(firestore, `users/${userId}/attendances`),
         where('checkInTime', '>=', subDays(new Date(), 7)),
         orderBy('checkInTime', 'asc')
-      ),
+      ) : null,
       [firestore, userId]
   );
   const { data: weeklyAttendanceData } = useCollection<AttendanceRecord>(weeklyAttendanceQuery);
@@ -127,18 +127,18 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
   };
 
   if (isUserLoading || isAttendanceLoading || isReportsLoading) {
-    return <p>Loading user profile...</p>;
+    return (
+        <div className="flex h-full w-full items-center justify-center p-10">
+            <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                <Building2 className="h-12 w-12 animate-pulse" />
+                <p>Loading User Profile...</p>
+            </div>
+        </div>
+    );
   }
 
-  // Only call notFound if loading is complete and user is still null
-  if (!isUserLoading && !user) {
-    return notFound();
-  }
-  
   if (!user) {
-    // This case will be hit if user is still null after loading,
-    // but the notFound() call above is more explicit for Next.js
-    return <p>User data not available.</p>;
+    return notFound();
   }
 
 
