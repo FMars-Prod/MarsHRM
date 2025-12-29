@@ -25,6 +25,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import Link from 'next/link';
 
 type User = {
   id: string;
@@ -529,13 +530,7 @@ const AnalyticsPage = () => {
                                             const notes = (rec.checkInNotes ? `In: ${rec.checkInNotes}` : '') + 
                                                           (rec.checkOutNotes ? `\nOut: ${rec.checkOutNotes}` : '');
                                             
-                                            let distance = null;
-                                            if (officeLocation && rec.locationCheckInLatitude && rec.locationCheckInLongitude) {
-                                                distance = getDistanceInKm(officeLocation, {
-                                                    latitude: rec.locationCheckInLatitude,
-                                                    longitude: rec.locationCheckInLongitude,
-                                                });
-                                            }
+                                            const distance = null;
 
                                             return (
                                             <TableRow key={rec.id}>
@@ -562,12 +557,13 @@ const AnalyticsPage = () => {
                                                 <TableCell>
                                                   {rec.locationCheckInLatitude && rec.locationCheckInLongitude ? (
                                                     <Tooltip>
-                                                      <TooltipTrigger>
-                                                        <MapPin className="h-5 w-5 text-muted-foreground" />
+                                                      <TooltipTrigger asChild>
+                                                        <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" rel="noopener noreferrer">
+                                                            <MapPin className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
+                                                        </Link>
                                                       </TooltipTrigger>
                                                       <TooltipContent>
-                                                        <p>Lat: {rec.locationCheckInLatitude.toFixed(4)}, Lon: {rec.locationCheckInLongitude.toFixed(4)}</p>
-                                                        {distance !== null && <p>Approx. {distance.toFixed(2)} km from office</p>}
+                                                        <p>View on Google Maps</p>
                                                       </TooltipContent>
                                                     </Tooltip>
                                                   ) : (
