@@ -13,7 +13,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,6 +34,12 @@ type User = {
   department: string;
 }
 
+type Location = {
+  latitude: number;
+  longitude: number;
+  maxDistanceKm?: number;
+};
+
 type AttendanceRecord = {
   id: string;
   checkInTime?: Timestamp;
@@ -42,6 +48,8 @@ type AttendanceRecord = {
   status: 'present' | 'late' | 'absent' | 'on_leave';
   checkInNotes?: string;
   checkOutNotes?: string;
+  locationCheckInLatitude?: number;
+  locationCheckInLongitude?: number;
 };
 
 type EditableAttendance = {
@@ -50,6 +58,22 @@ type EditableAttendance = {
     checkOutTime: string;
     totalBreakDuration: string;
 }
+
+const getDistanceInKm = (loc1: Location, loc2: Location) => {
+  if (!loc1 || !loc2) return Infinity;
+  const R = 6371; // Radius of the Earth in km
+  const dLat = (loc2.latitude - loc1.latitude) * (Math.PI / 180);
+  const dLon = (loc2.longitude - loc1.longitude) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(loc1.latitude * (Math.PI / 180)) *
+      Math.cos(loc2.latitude * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 
 const chartConfig = {
   work: {
@@ -86,6 +110,9 @@ const AnalyticsPage = () => {
   const { data: currentUserData } = useDoc(currentUserDocRef);
   const currentUserRole = (currentUserData as any)?.role;
   const isAdmin = currentUserRole === 'CEO/Admin' || currentUserRole === 'HR Manager' || currentUserRole === 'Team Lead';
+  
+  const officeLocationDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'location'), [firestore]);
+  const { data: officeLocation } = useDoc<Location>(officeLocationDocRef);
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
@@ -489,6 +516,7 @@ const AnalyticsPage = () => {
                                             <TableHead>Time (In/Out)</TableHead>
                                             <TableHead>Duration (Work/Break)</TableHead>
                                             <TableHead>Status</TableHead>
+                                            <TableHead>Location</TableHead>
                                             <TableHead>Notes</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -500,6 +528,14 @@ const AnalyticsPage = () => {
                                             }
                                             const notes = (rec.checkInNotes ? `In: ${rec.checkInNotes}` : '') + 
                                                           (rec.checkOutNotes ? `\nOut: ${rec.checkOutNotes}` : '');
+                                            
+                                            let distance = null;
+                                            if (officeLocation && rec.locationCheckInLatitude && rec.locationCheckInLongitude) {
+                                                distance = getDistanceInKm(officeLocation, {
+                                                    latitude: rec.locationCheckInLatitude,
+                                                    longitude: rec.locationCheckInLongitude,
+                                                });
+                                            }
 
                                             return (
                                             <TableRow key={rec.id}>
@@ -522,6 +558,21 @@ const AnalyticsPage = () => {
                                                             rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
                                                         )}
                                                     >{rec.status}</Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                  {rec.locationCheckInLatitude && rec.locationCheckInLongitude ? (
+                                                    <Tooltip>
+                                                      <TooltipTrigger>
+                                                        <MapPin className="h-5 w-5 text-muted-foreground" />
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>
+                                                        <p>Lat: {rec.locationCheckInLatitude.toFixed(4)}, Lon: {rec.locationCheckInLongitude.toFixed(4)}</p>
+                                                        {distance !== null && <p>Approx. {distance.toFixed(2)} km from office</p>}
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  ) : (
+                                                    <span className="text-muted-foreground/50">-</span>
+                                                  )}
                                                 </TableCell>
                                                 <TableCell>
                                                     {notes.trim() ? (
@@ -559,5 +610,3 @@ const AnalyticsPage = () => {
 };
 
 export default AnalyticsPage;
-
-    
