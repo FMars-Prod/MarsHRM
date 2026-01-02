@@ -37,10 +37,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, updateDoc, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format, parse } from "date-fns";
+import { format, parse, isSameDay, endOfDay } from "date-fns";
 import { Textarea } from "../ui/textarea";
 
 
@@ -126,6 +126,12 @@ export function AttendanceWidget() {
       const todayId = format(new Date(), 'yyyy-MM-dd');
       return doc(firestore, `users/${user.uid}/attendances`, todayId);
   }, [user, firestore]);
+  
+  const getYesterdayAttendanceRef = useMemoFirebase(() => {
+      if (!user || !lastClockInTime) return null;
+      const yesterdayId = format(lastClockInTime, 'yyyy-MM-dd');
+      return doc(firestore, `users/${user.uid}/attendances`, yesterdayId);
+  }, [user, firestore, lastClockInTime]);
 
   const {data: todaysAttendance} = useDoc(getTodaysAttendanceRef);
 
@@ -157,14 +163,41 @@ export function AttendanceWidget() {
     }
   }, [todaysAttendance]);
 
+  const handleAutoClockOut = () => {
+    if (getYesterdayAttendanceRef && lastClockInTime) {
+      const midnight = endOfDay(lastClockInTime);
+      updateDocumentNonBlocking(getYesterdayAttendanceRef, {
+        checkOutTime: Timestamp.fromDate(midnight),
+        totalBreakDuration: totalBreakTime,
+        checkOutNotes: "Automatically clocked out at midnight."
+      });
+      toast({
+        title: "Automatically Clocked Out",
+        description: "You were clocked out as the day has changed.",
+      });
+      // Reset state for the new day
+      setStatus("out");
+      setHasClockedOutToday(false);
+      setTimer(0);
+      setBreakTimer(0);
+      setTotalBreakTime(0);
+      setLastClockInTime(null);
+    }
+  }
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     if (status === "in") {
-      interval = setInterval(() => setTimer((prev) => prev + 1), 1000);
+      interval = setInterval(() => {
+        if (lastClockInTime && !isSameDay(new Date(), lastClockInTime)) {
+            handleAutoClockOut();
+        } else {
+            setTimer((prev) => prev + 1);
+        }
+      }, 1000);
     }
     return () => clearInterval(interval);
-  }, [status]);
+  }, [status, lastClockInTime]);
 
   useEffect(() => {
     let breakInterval: NodeJS.Timeout | undefined;
@@ -559,3 +592,5 @@ export function AttendanceWidget() {
     </Card>
   );
 }
+
+    
