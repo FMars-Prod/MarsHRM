@@ -106,7 +106,7 @@ export default function DashboardLayout({
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Building2 className="h-12 w-12 animate-pulse" />
-          <p className="text-muted-foreground">Loading GeoHRM...</p>
+          <p className="text-muted-foreground">Loading MarsHRM...</p>
         </div>
       </div>
     );
@@ -120,7 +120,7 @@ export default function DashboardLayout({
             <div className="bg-primary text-primary-foreground p-2 rounded-lg">
               <Building2 className="h-6 w-6" />
             </div>
-            <span className="font-headline text-lg font-semibold">GeoHRM</span>
+            <span className="font-headline text-lg font-semibold">MarsHRM</span>
           </div>
         </SidebarHeader>
         <SidebarContent>

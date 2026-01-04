@@ -12,7 +12,7 @@ const fontHeadline = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "GeoHRM",
+  title: "MarsHRM",
   description: "A Human Resource Management app with geolocation features.",
 };
 

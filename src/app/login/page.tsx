@@ -103,7 +103,7 @@ export default function LoginPage() {
                 <Building2 className="h-8 w-8" />
               </div>
             </div>
-            <CardTitle className="font-headline text-2xl">GeoHRM</CardTitle>
+            <CardTitle className="font-headline text-2xl">MarsHRM</CardTitle>
             <CardDescription>
               Sign in to your account.
             </CardDescription>

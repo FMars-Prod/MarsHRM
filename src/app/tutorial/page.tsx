@@ -71,7 +71,7 @@ export default function TutorialPage() {
         <div className="min-h-screen bg-secondary/40 p-4 sm:p-6 md:p-8">
             <div className="max-w-4xl mx-auto">
                 <PageHeader 
-                    title="How GeoHRM Works"
+                    title="How MarsHRM Works"
                     description="A quick guide to the main features of the application."
                 >
                     <Button asChild variant="outline">
