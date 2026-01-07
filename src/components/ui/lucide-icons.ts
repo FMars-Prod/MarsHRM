@@ -52,7 +52,9 @@ export {
   ChevronLeft,
   ChevronRight,
   Circle,
-  Smile
+  Smile,
+  Activity,
+  RotateCcw
 } from "lucide-react";
 
     

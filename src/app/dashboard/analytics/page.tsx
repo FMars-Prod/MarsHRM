@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,13 @@ type AttendanceRecord = {
   checkOutNotes?: string;
   locationCheckInLatitude?: number;
   locationCheckInLongitude?: number;
+};
+
+type LeaveRequest = {
+  id: string;
+  startDate: Timestamp;
+  endDate: Timestamp;
+  status: string;
 };
 
 type EditableAttendance = {
@@ -120,31 +127,38 @@ const AnalyticsPage = () => {
 
   const selectedUser = users?.find(u => u.id === selectedUserId);
 
-  const attendanceQuery = useMemoFirebase(() => {
-    if (!selectedUserId) return null;
-
+  const { start, end } = React.useMemo(() => {
     let start: Date;
     let end: Date;
 
     switch (filterMode) {
       case 'day':
-        if (!date) return null;
+        if (!date) return { start: null, end: null };
         start = startOfDay(date);
         end = endOfDay(date);
         break;
       case 'month':
-        if (!month) return null;
+        if (!month) return { start: null, end: null };
         start = startOfMonth(month);
         end = endOfMonth(month);
         break;
-      case 'all':
-        return query(
-          collection(firestore, `users/${selectedUserId}/attendances`),
-          orderBy('checkInTime', 'desc')
-        );
       default:
-        return null;
+        return { start: null, end: null };
     }
+    return { start, end };
+  }, [date, month, filterMode]);
+  
+  const attendanceQuery = useMemoFirebase(() => {
+    if (!selectedUserId) return null;
+
+    if (filterMode === 'all') {
+      return query(
+        collection(firestore, `users/${selectedUserId}/attendances`),
+        orderBy('checkInTime', 'desc')
+      );
+    }
+
+    if (!start || !end) return null;
     
     return query(
       collection(firestore, `users/${selectedUserId}/attendances`),
@@ -152,10 +166,20 @@ const AnalyticsPage = () => {
       where('checkInTime', '<=', end),
       orderBy('checkInTime', 'desc')
     );
-  }, [firestore, selectedUserId, date, month, filterMode]);
+  }, [firestore, selectedUserId, start, end, filterMode]);
 
 
   const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
+
+  const leaveQuery = useMemoFirebase(() => {
+    if (!selectedUserId) return null;
+    return query(
+      collection(firestore, `users/${selectedUserId}/leave_requests`),
+      where('status', '==', 'Approved')
+    );
+  }, [firestore, selectedUserId]);
+  
+  const { data: leaveData } = useCollection<LeaveRequest>(leaveQuery);
   
   const weeklyChartQuery = useMemoFirebase(() => {
     if(!selectedUserId) return null;
@@ -187,7 +211,7 @@ const AnalyticsPage = () => {
 
   const stats = React.useMemo(() => {
     if (!attendanceData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0 };
-    let totalWorkSeconds = 0, totalBreakSeconds = 0, lateDays = 0, onLeaveDays = 0;
+    let totalWorkSeconds = 0, totalBreakSeconds = 0, lateDays = 0;
     attendanceData.forEach(rec => {
       if (rec.checkInTime && rec.checkOutTime) {
         const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate());
@@ -195,15 +219,35 @@ const AnalyticsPage = () => {
         totalBreakSeconds += rec.totalBreakDuration || 0;
       }
       if (rec.status === 'late') lateDays++;
-      if (rec.status === 'on_leave') onLeaveDays++;
     });
+
+    let onLeaveDays = 0;
+    if (leaveData && (start || end || filterMode === 'all')) {
+        leaveData.forEach(leave => {
+            const leaveStart = leave.startDate.toDate();
+            const leaveEnd = leave.endDate.toDate();
+            
+            if (filterMode === 'all') {
+                onLeaveDays += differenceInDays(leaveEnd, leaveStart) + 1;
+            } else if(start && end) {
+                const interval = { start: leaveStart, end: leaveEnd };
+                const daysInPeriod = eachDayOfInterval({start, end});
+                daysInPeriod.forEach(day => {
+                    if (isWithinInterval(day, interval)) {
+                        onLeaveDays++;
+                    }
+                });
+            }
+        });
+    }
+
     return {
       totalHours: (totalWorkSeconds / 3600).toFixed(1),
       totalBreakHours: (totalBreakSeconds / 3600).toFixed(1),
       totalLeaves: onLeaveDays,
       lateDays,
     };
-  }, [attendanceData]);
+  }, [attendanceData, leaveData, start, end, filterMode]);
   
   const chartData = React.useMemo(() => {
       if (!weeklyAttendance) return [];
