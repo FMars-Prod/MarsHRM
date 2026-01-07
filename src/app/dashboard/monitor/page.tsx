@@ -7,10 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
-import { format, startOfDay, endOfDay, isWithinInterval, eachDayOfInterval } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX } from 'lucide-react';
+import { format, startOfDay, endOfDay, isWithinInterval, subDays } from 'date-fns';
+import { Building2, User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 type UserData = {
   id: string;
@@ -35,6 +39,7 @@ type LeaveRequest = {
 const MonitorPage = () => {
   const { user } = useUser();
   const firestore = useFirestore();
+  const [date, setDate] = React.useState<Date>(new Date());
   const [summary, setSummary] = React.useState({
     late: [] as UserData[],
     absent: [] as UserData[],
@@ -57,15 +62,14 @@ const MonitorPage = () => {
 
       setSummary(prev => ({ ...prev, isLoading: true }));
 
-      const today = new Date();
-      const todayStart = startOfDay(today);
-      const todayEnd = endOfDay(today);
+      const selectedDayStart = startOfDay(date);
+      const selectedDayEnd = endOfDay(date);
 
       // 1. Fetch today's attendance records using a collectionGroup query
       const attendanceQuery = query(
         collectionGroup(firestore, 'attendances'),
-        where('checkInTime', '>=', todayStart),
-        where('checkInTime', '<=', todayEnd)
+        where('checkInTime', '>=', selectedDayStart),
+        where('checkInTime', '<=', selectedDayEnd)
       );
       const attendanceSnapshot = await getDocs(attendanceQuery);
       const todaysAttendance = attendanceSnapshot.docs.map(doc => doc.data() as AttendanceRecord);
@@ -78,7 +82,7 @@ const MonitorPage = () => {
       const onLeaveTodayIds = new Set<string>();
       allApprovedLeaves.forEach(leave => {
         const leaveInterval = { start: leave.startDate.toDate(), end: leave.endDate.toDate() };
-        if (isWithinInterval(today, leaveInterval)) {
+        if (isWithinInterval(date, leaveInterval)) {
           onLeaveTodayIds.add(leave.employeeId);
         }
       });
@@ -124,7 +128,7 @@ const MonitorPage = () => {
     };
 
     fetchMonitorData();
-  }, [users, usersLoading, firestore]);
+  }, [users, usersLoading, firestore, date]);
 
   const UserListCard = ({ title, users, Icon, iconColor }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; }) => (
     <Card>
@@ -160,7 +164,34 @@ const MonitorPage = () => {
 
   return (
     <>
-      <PageHeader title="Daily Monitor" description={`An overview of employee status for ${format(new Date(), 'MMMM d, yyyy')}.`} />
+      <PageHeader title="Daily Monitor" description={`An overview of employee status for ${format(date, 'MMMM d, yyyy')}.`}>
+        <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setDate(new Date())}>Today</Button>
+            <Button variant="outline" onClick={() => setDate(subDays(new Date(), 1))}>Yesterday</Button>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-[240px] justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={(d) => d && setDate(d)}
+                        initialFocus
+                    />
+                </PopoverContent>
+            </Popover>
+        </div>
+      </PageHeader>
       
       {summary.isLoading ? (
         <div className="flex h-64 items-center justify-center">
@@ -169,7 +200,7 @@ const MonitorPage = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <UserListCard title="Present" users={summary.present} Icon={UserCheck} iconColor="text-green-500" />
-          <UserListCard title="Late Today" users={summary.late} Icon={UserX} iconColor="text-yellow-500" />
+          <UserListCard title="Late" users={summary.late} Icon={UserX} iconColor="text-yellow-500" />
           <UserListCard title="Absent" users={summary.absent} Icon={UserRoundX} iconColor="text-red-500" />
           <UserListCard title="On Leave" users={summary.onLeave} Icon={User} iconColor="text-blue-500" />
         </div>
