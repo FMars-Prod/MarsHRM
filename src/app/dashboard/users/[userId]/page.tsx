@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { use } from 'react';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { useFirestore, useMemoFirebase, useCollection, useDoc } from '@/firebase';
@@ -32,7 +33,7 @@ type Report = {
 
 const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
   const firestore = useFirestore();
-  const { userId } = params;
+  const { userId } = use(params);
 
   const userDocRef = useMemoFirebase(
     () => userId ? doc(firestore, 'users', userId) : null,
