@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/geohrm/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, eachDayOfInterval } from 'date-fns';
 import { Building2, User, UserCheck, UserX, UserRoundX } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -61,9 +61,9 @@ const MonitorPage = () => {
       const todayStart = startOfDay(today);
       const todayEnd = endOfDay(today);
 
-      // 1. Fetch today's attendance records
+      // 1. Fetch today's attendance records using a collectionGroup query
       const attendanceQuery = query(
-        collection(firestore, 'attendances'),
+        collectionGroup(firestore, 'attendances'),
         where('checkInTime', '>=', todayStart),
         where('checkInTime', '<=', todayEnd)
       );
