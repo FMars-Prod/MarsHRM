@@ -272,123 +272,128 @@ export default function UsersPage() {
         title="Manage Users"
         description="View, add, and manage all users in the system."
       >
-        <Dialog open={isDialogOpen} onOpenChange={(open) => !open && resetDialog()}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)} disabled={!canAddUser}>
-              <PlusCircle className="mr-2" />
-              Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingUser ? "Edit User" : "Add New User"}</DialogTitle>
-              <DialogDescription>
-                {editingUser ? "Update the details for this user." : "Fill in the form to create a new user."}
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh] -mx-6">
-            <div className="px-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="firstName" render={({ field }) => (
-                        <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} placeholder="John" /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="lastName" render={({ field }) => (
-                        <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} placeholder="Doe" /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </div>
-                <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                            <Input 
-                                type="email" 
-                                {...field} 
-                                placeholder="john.doe@example.com"
-                                readOnly={!!editingUser}
-                                disabled={!!editingUser}
-                                className={editingUser ? "cursor-not-allowed bg-muted/50" : ""}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                 <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="jobTitle" render={({ field }) => (
-                        <FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="department" render={({ field }) => (
-                        <FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </div>
-                <FormField control={form.control} name="role" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={editingUser?.id === currentUser?.uid || !canModify(field.value)}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                <SelectItem value="Member">Member</SelectItem>
-                                <SelectItem value="Team Lead">Team Lead</SelectItem>
-                                <SelectItem value="HR Manager">HR Manager</SelectItem>
-                                {currentUserRole === 'CEO/Admin' && <SelectItem value="CEO/Admin">CEO/Admin</SelectItem>}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Password {editingUser ? '(Optional)' : ''}</FormLabel>
-                            <div className="relative">
-                                <FormControl>
-                                    <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                                </FormControl>
-                                <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
-                                    {showPassword ? <EyeOff /> : <Eye />}
-                                </Button>
-                            </div>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Confirm Password</FormLabel>
-                            <div className="relative">
-                            <FormControl>
-                                <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                            </FormControl>
-                             <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                                    {showConfirmPassword ? <EyeOff /> : <Eye />}
-                                </Button>
-                            </div>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <DialogFooter className="pt-4">
-                  <DialogClose asChild><Button type="button" variant="outline" onClick={resetDialog}>Cancel</Button></DialogClose>
-                  <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? 'Saving...' : 'Save User'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-            </div>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Dialog open={isDialogOpen} onOpenChange={(open) => !open && resetDialog()}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setIsDialogOpen(true)} disabled={!canAddUser}>
+                <PlusCircle className="mr-2" />
+                Add User
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{editingUser ? "Edit User" : "Add New User"}</DialogTitle>
+                <DialogDescription>
+                  {editingUser ? "Update the details for this user." : "Fill in the form to create a new user."}
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[70vh] -mx-6">
+              <div className="px-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                      <FormField control={form.control} name="firstName" render={({ field }) => (
+                          <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} placeholder="John" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="lastName" render={({ field }) => (
+                          <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} placeholder="Doe" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                  </div>
+                  <FormField control={form.control} name="email" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                              <Input 
+                                  type="email" 
+                                  {...field} 
+                                  placeholder="john.doe@example.com"
+                                  readOnly={!!editingUser}
+                                  disabled={!!editingUser}
+                                  className={editingUser ? "cursor-not-allowed bg-muted/50" : ""}
+                              />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )} />
+                   <div className="grid grid-cols-2 gap-4">
+                      <FormField control={form.control} name="jobTitle" render={({ field }) => (
+                          <FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="department" render={({ field }) => (
+                          <FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                  </div>
+                  <FormField control={form.control} name="role" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Role</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={editingUser?.id === currentUser?.uid || !canModify(field.value)}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Select a role" />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  <SelectItem value="Member">Member</SelectItem>
+                                  <SelectItem value="Team Lead">Team Lead</SelectItem>
+                                  <SelectItem value="HR Manager">HR Manager</SelectItem>
+                                  {currentUserRole === 'CEO/Admin' && <SelectItem value="CEO/Admin">CEO/Admin</SelectItem>}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                  )} />
+                  <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Password {editingUser ? '(Optional)' : ''}</FormLabel>
+                              <div className="relative">
+                                  <FormControl>
+                                      <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                                  </FormControl>
+                                  <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
+                                      {showPassword ? <EyeOff /> : <Eye />}
+                                  </Button>
+                              </div>
+                              <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Confirm Password</FormLabel>
+                              <div className="relative">
+                              <FormControl>
+                                  <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                              </FormControl>
+                               <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                      {showConfirmPassword ? <EyeOff /> : <Eye />}
+                                  </Button>
+                              </div>
+                              <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                  <DialogFooter className="pt-4">
+                    <DialogClose asChild><Button type="button" variant="outline" onClick={resetDialog}>Cancel</Button></DialogClose>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                      {form.formState.isSubmitting ? 'Saving...' : 'Save User'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+              </div>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+          <Button asChild variant="outline" disabled={!canAddUser}>
+            <Link href="/dashboard/users/bulk">Bulk Create</Link>
+          </Button>
+        </div>
       </PageHeader>
       <div className="border rounded-lg">
         <Table>
