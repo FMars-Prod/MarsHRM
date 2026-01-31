@@ -6,13 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useAuth } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { writeBatch, doc, collection } from 'firebase/firestore';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText, UserPlus, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { firebaseConfig } from '@/firebase/config';
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
 interface UserToCreate {
@@ -28,14 +30,10 @@ interface UserToCreate {
 
 export default function BulkCreatePage() {
     const firestore = useFirestore();
-    const auth = useAuth();
     const { toast } = useToast();
     const [csvData, setCsvData] = React.useState('');
     const [isCreating, setIsCreating] = React.useState(false);
     const [creationLog, setCreationLog] = React.useState<string[]>([]);
-    
-    // Store admin's original auth state to sign back in
-    const adminUser = auth.currentUser;
 
     const handleCreation = async () => {
         if (!csvData.trim()) {
@@ -88,15 +86,20 @@ export default function BulkCreatePage() {
         setCreationLog(prev => [...prev, `Found ${usersToCreate.length} users to create.`]);
 
         for (const user of usersToCreate) {
+            const tempAppName = `bulk-create-${user.line}`;
+            let tempApp;
             try {
-                setCreationLog(prev => [...prev, `Creating user for ${user.email}...`]);
+                setCreationLog(prev => [...prev, `Creating auth user for ${user.email}...`]);
 
-                // THIS IS THE PROBLEMATIC PART. This will sign out the admin.
-                // The loop will break after this first user is created.
-                const userCredential = await createUserWithEmailAndPassword(auth, user.email, user.password);
+                // Initialize a temporary Firebase app to create the user without signing out the admin
+                tempApp = initializeApp(firebaseConfig, tempAppName);
+                const tempAuth = getAuth(tempApp);
+
+                const userCredential = await createUserWithEmailAndPassword(tempAuth, user.email, user.password);
                 const newUserId = userCredential.user.uid;
                 setCreationLog(prev => [...prev, `Auth account created for ${user.email} with UID: ${newUserId}`]);
 
+                // Create user profile and role in Firestore using a batch write
                 const batch = writeBatch(firestore);
                 const userDocRef = doc(firestore, 'users', newUserId);
 
@@ -130,13 +133,20 @@ export default function BulkCreatePage() {
                 const errorMessage = `Failed to create user on line ${user.line}: ${error.message}`;
                 setCreationLog(prev => [...prev, errorMessage]);
                 toast({ variant: 'destructive', title: 'An Error Occurred', description: errorMessage });
-                // Stop the whole process on first error
                 setIsCreating(false);
-                return;
+                if (tempApp) {
+                    await deleteApp(tempApp).catch(e => console.error("Failed to delete temp app", e));
+                }
+                return; // Stop the process on first error
+            } finally {
+                // Clean up the temporary app instance
+                if (tempApp) {
+                    await deleteApp(tempApp);
+                }
             }
         }
 
-        setCreationLog(prev => [...prev, 'Bulk creation process finished.']);
+        setCreationLog(prev => [...prev, 'Bulk creation process finished successfully.']);
         toast({ title: 'Bulk Creation Finished' });
         setIsCreating(false);
     };
@@ -188,12 +198,6 @@ Peter,Jones,peter.j@example.com,securePass,HR Manager,Human Resources,HR Manager
                             <UserPlus className="mr-2" />
                             {isCreating ? 'Creating...' : 'Create Users'}
                         </Button>
-                         <Alert variant="destructive">
-                            <AlertTitle>Known Issue</AlertTitle>
-                            <AlertDescription>
-                                Due to browser limitations, this process may sign you out after creating the first user. The operation will not continue for the rest of the list.
-                            </AlertDescription>
-                        </Alert>
                     </CardContent>
                 </Card>
                 <Card>
