@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -176,8 +175,11 @@ export default function BulkCreatePage() {
                                 id="csv-data"
                                 value={csvData}
                                 onChange={(e) => setCsvData(e.target.value)}
-                                placeholder="firstName,lastName,email,password,jobTitle,department,role
-Jane,Doe,jane.d@example.com,password123,Developer,Engineering,Member"
+                                placeholder={`firstName,lastName,email,password,jobTitle,department,role
+Jane,Doe,jane.d@example.com,password123,Developer,Engineering,Member
+John,Smith,john.s@example.com,newPass1,Engineer,Technology,Member
+Maria,Garcia,maria.g@example.com,newPass2,Team Lead,Engineering,Team Lead
+Peter,Jones,peter.j@example.com,securePass,HR Manager,Human Resources,HR Manager`}
                                 className="h-48 font-mono text-xs"
                                 disabled={isCreating}
                             />
