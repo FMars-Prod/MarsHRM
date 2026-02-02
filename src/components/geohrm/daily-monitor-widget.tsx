@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -6,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX } from 'lucide-react';
+import { Building2, User, UserCheck, UserX, UserRoundX, Download } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 type UserData = {
   id: string;
@@ -35,6 +35,7 @@ type LeaveRequest = {
 
 export const DailyMonitorWidget = () => {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [summary, setSummary] = React.useState({
     late: [] as UserData[],
     absent: [] as UserData[],
@@ -123,6 +124,50 @@ export const DailyMonitorWidget = () => {
 
     fetchMonitorData();
   }, [users, usersLoading, firestore]);
+
+  const handleExport = () => {
+    const { present, late, absent, onLeave, isLoading } = summary;
+    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length)) {
+      toast({
+        variant: "destructive",
+        title: "No data to export",
+        description: "There is no status information for today.",
+      });
+      return;
+    }
+
+    const allUsersWithStatus = [
+      ...present.map(u => ({ ...u, status: 'Present' })),
+      ...late.map(u => ({ ...u, status: 'Late' })),
+      ...absent.map(u => ({ ...u, status: 'Absent' })),
+      ...onLeave.map(u => ({ ...u, status: 'On Leave' })),
+    ];
+
+    const headers = ['Status', 'First Name', 'Last Name', 'Job Title'];
+    const csvRows = [
+      headers.join(','),
+      ...allUsersWithStatus.map(u => {
+        const row = [
+          `"${u.status}"`,
+          `"${u.firstName}"`,
+          `"${u.lastName}"`,
+          `"${u.jobTitle}"`,
+        ];
+        return row.join(',');
+      })
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `daily_monitor_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   
   const UserListCard = ({ title, users, Icon, iconColor, onClick }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; onClick: () => void; }) => (
     <Card className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={onClick}>
@@ -140,8 +185,16 @@ export const DailyMonitorWidget = () => {
     <Sheet onOpenChange={(isOpen) => !isOpen && setSheetContent(null)}>
         <Card>
             <CardHeader>
-                <CardTitle className="font-headline">Daily Team Monitor</CardTitle>
-                <CardDescription>A real-time overview of your team's status for today, {format(new Date(), 'MMMM d')}.</CardDescription>
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <CardTitle className="font-headline">Daily Team Monitor</CardTitle>
+                        <CardDescription>A real-time overview of your team's status for today, {format(new Date(), 'MMMM d')}.</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleExport} disabled={summary.isLoading}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
             {summary.isLoading ? (
