@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
-import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { collection, doc, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,7 +13,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
@@ -352,6 +353,15 @@ const AnalyticsPage = () => {
       toast({ title: "Attendance Updated", description: "The record has been saved." });
       setIsEditDialogOpen(false);
   }
+
+  const handleResetDay = () => {
+    if (!selectedUserId || !date) return;
+    const attendanceId = format(date, 'yyyy-MM-dd');
+    const attendanceRef = doc(firestore, `users/${selectedUserId}/attendances/${attendanceId}`);
+    deleteDocumentNonBlocking(attendanceRef);
+    toast({ title: "Day Reset", description: `Attendance for ${selectedUser?.firstName} on ${format(date, "PPP")} has been reset.` });
+    setIsEditDialogOpen(false);
+  }
   
   const getFilterPeriodText = () => {
       if (filterMode === 'day' && date) return format(date, 'MMM d, yyyy');
@@ -439,9 +449,31 @@ const AnalyticsPage = () => {
                                 </Select>
                             </div>
                         </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                            <Button onClick={handleAttendanceUpdate}>Save Changes</Button>
+                        <DialogFooter className="sm:justify-between">
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">
+                                        <RotateCcw className="mr-2 h-4 w-4"/>
+                                        Reset Day
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will delete the attendance record for {selectedUser?.firstName} on {date ? format(date, 'PPP') : 'this day'}. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleResetDay}>Confirm Reset</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            <div className="flex gap-2">
+                              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                              <Button onClick={handleAttendanceUpdate}>Save Changes</Button>
+                            </div>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
