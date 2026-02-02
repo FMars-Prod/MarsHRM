@@ -293,23 +293,28 @@ const AnalyticsPage = () => {
         toast({ variant: 'destructive', title: 'No data to export' });
         return;
     }
-    const headers = ['Date', 'Clock In', 'Clock Out', 'Work Duration', 'Break Duration', 'Status', 'Clock In Notes', 'Clock Out Notes'];
+    const headers = ['Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Location', 'Notes'];
     const csvRows = [
         headers.join(','),
         ...attendanceData.map(rec => {
             let workDuration = 0;
             if (rec.checkInTime && rec.checkOutTime) {
-                workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkOutTime.toDate()) - (rec.totalBreakDuration || 0);
+                workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
             }
+
+            const timeInOut = rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"` : "N/A";
+            const durationWorkBreak = `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
+            const location = rec.locationCheckInLatitude && rec.locationCheckInLongitude ? `"${rec.locationCheckInLatitude}, ${rec.locationCheckInLongitude}"` : "N/A";
+            const notes = `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"`;
+
+
             const row = [
                 rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "PP")}"` : "N/A",
-                rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "p")}"` : "N/A",
-                rec.checkOutTime ? `"${format(rec.checkOutTime.toDate(), "p")}"` : "N/A",
-                `"${formatDuration(workDuration)}"`,
-                `"${formatDuration(rec.totalBreakDuration || 0)}"`,
+                timeInOut,
+                durationWorkBreak,
                 `"${rec.status}"`,
-                `"${rec.checkInNotes || ''}"`,
-                `"${rec.checkOutNotes || ''}"`,
+                location,
+                notes,
             ];
             return row.join(',');
         })
@@ -325,7 +330,7 @@ const AnalyticsPage = () => {
     if (filterMode === 'month' && month) datePart = format(month, 'yyyy-MM');
     if (filterMode === 'all') datePart = 'all_time';
 
-    link.setAttribute('download', `${selectedUser?.firstName}_${selectedUser?.lastName}_attendance_${datePart}.csv`);
+    link.setAttribute('download', `FortuMars_AttendanceReport_${datePart}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
