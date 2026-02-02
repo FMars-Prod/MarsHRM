@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/geohrm/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
-import { format, startOfDay, endOfDay, isWithinInterval, subDays } from 'date-fns';
+import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
 import { Building2, User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
@@ -27,7 +27,14 @@ type UserData = {
 
 type AttendanceRecord = {
   employeeId: string;
+  checkInTime?: Timestamp;
+  checkOutTime?: Timestamp;
+  totalBreakDuration?: number;
   status: 'present' | 'late';
+  checkInNotes?: string;
+  checkOutNotes?: string;
+  locationCheckInLatitude?: number;
+  locationCheckInLongitude?: number;
 };
 
 type LeaveRequest = {
@@ -48,6 +55,8 @@ const MonitorPage = () => {
     present: [] as UserData[],
     isLoading: true,
   });
+  const [attendanceRecords, setAttendanceRecords] = React.useState<Map<string, AttendanceRecord>>(new Map());
+
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
@@ -73,7 +82,12 @@ const MonitorPage = () => {
         where('checkInTime', '<=', selectedDayEnd)
       );
       const attendanceSnapshot = await getDocs(attendanceQuery);
-      const todaysAttendance = attendanceSnapshot.docs.map(doc => doc.data() as AttendanceRecord);
+      const attendanceMap = new Map<string, AttendanceRecord>();
+      attendanceSnapshot.docs.forEach(doc => {
+          const data = doc.data() as AttendanceRecord;
+          attendanceMap.set(data.employeeId, data);
+      });
+      setAttendanceRecords(attendanceMap);
 
       // 2. Fetch approved leaves that cover today
       const leavesQuery = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
@@ -91,11 +105,11 @@ const MonitorPage = () => {
       const presentUserIds = new Set<string>();
       const lateUserIds = new Set<string>();
       
-      todaysAttendance.forEach(att => {
+      attendanceMap.forEach((att, employeeId) => {
         if (att.status === 'late') {
-          lateUserIds.add(att.employeeId);
+          lateUserIds.add(employeeId);
         } else if (att.status === 'present') {
-          presentUserIds.add(att.employeeId);
+          presentUserIds.add(employeeId);
         }
       });
 
@@ -130,6 +144,13 @@ const MonitorPage = () => {
 
     fetchMonitorData();
   }, [users, usersLoading, firestore, date]);
+  
+  const formatDuration = (seconds: number) => {
+    if (seconds < 0) seconds = 0;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
 
   const handleExport = () => {
     const { present, late, absent, onLeave, isLoading } = summary;
@@ -149,15 +170,42 @@ const MonitorPage = () => {
       ...onLeave.map(u => ({ ...u, status: 'On Leave' })),
     ];
 
-    const headers = ['Status', 'First Name', 'Last Name', 'Job Title'];
+    const headers = ['Status', 'First Name', 'Last Name', 'Job Title', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Location', 'Notes'];
     const csvRows = [
       headers.join(','),
-      ...allUsersWithStatus.map(u => {
+      ...allUsersWithStatus.map(user => {
+        const rec = attendanceRecords.get(user.id);
+        let workDuration = 0;
+        let timeInOut = "N/A";
+        let durationWorkBreak = "N/A";
+        let location = "N/A";
+        let notes = "";
+        const recordDate = `"${format(date, "PP")}"`;
+
+        if (rec && rec.checkInTime) {
+            if (rec.checkOutTime) {
+                workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+            }
+            timeInOut = `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"`;
+            durationWorkBreak = `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
+            location = rec.locationCheckInLatitude && rec.locationCheckInLongitude ? `"${rec.locationCheckInLatitude}, ${rec.locationCheckInLongitude}"` : "N/A";
+            notes = `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"`;
+        } else if (user.status === 'On Leave') {
+            notes = '"On Approved Leave"';
+        } else if (user.status === 'Absent') {
+            notes = '"Absent"';
+        }
+
         const row = [
-          `"${u.status}"`,
-          `"${u.firstName}"`,
-          `"${u.lastName}"`,
-          `"${u.jobTitle}"`,
+          `"${user.status}"`,
+          `"${user.firstName}"`,
+          `"${user.lastName}"`,
+          `"${user.jobTitle}"`,
+          recordDate,
+          timeInOut,
+          durationWorkBreak,
+          location,
+          notes,
         ];
         return row.join(',');
       })
