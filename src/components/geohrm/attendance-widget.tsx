@@ -380,6 +380,16 @@ export function AttendanceWidget() {
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   };
 
+  const handleResetDay = () => {
+    if (getTodaysAttendanceRef) {
+        deleteDocumentNonBlocking(getTodaysAttendanceRef);
+        toast({
+            title: "Day Reset",
+            description: "Your attendance for today has been reset. You can now clock in again."
+        });
+    }
+  };
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -521,48 +531,70 @@ export function AttendanceWidget() {
         )}
       </CardContent>
       <CardFooter className="grid grid-cols-2 gap-4">
-        {status === "out" ? (
-          <Button
-            onClick={handleClockIn}
-            className="w-full col-span-2"
-            disabled={hasClockedOutToday || !officeLocation}
-          >
-            <Clock className="mr-2" /> Clock In
-          </Button>
-        ) : (
-          <>
+        {status === 'out' && !hasClockedOutToday && (
             <Button
-              onClick={handleBreak}
-              variant={status === "break" ? "default" : "outline"}
-              className="w-full"
+                onClick={handleClockIn}
+                className="w-full col-span-2"
+                disabled={!officeLocation}
             >
-              <Coffee className="mr-2" />
-              {status === "break" ? "End Break" : "Start Break"}
+                <Clock className="mr-2" /> Clock In
             </Button>
+        )}
+        {status === 'out' && hasClockedOutToday && (
             <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full">
-                  Clock Out
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    Are you sure you want to clock out?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action will end your current work session.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleClockOut}>
-                    Confirm Clock Out
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
+                <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="w-full col-span-2">
+                        <RotateCcw className="mr-2" /> Reset Day
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will delete today's attendance record and allow you to clock in again. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleResetDay}>Confirm Reset</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
             </AlertDialog>
-          </>
+        )}
+        {status !== 'out' && (
+            <>
+                <Button
+                    onClick={handleBreak}
+                    variant={status === "break" ? "default" : "outline"}
+                    className="w-full"
+                >
+                    <Coffee className="mr-2" />
+                    {status === "break" ? "End Break" : "Start Break"}
+                </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="w-full">
+                            Clock Out
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>
+                                Are you sure you want to clock out?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action will end your current work session.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleClockOut}>
+                                Confirm Clock Out
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </>
         )}
       </CardFooter>
 
@@ -592,5 +624,3 @@ export function AttendanceWidget() {
     </Card>
   );
 }
-
-    
