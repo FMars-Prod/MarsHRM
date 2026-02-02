@@ -4,17 +4,17 @@
 import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, subDays } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon } from 'lucide-react';
+import { Building2, User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 type UserData = {
   id: string;
@@ -22,6 +22,7 @@ type UserData = {
   lastName: string;
   jobTitle: string;
   avatar?: string;
+  role?: string;
 };
 
 type AttendanceRecord = {
@@ -37,8 +38,8 @@ type LeaveRequest = {
 };
 
 const MonitorPage = () => {
-  const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [date, setDate] = React.useState<Date>(new Date());
   const [summary, setSummary] = React.useState({
     late: [] as UserData[],
@@ -130,6 +131,50 @@ const MonitorPage = () => {
     fetchMonitorData();
   }, [users, usersLoading, firestore, date]);
 
+  const handleExport = () => {
+    const { present, late, absent, onLeave, isLoading } = summary;
+    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length)) {
+      toast({
+        variant: "destructive",
+        title: "No data to export",
+        description: "There is no status information for the selected date.",
+      });
+      return;
+    }
+
+    const allUsersWithStatus = [
+      ...present.map(u => ({ ...u, status: 'Present' })),
+      ...late.map(u => ({ ...u, status: 'Late' })),
+      ...absent.map(u => ({ ...u, status: 'Absent' })),
+      ...onLeave.map(u => ({ ...u, status: 'On Leave' })),
+    ];
+
+    const headers = ['Status', 'First Name', 'Last Name', 'Job Title'];
+    const csvRows = [
+      headers.join(','),
+      ...allUsersWithStatus.map(u => {
+        const row = [
+          `"${u.status}"`,
+          `"${u.firstName}"`,
+          `"${u.lastName}"`,
+          `"${u.jobTitle}"`,
+        ];
+        return row.join(',');
+      })
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `daily_monitor_${format(date, 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const UserListCard = ({ title, users, Icon, iconColor }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; }) => (
     <Card>
       <CardHeader>
@@ -165,7 +210,7 @@ const MonitorPage = () => {
   return (
     <>
       <PageHeader title="Daily Monitor" description={`An overview of employee status for ${format(date, 'MMMM d, yyyy')}.`}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" onClick={() => setDate(new Date())}>Today</Button>
             <Button variant="outline" onClick={() => setDate(subDays(new Date(), 1))}>Yesterday</Button>
             <Popover>
@@ -190,6 +235,10 @@ const MonitorPage = () => {
                     />
                 </PopoverContent>
             </Popover>
+            <Button onClick={handleExport} disabled={summary.isLoading}>
+                <Download className="mr-2 h-4 w-4"/>
+                Export CSV
+            </Button>
         </div>
       </PageHeader>
       
