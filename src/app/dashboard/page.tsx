@@ -6,10 +6,10 @@ import { AnnouncementsWidget } from "@/components/geohrm/announcements-widget";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { EventsWidget } from "@/components/geohrm/events-widget";
 import { PageHeader } from "@/components/geohrm/page-header";
-import { TeamStatusWidget } from "@/components/geohrm/team-status-widget";
 import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
+import { WorkHoursSummaryWidget } from "@/components/geohrm/work-hours-summary-widget";
 
 export default function DashboardPage() {
   const { user: currentUser } = useUser();
@@ -39,7 +39,8 @@ export default function DashboardPage() {
           <AttendanceWidget />
           <ActionItemsWidget />
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
+          <WorkHoursSummaryWidget />
           <AnnouncementsWidget />
         </div>
         <div className="lg:col-span-1">
