@@ -56,10 +56,8 @@ service cloud.firestore {
     }
 
     match /users/{userId}/payslips/{payslipId} {
-      allow read, write: if
-        (request.method == 'get' || request.method == 'list')
-          ? isOwner(userId) || isCEO() || isHR()
-          : (isCEO() || isHR());
+      allow read: if isOwner(userId) || isCEO() || isHR();
+      allow write: if isCEO() || isHR();
     }
     
     match /announcements/{announcementId} {
