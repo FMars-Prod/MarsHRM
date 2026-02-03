@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -12,6 +11,7 @@ import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from '../ui/scroll-area';
 
 type UserData = {
   id: string;
@@ -269,11 +269,12 @@ export const DailyMonitorWidget = () => {
         </Card>
 
         {sheetContent && (
-            <SheetContent>
+            <SheetContent className="flex flex-col">
                 <SheetHeader>
                     <SheetTitle>{sheetContent.title} ({sheetContent.users.length})</SheetTitle>
                 </SheetHeader>
-                <div className="py-4 space-y-3">
+                <ScrollArea className="flex-1 -mx-6">
+                  <div className="py-4 px-6 space-y-3">
                      {sheetContent.users.length > 0 ? (
                         sheetContent.users.map(user => (
                             <Link href={`/dashboard/users/${user.id}`} key={user.id} className="flex items-center gap-3 p-2 -m-2 rounded-lg hover:bg-muted transition-colors">
@@ -290,7 +291,8 @@ export const DailyMonitorWidget = () => {
                     ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">No employees in this category.</p>
                     )}
-                </div>
+                  </div>
+                </ScrollArea>
             </SheetContent>
         )}
     </Sheet>
