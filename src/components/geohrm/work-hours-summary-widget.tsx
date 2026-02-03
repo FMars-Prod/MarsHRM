@@ -9,6 +9,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { startOfMonth, endOfMonth, differenceInSeconds, startOfWeek, endOfWeek } from 'date-fns';
 import { Activity } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type AttendanceRecord = {
   checkInTime?: Timestamp;
@@ -91,24 +92,12 @@ export function WorkHoursSummaryWidget() {
                         <Activity className="size-5" />
                         Hours Summary
                     </CardTitle>
-                    <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
-                        <Button
-                            size="sm"
-                            variant={viewMode === 'weekly' ? 'secondary' : 'ghost'}
-                            onClick={() => setViewMode('weekly')}
-                            className="px-2 h-7"
-                        >
-                            Weekly
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={viewMode === 'monthly' ? 'secondary' : 'ghost'}
-                            onClick={() => setViewMode('monthly')}
-                            className="px-2 h-7"
-                        >
-                            Monthly
-                        </Button>
-                    </div>
+                    <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'weekly' | 'monthly')}>
+                        <TabsList className="h-8">
+                            <TabsTrigger value="weekly" className="h-6 px-2 text-xs">Weekly</TabsTrigger>
+                            <TabsTrigger value="monthly" className="h-6 px-2 text-xs">Monthly</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 </div>
                 <CardDescription>
                     Your total work and break hours for {periodText}.
