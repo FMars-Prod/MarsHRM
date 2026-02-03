@@ -561,6 +561,24 @@
           "description": "The official end time of the work shift (e.g., '17:00')."
         }
       }
+    },
+    "Payslip": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Payslip",
+      "type": "object",
+      "description": "Represents an employee's payslip for a specific period.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the payslip." },
+        "employeeId": { "type": "string", "description": "Reference to the Employee entity." },
+        "month": { "type": "number", "description": "The month of the payslip (1-12)." },
+        "year": { "type": "number", "description": "The year of the payslip." },
+        "issueDate": { "type": "string", "format": "date-time", "description": "Date when the payslip was issued." },
+        "grossSalary": { "type": "number", "description": "The gross salary for the period." },
+        "deductions": { "type": "number", "description": "Total deductions for the period." },
+        "netSalary": { "type": "number", "description": "The net salary paid." },
+        "downloadUrl": { "type": "string", "description": "A public URL to download the payslip PDF." }
+      },
+      "required": ["id", "employeeId", "month", "year", "issueDate", "netSalary", "downloadUrl"]
     }
   },
   "auth": {
@@ -839,6 +857,26 @@
             {
               "name": "settingId",
               "description": "The unique identifier for the setting (e.g., 'location')."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/payslips/{payslipId}",
+        "definition": {
+          "entityName": "Payslip",
+          "schema": {
+            "$ref": "#/backend/entities/Payslip"
+          },
+          "description": "Stores payslip records for each user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "payslipId",
+              "description": "The unique identifier of the payslip."
             }
           ]
         }

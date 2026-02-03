@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 function isOwner(userId) {
@@ -53,6 +54,11 @@ service cloud.firestore {
     match /users/{userId}/reports/{reportId} {
       allow read, write: if isOwner(userId) || isCEO() || isHR() || isTeamLeadOf(userId);
     }
+
+    match /users/{userId}/payslips/{payslipId} {
+      allow read: if isOwner(userId) || isCEO() || isHR();
+      allow write: if isCEO() || isHR();
+    }
     
     match /announcements/{announcementId} {
         allow read: if request.auth != null;
@@ -101,3 +107,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
