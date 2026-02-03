@@ -20,9 +20,26 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown } from "lucide-react";
+import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown, MoreHorizontal, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import * as React from "react";
@@ -36,7 +53,7 @@ import {
 } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -177,10 +194,12 @@ export default function LeavePage() {
   );
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
+  const isUserAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
   const [leaveType, setLeaveType] = React.useState<string>("");
   const [reason, setReason] = React.useState("");
   const [isRequesting, setIsRequesting] = React.useState(false);
+  const [selectedRequest, setSelectedRequest] = React.useState<LeaveRequestWithId | null>(null);
   
   const currentYear = getYear(new Date());
   const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
@@ -221,6 +240,7 @@ export default function LeavePage() {
         if (teamMemberIds.length > 0) {
           return query(baseQuery, where('employeeId', 'in', teamMemberIds));
         }
+        // Fallback for a team lead with no members, can still see their own.
         return query(baseQuery, where('employeeId', '==', user.uid));
       case 'HR Manager':
       case 'CEO/Admin':
@@ -240,6 +260,11 @@ export default function LeavePage() {
       [approvalField]: approverId,
     });
     toast({ title: `Request ${newStatus}` });
+  }
+
+  const handleDeleteRequest = (requestId: string) => {
+    deleteDocumentNonBlocking(doc(firestore, 'leave_requests', requestId));
+    toast({ title: 'Leave Request Deleted' });
   }
 
   const handleCreateRequest = () => {
@@ -284,17 +309,15 @@ export default function LeavePage() {
         setIsRequesting(false);
       });
   }
-
+  
   const allLeaveRequests = (leaveRequests || []).filter(req => {
     if (userRole === 'Team Lead') {
-      // Show team members' pending requests, and all of own requests
-      if (req.employeeId !== user?.uid) {
-        return req.status === 'Pending';
-      }
-      return true;
+      // Team lead sees all their own requests, plus pending requests from their members
+      if (req.employeeId === user?.uid) return true;
+      return req.status === 'Pending';
     }
     if (userRole === 'HR Manager') {
-      // Show requests pending HR approval, and ones they've already actioned
+      // HR sees requests pending their approval, and ones they've actioned
       return ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(req.status);
     }
     return true; // Members and Admins see everything they are allowed to by rules
@@ -407,121 +430,144 @@ export default function LeavePage() {
           </Dialog>
         )}
       </PageHeader>
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {(userRole === 'Team Lead' || userRole === 'HR Manager' || userRole === 'CEO/Admin') && <TableHead>Employee</TableHead>}
-              <TableHead>Dates</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading requests...</TableCell></TableRow>
-            ) : allLeaveRequests && allLeaveRequests.length > 0 ? (
-              allLeaveRequests.map((request) => (
-                <TableRow key={request.id}>
-                  {(userRole === 'Team Lead' || userRole === 'HR Manager' || userRole === 'CEO/Admin') && <TableCell className="font-medium">{request.employeeName}</TableCell>}
-                  <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
-                  <TableCell>{request.leaveType}</TableCell>
-                  <TableCell>
-                    <Badge variant='outline' className={cn(statusVariantMap[request.status])}>
-                      {request.status.replace(/ by Team Lead| by HR/g, '')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
+      <Sheet open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}>
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {(userRole === 'Team Lead' || isUserAdmin) && <TableHead>Employee</TableHead>}
+                <TableHead>Dates</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                  <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading requests...</TableCell></TableRow>
+              ) : allLeaveRequests && allLeaveRequests.length > 0 ? (
+                allLeaveRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    {(userRole === 'Team Lead' || isUserAdmin) && <TableCell className="font-medium">{request.employeeName}</TableCell>}
+                    <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
+                    <TableCell>{request.leaveType}</TableCell>
+                    <TableCell>
+                      <Badge variant='outline' className={cn(statusVariantMap[request.status])}>
+                        {request.status.replace(/ by Team Lead| by HR/g, '')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <SheetTrigger asChild>
+                            <DropdownMenuItem onClick={() => setSelectedRequest(request)}>
+                              <Eye className="mr-2 h-4 w-4" /> View Details
+                            </DropdownMenuItem>
+                          </SheetTrigger>
+                           {userRole === 'Team Lead' && request.status === 'Pending' && request.employeeId !== user?.uid && (
+                              <>
+                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')}>
+                                      <ThumbsUp className="mr-2 h-4 w-4"/> Approve
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Rejected by Team Lead', user!.uid, 'approvedByTeamLeadId')} className="text-destructive">
+                                      <ThumbsDown className="mr-2 h-4 w-4"/> Reject
+                                  </DropdownMenuItem>
+                              </>
+                          )}
+                          {(userRole === 'HR Manager') && request.status === 'Pending HR Approval' && (
+                              <>
+                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>
+                                      <ThumbsUp className="mr-2 h-4 w-4"/> Approve
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Rejected by HR', user!.uid, 'approvedByHRId')} className="text-destructive">
+                                      <ThumbsDown className="mr-2 h-4 w-4"/> Reject
+                                  </DropdownMenuItem>
+                              </>
+                          )}
                           {userRole === 'CEO/Admin' && !['Approved', 'Rejected'].some(s => request.status.includes(s)) && (
-                               <>
-                                  <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>
-                                      <ThumbsUp className="mr-2 h-4 w-4"/> Approve
-                                  </Button>
-                                  <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected', user!.uid, 'approvedByHRId')}>
-                                      <ThumbsDown className="mr-2 h-4 w-4"/> Reject
-                                  </Button>
-                              </>
-                          )}
-                          {userRole === 'Team Lead' && request.status === 'Pending' && request.employeeId !== user?.uid && (
                               <>
-                                  <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')}>
+                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>
                                       <ThumbsUp className="mr-2 h-4 w-4"/> Approve
-                                  </Button>
-                                  <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected by Team Lead', user!.uid, 'approvedByTeamLeadId')}>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Rejected', user!.uid, 'approvedByHRId')} className="text-destructive">
                                       <ThumbsDown className="mr-2 h-4 w-4"/> Reject
-                                  </Button>
+                                  </DropdownMenuItem>
                               </>
                           )}
-                           {(userRole === 'HR Manager') && request.status === 'Pending HR Approval' && (
-                              <>
-                                  <Button variant="outline" size="sm" className="bg-green-500/20 text-green-700 hover:bg-green-500/30" onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>
-                                      <ThumbsUp className="mr-2 h-4 w-4"/> Approve
-                                  </Button>
-                                  <Button variant="outline" size="sm" className="bg-red-500/20 text-red-700 hover:bg-red-500/30" onClick={() => handleRequestStatus(request.id, 'Rejected by HR', user!.uid, 'approvedByHRId')}>
-                                      <ThumbsDown className="mr-2 h-4 w-4"/> Reject
-                                  </Button>
-                              </>
+                          {isUserAdmin && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>This action cannot be undone. This will permanently delete this leave request.</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteRequest(request.id)}>Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                           )}
-                          <Sheet>
-                              <SheetTrigger asChild>
-                                  <Button variant="outline" size="sm">
-                                      <Eye className="mr-2 h-4 w-4"/>
-                                      View Details
-                                  </Button>
-                              </SheetTrigger>
-                              <SheetContent>
-                                  <SheetHeader>
-                                      <SheetTitle>Leave Request Details</SheetTitle>
-                                      <SheetDescription>
-                                          Track the approval status of the request.
-                                      </SheetDescription>
-                                  </SheetHeader>
-                                  <Separator className="my-4" />
-                                  <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
-                                  <div className="space-y-4">
-                                     <div className="space-y-1">
-                                          <p className="text-sm font-medium text-muted-foreground">Employee</p>
-                                          <p className="font-semibold">{request.employeeName}</p>
-                                     </div>
-                                     <div className="space-y-1">
-                                          <p className="text-sm font-medium text-muted-foreground">Leave Type</p>
-                                          <p className="font-semibold">{request.leaveType}</p>
-                                     </div>
-                                     <div className="space-y-1">
-                                          <p className="text-sm font-medium text-muted-foreground">Dates</p>
-                                          <p className="font-semibold">{`${formatDate(request.startDate)} to ${formatDate(request.endDate)}`}</p>
-                                     </div>
-                                     <div className="space-y-1">
-                                          <p className="text-sm font-medium text-muted-foreground">Reason</p>
-                                          <p className="text-sm whitespace-pre-wrap">{request.reason}</p>
-                                     </div>
-                                     <div className="space-y-1">
-                                          <p className="text-sm font-medium text-muted-foreground">Status</p>
-                                          <Badge variant='outline' className={cn(statusVariantMap[request.status])}>
-                                              {request.status}
-                                          </Badge>
-                                     </div>
-                                      <Separator className="my-4" />
-                                      <h4 className="font-semibold">Approval History</h4>
-                                      <LeaveStatusTracker request={request} />
-                                  </div>
-                                  </ScrollArea>
-                              </SheetContent>
-                          </Sheet>
-                      </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-                 <TableRow><TableCell colSpan={5} className="h-24 text-center">No leave requests found.</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                  <TableRow><TableCell colSpan={5} className="h-24 text-center">No leave requests found.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        {selectedRequest && (
+          <SheetContent>
+              <SheetHeader>
+                  <SheetTitle>Leave Request Details</SheetTitle>
+                  <SheetDescription>
+                      Track the approval status of the request.
+                  </SheetDescription>
+              </SheetHeader>
+              <Separator className="my-4" />
+              <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
+              <div className="space-y-4">
+                  <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Employee</p>
+                      <p className="font-semibold">{selectedRequest.employeeName}</p>
+                  </div>
+                  <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Leave Type</p>
+                      <p className="font-semibold">{selectedRequest.leaveType}</p>
+                  </div>
+                  <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Dates</p>
+                      <p className="font-semibold">{`${formatDate(selectedRequest.startDate)} to ${formatDate(selectedRequest.endDate)}`}</p>
+                  </div>
+                  <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Reason</p>
+                      <p className="text-sm whitespace-pre-wrap">{selectedRequest.reason}</p>
+                  </div>
+                  <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">Status</p>
+                      <Badge variant='outline' className={cn(statusVariantMap[selectedRequest.status])}>
+                          {selectedRequest.status}
+                      </Badge>
+                  </div>
+                  <Separator className="my-4" />
+                  <h4 className="font-semibold">Approval History</h4>
+                  <LeaveStatusTracker request={selectedRequest} />
+              </div>
+              </ScrollArea>
+          </SheetContent>
+        )}
+      </Sheet>
     </>
   );
 }
-
-    

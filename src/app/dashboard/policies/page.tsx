@@ -11,11 +11,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Check, BookOpen, PlusCircle } from "lucide-react";
+import { Check, BookOpen, PlusCircle, MoreHorizontal, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React from "react";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, serverTimestamp, query, orderBy } from "firebase/firestore";
 import {
@@ -32,6 +57,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { WithId } from "@/firebase/firestore/use-collection";
+import { Separator } from "@/components/ui/separator";
 
 type Policy = {
   title: string;
@@ -46,6 +72,8 @@ export default function PoliciesPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const [selectedPolicy, setSelectedPolicy] = React.useState<Policy | null>(null);
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
@@ -98,6 +126,12 @@ export default function PoliciesPage() {
     setNewTitle('');
     setNewContent('');
   }
+
+  const handleDeletePolicy = (policyId: string) => {
+    if (!user) return;
+    deleteDocumentNonBlocking(doc(firestore, 'policies', policyId));
+    toast({ title: "Policy Deleted" });
+  };
 
   const acknowledgedPolicyIds = React.useMemo(() => {
     if (!acknowledgments) return new Set<string>();
@@ -154,52 +188,93 @@ export default function PoliciesPage() {
           </Dialog>
         )}
       </PageHeader>
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Policy Title</TableHead>
-              <TableHead>Effective Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading policies...</TableCell></TableRow>
-            ) : allPolicies.map((policy) => (
-              <TableRow key={policy.id}>
-                <TableCell className="font-medium">{policy.title}</TableCell>
-                <TableCell>{policy.effectiveDate ? new Date(policy.effectiveDate.toDate()).toLocaleDateString() : 'N/A'}</TableCell>
-                <TableCell>
-                  <Badge variant="outline"
-                    className={cn(
-                        policy.status === 'Acknowledged' && 'text-green-600 border-green-600/50',
-                        policy.status === 'Pending Acknowledgment' && 'text-yellow-600 border-yellow-600/50'
-                    )}
-                  >{policy.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  {policy.status === 'Pending Acknowledgment' ? (
-                    <Button onClick={() => handleAcknowledge(policy.id)}>
-                      <Check className="mr-2" />
-                      Read & Acknowledge
-                    </Button>
-                  ) : (
-                    <Button variant="outline" disabled>
-                      <BookOpen className="mr-2" />
-                      View
-                    </Button>
-                  )}
-                </TableCell>
+      <Sheet open={!!selectedPolicy} onOpenChange={(isOpen) => !isOpen && setSelectedPolicy(null)}>
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Policy Title</TableHead>
+                <TableHead>Effective Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {!isLoading && allPolicies.length === 0 && (
-            <div className="text-center p-10 text-muted-foreground">No policies found.</div>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                  <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading policies...</TableCell></TableRow>
+              ) : allPolicies.map((policy) => (
+                <TableRow key={policy.id}>
+                  <TableCell className="font-medium">{policy.title}</TableCell>
+                  <TableCell>{policy.effectiveDate ? new Date(policy.effectiveDate.toDate()).toLocaleDateString() : 'N/A'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline"
+                      className={cn(
+                          policy.status === 'Acknowledged' && 'text-green-600 border-green-600/50',
+                          policy.status === 'Pending Acknowledgment' && 'text-yellow-600 border-yellow-600/50'
+                      )}
+                    >{policy.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <SheetTrigger asChild>
+                                <DropdownMenuItem onClick={() => setSelectedPolicy(policy)}>
+                                    <BookOpen className="mr-2 h-4 w-4" /> View Content
+                                </DropdownMenuItem>
+                            </SheetTrigger>
+                            {policy.status === 'Pending Acknowledgment' && (
+                                <DropdownMenuItem onClick={() => handleAcknowledge(policy.id)}>
+                                    <Check className="mr-2 h-4 w-4" /> Acknowledge
+                                </DropdownMenuItem>
+                            )}
+                            {isAdmin && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete this policy.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeletePolicy(policy.id)}>
+                                                Delete
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {!isLoading && allPolicies.length === 0 && (
+              <div className="text-center p-10 text-muted-foreground">No policies found.</div>
+          )}
+        </div>
+        {selectedPolicy && (
+            <SheetContent>
+                <SheetHeader>
+                    <SheetTitle>{selectedPolicy.title}</SheetTitle>
+                    <SheetDescription>Effective since {selectedPolicy.effectiveDate ? new Date(selectedPolicy.effectiveDate.toDate()).toLocaleDateString() : 'N/A'}</SheetDescription>
+                </SheetHeader>
+                <Separator className="my-4"/>
+                <p className="text-sm whitespace-pre-wrap">{selectedPolicy.content}</p>
+            </SheetContent>
         )}
-      </div>
+      </Sheet>
     </>
   );
 }

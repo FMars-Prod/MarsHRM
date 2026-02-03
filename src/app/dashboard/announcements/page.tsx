@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Eye, PlusCircle } from "lucide-react";
+import { Eye, PlusCircle, MoreHorizontal, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -23,6 +23,23 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -36,7 +53,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useUser, useFirestore, useMemoFirebase, useCollection, addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, useCollection, addDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, serverTimestamp, orderBy, query } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -129,6 +146,14 @@ export default function AnnouncementsPage() {
     setIsCreateDialogOpen(false);
     setNewTitle("");
     setNewContent("");
+  };
+
+  const handleDeleteAnnouncement = (id: string) => {
+    deleteDocumentNonBlocking(doc(firestore, 'announcements', id));
+    toast({
+        title: "Announcement Deleted",
+        description: "The announcement has been removed.",
+    });
   };
 
   const allAnnouncements: AnnouncementWithStatus[] = (announcements || []).map((ann) => ({
@@ -226,23 +251,52 @@ export default function AnnouncementsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <SheetTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedAnnouncement(announcement);
-                            if (announcement.status === "Unread") {
-                              handleMarkAsRead(announcement.id);
-                            }
-                          }}
-                        >
-                          <Eye className="mr-2" />
-                          {announcement.status === "Unread"
-                            ? "View & Acknowledge"
-                            : "View"}
-                        </Button>
-                      </SheetTrigger>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <SheetTrigger asChild>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedAnnouncement(announcement);
+                                if (announcement.status === "Unread") {
+                                  handleMarkAsRead(announcement.id);
+                                }
+                              }}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </DropdownMenuItem>
+                          </SheetTrigger>
+                          {isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the announcement.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteAnnouncement(announcement.id)}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))

@@ -32,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,8 +44,19 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, serverTimestamp, orderBy, query } from "firebase/firestore";
 import React from "react";
@@ -119,6 +130,11 @@ export default function IssuesPage() {
     setNewTitle('');
     setNewDescription('');
   }
+
+  const handleDeleteIssue = (issueId: string) => {
+    deleteDocumentNonBlocking(doc(firestore, 'issue_reports', issueId));
+    toast({ title: "Issue Deleted", description: "The issue has been removed." });
+  };
 
   const issueData = isAdmin ? issues : issues?.filter(issue => issue.employeeId === user?.uid);
 
@@ -204,14 +220,38 @@ export default function IssuesPage() {
                           <DropdownMenuItem onClick={() => setSelectedIssue(issue)}>View Details</DropdownMenuItem>
                         </SheetTrigger>
                         {isAdmin && (
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                                <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'Open')}>Open</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'In Progress')}>In Progress</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'Resolved')}>Resolved</DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
+                          <>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'Open')}>Open</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'In Progress')}>In Progress</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'Resolved')}>Resolved</DropdownMenuItem>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                             <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete this issue report.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteIssue(issue.id)}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -262,5 +302,3 @@ export default function IssuesPage() {
     </>
   );
 }
-
-    
