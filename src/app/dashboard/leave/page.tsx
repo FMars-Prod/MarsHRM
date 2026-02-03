@@ -49,7 +49,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,6 +79,12 @@ type LeaveRequest = {
   createdAt: any;
 };
 
+type UserData = {
+    id: string;
+    firstName: string;
+    lastName: string;
+};
+
 type LeaveRequestWithId = WithId<LeaveRequest>;
 
 type Team = {
@@ -90,25 +95,40 @@ type Team = {
 }
 
 
-const LeaveStatusTracker = ({ request }: { request: LeaveRequestWithId }) => {
+const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; users: WithId<UserData>[] | null; }) => {
+  const teamLeadApprover = users?.find(u => u.id === request.approvedByTeamLeadId);
+  const hrApprover = users?.find(u => u.id === request.approvedByHRId);
+  
+  const teamLeadName = teamLeadApprover ? `${teamLeadApprover.firstName} ${teamLeadApprover.lastName}` : 'Team Lead';
+  const hrName = hrApprover ? `${hrApprover.firstName} ${hrApprover.lastName}` : 'HR';
+
+  // Find who rejected it
+  let rejecterName = '';
+  if (request.status.startsWith('Rejected')) {
+      const rejecterId = request.status === 'Rejected by Team Lead' ? request.approvedByTeamLeadId : request.approvedByHRId;
+      const rejecter = users?.find(u => u.id === rejecterId);
+      rejecterName = rejecter ? `${rejecter.firstName} ${rejecter.lastName}` : 'Administrator';
+  }
+
   const isSubmitted = true;
   const isFinalRejected = request.status.startsWith('Rejected');
   const isApprovedByLead = ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(request.status);
   const isRejectedByLead = request.status === 'Rejected by Team Lead';
   const isApprovedByHR = request.status === 'Approved';
-  const isRejectedByHR = request.status === 'Rejected by HR';
+  const isRejectedByHR = request.status === 'Rejected by HR' || request.status === 'Rejected';
 
   const isPendingLead = request.status === 'Pending';
   const isPendingHR = request.status === 'Pending HR Approval';
 
   return (
     <div className="space-y-4">
+      {/* Submitted Stage */}
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white", "bg-green-500")}>
+          <div className="flex items-center justify-center h-6 w-6 rounded-full bg-green-500 text-white">
             <Check className="h-4 w-4" />
           </div>
-          <div className="h-12 w-0.5 bg-primary/20"></div>
+          <div className="h-16 w-0.5 bg-primary/20"></div>
         </div>
         <div>
           <h4 className="font-semibold">Submitted</h4>
@@ -116,6 +136,7 @@ const LeaveStatusTracker = ({ request }: { request: LeaveRequestWithId }) => {
         </div>
       </div>
       
+      {/* Team Lead Stage */}
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
           <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
@@ -127,18 +148,22 @@ const LeaveStatusTracker = ({ request }: { request: LeaveRequestWithId }) => {
             {isRejectedByLead && <X className="h-4 w-4" />}
             {isPendingLead && <Clock className="h-4 w-4" />}
           </div>
-          <div className={cn("h-12 w-0.5", (isApprovedByLead || isRejectedByLead) ? 'bg-primary/20' : 'bg-gray-200')}></div>
+          <div className={cn("h-16 w-0.5", (isApprovedByLead || isRejectedByLead) ? 'bg-primary/20' : 'bg-gray-200')}></div>
         </div>
-        <div>
+        <div className="flex-1">
           <h4 className={cn("font-semibold", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
           <p className="text-sm text-muted-foreground">
-            {isApprovedByLead && 'Approved by Team Lead.'}
-            {isRejectedByLead && `Rejected by Team Lead. ${request.rejectionReason || ''}`}
+            {isApprovedByLead && `Approved by ${teamLeadName}.`}
+            {isRejectedByLead && `Rejected by ${rejecterName}.`}
             {isPendingLead && 'Pending approval.'}
           </p>
+          {isRejectedByLead && request.rejectionReason && (
+            <p className="text-xs text-destructive/80 mt-1 italic">"{request.rejectionReason}"</p>
+          )}
         </div>
       </div>
 
+      {/* HR Stage */}
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
           <div className={cn("flex items-center justify-center h-6 w-6 rounded-full",
@@ -149,23 +174,25 @@ const LeaveStatusTracker = ({ request }: { request: LeaveRequestWithId }) => {
             isRejectedByLead && "bg-gray-300 text-white"
           )}>
             {isApprovedByHR && <Check className="h-4 w-4" />}
-            {isRejectedByHR && <X className="h-4 w-4" />}
+            {(isRejectedByHR || isRejectedByLead) && <X className="h-4 w-4" />}
             {(isPendingHR || isPendingLead) && <Clock className="h-4 w-4" />}
-            {isRejectedByLead && <X className="h-4 w-4" />}
           </div>
         </div>
-        <div>
+        <div className="flex-1">
           <h4 className={cn("font-semibold", 
               isRejectedByHR && "text-red-500",
               !isApprovedByLead && !isRejectedByLead && "text-muted-foreground"
           )}>HR Approval</h4>
           <p className="text-sm text-muted-foreground">
-            {isApprovedByHR && 'Approved by HR.'}
-            {isRejectedByHR && `Rejected by HR. ${request.rejectionReason || ''}`}
+            {isApprovedByHR && `Approved by ${hrName}.`}
+            {isRejectedByHR && `Rejected by ${rejecterName}.`}
             {isPendingHR && 'Pending HR approval.'}
             {isPendingLead && 'Waiting for Team Lead approval.'}
             {isRejectedByLead && 'Not applicable.'}
           </p>
+           {isRejectedByHR && request.rejectionReason && (
+            <p className="text-xs text-destructive/80 mt-1 italic">"{request.rejectionReason}"</p>
+          )}
         </div>
       </div>
     </div>
@@ -200,6 +227,9 @@ export default function LeavePage() {
   const [reason, setReason] = React.useState("");
   const [isRequesting, setIsRequesting] = React.useState(false);
   const [selectedRequest, setSelectedRequest] = React.useState<LeaveRequestWithId | null>(null);
+  
+  const [rejectionReason, setRejectionReason] = React.useState("");
+  const [requestToReject, setRequestToReject] = React.useState<LeaveRequestWithId | null>(null);
   
   const currentYear = getYear(new Date());
   const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
@@ -240,8 +270,7 @@ export default function LeavePage() {
         if (teamMemberIds.length > 0) {
           return query(baseQuery, where('employeeId', 'in', teamMemberIds));
         }
-        // Fallback for a team lead with no members, can still see their own.
-        return query(baseQuery, where('employeeId', '==', user.uid));
+        return query(baseQuery, where('employeeId', '==', '-----')); // No members, show no requests
       case 'HR Manager':
       case 'CEO/Admin':
         return query(baseQuery);
@@ -249,9 +278,13 @@ export default function LeavePage() {
         return null;
     }
   }, [firestore, user, userRole, teamMemberIds]);
+  
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
+  const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
 
 
-  const { data: leaveRequests, isLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
+  const { data: leaveRequests, isLoading: requestsLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
+  const isLoading = usersLoading || requestsLoading;
   
   const handleRequestStatus = (requestId: string, newStatus: LeaveStatus, approverId: string, approvalField: string) => {
     const requestDocRef = doc(firestore, 'leave_requests', requestId);
@@ -266,6 +299,42 @@ export default function LeavePage() {
     deleteDocumentNonBlocking(doc(firestore, 'leave_requests', requestId));
     toast({ title: 'Leave Request Deleted' });
   }
+
+  const handleRejectionSubmit = () => {
+    if (!requestToReject || !rejectionReason) {
+        toast({ variant: 'destructive', title: 'Reason Required', description: 'Please provide a reason for rejection.' });
+        return;
+    }
+    if (!user) return;
+
+    let newStatus: LeaveStatus;
+    let approvalField: string;
+
+    if (userRole === 'Team Lead') {
+        newStatus = 'Rejected by Team Lead';
+        approvalField = 'approvedByTeamLeadId';
+    } else if (userRole === 'HR Manager') {
+        newStatus = 'Rejected by HR';
+        approvalField = 'approvedByHRId';
+    } else if (userRole === 'CEO/Admin') {
+        newStatus = 'Rejected';
+        approvalField = 'approvedByHRId'; // Attribute to admin/HR level
+    } else {
+        return;
+    }
+
+    const requestDocRef = doc(firestore, 'leave_requests', requestToReject.id);
+    updateDocumentNonBlocking(requestDocRef, {
+      status: newStatus,
+      [approvalField]: user.uid,
+      rejectionReason: rejectionReason,
+    });
+
+    toast({ title: `Request Rejected` });
+    setRequestToReject(null);
+    setRejectionReason("");
+  }
+
 
   const handleCreateRequest = () => {
     if (!user || !userData || !leaveType || !reason || !startDay || !startMonth || !startYear || !endDay || !endMonth || !endYear) {
@@ -312,12 +381,9 @@ export default function LeavePage() {
   
   const allLeaveRequests = (leaveRequests || []).filter(req => {
     if (userRole === 'Team Lead') {
-      // Team lead sees all their own requests, plus pending requests from their members
-      if (req.employeeId === user?.uid) return true;
-      return req.status === 'Pending';
+      return true; // Team lead sees all their members' requests + their own
     }
     if (userRole === 'HR Manager') {
-      // HR sees requests pending their approval, and ones they've actioned
       return ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(req.status);
     }
     return true; // Members and Admins see everything they are allowed to by rules
@@ -435,7 +501,7 @@ export default function LeavePage() {
           <Table>
             <TableHeader>
               <TableRow>
-                {(userRole === 'Team Lead' || isUserAdmin) && <TableHead>Employee</TableHead>}
+                {(userRole !== 'Member') && <TableHead>Employee</TableHead>}
                 <TableHead>Dates</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
@@ -448,7 +514,7 @@ export default function LeavePage() {
               ) : allLeaveRequests && allLeaveRequests.length > 0 ? (
                 allLeaveRequests.map((request) => (
                   <TableRow key={request.id}>
-                    {(userRole === 'Team Lead' || isUserAdmin) && <TableCell className="font-medium">{request.employeeName}</TableCell>}
+                    {(userRole !== 'Member') && <TableCell className="font-medium">{request.employeeName}</TableCell>}
                     <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
                     <TableCell>{request.leaveType}</TableCell>
                     <TableCell>
@@ -472,7 +538,7 @@ export default function LeavePage() {
                                   <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')}>
                                       <ThumbsUp className="mr-2 h-4 w-4"/> Approve
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Rejected by Team Lead', user!.uid, 'approvedByTeamLeadId')} className="text-destructive">
+                                  <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-destructive">
                                       <ThumbsDown className="mr-2 h-4 w-4"/> Reject
                                   </DropdownMenuItem>
                               </>
@@ -482,7 +548,7 @@ export default function LeavePage() {
                                   <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>
                                       <ThumbsUp className="mr-2 h-4 w-4"/> Approve
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Rejected by HR', user!.uid, 'approvedByHRId')} className="text-destructive">
+                                   <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-destructive">
                                       <ThumbsDown className="mr-2 h-4 w-4"/> Reject
                                   </DropdownMenuItem>
                               </>
@@ -492,7 +558,7 @@ export default function LeavePage() {
                                   <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>
                                       <ThumbsUp className="mr-2 h-4 w-4"/> Approve
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Rejected', user!.uid, 'approvedByHRId')} className="text-destructive">
+                                   <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-destructive">
                                       <ThumbsDown className="mr-2 h-4 w-4"/> Reject
                                   </DropdownMenuItem>
                               </>
@@ -562,12 +628,31 @@ export default function LeavePage() {
                   </div>
                   <Separator className="my-4" />
                   <h4 className="font-semibold">Approval History</h4>
-                  <LeaveStatusTracker request={selectedRequest} />
+                  <LeaveStatusTracker request={selectedRequest} users={users} />
               </div>
               </ScrollArea>
           </SheetContent>
         )}
       </Sheet>
+        <AlertDialog open={!!requestToReject} onOpenChange={(isOpen) => { if (!isOpen) setRequestToReject(null); }}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Reason for Rejection</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Please provide a reason for rejecting this leave request. This will be shared with the employee.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="e.g., Conflicting schedule, project deadline..."
+                />
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setRejectionReason("")}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleRejectionSubmit}>Confirm Rejection</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </>
   );
 }
