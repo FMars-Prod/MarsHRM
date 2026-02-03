@@ -94,10 +94,17 @@ export default function PayslipsPage() {
   const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
 
   const payslipUserId = isAdmin ? selectedUser?.id : user?.uid;
+  
   const payslipsQuery = useMemoFirebase(
-    () => payslipUserId ? query(collection(firestore, `users/${payslipUserId}/payslips`), orderBy('year', 'desc'), orderBy('month', 'desc')) : null,
+    () => payslipUserId ? query(
+        collection(firestore, `payslips`), 
+        where('employeeId', '==', payslipUserId), 
+        orderBy('year', 'desc'), 
+        orderBy('month', 'desc')
+    ) : null,
     [firestore, payslipUserId]
   );
+
   const { data: payslips, isLoading: payslipsLoading } = useCollection<Payslip>(payslipsQuery);
 
   const handleAddPayslip = () => {
@@ -120,7 +127,7 @@ export default function PayslipsPage() {
       issueDate: serverTimestamp(),
     };
     
-    addDocumentNonBlocking(collection(firestore, `users/${payslipUserId}/payslips`), newPayslip);
+    addDocumentNonBlocking(collection(firestore, `payslips`), newPayslip);
     toast({ title: 'Payslip Added' });
     setIsDialogOpen(false);
     setPayslipData({
@@ -135,7 +142,7 @@ export default function PayslipsPage() {
 
   const handleDeletePayslip = (payslipId: string) => {
     if (!payslipUserId) return;
-    deleteDocumentNonBlocking(doc(firestore, `users/${payslipUserId}/payslips`, payslipId));
+    deleteDocumentNonBlocking(doc(firestore, `payslips`, payslipId));
     toast({ title: 'Payslip Deleted' });
   };
   
@@ -309,5 +316,3 @@ export default function PayslipsPage() {
     </>
   );
 }
-
-    
