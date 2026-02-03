@@ -98,14 +98,22 @@ export default function PayslipsPage() {
   const payslipsQuery = useMemoFirebase(
     () => payslipUserId ? query(
         collection(firestore, `payslips`), 
-        where('employeeId', '==', payslipUserId), 
-        orderBy('year', 'desc'), 
-        orderBy('month', 'desc')
+        where('employeeId', '==', payslipUserId)
     ) : null,
     [firestore, payslipUserId]
   );
 
-  const { data: payslips, isLoading: payslipsLoading } = useCollection<Payslip>(payslipsQuery);
+  const { data: unsortedPayslips, isLoading: payslipsLoading } = useCollection<Payslip>(payslipsQuery);
+
+  const payslips = React.useMemo(() => {
+    if (!unsortedPayslips) return null;
+    return [...unsortedPayslips].sort((a, b) => {
+      if (a.year !== b.year) {
+        return b.year - a.year;
+      }
+      return b.month - a.month;
+    });
+  }, [unsortedPayslips]);
 
   const handleAddPayslip = () => {
     if (!payslipUserId) return;
