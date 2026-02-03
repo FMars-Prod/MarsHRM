@@ -2,12 +2,11 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp } from 'firebase/firestore';
-import { startOfMonth, endOfMonth, differenceInSeconds, startOfWeek, endOfWeek } from 'date-fns';
+import { startOfMonth, endOfMonth, differenceInSeconds, startOfWeek, endOfWeek, eachDayOfInterval, format } from 'date-fns';
 import { Activity } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -55,34 +54,54 @@ export function WorkHoursSummaryWidget() {
 
     const { data: attendanceData, isLoading } = useCollection<AttendanceRecord>(attendanceQuery);
 
-    const summaryData = React.useMemo(() => {
-        if (!attendanceData) {
-            return { workHours: 0, breakHours: 0 };
+    const chartData = React.useMemo(() => {
+        if (!attendanceData) return [];
+
+        if (viewMode === 'weekly') {
+            const dailyHours = new Map<string, number>();
+            const daysInWeek = eachDayOfInterval({ start, end });
+            daysInWeek.forEach(day => {
+                dailyHours.set(format(day, 'EEE'), 0);
+            });
+
+            attendanceData.forEach(rec => {
+                if (rec.checkInTime && rec.checkOutTime) {
+                    const dayKey = format(rec.checkInTime.toDate(), 'EEE');
+                    const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+                    const currentHours = dailyHours.get(dayKey) || 0;
+                    dailyHours.set(dayKey, currentHours + workSeconds / 3600);
+                }
+            });
+
+            return Array.from(dailyHours.entries()).map(([name, hours]) => ({
+                name,
+                hours: parseFloat(hours.toFixed(1)),
+            }));
+        } else {
+            const weeklyHours: { [week: string]: number } = {};
+
+            attendanceData.forEach(rec => {
+                if (rec.checkInTime && rec.checkOutTime) {
+                    const date = rec.checkInTime.toDate();
+                    const dayOfMonth = date.getDate();
+                    const weekKey = `Week ${Math.ceil(dayOfMonth / 7)}`;
+
+                    if (!weeklyHours[weekKey]) {
+                        weeklyHours[weekKey] = 0;
+                    }
+                    const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+                    weeklyHours[weekKey] += workSeconds / 3600;
+                }
+            });
+
+            return Object.keys(weeklyHours)
+                .sort((a, b) => parseInt(a.replace('Week ', '')) - parseInt(b.replace('Week ', '')))
+                .map(name => ({
+                    name,
+                    hours: parseFloat(weeklyHours[name].toFixed(1)),
+                }));
         }
-        let totalWorkSeconds = 0;
-        let totalBreakSeconds = 0;
-
-        attendanceData.forEach(rec => {
-            if (rec.checkInTime && rec.checkOutTime) {
-                const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate());
-                const breakDuration = rec.totalBreakDuration || 0;
-                totalWorkSeconds += workSeconds - breakDuration;
-                totalBreakSeconds += breakDuration;
-            }
-        });
-
-        return {
-            workHours: parseFloat((totalWorkSeconds / 3600).toFixed(1)),
-            breakHours: parseFloat((totalBreakSeconds / 3600).toFixed(1)),
-        };
-    }, [attendanceData]);
-
-    const chartData = [
-        { name: 'Work', hours: summaryData.workHours, fill: 'hsl(var(--chart-1))' },
-        { name: 'Break', hours: summaryData.breakHours, fill: 'hsl(var(--chart-2))' }
-    ];
-    
-    const periodText = viewMode === 'weekly' ? 'this week' : 'this month';
+    }, [attendanceData, viewMode, start, end]);
 
     return (
         <Card>
@@ -90,7 +109,7 @@ export function WorkHoursSummaryWidget() {
                 <div className="flex items-center justify-between">
                     <CardTitle className="font-headline flex items-center gap-2">
                         <Activity className="size-5" />
-                        Hours Summary
+                        My Activity
                     </CardTitle>
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'weekly' | 'monthly')}>
                         <TabsList className="h-8">
@@ -100,7 +119,7 @@ export function WorkHoursSummaryWidget() {
                     </Tabs>
                 </div>
                 <CardDescription>
-                    Your total work and break hours for {periodText}.
+                    Your work and break hours summary.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -112,31 +131,33 @@ export function WorkHoursSummaryWidget() {
                     <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                         <BarChart
                             data={chartData}
-                            layout="vertical"
-                            margin={{ left: -10 }}
+                            margin={{ top: 5, right: 10, left: -10, bottom: 0 }}
                             accessibilityLayer
                         >
-                            <CartesianGrid horizontal={false} />
-                            <YAxis
+                            <CartesianGrid vertical={false} />
+                            <XAxis
                                 dataKey="name"
-                                type="category"
                                 tickLine={false}
                                 axisLine={false}
-                                tickMargin={10}
-                                className="text-sm"
+                                tickMargin={8}
+                                className="text-xs"
                             />
-                            <XAxis dataKey="hours" type="number" hide />
+                            <YAxis
+                                tickFormatter={(value) => `${value}h`}
+                                allowDecimals={false}
+                                className="text-xs"
+                            />
                             <ChartTooltip
                                 cursor={false}
-                                content={<ChartTooltipContent
+                                content={<ChartTooltipContent 
                                     formatter={(value) => `${value} hrs`}
-                                    hideLabel
+                                    indicator="dot"
                                 />}
                             />
                             <Bar
                                 dataKey="hours"
+                                fill="var(--color-hours)"
                                 radius={4}
-                                barSize={32}
                             />
                         </BarChart>
                     </ChartContainer>
