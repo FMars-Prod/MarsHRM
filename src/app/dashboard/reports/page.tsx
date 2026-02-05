@@ -19,11 +19,9 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBl
 import { collection, query, where, orderBy, doc } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 const baseReportSchema = z.object({
@@ -312,15 +310,15 @@ export default function ReportsPage() {
           <DialogTrigger asChild>
             <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-2xl p-0 flex flex-col h-[90vh] max-h-[90vh]">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <DialogHeader>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+                <DialogHeader className="p-6 pb-4">
                   <DialogTitle>New Daily Report</DialogTitle>
                   <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="max-h-[60vh]">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 pr-6">
+                <div className="flex-1 overflow-y-auto px-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
                     <div className="col-span-2">
                       <FormField control={form.control} name="subject" render={({ field }) => (
                         <FormItem><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -340,8 +338,8 @@ export default function ReportsPage() {
                       )} />
                     </div>
                   </div>
-                </ScrollArea>
-                <DialogFooter className="pt-4 border-t">
+                </div>
+                <DialogFooter className="p-6 pt-4 border-t">
                   <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                   <Button type="submit" disabled={form.formState.isSubmitting}>Submit Report</Button>
                 </DialogFooter>
@@ -387,7 +385,7 @@ export default function ReportsPage() {
           if (isAdmin) setSelectedUser(null);
         }
       }}>
-        <SheetContent className="sm:max-w-lg">
+        <SheetContent className="sm:max-w-lg flex flex-col">
           <SheetHeader>
             <SheetTitle>
               {isAdmin && selectedUser ? `${selectedUser.firstName}'s Reports` : "Report Details"}
@@ -397,7 +395,7 @@ export default function ReportsPage() {
             </SheetDescription>
           </SheetHeader>
           <Separator className="my-4" />
-          <ScrollArea className="h-[calc(100vh-8rem)] -mx-6">
+          <div className="flex-1 overflow-y-auto -mx-6">
             <div className="px-6">
               {areReportsLoading ? <p>Loading...</p> : reports && reports.length > 0 ? (
                   <div className="space-y-6">
@@ -410,27 +408,27 @@ export default function ReportsPage() {
                   </div>
               ) : <p className="text-center text-muted-foreground">No reports found.</p>}
             </div>
-          </ScrollArea>
+          </div>
         </SheetContent>
       </Sheet>
       
       <Dialog open={!!selectedReport} onOpenChange={(isOpen) => !isOpen && setSelectedReport(null)}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl p-0 flex flex-col h-[90vh] max-h-[90vh]">
+          <DialogHeader className="p-6 pb-4">
             <DialogTitle>Report Details</DialogTitle>
             <DialogDescription>
               Submitted on {selectedReport?.date ? format(selectedReport.date.toDate(), "PPpp") : ''}
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh] -mx-6 px-6">
+          <div className="flex-1 overflow-y-auto px-6">
             <div className="space-y-4 py-4">
               {selectedReport?.reportType === 'Technical'
                 ? <TechnicalReportDetails report={selectedReport} />
                 : selectedReport && <BusinessReportDetails report={selectedReport} />
               }
             </div>
-          </ScrollArea>
-          <DialogFooter className="pt-4 border-t">
+          </div>
+          <DialogFooter className="p-6 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setSelectedReport(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
