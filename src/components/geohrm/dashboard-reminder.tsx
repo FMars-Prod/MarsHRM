@@ -1,12 +1,14 @@
-
 'use client';
+
 import { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Megaphone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { Megaphone } from 'lucide-react';
+import Link from 'next/link';
 
-export function ReportReminder() {
+export function DashboardReminder() {
     const [showReminder, setShowReminder] = useState(false);
     const { user } = useUser();
     const firestore = useFirestore();
@@ -38,16 +40,15 @@ export function ReportReminder() {
     }
 
     return (
-        <div className="fixed bottom-4 right-4 z-50 w-full max-w-sm animate-fade-in-up">
-            <Alert>
-                <Megaphone className="h-4 w-4" />
-                <AlertTitle>Daily Report Reminder</AlertTitle>
-                <AlertDescription>
-                    It's that time! Please don't forget to submit your daily work report before signing out.
-                </AlertDescription>
-            </Alert>
-        </div>
+        <Alert className="mb-6 animate-fade-in-up">
+            <Megaphone className="h-4 w-4" />
+            <AlertTitle>Daily Report Reminder</AlertTitle>
+            <AlertDescription className="flex justify-between items-center">
+                <p>It's that time! Please don't forget to submit your daily work report before signing out.</p>
+                <Button asChild size="sm">
+                    <Link href="/dashboard/reports">Submit Report</Link>
+                </Button>
+            </AlertDescription>
+        </Alert>
     );
 }
-
-    

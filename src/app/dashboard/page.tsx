@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
@@ -10,6 +9,7 @@ import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { WorkHoursSummaryWidget } from "@/components/geohrm/work-hours-summary-widget";
+import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
 
 export default function DashboardPage() {
   const { user: currentUser } = useUser();
@@ -28,6 +28,8 @@ export default function DashboardPage() {
       >
       </PageHeader>
       
+      <DashboardReminder />
+
       {isAdminOrHR && (
         <div className="mb-6">
           <DailyMonitorWidget />
