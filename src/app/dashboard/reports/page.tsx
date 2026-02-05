@@ -319,8 +319,8 @@ export default function ReportsPage() {
                   <DialogTitle>New Daily Report</DialogTitle>
                   <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="max-h-[60vh] -mx-6 px-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                <ScrollArea className="max-h-[60vh]">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 pr-6">
                     <div className="col-span-2">
                       <FormField control={form.control} name="subject" render={({ field }) => (
                         <FormItem><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
