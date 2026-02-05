@@ -46,10 +46,6 @@
           "type": "string",
           "description": "Reference to the Team entity. (Relationship: Team 1:N Employee). Null if employee is not part of a team"
         },
-        "averageRating": {
-            "type": "number",
-            "description": "The average rating of the employee's work reports."
-        },
         "avatar": {
           "type": "string",
           "description": "A single emoji character to be used as the user's avatar."
@@ -296,13 +292,9 @@
         "summary": {
           "type": "string",
           "description": "A summary of the work accomplished."
-        },
-        "rating": {
-            "type": "number",
-            "description": "A rating from 1 to 5 for the work report."
         }
       },
-      "required": ["id", "date", "summary", "rating"]
+      "required": ["id", "date", "summary"]
     },
     "Announcement": {
       "$schema": "http://json-schema.org/draft-07/schema#",

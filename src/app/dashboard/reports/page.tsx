@@ -51,21 +51,9 @@ import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type Report = { id: string; date: any; summary: string; rating: number };
-type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; averageRating?: number };
+type Report = { id: string; date: any; summary: string; };
+type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; };
 type Team = { id: string; memberIds: string[] };
-
-const StarRating = ({ rating, onRatingChange, interactive = false }: { rating: number, onRatingChange?: (rating: number) => void, interactive?: boolean }) => (
-    <div className={cn("flex items-center", interactive && "cursor-pointer")}>
-        {[...Array(5)].map((_, i) => (
-            <Star
-                key={i}
-                className={cn("h-5 w-5", i < rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground", interactive && "hover:scale-125 transition-transform")}
-                onClick={() => onRatingChange?.(i + 1 === rating ? 0 : i + 1)}
-            />
-        ))}
-    </div>
-);
 
 export default function ReportsPage() {
   const { user } = useUser();
@@ -74,7 +62,6 @@ export default function ReportsPage() {
   
   const [selectedMember, setSelectedMember] = React.useState<UserData | null>(null);
   const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
-  const [newReportRating, setNewReportRating] = React.useState(0);
   const [searchQuery, setSearchQuery] = React.useState("");
 
   const [filterYear, setFilterYear] = React.useState<string | undefined>();
@@ -138,12 +125,6 @@ export default function ReportsPage() {
   }, [firestore, selectedMember, filterDate]);
   
   const { data: memberReports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
-
-  const averageRating = React.useMemo(() => {
-      if (!memberReports || memberReports.length === 0) return 0;
-      const total = memberReports.reduce((acc, report) => acc + report.rating, 0);
-      return total / memberReports.length;
-  }, [memberReports]);
   
   const currentYear = getYear(new Date());
   const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
@@ -153,7 +134,7 @@ export default function ReportsPage() {
   const days = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
 
 
-  const handleAddReport = async (memberId: string, summary: string, rating: number) => {
+  const handleAddReport = async (memberId: string, summary: string) => {
     if (!summary) {
         toast({ variant: 'destructive', title: 'Summary is required' });
         return;
@@ -161,23 +142,15 @@ export default function ReportsPage() {
     const reportPayload = {
       date: new Date(),
       summary: summary,
-      rating: rating,
     }
     
     await addDocumentNonBlocking(collection(firestore, `users/${memberId}/reports`), reportPayload);
     
-    const allReportsSnapshot = await getDocs(query(collection(firestore, `users/${memberId}/reports`)));
-    const allReports = allReportsSnapshot.docs.map(d => d.data() as Report);
-    const newAverage = allReports.reduce((acc, r) => acc + r.rating, 0) / allReports.length;
-    
-    await updateDocumentNonBlocking(doc(firestore, 'users', memberId), { averageRating: newAverage });
-
     toast({
         title: "Report Saved",
         description: `Work report for ${selectedMember?.firstName} has been saved.`
     });
     setIsAddReportDialogOpen(false);
-    setNewReportRating(0);
   };
 
   const handleExport = () => {
@@ -189,14 +162,13 @@ export default function ReportsPage() {
         return;
     }
 
-    const headers = ["Date", "Summary", "Rating"];
+    const headers = ["Date", "Summary"];
     const csvRows = [
         headers.join(','),
         ...memberReports.map(report => {
             const date = `"${format(new Date(report.date.toDate()), "PPpp")}"`;
             const summary = `"${report.summary.replace(/"/g, '""')}"`;
-            const rating = report.rating;
-            return [date, summary, rating].join(',');
+            return [date, summary].join(',');
         })
     ];
 
@@ -219,7 +191,7 @@ export default function ReportsPage() {
         return;
     }
 
-    const headers = ["Team Member", "Job Title", "Report Date", "Report Summary", "Rating"];
+    const headers = ["Team Member", "Job Title", "Report Date", "Report Summary"];
     const csvRows = [headers.join(',')];
 
     for (const member of usersToExport) {
@@ -233,7 +205,6 @@ export default function ReportsPage() {
                     `"${member.jobTitle}"`,
                     `"${format(report.date.toDate(), "PPpp")}"`,
                     `"${report.summary.replace(/"/g, '""')}"`,
-                    report.rating
                 ];
                 csvRows.push(row.join(','));
             });
@@ -243,7 +214,6 @@ export default function ReportsPage() {
                 `"${member.jobTitle}"`,
                 "N/A",
                 "No reports submitted",
-                "N/A"
             ];
             csvRows.push(row.join(','));
         }
@@ -301,13 +271,12 @@ export default function ReportsPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Job Title</TableHead>
-                <TableHead>Avg. Rating</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {areUsersLoading || areTeamsLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center h-24">Loading team members...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={3} className="text-center h-24">Loading team members...</TableCell></TableRow>
               ) : filteredUserData && filteredUserData.length > 0 ? (
                 filteredUserData.map((member) => (
                 <TableRow key={member.id}>
@@ -315,16 +284,6 @@ export default function ReportsPage() {
                      {member.firstName} {member.lastName}
                   </TableCell>
                   <TableCell>{member.jobTitle}</TableCell>
-                  <TableCell>
-                    {member.averageRating ? (
-                        <div className="flex items-center gap-1">
-                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400"/>
-                            <span>{member.averageRating.toFixed(2)}</span>
-                        </div>
-                    ) : (
-                        <span className="text-muted-foreground">N/A</span>
-                    )}
-                  </TableCell>
                   <TableCell className="text-right">
                     <SheetTrigger asChild>
                       <Button variant="outline" size="sm" onClick={() => setSelectedMember(member)}>
@@ -335,7 +294,7 @@ export default function ReportsPage() {
                   </TableCell>
                 </TableRow>
               ))) : (
-                <TableRow><TableCell colSpan={4} className="text-center h-24">No team members found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={3} className="text-center h-24">No team members found.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -348,20 +307,11 @@ export default function ReportsPage() {
                         <SheetTitle>{selectedMember.firstName} {selectedMember.lastName}'s Reports</SheetTitle>
                         <SheetDescription>Review and add work reports for this team member.</SheetDescription>
                     </div>
-                    {averageRating > 0 && (
-                        <div className="flex items-center gap-1 text-lg font-bold p-2 rounded-md bg-muted">
-                           <Star className="h-5 w-5 text-yellow-400 fill-yellow-400"/>
-                           {averageRating.toFixed(2)}
-                        </div>
-                    )}
                 </div>
             </SheetHeader>
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                <Dialog open={isAddReportDialogOpen} onOpenChange={(isOpen) => {
-                    if (!isOpen) setNewReportRating(0);
-                    setIsAddReportDialogOpen(isOpen);
-                }}>
+                <Dialog open={isAddReportDialogOpen} onOpenChange={setIsAddReportDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
                       <PlusCircle className="mr-2 h-4 w-4" />
@@ -374,7 +324,7 @@ export default function ReportsPage() {
                           const formData = new FormData(e.currentTarget);
                           const summary = formData.get("summary") as string;
                           if (summary && selectedMember) {
-                              handleAddReport(selectedMember.id, summary, newReportRating);
+                              handleAddReport(selectedMember.id, summary);
                           }
                       }}>
                           <DialogHeader>
@@ -387,12 +337,6 @@ export default function ReportsPage() {
                               <div className="grid gap-2">
                                 <Label htmlFor="summary">Report Summary</Label>
                                 <Textarea id="summary" name="summary" placeholder="Describe the work accomplished..." required />
-                              </div>
-                              <div className="grid gap-2">
-                                <Label>Rating</Label>
-                                <div className="flex items-center gap-1">
-                                    <StarRating rating={newReportRating} onRatingChange={setNewReportRating} interactive={true} />
-                                </div>
                               </div>
                           </div>
                           <DialogFooter>
@@ -468,7 +412,6 @@ export default function ReportsPage() {
                                         <TableRow>
                                             <TableHead>Date & Time</TableHead>
                                             <TableHead>Summary</TableHead>
-                                            <TableHead>Rating</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -478,7 +421,6 @@ export default function ReportsPage() {
                                                   {format(new Date(report.date.toDate()), "MMM d, yyyy 'at' h:mm a")}
                                                 </TableCell>
                                                 <TableCell>{report.summary}</TableCell>
-                                                <TableCell><StarRating rating={report.rating} /></TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -498,4 +440,3 @@ export default function ReportsPage() {
     </>
   );
 }
-
