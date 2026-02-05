@@ -37,8 +37,6 @@ const businessReportSchema = baseReportSchema.extend({
   connectionsAchieved: z.coerce.number().min(0, "Cannot be negative.").default(0),
   leadsGenerated: z.coerce.number().min(0, "Cannot be negative.").default(0),
   clientInteractions: z.coerce.number().min(0, "Cannot be negative.").default(0),
-  crmUpdated: z.boolean().default(false),
-  crmUpdateDetails: z.string().optional(),
 });
 
 const technicalReportSchema = baseReportSchema.extend({
@@ -67,8 +65,6 @@ type Report = {
   connectionsAchieved?: number;
   leadsGenerated?: number;
   clientInteractions?: number;
-  crmUpdated?: boolean;
-  crmUpdateDetails?: string;
   technologyUsed?: string;
   taskDescription?: string;
   workDone?: string;
@@ -97,10 +93,6 @@ const BusinessReportDetails = ({ report }: { report: Report }) => (
         <ReportDetailItem label="Leads/Follow-ups" value={report.leadsGenerated} />
         <ReportDetailItem label="Meetings" value={report.clientInteractions} />
     </div>
-    <ReportDetailItem label="CRM Updated" value={report.crmUpdated ? "Yes" : "No"} />
-    {report.crmUpdated && report.crmUpdateDetails && (
-        <ReportDetailItem label="CRM Details" value={<p className="text-sm whitespace-pre-wrap">{report.crmUpdateDetails}</p>} />
-    )}
     {report.otherWork && (
         <ReportDetailItem label="Other Work/Pending" value={<p className="text-sm whitespace-pre-wrap">{report.otherWork}</p>} />
     )}
@@ -179,8 +171,6 @@ export default function ReportsPage() {
         connectionsAchieved: 0,
         leadsGenerated: 0,
         clientInteractions: 0,
-        crmUpdated: false,
-        crmUpdateDetails: "",
       })
     },
   });
@@ -230,19 +220,6 @@ export default function ReportsPage() {
       <FormField control={form.control} name="clientInteractions" render={({ field }) => (
         <FormItem><FormLabel>Client Interactions / Meetings</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
       )} />
-      <FormField control={form.control} name="crmUpdated" render={({ field }) => (
-        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 col-span-2">
-          <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-          <div className="space-y-1 leading-none"><FormLabel>CRM / Data Updated?</FormLabel></div>
-        </FormItem>
-      )} />
-       {form.watch('crmUpdated') && (
-         <div className="col-span-2">
-         <FormField control={form.control} name="crmUpdateDetails" render={({ field }) => (
-            <FormItem><FormLabel>CRM Update Details</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
-          </div>
-       )}
     </>
   );
 
@@ -342,7 +319,7 @@ export default function ReportsPage() {
                   <DialogTitle>New Daily Report</DialogTitle>
                   <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
                 </DialogHeader>
-                <div className="overflow-y-auto max-h-[60vh] -mx-6 px-6">
+                <ScrollArea className="max-h-[60vh] -mx-6 px-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
                     <div className="col-span-2">
                       <FormField control={form.control} name="subject" render={({ field }) => (
@@ -359,11 +336,11 @@ export default function ReportsPage() {
                     </div>
                      <div className="col-span-2">
                       <FormField control={form.control} name="signature" render={({ field }) => (
-                        <FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} disabled /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
                   </div>
-                </div>
+                </ScrollArea>
                 <DialogFooter className="pt-4 border-t">
                   <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                   <Button type="submit" disabled={form.formState.isSubmitting}>Submit Report</Button>
@@ -445,14 +422,14 @@ export default function ReportsPage() {
               Submitted on {selectedReport?.date ? format(selectedReport.date.toDate(), "PPpp") : ''}
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[60vh] -mx-6 px-6">
+          <ScrollArea className="max-h-[60vh] -mx-6 px-6">
             <div className="space-y-4 py-4">
               {selectedReport?.reportType === 'Technical'
                 ? <TechnicalReportDetails report={selectedReport} />
                 : selectedReport && <BusinessReportDetails report={selectedReport} />
               }
             </div>
-          </div>
+          </ScrollArea>
           <DialogFooter className="pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setSelectedReport(null)}>Close</Button>
           </DialogFooter>
@@ -461,5 +438,3 @@ export default function ReportsPage() {
     </>
   );
 }
-
-    

@@ -290,8 +290,6 @@
         "connectionsAchieved": { "type": "number" },
         "leadsGenerated": { "type": "number" },
         "clientInteractions": { "type": "number" },
-        "crmUpdated": { "type": "boolean" },
-        "crmUpdateDetails": { "type": "string" },
         "technologyUsed": { "type": "string" },
         "taskDescription": { "type": "string" },
         "workDone": { "type": "string" },
