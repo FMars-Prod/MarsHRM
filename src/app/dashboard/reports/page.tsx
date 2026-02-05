@@ -26,28 +26,60 @@ import { z } from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-
-const reportSchema = z.object({
+const baseReportSchema = z.object({
   subject: z.string().min(1, "Subject is required."),
+  otherWork: z.string().optional(),
+  signature: z.string().min(1, "Signature is required."),
+});
+
+const businessReportSchema = baseReportSchema.extend({
   callsMade: z.coerce.number().min(0, "Cannot be negative.").default(0),
   connectionsAchieved: z.coerce.number().min(0, "Cannot be negative.").default(0),
   leadsGenerated: z.coerce.number().min(0, "Cannot be negative.").default(0),
   clientInteractions: z.coerce.number().min(0, "Cannot be negative.").default(0),
   crmUpdated: z.boolean().default(false),
   crmUpdateDetails: z.string().optional(),
-  otherWork: z.string().optional(),
-  signature: z.string().min(1, "Signature is required."),
 });
 
-type ReportFormValues = z.infer<typeof reportSchema>;
+const technicalReportSchema = baseReportSchema.extend({
+  technologyUsed: z.string().min(1, "This field is required."),
+  taskDescription: z.string().min(1, "This field is required."),
+  workDone: z.string().min(1, "This field is required."),
+  moduleWorkedOn: z.string().min(1, "This field is required."),
+  taskStatus: z.enum(["Completed", "In Progress"]),
+  logInTime: z.string().min(1, "Login time is required."),
+  logOutTime: z.string().min(1, "Logout time is required."),
+});
 
-type Report = ReportFormValues & { 
+
+type BusinessReportFormValues = z.infer<typeof businessReportSchema>;
+type TechnicalReportFormValues = z.infer<typeof technicalReportSchema>;
+type ReportFormValues = BusinessReportFormValues | TechnicalReportFormValues;
+
+type Report = { 
   id: string; 
   employeeId: string;
   date: any; 
+  reportType: 'Business' | 'Technical';
+  subject: string;
+  signature: string;
+  callsMade?: number;
+  connectionsAchieved?: number;
+  leadsGenerated?: number;
+  clientInteractions?: number;
+  crmUpdated?: boolean;
+  crmUpdateDetails?: string;
+  technologyUsed?: string;
+  taskDescription?: string;
+  workDone?: string;
+  moduleWorkedOn?: string;
+  taskStatus?: 'Completed' | 'In Progress';
+  logInTime?: string;
+  logOutTime?: string;
+  otherWork?: string;
 };
 
-type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; };
+type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; department?: string; };
 
 const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => (
   <div>
@@ -55,6 +87,46 @@ const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactN
     <p className="font-semibold">{value ?? '-'}</p>
   </div>
 );
+
+const BusinessReportDetails = ({ report }: { report: Report }) => (
+  <>
+    <ReportDetailItem label="Subject" value={report.subject} />
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <ReportDetailItem label="Calls Made" value={report.callsMade} />
+        <ReportDetailItem label="Connections" value={report.connectionsAchieved} />
+        <ReportDetailItem label="Leads/Follow-ups" value={report.leadsGenerated} />
+        <ReportDetailItem label="Meetings" value={report.clientInteractions} />
+    </div>
+    <ReportDetailItem label="CRM Updated" value={report.crmUpdated ? "Yes" : "No"} />
+    {report.crmUpdated && report.crmUpdateDetails && (
+        <ReportDetailItem label="CRM Details" value={<p className="text-sm whitespace-pre-wrap">{report.crmUpdateDetails}</p>} />
+    )}
+    {report.otherWork && (
+        <ReportDetailItem label="Other Work/Pending" value={<p className="text-sm whitespace-pre-wrap">{report.otherWork}</p>} />
+    )}
+    <ReportDetailItem label="Signature" value={report.signature} />
+  </>
+);
+
+const TechnicalReportDetails = ({ report }: { report: Report }) => (
+  <>
+    <ReportDetailItem label="Subject" value={report.subject} />
+    <ReportDetailItem label="Technology / Tool Used" value={report.technologyUsed} />
+    <ReportDetailItem label="Task Description" value={<p className="text-sm whitespace-pre-wrap">{report.taskDescription}</p>} />
+    <ReportDetailItem label="Code / Design / Testing Work Done" value={<p className="text-sm whitespace-pre-wrap">{report.workDone}</p>} />
+    <ReportDetailItem label="Module / Feature Worked On" value={report.moduleWorkedOn} />
+    <ReportDetailItem label="Status" value={report.taskStatus} />
+     <div className="grid grid-cols-2 gap-4">
+        <ReportDetailItem label="Log in Time" value={report.logInTime} />
+        <ReportDetailItem label="Log out Time" value={report.logOutTime} />
+    </div>
+    {report.otherWork && (
+        <ReportDetailItem label="Other Work / Pending" value={<p className="text-sm whitespace-pre-wrap">{report.otherWork}</p>} />
+    )}
+    <ReportDetailItem label="Signature" value={report.signature} />
+  </>
+);
+
 
 export default function ReportsPage() {
   const { user } = useUser();
@@ -67,13 +139,16 @@ export default function ReportsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
-  const { data: currentUserData } = useDoc(userDocRef);
-  const userRole = (currentUserData as any)?.role;
+  const { data: currentUserData } = useDoc<UserData>(userDocRef);
+  const userRole = currentUserData?.role;
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
+  const technicalDepartments = ['Engineering', 'Technology', 'IT'];
+  const isTechnicalUser = currentUserData?.department ? technicalDepartments.includes(currentUserData.department) : false;
+
   const usersQuery = useMemoFirebase(() => {
     if (!isAdmin) return null;
-    return query(collection(firestore, "users"), where('role', 'in', ['Team Lead', 'Member']));
+    return query(collection(firestore, "users"));
   }, [firestore, isAdmin]);
   const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(usersQuery);
 
@@ -86,17 +161,27 @@ export default function ReportsPage() {
   const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
 
   const form = useForm<ReportFormValues>({
-    resolver: zodResolver(reportSchema),
+    resolver: zodResolver(isTechnicalUser ? technicalReportSchema : businessReportSchema),
     defaultValues: {
       subject: "",
-      callsMade: 0,
-      connectionsAchieved: 0,
-      leadsGenerated: 0,
-      clientInteractions: 0,
-      crmUpdated: false,
-      crmUpdateDetails: "",
       otherWork: "",
-      signature: (currentUserData as any)?.firstName ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : "",
+      signature: currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName}` : "",
+      ...(isTechnicalUser ? {
+        technologyUsed: "",
+        taskDescription: "",
+        workDone: "",
+        moduleWorkedOn: "",
+        taskStatus: "In Progress",
+        logInTime: "09:30",
+        logOutTime: "18:30",
+      } : {
+        callsMade: 0,
+        connectionsAchieved: 0,
+        leadsGenerated: 0,
+        clientInteractions: 0,
+        crmUpdated: false,
+        crmUpdateDetails: "",
+      })
     },
   });
 
@@ -104,7 +189,7 @@ export default function ReportsPage() {
     if(currentUserData) {
       form.reset({
         ...form.getValues(),
-        signature: `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}`
+        signature: `${currentUserData.firstName} ${currentUserData.lastName}`
       });
     }
   }, [currentUserData, form]);
@@ -116,6 +201,7 @@ export default function ReportsPage() {
       ...values,
       employeeId: user.uid,
       date: new Date(),
+      reportType: isTechnicalUser ? 'Technical' : 'Business',
     }
     
     await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), reportPayload);
@@ -129,6 +215,73 @@ export default function ReportsPage() {
   };
 
   const filteredUsers = usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  const BusinessFormFields = () => (
+    <>
+      <FormField control={form.control} name="callsMade" render={({ field }) => (
+        <FormItem><FormLabel>Calls Made</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+      <FormField control={form.control} name="connectionsAchieved" render={({ field }) => (
+        <FormItem><FormLabel>Connections Achieved</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+      <FormField control={form.control} name="leadsGenerated" render={({ field }) => (
+        <FormItem><FormLabel>Leads Generated / Follow-ups Done</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+      <FormField control={form.control} name="clientInteractions" render={({ field }) => (
+        <FormItem><FormLabel>Client Interactions / Meetings</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+      <FormField control={form.control} name="crmUpdated" render={({ field }) => (
+        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 col-span-2">
+          <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+          <div className="space-y-1 leading-none"><FormLabel>CRM / Data Updated?</FormLabel></div>
+        </FormItem>
+      )} />
+       {form.watch('crmUpdated') && (
+         <div className="col-span-2">
+         <FormField control={form.control} name="crmUpdateDetails" render={({ field }) => (
+            <FormItem><FormLabel>CRM Update Details</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+          )} />
+          </div>
+       )}
+    </>
+  );
+
+  const TechnicalFormFields = () => (
+    <>
+      <FormField control={form.control} name="technologyUsed" render={({ field }) => (
+        <FormItem className="col-span-2"><FormLabel>Technology / Tool Used / Learnt</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+      <FormField control={form.control} name="taskDescription" render={({ field }) => (
+        <FormItem className="col-span-2"><FormLabel>Task Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+      <FormField control={form.control} name="workDone" render={({ field }) => (
+        <FormItem className="col-span-2"><FormLabel>Code / Design / Testing Work Done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+      <FormField control={form.control} name="moduleWorkedOn" render={({ field }) => (
+        <FormItem className="col-span-2"><FormLabel>Module / Feature Worked On</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+       <FormField control={form.control} name="taskStatus" render={({ field }) => (
+        <FormItem>
+          <FormLabel>Status</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+              <SelectContent>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+              </SelectContent>
+            </Select>
+          <FormMessage />
+        </FormItem>
+      )} />
+      <div/>
+      <FormField control={form.control} name="logInTime" render={({ field }) => (
+        <FormItem><FormLabel>Log in Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+      <FormField control={form.control} name="logOutTime" render={({ field }) => (
+        <FormItem><FormLabel>Log out Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+      )} />
+    </>
+  );
 
   const AdminView = () => (
     <>
@@ -150,7 +303,7 @@ export default function ReportsPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Job Title</TableHead>
-              <TableHead>Role</TableHead>
+              <TableHead>Department</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -161,7 +314,7 @@ export default function ReportsPage() {
               <TableRow key={u.id} className="cursor-pointer" onClick={() => setSelectedUser(u)}>
                 <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
                 <TableCell>{u.jobTitle}</TableCell>
-                <TableCell>{u.role}</TableCell>
+                <TableCell>{u.department}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="outline" size="sm" onClick={() => setSelectedUser(u)}>
                     View Reports
@@ -190,41 +343,25 @@ export default function ReportsPage() {
                   <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[70vh] -mx-6 px-6">
-                <div className="grid gap-4 py-4">
-                  <FormField control={form.control} name="subject" render={({ field }) => (
-                    <FormItem><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <FormField control={form.control} name="callsMade" render={({ field }) => (
-                      <FormItem><FormLabel>Calls Made</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="connectionsAchieved" render={({ field }) => (
-                      <FormItem><FormLabel>Connections</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="leadsGenerated" render={({ field }) => (
-                      <FormItem><FormLabel>Leads/Follow-ups</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="clientInteractions" render={({ field }) => (
-                      <FormItem><FormLabel>Meetings</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                  <div className="col-span-2">
+                    <FormField control={form.control} name="subject" render={({ field }) => (
+                      <FormItem><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                   </div>
-                  <FormField control={form.control} name="crmUpdated" render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                      <div className="space-y-1 leading-none"><FormLabel>CRM / Data Updated?</FormLabel></div>
-                    </FormItem>
-                  )} />
-                   {form.watch('crmUpdated') && (
-                     <FormField control={form.control} name="crmUpdateDetails" render={({ field }) => (
-                        <FormItem><FormLabel>CRM Update Details</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                   )}
-                  <FormField control={form.control} name="otherWork" render={({ field }) => (
-                    <FormItem><FormLabel>Other Work / Pending Tasks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="signature" render={({ field }) => (
-                    <FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
+                  
+                  {isTechnicalUser ? <TechnicalFormFields /> : <BusinessFormFields />}
+                  
+                  <div className="col-span-2">
+                    <FormField control={form.control} name="otherWork" render={({ field }) => (
+                      <FormItem><FormLabel>Other work done / yet to be done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                   <div className="col-span-2">
+                    <FormField control={form.control} name="signature" render={({ field }) => (
+                      <FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
                 </div>
                 </ScrollArea>
                 <DialogFooter className="pt-4 border-t">
@@ -300,7 +437,6 @@ export default function ReportsPage() {
         </SheetContent>
       </Sheet>
       
-      {/* Detail view for a single report */}
       <Dialog open={!!selectedReport} onOpenChange={(isOpen) => !isOpen && setSelectedReport(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
@@ -310,23 +446,12 @@ export default function ReportsPage() {
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] -mx-6 px-6">
-          <div className="space-y-4 py-4">
-              <ReportDetailItem label="Subject" value={selectedReport?.subject} />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <ReportDetailItem label="Calls Made" value={selectedReport?.callsMade} />
-                  <ReportDetailItem label="Connections" value={selectedReport?.connectionsAchieved} />
-                  <ReportDetailItem label="Leads / Follow-ups" value={selectedReport?.leadsGenerated} />
-                  <ReportDetailItem label="Meetings" value={selectedReport?.clientInteractions} />
-              </div>
-              <ReportDetailItem label="CRM Updated" value={selectedReport?.crmUpdated ? "Yes" : "No"} />
-              {selectedReport?.crmUpdated && selectedReport.crmUpdateDetails && (
-                  <ReportDetailItem label="CRM Details" value={<p className="text-sm whitespace-pre-wrap">{selectedReport.crmUpdateDetails}</p>} />
-              )}
-              {selectedReport?.otherWork && (
-                  <ReportDetailItem label="Other Work / Pending" value={<p className="text-sm whitespace-pre-wrap">{selectedReport.otherWork}</p>} />
-              )}
-              <ReportDetailItem label="Signature" value={selectedReport?.signature} />
-          </div>
+            <div className="space-y-4 py-4">
+              {selectedReport?.reportType === 'Technical'
+                ? <TechnicalReportDetails report={selectedReport} />
+                : selectedReport && <BusinessReportDetails report={selectedReport} />
+              }
+            </div>
           </ScrollArea>
           <DialogFooter className="pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setSelectedReport(null)}>Close</Button>
@@ -336,5 +461,3 @@ export default function ReportsPage() {
     </>
   );
 }
-
-    
