@@ -24,6 +24,17 @@ const PopoverContent = React.forwardRef<
         className
       )}
       onCloseAutoFocus={(e) => e.preventDefault()}
+      onPointerDownOutside={(event) => {
+        const originalEvent = event.detail.originalEvent;
+        const target = originalEvent.target as HTMLElement;
+        if (
+          target &&
+          (target.closest('[data-radix-popper-content-wrapper]') ||
+            target.closest('.rdp'))
+        ) {
+          event.preventDefault();
+        }
+      }}
       {...props}
     />
   </PopoverPrimitive.Portal>
