@@ -342,28 +342,28 @@ export default function ReportsPage() {
                   <DialogTitle>New Daily Report</DialogTitle>
                   <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="max-h-[70vh] -mx-6 px-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                  <div className="col-span-2">
-                    <FormField control={form.control} name="subject" render={({ field }) => (
-                      <FormItem><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                  </div>
-                  
-                  {isTechnicalUser ? <TechnicalFormFields /> : <BusinessFormFields />}
-                  
-                  <div className="col-span-2">
-                    <FormField control={form.control} name="otherWork" render={({ field }) => (
-                      <FormItem><FormLabel>Other work done / yet to be done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                  </div>
-                   <div className="col-span-2">
-                    <FormField control={form.control} name="signature" render={({ field }) => (
-                      <FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
+                <div className="overflow-y-auto max-h-[60vh] -mx-6 px-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                    <div className="col-span-2">
+                      <FormField control={form.control} name="subject" render={({ field }) => (
+                        <FormItem><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
+                    
+                    {isTechnicalUser ? <TechnicalFormFields /> : <BusinessFormFields />}
+                    
+                    <div className="col-span-2">
+                      <FormField control={form.control} name="otherWork" render={({ field }) => (
+                        <FormItem><FormLabel>Other work done / yet to be done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
+                     <div className="col-span-2">
+                      <FormField control={form.control} name="signature" render={({ field }) => (
+                        <FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
                   </div>
                 </div>
-                </ScrollArea>
                 <DialogFooter className="pt-4 border-t">
                   <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                   <Button type="submit" disabled={form.formState.isSubmitting}>Submit Report</Button>
@@ -445,14 +445,14 @@ export default function ReportsPage() {
               Submitted on {selectedReport?.date ? format(selectedReport.date.toDate(), "PPpp") : ''}
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh] -mx-6 px-6">
+          <div className="overflow-y-auto max-h-[60vh] -mx-6 px-6">
             <div className="space-y-4 py-4">
               {selectedReport?.reportType === 'Technical'
                 ? <TechnicalReportDetails report={selectedReport} />
                 : selectedReport && <BusinessReportDetails report={selectedReport} />
               }
             </div>
-          </ScrollArea>
+          </div>
           <DialogFooter className="pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setSelectedReport(null)}>Close</Button>
           </DialogFooter>
@@ -461,3 +461,5 @@ export default function ReportsPage() {
     </>
   );
 }
+
+    
