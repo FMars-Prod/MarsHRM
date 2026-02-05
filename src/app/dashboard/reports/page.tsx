@@ -4,439 +4,337 @@
 import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, FileText, Download, Search, Star, Filter, X } from "lucide-react";
+import { PlusCircle, FileText, Search } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay, getYear, getMonth, getDaysInMonth, isValid } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, updateDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, orderBy, doc, getDocs } from "firebase/firestore";
+import { format } from "date-fns";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc } from "@/firebase";
+import { collection, query, where, orderBy, doc } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-type Report = { id: string; date: any; summary: string; };
+
+const reportSchema = z.object({
+  subject: z.string().min(1, "Subject is required."),
+  callsMade: z.coerce.number().min(0, "Cannot be negative.").default(0),
+  connectionsAchieved: z.coerce.number().min(0, "Cannot be negative.").default(0),
+  leadsGenerated: z.coerce.number().min(0, "Cannot be negative.").default(0),
+  clientInteractions: z.coerce.number().min(0, "Cannot be negative.").default(0),
+  crmUpdated: z.boolean().default(false),
+  crmUpdateDetails: z.string().optional(),
+  otherWork: z.string().optional(),
+  signature: z.string().min(1, "Signature is required."),
+});
+
+type ReportFormValues = z.infer<typeof reportSchema>;
+
+type Report = ReportFormValues & { 
+  id: string; 
+  employeeId: string;
+  date: any; 
+};
+
 type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; };
-type Team = { id: string; memberIds: string[] };
+
+const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => (
+  <div>
+    <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    <p className="font-semibold">{value ?? '-'}</p>
+  </div>
+);
 
 export default function ReportsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [selectedMember, setSelectedMember] = React.useState<UserData | null>(null);
-  const [isAddReportDialogOpen, setIsAddReportDialogOpen] = React.useState(false);
+  const [selectedReport, setSelectedReport] = React.useState<Report | null>(null);
+  const [selectedUser, setSelectedUser] = React.useState<UserData | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
-
-  const [filterYear, setFilterYear] = React.useState<string | undefined>();
-  const [filterMonth, setFilterMonth] = React.useState<string | undefined>();
-  const [filterDay, setFilterDay] = React.useState<string | undefined>();
-  const [filterDate, setFilterDate] = React.useState<Date | undefined>();
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc(userDocRef);
   const userRole = (currentUserData as any)?.role;
-
-  const teamQuery = useMemoFirebase(() => {
-    if (!user || userRole !== 'Team Lead') return null;
-    return query(collection(firestore, 'teams'), where('teamLeadId', '==', user.uid));
-  }, [firestore, user, userRole]);
-
-  const { data: teamsData, isLoading: areTeamsLoading } = useCollection<Team>(teamQuery);
-
-  const teamMemberIds = React.useMemo(() => {
-    if (!teamsData || teamsData.length === 0) return [];
-    return teamsData.flatMap(team => team.memberIds.filter(id => id !== user?.uid)); // Team lead doesn't report on themselves
-  }, [teamsData, user]);
-
-  const membersQuery = useMemoFirebase(() => {
-    if (userRole === 'Team Lead') {
-      if (teamMemberIds.length === 0) return null;
-      return query(collection(firestore, "users"), where('id', 'in', teamMemberIds));
-    }
-    if (userRole === 'HR Manager' || userRole === 'CEO/Admin') {
-      // HR/CEO can see reports of Team Leads and Members.
-      return query(collection(firestore, "users"), where('role', 'in', ['Team Lead', 'Member']));
-    }
-    return null;
-  }, [firestore, userRole, teamMemberIds]);
-
-  const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(membersQuery);
-
-  React.useEffect(() => {
-    if (filterYear && filterMonth && filterDay) {
-      const newDate = new Date(parseInt(filterYear), parseInt(filterMonth), parseInt(filterDay));
-      if (isValid(newDate) && newDate <= new Date()) {
-        setFilterDate(newDate);
-      } else {
-        setFilterDate(undefined);
-      }
-    } else {
-      setFilterDate(undefined);
-    }
-  }, [filterYear, filterMonth, filterDay]);
+  const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+  
+  const usersQuery = useMemoFirebase(() => {
+    if (!isAdmin) return null;
+    return query(collection(firestore, "users"), where('role', 'in', ['Team Lead', 'Member']));
+  }, [firestore, isAdmin]);
+  const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(usersQuery);
 
   const reportsQuery = useMemoFirebase(() => {
-    if (!selectedMember) return null;
-    let q = query(collection(firestore, `users/${selectedMember.id}/reports`), orderBy('date', 'desc'));
-    if (filterDate) {
-        q = query(q, 
-            where('date', '>=', startOfDay(filterDate)),
-            where('date', '<=', endOfDay(filterDate))
-        );
-    }
-    return q;
-  }, [firestore, selectedMember, filterDate]);
+    const targetUserId = isAdmin ? selectedUser?.id : user?.uid;
+    if (!targetUserId) return null;
+    return query(collection(firestore, `users/${targetUserId}/reports`), orderBy('date', 'desc'));
+  }, [firestore, user, isAdmin, selectedUser]);
   
-  const { data: memberReports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
-  
-  const currentYear = getYear(new Date());
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
-  const months = Array.from({ length: 12 }, (_, i) => ({ value: i.toString(), name: format(new Date(0, i), 'MMMM') }));
+  const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
 
-  const daysInMonth = (filterYear && filterMonth) ? getDaysInMonth(new Date(parseInt(filterYear), parseInt(filterMonth))) : 31;
-  const days = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
+  const form = useForm<ReportFormValues>({
+    resolver: zodResolver(reportSchema),
+    defaultValues: {
+      subject: "",
+      callsMade: 0,
+      connectionsAchieved: 0,
+      leadsGenerated: 0,
+      clientInteractions: 0,
+      crmUpdated: false,
+      crmUpdateDetails: "",
+      otherWork: "",
+      signature: (currentUserData as any)?.firstName ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : "",
+    },
+  });
 
-
-  const handleAddReport = async (memberId: string, summary: string) => {
-    if (!summary) {
-        toast({ variant: 'destructive', title: 'Summary is required' });
-        return;
+  React.useEffect(() => {
+    if(currentUserData) {
+      form.reset({
+        ...form.getValues(),
+        signature: `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}`
+      });
     }
+  }, [currentUserData, form]);
+
+  const onSubmit = async (values: ReportFormValues) => {
+    if (!user) return;
+    
     const reportPayload = {
+      ...values,
+      employeeId: user.uid,
       date: new Date(),
-      summary: summary,
     }
     
-    await addDocumentNonBlocking(collection(firestore, `users/${memberId}/reports`), reportPayload);
+    await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), reportPayload);
     
     toast({
-        title: "Report Saved",
-        description: `Work report for ${selectedMember?.firstName} has been saved.`
+        title: "Report Submitted",
+        description: "Your daily work report has been saved."
     });
-    setIsAddReportDialogOpen(false);
+    setIsAddDialogOpen(false);
+    form.reset();
   };
 
-  const handleExport = () => {
-    if (!selectedMember || !memberReports || memberReports.length === 0) {
-        toast({
-            variant: "destructive",
-            title: "No reports to export",
-        });
-        return;
-    }
+  const filteredUsers = usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const headers = ["Date", "Summary"];
-    const csvRows = [
-        headers.join(','),
-        ...memberReports.map(report => {
-            const date = `"${format(new Date(report.date.toDate()), "PPpp")}"`;
-            const summary = `"${report.summary.replace(/"/g, '""')}"`;
-            return [date, summary].join(',');
-        })
-    ];
-
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute('download', `${selectedMember.firstName}_${selectedMember.lastName}_Reports.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-
-  const handleExportAll = async () => {
-    const usersToExport = filteredUserData;
-    if (!usersToExport || usersToExport.length === 0) {
-        toast({ variant: "destructive", title: "No data to export" });
-        return;
-    }
-
-    const headers = ["Team Member", "Job Title", "Report Date", "Report Summary"];
-    const csvRows = [headers.join(',')];
-
-    for (const member of usersToExport) {
-        const reportsSnapshot = await getDocs(query(collection(firestore, `users/${member.id}/reports`), orderBy('date', 'desc')));
-        const reports = reportsSnapshot.docs.map(d => d.data() as Report);
-        
-        if (reports.length > 0) {
-            reports.forEach(report => {
-                const row = [
-                    `"${member.firstName} ${member.lastName}"`,
-                    `"${member.jobTitle}"`,
-                    `"${format(report.date.toDate(), "PPpp")}"`,
-                    `"${report.summary.replace(/"/g, '""')}"`,
-                ];
-                csvRows.push(row.join(','));
-            });
-        } else {
-            const row = [
-                `"${member.firstName} ${member.lastName}"`,
-                `"${member.jobTitle}"`,
-                "N/A",
-                "No reports submitted",
-            ];
-            csvRows.push(row.join(','));
-        }
-    }
-
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute('download', 'All_Team_Reports.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-  
-  const filteredUserData = usersData?.filter(member =>
-    `${member.firstName} ${member.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
+  const AdminView = () => (
+    <>
+      <PageHeader title="Employee Reports" description="View daily reports submitted by employees." />
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search for an employee..." 
+            className="pl-8" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Job Title</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {areUsersLoading ? (
+              <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading users...</TableCell></TableRow>
+            ) : filteredUsers?.map(u => (
+              <TableRow key={u.id} className="cursor-pointer" onClick={() => setSelectedUser(u)}>
+                <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
+                <TableCell>{u.jobTitle}</TableCell>
+                <TableCell>{u.role}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="outline" size="sm" onClick={() => setSelectedUser(u)}>
+                    View Reports
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
-  
-  const clearFilters = () => {
-    setFilterYear(undefined);
-    setFilterMonth(undefined);
-    setFilterDay(undefined);
-  }
+
+  const EmployeeView = () => (
+    <>
+      <PageHeader title="My Daily Reports" description="Submit and review your daily work reports.">
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-2xl">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <DialogHeader>
+                  <DialogTitle>New Daily Report</DialogTitle>
+                  <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[70vh] -mx-6 px-6">
+                <div className="grid gap-4 py-4">
+                  <FormField control={form.control} name="subject" render={({ field }) => (
+                    <FormItem><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <FormField control={form.control} name="callsMade" render={({ field }) => (
+                      <FormItem><FormLabel>Calls Made</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="connectionsAchieved" render={({ field }) => (
+                      <FormItem><FormLabel>Connections</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="leadsGenerated" render={({ field }) => (
+                      <FormItem><FormLabel>Leads/Follow-ups</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="clientInteractions" render={({ field }) => (
+                      <FormItem><FormLabel>Meetings</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <FormField control={form.control} name="crmUpdated" render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                      <div className="space-y-1 leading-none"><FormLabel>CRM / Data Updated?</FormLabel></div>
+                    </FormItem>
+                  )} />
+                   {form.watch('crmUpdated') && (
+                     <FormField control={form.control} name="crmUpdateDetails" render={({ field }) => (
+                        <FormItem><FormLabel>CRM Update Details</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                   )}
+                  <FormField control={form.control} name="otherWork" render={({ field }) => (
+                    <FormItem><FormLabel>Other Work / Pending Tasks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="signature" render={({ field }) => (
+                    <FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+                </ScrollArea>
+                <DialogFooter className="pt-4 border-t">
+                  <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                  <Button type="submit" disabled={form.formState.isSubmitting}>Submit Report</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </PageHeader>
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Subject</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {areReportsLoading ? (
+              <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading reports...</TableCell></TableRow>
+            ) : reports && reports.length > 0 ? (
+              reports.map(report => (
+                <TableRow key={report.id} onClick={() => setSelectedReport(report)} className="cursor-pointer">
+                  <TableCell>{format(report.date.toDate(), "PPP")}</TableCell>
+                  <TableCell>{report.subject}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="outline" size="sm" onClick={() => setSelectedReport(report)}>
+                      View Details
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow><TableCell colSpan={3} className="h-24 text-center">No reports submitted yet.</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </>
+  );
 
   return (
     <>
-      <PageHeader
-        title="Team Reports"
-        description="View your team members and their work reports."
-      >
-        <div className="flex items-center gap-2">
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Search by name..."
-                    className="pl-8"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                />
-            </div>
-            <Button onClick={handleExportAll} disabled={!usersData || usersData.length === 0}>
-              <Download className="mr-2 h-4 w-4" />
-              Export All
-            </Button>
-        </div>
-      </PageHeader>
-      <Sheet open={!!selectedMember} onOpenChange={(isOpen) => !isOpen && setSelectedMember(null)}>
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Job Title</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {areUsersLoading || areTeamsLoading ? (
-                <TableRow><TableCell colSpan={3} className="text-center h-24">Loading team members...</TableCell></TableRow>
-              ) : filteredUserData && filteredUserData.length > 0 ? (
-                filteredUserData.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">
-                     {member.firstName} {member.lastName}
-                  </TableCell>
-                  <TableCell>{member.jobTitle}</TableCell>
-                  <TableCell className="text-right">
-                    <SheetTrigger asChild>
-                      <Button variant="outline" size="sm" onClick={() => setSelectedMember(member)}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        View Reports
-                      </Button>
-                    </SheetTrigger>
-                  </TableCell>
-                </TableRow>
-              ))) : (
-                <TableRow><TableCell colSpan={3} className="text-center h-24">No team members found.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        {selectedMember && (
-          <SheetContent className="sm:max-w-lg flex flex-col">
-            <SheetHeader>
-                <div className="flex justify-between items-start">
-                    <div>
-                        <SheetTitle>{selectedMember.firstName} {selectedMember.lastName}'s Reports</SheetTitle>
-                        <SheetDescription>Review and add work reports for this team member.</SheetDescription>
-                    </div>
-                </div>
-            </SheetHeader>
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Dialog open={isAddReportDialogOpen} onOpenChange={setIsAddReportDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add New Report
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                      <form onSubmit={(e) => {
-                          e.preventDefault();
-                          const formData = new FormData(e.currentTarget);
-                          const summary = formData.get("summary") as string;
-                          if (summary && selectedMember) {
-                              handleAddReport(selectedMember.id, summary);
-                          }
-                      }}>
-                          <DialogHeader>
-                              <DialogTitle>New Report for {selectedMember.firstName}</DialogTitle>
-                              <DialogDescription>
-                              Enter the details of the work report below.
-                              </DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                              <div className="grid gap-2">
-                                <Label htmlFor="summary">Report Summary</Label>
-                                <Textarea id="summary" name="summary" placeholder="Describe the work accomplished..." required />
-                              </div>
+      {isAdmin ? <AdminView /> : <EmployeeView />}
+      
+      <Sheet open={!!selectedReport || (isAdmin && !!selectedUser)} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setSelectedReport(null);
+          if (isAdmin) setSelectedUser(null);
+        }
+      }}>
+        <SheetContent className="sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>
+              {isAdmin && selectedUser ? `${selectedUser.firstName}'s Reports` : "Report Details"}
+            </SheetTitle>
+            <SheetDescription>
+              {isAdmin && selectedUser ? `Daily reports submitted by ${selectedUser.firstName}.` : "Details of your submitted report."}
+            </SheetDescription>
+          </SheetHeader>
+          <Separator className="my-4" />
+          <ScrollArea className="h-[calc(100vh-8rem)] -mx-6">
+            <div className="px-6">
+              {areReportsLoading ? <p>Loading...</p> : reports && reports.length > 0 ? (
+                  <div className="space-y-6">
+                      {reports.map(report => (
+                          <div key={report.id} className="border p-4 rounded-lg cursor-pointer hover:bg-muted/50" onClick={() => setSelectedReport(report)}>
+                              <p className="font-semibold">{report.subject}</p>
+                              <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
                           </div>
-                          <DialogFooter>
-                              <DialogClose asChild>
-                                  <Button type="button" variant="outline">Cancel</Button>
-                              </DialogClose>
-                              <Button type="submit">Save Report</Button>
-                          </DialogFooter>
-                      </form>
-                  </DialogContent>
-                </Dialog>
-                <Button variant="outline" onClick={handleExport} disabled={!memberReports || memberReports.length === 0}>
-                    <Download className="mr-2 h-4 w-4"/>
-                    Export as CSV
-                </Button>
-                <div className="flex-1" />
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon">
-                            <Filter className="h-4 w-4"/>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56">
-                        <div className="px-2 py-1.5 text-sm font-semibold">Filter by Date</div>
-                        <div className="grid grid-cols-3 gap-1 px-1">
-                            <Select onValueChange={setFilterYear} value={filterYear}>
-                                <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                                <SelectContent>
-                                    {years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <Select onValueChange={setFilterMonth} value={filterMonth} disabled={!filterYear}>
-                                <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                                <SelectContent>
-                                    {months.map(m => <SelectItem key={m.value} value={m.value}>{m.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                             <Select onValueChange={setFilterDay} value={filterDay} disabled={!filterMonth || !filterYear}>
-                                <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                                <SelectContent>
-                                    {days.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        {(filterDate || filterYear) && (
-                            <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={clearFilters}>
-                                    <X className="mr-2 h-4 w-4" />
-                                    Clear Filters
-                                </DropdownMenuItem>
-                            </>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-              </div>
+                      ))}
+                  </div>
+              ) : <p className="text-center text-muted-foreground">No reports found.</p>}
             </div>
-            
-            <Separator className="my-4" />
-
-            <div className="flex-1 flex flex-col min-h-0">
-                <h4 className="font-semibold text-sm shrink-0">
-                    {filterDate ? `Reports for ${format(filterDate, "PPP")}` : 'Existing Reports'}
-                </h4>
-                <ScrollArea className="mt-2 -mx-6">
-                    <div className="px-6">
-                        {areReportsLoading ? (<p>Loading reports...</p>) : 
-                        memberReports && memberReports.length > 0 ? (
-                            <div className="border rounded-lg">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Date & Time</TableHead>
-                                            <TableHead>Summary</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {memberReports.map(report => (
-                                            <TableRow key={report.id}>
-                                                <TableCell className="text-sm text-muted-foreground">
-                                                  {format(new Date(report.date.toDate()), "MMM d, yyyy 'at' h:mm a")}
-                                                </TableCell>
-                                                <TableCell>{report.summary}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            No reports found for this period.
-                          </p>
-                        )}
-                    </div>
-                </ScrollArea>
-              </div>
-          </SheetContent>
-        )}
+          </ScrollArea>
+        </SheetContent>
       </Sheet>
+      
+      {/* Detail view for a single report */}
+      <Dialog open={!!selectedReport} onOpenChange={(isOpen) => !isOpen && setSelectedReport(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Report Details</DialogTitle>
+            <DialogDescription>
+              Submitted on {selectedReport?.date ? format(selectedReport.date.toDate(), "PPpp") : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[70vh] -mx-6 px-6">
+          <div className="space-y-4 py-4">
+              <ReportDetailItem label="Subject" value={selectedReport?.subject} />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <ReportDetailItem label="Calls Made" value={selectedReport?.callsMade} />
+                  <ReportDetailItem label="Connections" value={selectedReport?.connectionsAchieved} />
+                  <ReportDetailItem label="Leads / Follow-ups" value={selectedReport?.leadsGenerated} />
+                  <ReportDetailItem label="Meetings" value={selectedReport?.clientInteractions} />
+              </div>
+              <ReportDetailItem label="CRM Updated" value={selectedReport?.crmUpdated ? "Yes" : "No"} />
+              {selectedReport?.crmUpdated && selectedReport.crmUpdateDetails && (
+                  <ReportDetailItem label="CRM Details" value={<p className="text-sm whitespace-pre-wrap">{selectedReport.crmUpdateDetails}</p>} />
+              )}
+              {selectedReport?.otherWork && (
+                  <ReportDetailItem label="Other Work / Pending" value={<p className="text-sm whitespace-pre-wrap">{selectedReport.otherWork}</p>} />
+              )}
+              <ReportDetailItem label="Signature" value={selectedReport?.signature} />
+          </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 border-t">
+              <Button type="button" variant="outline" onClick={() => setSelectedReport(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+
+    

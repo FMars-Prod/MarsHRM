@@ -18,6 +18,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
 import { isToday } from 'date-fns';
+import { ReportReminder } from '@/components/geohrm/report-reminder';
 
 type LeaveRequest = {
   status: string;
@@ -143,6 +144,7 @@ export default function DashboardLayout({
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
+        <ReportReminder />
         <footer className="border-t p-4 text-center text-xs text-muted-foreground">
             Developed by FortuMars
         </footer>
@@ -150,3 +152,5 @@ export default function DashboardLayout({
     </SidebarProvider>
   );
 }
+
+    
