@@ -83,20 +83,17 @@ export function WorkHoursSummaryWidget() {
                 "Week 2": 0,
                 "Week 3": 0,
                 "Week 4": 0,
+                "Week 5": 0,
             };
-
-            const daysInMonth = getDaysInMonth(start);
-            if (daysInMonth > 28) {
-                weeklyHours["Week 5"] = 0;
-            }
 
             attendanceData.forEach(rec => {
                 if (rec.checkInTime && rec.checkOutTime) {
                     const date = rec.checkInTime.toDate();
                     const dayOfMonth = date.getDate();
-                    const weekKey = `Week ${Math.ceil(dayOfMonth / 7)}`;
-
-                    if (weeklyHours.hasOwnProperty(weekKey)) {
+                    const weekNumber = Math.ceil(dayOfMonth / 7);
+                    
+                    if (weekNumber >= 1 && weekNumber <= 5) {
+                        const weekKey = `Week ${weekNumber}`;
                         const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
                         weeklyHours[weekKey] += workSeconds / 3600;
                     }
@@ -138,7 +135,7 @@ export function WorkHoursSummaryWidget() {
                     <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                         <BarChart
                             data={chartData}
-                            margin={{ top: 5, right: 10, left: -10, bottom: 0 }}
+                            margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
                             accessibilityLayer
                         >
                             <CartesianGrid vertical={false} />
@@ -147,7 +144,7 @@ export function WorkHoursSummaryWidget() {
                                 tickLine={false}
                                 axisLine={false}
                                 tickMargin={8}
-                                className="text-xs"
+                                className="text-[0.65rem] sm:text-xs"
                             />
                             <YAxis
                                 tickFormatter={(value) => `${value}h`}
