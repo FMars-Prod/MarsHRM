@@ -136,7 +136,7 @@ export default function DashboardLayout({
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-          <SidebarTrigger className="md:hidden" />
+          <SidebarTrigger />
           <div className="flex-1">
             {/* Placeholder for breadcrumbs or page title if needed */}
           </div>
