@@ -2,16 +2,17 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, differenceInSeconds } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX, Download } from 'lucide-react';
+import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type UserData = {
   id: string;
@@ -217,6 +218,58 @@ export const DailyMonitorWidget = () => {
     URL.revokeObjectURL(url);
   };
   
+    const handleShare = (platform: 'email' | 'whatsapp' | 'teams') => {
+    const { present, late, absent, onLeave, isLoading } = summary;
+
+    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length)) {
+      toast({
+        variant: "destructive",
+        title: "No data to share",
+        description: "There is no status information for today.",
+      });
+      return;
+    }
+
+    const reportTitle = `Daily Attendance Summary for ${format(new Date(), 'MMMM d, yyyy')}`;
+
+    const summaryText = `*${reportTitle}*
+
+*Summary:*
+- *Present:* ${present.length + late.length}
+- *Late:* ${late.length}
+- *Absent:* ${absent.length}
+- *On Leave:* ${onLeave.length}
+
+*Details:*
+- *Late Employees:* ${late.map(u => `${u.firstName} ${u.lastName}`).join(', ') || 'None'}
+- *Absent Employees:* ${absent.map(u => `${u.firstName} ${u.lastName}`).join(', ') || 'None'}
+- *On Leave:* ${onLeave.map(u => `${u.firstName} ${u.lastName}`).join(', ') || 'None'}
+
+_This is an automated summary generated from the MarsHRM application._
+    `;
+
+    const encodedSummary = encodeURIComponent(summaryText);
+
+    let shareUrl = '';
+
+    switch (platform) {
+        case 'email':
+            const emailSubject = encodeURIComponent(reportTitle);
+            shareUrl = `mailto:?subject=${emailSubject}&body=${encodedSummary}`;
+            break;
+        case 'whatsapp':
+            shareUrl = `https://wa.me/?text=${encodedSummary}`;
+            break;
+        case 'teams':
+            shareUrl = `https://teams.microsoft.com/l/chat/0/0?message=${encodedSummary}`;
+            break;
+    }
+
+    if (shareUrl) {
+        window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   const UserListCard = ({ title, users, Icon, iconColor, onClick }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; onClick: () => void; }) => (
     <Card className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={onClick}>
       <CardHeader>
@@ -238,10 +291,34 @@ export const DailyMonitorWidget = () => {
                         <CardTitle className="font-headline">Daily Team Monitor</CardTitle>
                         <CardDescription>A real-time overview of your team's status for today, {format(new Date(), 'MMMM d')}.</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleExport} disabled={summary.isLoading}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Export
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" disabled={summary.isLoading}>
+                                <Share2 className="mr-2 h-4 w-4" />
+                                Share / Export
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={handleExport}>
+                                <Download className="mr-2 h-4 w-4" />
+                                Download CSV
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel>Share Summary via</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleShare('email')}>
+                                <Mail className="mr-2 h-4 w-4"/> 
+                                Email
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+                                <MessageSquare className="mr-2 h-4 w-4"/>
+                                WhatsApp
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleShare('teams')}>
+                                <Users className="mr-2 h-4 w-4"/>
+                                Microsoft Teams
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </CardHeader>
             <CardContent>
