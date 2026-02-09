@@ -180,7 +180,7 @@ export default function IssuesPage() {
         </Dialog>
       </PageHeader>
       <Sheet onOpenChange={(isOpen) => !isOpen && setSelectedIssue(null)}>
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

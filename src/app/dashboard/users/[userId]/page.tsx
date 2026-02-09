@@ -237,47 +237,49 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
                         <CardDescription>A log of the user's recent clock-in and clock-out activity.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Clock In/Out</TableHead>
-                                    <TableHead>Work</TableHead>
-                                    <TableHead>Break</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {(attendanceData || []).slice(0, 7).map((rec, i) => {
-                                    let workDuration = 0;
-                                    if (rec.checkInTime && rec.checkOutTime) {
-                                        workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
-                                    }
-                                    return (
-                                    <TableRow key={i}>
-                                        <TableCell className="font-medium">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
-                                        <TableCell>
-                                          {rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}
-                                          {' / '}
-                                          {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
-                                        </TableCell>
-                                        <TableCell>{formatDuration(workDuration)}</TableCell>
-                                        <TableCell>{formatDuration(rec.totalBreakDuration || 0)}</TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant="outline"
-                                                className={cn(
-                                                    rec.status === 'present' && 'text-green-600 border-green-600/50',
-                                                    rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
-                                                    rec.status === 'absent' && 'text-red-600 border-red-600/50',
-                                                    rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
-                                                )}
-                                            >{rec.status}</Badge>
-                                        </TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Clock In/Out</TableHead>
+                                        <TableHead>Work</TableHead>
+                                        <TableHead>Break</TableHead>
+                                        <TableHead>Status</TableHead>
                                     </TableRow>
-                                )})}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {(attendanceData || []).slice(0, 7).map((rec, i) => {
+                                        let workDuration = 0;
+                                        if (rec.checkInTime && rec.checkOutTime) {
+                                            workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+                                        }
+                                        return (
+                                        <TableRow key={i}>
+                                            <TableCell className="font-medium">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                                            <TableCell>
+                                              {rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}
+                                              {' / '}
+                                              {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
+                                            </TableCell>
+                                            <TableCell>{formatDuration(workDuration)}</TableCell>
+                                            <TableCell>{formatDuration(rec.totalBreakDuration || 0)}</TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                        rec.status === 'present' && 'text-green-600 border-green-600/50',
+                                                        rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
+                                                        rec.status === 'absent' && 'text-red-600 border-red-600/50',
+                                                        rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
+                                                    )}
+                                                >{rec.status}</Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    )})}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

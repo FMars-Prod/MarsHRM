@@ -395,7 +395,7 @@ export default function UsersPage() {
           </Button>
         </div>
       </PageHeader>
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

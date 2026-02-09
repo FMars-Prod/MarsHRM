@@ -272,7 +272,7 @@ export default function ReportsPage() {
           />
         </div>
       </div>
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -348,7 +348,7 @@ export default function ReportsPage() {
           </DialogContent>
         </Dialog>
       </PageHeader>
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Subject</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
           <TableBody>

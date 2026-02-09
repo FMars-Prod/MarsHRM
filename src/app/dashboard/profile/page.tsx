@@ -177,7 +177,7 @@ export default function ProfilePage() {
                                         {Object.entries(emojiCategories).map(([category, emojis]) => (
                                             <div key={category}>
                                                 <h3 className="font-semibold text-lg sticky top-0 bg-background py-2">{category}</h3>
-                                                <div className="grid grid-cols-8 gap-2">
+                                                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
                                                     {emojis.map(emoji => (
                                                         <button 
                                                             key={emoji} 

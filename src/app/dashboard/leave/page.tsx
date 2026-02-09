@@ -415,12 +415,12 @@ export default function LeavePage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="leaveType" className="text-right">
+                <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-x-4 gap-y-2">
+                  <Label htmlFor="leaveType" className="text-left sm:text-right">
                     Leave Type
                   </Label>
                   <Select onValueChange={setLeaveType}>
-                      <SelectTrigger className="col-span-3">
+                      <SelectTrigger className="col-span-1 sm:col-span-3">
                           <SelectValue placeholder="Select leave type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -432,9 +432,9 @@ export default function LeavePage() {
                   </Select>
                 </div>
                 
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <Label className="text-right pt-2">Start Date</Label>
-                  <div className="col-span-3 grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                  <Label className="text-left sm:text-right pt-2">Start Date</Label>
+                  <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
                     <Select onValueChange={setStartYear} value={startYear}>
                       <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
                       <SelectContent>
@@ -456,9 +456,9 @@ export default function LeavePage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <Label className="text-right pt-2">End Date</Label>
-                  <div className="col-span-3 grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                  <Label className="text-left sm:text-right pt-2">End Date</Label>
+                  <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
                     <Select onValueChange={setEndYear} value={endYear}>
                       <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
                       <SelectContent>
@@ -480,11 +480,11 @@ export default function LeavePage() {
                   </div>
                 </div>
 
-                 <div className="grid grid-cols-4 items-start gap-4">
-                  <Label htmlFor="reason" className="text-right pt-2">
+                 <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                  <Label htmlFor="reason" className="text-left sm:text-right pt-2">
                     Reason
                   </Label>
-                  <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide a reason for your leave..." className="col-span-3" />
+                  <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide a reason for your leave..." className="col-span-1 sm:col-span-3" />
                 </div>
               </div>
               <DialogFooter>
@@ -498,7 +498,7 @@ export default function LeavePage() {
         )}
       </PageHeader>
       <Sheet open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}>
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -657,5 +657,3 @@ export default function LeavePage() {
     </>
   );
 }
-
-    

@@ -189,7 +189,7 @@ export default function PoliciesPage() {
         )}
       </PageHeader>
       <Sheet open={!!selectedPolicy} onOpenChange={(isOpen) => !isOpen && setSelectedPolicy(null)}>
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

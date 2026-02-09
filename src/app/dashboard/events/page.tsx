@@ -239,14 +239,14 @@ export default function EventsPage() {
                   </DialogHeader>
                   <ScrollArea className="max-h-[70vh] -mx-6">
                     <div className="grid gap-4 py-4 px-6">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">Person's Name</Label>
-                            <Input id="name" value={newEventName} onChange={(e) => setNewEventName(e.target.value)} className="col-span-3" placeholder="e.g., John Doe" />
+                        <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-x-4 gap-y-2">
+                            <Label htmlFor="name" className="text-left sm:text-right">Person's Name</Label>
+                            <Input id="name" value={newEventName} onChange={(e) => setNewEventName(e.target.value)} className="col-span-1 sm:col-span-3" placeholder="e.g., John Doe" />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="type" className="text-right">Event Type</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-x-4 gap-y-2">
+                            <Label htmlFor="type" className="text-left sm:text-right">Event Type</Label>
                             <Select onValueChange={setNewEventType} value={newEventType}>
-                                <SelectTrigger className="col-span-3">
+                                <SelectTrigger className="col-span-1 sm:col-span-3">
                                     <SelectValue placeholder="Select an event type" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -257,14 +257,14 @@ export default function EventsPage() {
                             </Select>
                         </div>
                         {newEventType === 'Other' && (
-                            <div className="grid grid-cols-4 items-start gap-4">
-                                <Label htmlFor="other-type" className="text-right pt-2">Custom Type</Label>
-                                <Textarea id="other-type" value={otherEventType} onChange={(e) => setOtherEventType(e.target.value)} className="col-span-3" placeholder="e.g., Project Launch" />
+                            <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                                <Label htmlFor="other-type" className="text-left sm:text-right pt-2">Custom Type</Label>
+                                <Textarea id="other-type" value={otherEventType} onChange={(e) => setOtherEventType(e.target.value)} className="col-span-1 sm:col-span-3" placeholder="e.g., Project Launch" />
                             </div>
                         )}
-                        <div className="grid grid-cols-4 items-start gap-4">
-                            <Label className="text-right pt-2">Date</Label>
-                            <div className="col-span-3 grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                            <Label className="text-left sm:text-right pt-2">Date</Label>
+                            <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
                                 <Select onValueChange={setYear} value={year}>
                                     <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
                                     <SelectContent>
@@ -285,13 +285,13 @@ export default function EventsPage() {
                                 </Select>
                             </div>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="time" className="text-right">Time (Optional)</Label>
-                            <Input id="time" type="time" value={newEventTime} onChange={(e) => setNewEventTime(e.target.value)} className="col-span-3" />
+                        <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-x-4 gap-y-2">
+                            <Label htmlFor="time" className="text-left sm:text-right">Time (Optional)</Label>
+                            <Input id="time" type="time" value={newEventTime} onChange={(e) => setNewEventTime(e.target.value)} className="col-span-1 sm:col-span-3" />
                         </div>
-                        <div className="grid grid-cols-4 items-start gap-4">
-                            <Label className="text-right pt-2">Icon</Label>
-                            <div className="col-span-3 grid grid-cols-5 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                            <Label className="text-left sm:text-right pt-2">Icon</Label>
+                            <div className="col-span-1 sm:col-span-3 flex flex-wrap gap-2">
                                 {Object.keys(iconComponents).map(iconKey => {
                                     const iconName = iconKey as IconName;
                                     return (
@@ -308,9 +308,9 @@ export default function EventsPage() {
                                 })}
                             </div>
                         </div>
-                         <div className="grid grid-cols-4 items-start gap-4">
-                            <Label className="text-right pt-2">Color</Label>
-                            <div className="col-span-3 grid grid-cols-5 gap-2">
+                         <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                            <Label className="text-left sm:text-right pt-2">Color</Label>
+                            <div className="col-span-1 sm:col-span-3 flex flex-wrap gap-2">
                                 {colorOptions.map(color => (
                                     <Button
                                         key={color.id}
@@ -398,7 +398,3 @@ export default function EventsPage() {
     </>
   );
 }
-
-    
-
-    
