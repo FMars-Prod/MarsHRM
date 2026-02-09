@@ -6,7 +6,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp } from 'firebase/firestore';
-import { startOfMonth, endOfMonth, differenceInSeconds, startOfWeek, endOfWeek, eachDayOfInterval, format } from 'date-fns';
+import { startOfMonth, endOfMonth, differenceInSeconds, startOfWeek, endOfWeek, eachDayOfInterval, format, getDaysInMonth } from 'date-fns';
 import { Activity } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -78,7 +78,17 @@ export function WorkHoursSummaryWidget() {
                 hours: parseFloat(hours.toFixed(1)),
             }));
         } else {
-            const weeklyHours: { [week: string]: number } = {};
+            const weeklyHours: { [week: string]: number } = {
+                "Week 1": 0,
+                "Week 2": 0,
+                "Week 3": 0,
+                "Week 4": 0,
+            };
+
+            const daysInMonth = getDaysInMonth(start);
+            if (daysInMonth > 28) {
+                weeklyHours["Week 5"] = 0;
+            }
 
             attendanceData.forEach(rec => {
                 if (rec.checkInTime && rec.checkOutTime) {
@@ -86,20 +96,17 @@ export function WorkHoursSummaryWidget() {
                     const dayOfMonth = date.getDate();
                     const weekKey = `Week ${Math.ceil(dayOfMonth / 7)}`;
 
-                    if (!weeklyHours[weekKey]) {
-                        weeklyHours[weekKey] = 0;
+                    if (weeklyHours.hasOwnProperty(weekKey)) {
+                        const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+                        weeklyHours[weekKey] += workSeconds / 3600;
                     }
-                    const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
-                    weeklyHours[weekKey] += workSeconds / 3600;
                 }
             });
 
-            return Object.keys(weeklyHours)
-                .sort((a, b) => parseInt(a.replace('Week ', '')) - parseInt(b.replace('Week ', '')))
-                .map(name => ({
-                    name,
-                    hours: parseFloat(weeklyHours[name].toFixed(1)),
-                }));
+            return Object.keys(weeklyHours).map(name => ({
+                name,
+                hours: parseFloat(weeklyHours[name].toFixed(1)),
+            }));
         }
     }, [attendanceData, viewMode, start, end]);
 
