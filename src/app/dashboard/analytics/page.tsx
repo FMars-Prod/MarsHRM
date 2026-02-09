@@ -13,7 +13,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Share2, Mail, MessageSquare, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -27,6 +27,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 
 type User = {
   id: string;
@@ -288,6 +290,13 @@ const AnalyticsPage = () => {
     return `${hours}h ${minutes}m`;
   };
   
+    const getFilterPeriodText = () => {
+      if (filterMode === 'day' && date) return format(date, 'MMM d, yyyy');
+      if (filterMode === 'month' && month) return format(month, 'MMMM yyyy');
+      if (filterMode === 'all') return 'All time';
+      return 'Selected period';
+  }
+
   const handleExport = () => {
     if (!attendanceData || attendanceData.length === 0) {
         toast({ variant: 'destructive', title: 'No data to export' });
@@ -336,6 +345,51 @@ const AnalyticsPage = () => {
     document.body.removeChild(link);
   }
 
+  const handleShare = (platform: 'email' | 'whatsapp' | 'teams') => {
+    if (!selectedUser || !attendanceData) {
+        toast({ variant: 'destructive', title: 'No data to share' });
+        return;
+    }
+
+    const reportTitle = `Attendance Report for ${selectedUser.firstName} ${selectedUser.lastName}`;
+    const period = getFilterPeriodText();
+
+    // Using markdown for a bit of structure, which works well in Teams & some email clients.
+    const summary = `*${reportTitle}*
+*Period:* ${period}
+
+*Key Statistics:*
+- *Total Work Hours:* ${stats.totalHours} hrs
+- *Total Break Time:* ${stats.totalBreakHours} hrs
+- *Total Leaves:* ${stats.totalLeaves} days
+- *Total Late Days:* ${stats.lateDays} days
+
+_This is an automated summary generated from the MarsHRM application._
+    `;
+
+    const encodedSummary = encodeURIComponent(summary);
+
+    let shareUrl = '';
+
+    switch (platform) {
+        case 'email':
+            const emailSubject = encodeURIComponent(reportTitle);
+            shareUrl = `mailto:?subject=${emailSubject}&body=${encodedSummary}`;
+            break;
+        case 'whatsapp':
+            shareUrl = `https://wa.me/?text=${encodedSummary}`;
+            break;
+        case 'teams':
+            shareUrl = `https://teams.microsoft.com/l/chat/0/0?message=${encodedSummary}`;
+            break;
+    }
+
+    if (shareUrl) {
+        window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+
   const handleAttendanceUpdate = () => {
       if (!selectedUserId || !date) return;
 
@@ -366,13 +420,6 @@ const AnalyticsPage = () => {
     deleteDocumentNonBlocking(attendanceRef);
     toast({ title: "Day Reset", description: `Attendance for ${selectedUser?.firstName} on ${format(date, "PPP")} has been reset.` });
     setIsEditDialogOpen(false);
-  }
-  
-  const getFilterPeriodText = () => {
-      if (filterMode === 'day' && date) return format(date, 'MMM d, yyyy');
-      if (filterMode === 'month' && month) return format(month, 'MMMM yyyy');
-      if (filterMode === 'all') return 'All time';
-      return 'Selected period';
   }
   
   return (
@@ -483,10 +530,34 @@ const AnalyticsPage = () => {
                     </DialogContent>
                 </Dialog>
             )}
-            <Button onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
-                <Download className="mr-2 h-4 w-4"/>
-                Export CSV
-            </Button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
+                        <Share2 className="mr-2 h-4 w-4"/>
+                        Share / Export
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    <DropdownMenuItem onClick={handleExport}>
+                        <Download className="mr-2 h-4 w-4"/>
+                        Download CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Share Summary via</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => handleShare('email')}>
+                        <Mail className="mr-2 h-4 w-4"/> 
+                        Email
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+                        <MessageSquare className="mr-2 h-4 w-4"/>
+                        WhatsApp
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleShare('teams')}>
+                        <Users className="mr-2 h-4 w-4"/>
+                        Microsoft Teams
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </div>
 
