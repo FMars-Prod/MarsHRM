@@ -46,11 +46,10 @@ type LeaveRequest = {
   endDate: Timestamp;
 };
 
-export const DailyMonitorWidget = () => {
+export function DailyMonitorWidget() {
   const firestore = useFirestore();
-  const { toast } = useToast();
   const { user: currentUser } = useUser();
-
+  const { toast } = useToast();
   const [summary, setSummary] = React.useState({
     late: [] as UserData[],
     absent: [] as UserData[],
@@ -58,14 +57,14 @@ export const DailyMonitorWidget = () => {
     present: [] as UserData[],
     isLoading: true,
   });
-  const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[] } | null>(null);
   const [attendanceRecords, setAttendanceRecords] = React.useState<Map<string, AttendanceRecord>>(new Map());
+  const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[] } | null>(null);
 
+  const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
+  const { data: currentUserData } = useDoc(currentUserDocRef);
+  
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
-  
-  const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
-  const { data: currentUserData } = useDoc(currentUserDocRef);
 
   React.useEffect(() => {
     const fetchMonitorData = async () => {
@@ -78,14 +77,14 @@ export const DailyMonitorWidget = () => {
 
       setSummary(prev => ({ ...prev, isLoading: true }));
 
-      const today = new Date();
-      const todayStart = startOfDay(today);
-      const todayEnd = endOfDay(today);
+      const selectedDayStart = startOfDay(new Date());
+      const selectedDayEnd = endOfDay(new Date());
 
+      // 1. Fetch today's attendance records using a collectionGroup query
       const attendanceQuery = query(
         collectionGroup(firestore, 'attendances'),
-        where('checkInTime', '>=', todayStart),
-        where('checkInTime', '<=', todayEnd)
+        where('checkInTime', '>=', selectedDayStart),
+        where('checkInTime', '<=', selectedDayEnd)
       );
       const attendanceSnapshot = await getDocs(attendanceQuery);
       const attendanceMap = new Map<string, AttendanceRecord>();
@@ -95,6 +94,7 @@ export const DailyMonitorWidget = () => {
       });
       setAttendanceRecords(attendanceMap);
 
+      // 2. Fetch approved leaves that cover today
       const leavesQuery = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
       const leavesSnapshot = await getDocs(leavesQuery);
       const allApprovedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveRequest);
@@ -102,7 +102,7 @@ export const DailyMonitorWidget = () => {
       const onLeaveTodayIds = new Set<string>();
       allApprovedLeaves.forEach(leave => {
         const leaveInterval = { start: leave.startDate.toDate(), end: leave.endDate.toDate() };
-        if (isWithinInterval(today, leaveInterval)) {
+        if (isWithinInterval(new Date(), leaveInterval)) {
           onLeaveTodayIds.add(leave.employeeId);
         }
       });
@@ -131,7 +131,7 @@ export const DailyMonitorWidget = () => {
         } else if (onLeaveTodayIds.has(u.id)) {
           onLeaveUsers.push(u);
         } else {
-          if (u.role !== 'CEO/Admin' && u.role !== 'HR Manager') {
+          if ((u as any).role !== 'CEO/Admin' && (u as any).role !== 'HR Manager') {
              absentUsers.push(u);
           }
         }
@@ -148,7 +148,7 @@ export const DailyMonitorWidget = () => {
 
     fetchMonitorData();
   }, [users, usersLoading, firestore]);
-
+  
   const formatDuration = (seconds: number) => {
     if (seconds < 0) seconds = 0;
     const hours = Math.floor(seconds / 3600);
@@ -227,179 +227,126 @@ export const DailyMonitorWidget = () => {
     URL.revokeObjectURL(url);
   };
   
-    const handleShare = (platform: 'email' | 'whatsapp' | 'teams') => {
-    const { present, late, absent, onLeave, isLoading } = summary;
-
-    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length)) {
-      toast({
-        variant: "destructive",
-        title: "No data to share",
-        description: "There is no status information for today.",
-      });
+  const handleShare = (platform: 'email' | 'whatsapp' | 'teams') => {
+    if (summary.isLoading) {
+      toast({ variant: 'destructive', title: 'Data not ready', description: 'Please wait for the summary to load.' });
       return;
     }
-    
-    const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'HR/Admin';
-    const reportDate = format(new Date(), 'MMMM d, yyyy');
 
-    const presentList = present.map(u => {
-        const rec = attendanceRecords.get(u.id);
-        const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        return `- ${u.firstName} ${u.lastName} (In: ${time})`;
-    }).join('\n') || '- None';
-    
-    const lateList = late.map(u => {
-        const rec = attendanceRecords.get(u.id);
-        const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        return `- ${u.firstName} ${u.lastName} (In: ${time})`;
-    }).join('\n') || '- None';
+    const reportDate = format(new Date(), 'PPP');
+    const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
 
-    const absentList = absent.map(u => `- ${u.firstName} ${u.lastName}`).join('\n') || '- None';
-    const onLeaveList = onLeave.map(u => `- ${u.firstName} ${u.lastName}`).join('\n') || '- None';
+    let reportText = `FortuMars - Daily Attendance Summary\n`;
+    reportText += `Date: ${reportDate}\n`;
+    reportText += `Generated by: ${generatorName}\n\n`;
 
-    const summaryText = `DAILY ATTENDANCE SUMMARY - ${reportDate}
+    const createSection = (title: string, users: UserData[], includeTime: boolean = false) => {
+        if (users.length === 0) return '';
+        let section = `${title} (${users.length})\n`;
+        users.forEach(u => {
+            const time = attendanceRecords.get(u.id)?.checkInTime;
+            const timeStr = time ? ` (${format(time.toDate(), 'p')})` : '';
+            section += `- ${u.firstName} ${u.lastName}${includeTime ? timeStr : ''}\n`;
+        });
+        return section + '\n';
+    };
 
-Company: MarsHRM
-Generated by: ${generatorName}
+    reportText += createSection('Present', summary.present, true);
+    reportText += createSection('Late', summary.late, true);
+    reportText += createSection('Absent', summary.absent);
+    reportText += createSection('On Leave', summary.onLeave);
 
----
-*OVERALL STATUS*
----
-- Present: ${present.length}
-- Late: ${late.length}
-- Absent: ${absent.length}
-- On Leave: ${onLeave.length}
+    const encodedText = encodeURIComponent(reportText);
 
----
-*DETAILS*
----
-
-*PRESENT EMPLOYEES (${present.length})*
-${presentList}
-
-*LATE EMPLOYEES (${late.length})*
-${lateList}
-
-*ABSENT EMPLOYEES (${absent.length})*
-${absentList}
-
-*ON LEAVE (${onLeave.length})*
-${onLeaveList}
-`;
-
-    const encodedSummary = encodeURIComponent(summaryText);
-    let shareUrl = '';
-
-    switch (platform) {
-        case 'email':
-            const emailSubject = encodeURIComponent(`Daily Attendance Summary - ${reportDate}`);
-            shareUrl = `mailto:?subject=${emailSubject}&body=${encodedSummary}`;
-            break;
-        case 'whatsapp':
-            shareUrl = `https://wa.me/916381808782?text=${encodedSummary}`;
-            break;
-        case 'teams':
-            shareUrl = `https://teams.microsoft.com/l/chat/0/0?message=${encodedSummary}`;
-            break;
+    let url = '';
+    if (platform === 'email') {
+      url = `mailto:?subject=Daily Attendance Summary - ${reportDate}&body=${encodedText}`;
+    } else if (platform === 'whatsapp') {
+      const whatsAppNumber = '+916381808782';
+      url = `https://wa.me/${whatsAppNumber}?text=${encodedText}`;
+    } else if (platform === 'teams') {
+      url = `https://teams.microsoft.com/l/chat/0/0?users=&message=${encodedText}`;
     }
-
-    if (shareUrl) {
-        window.open(shareUrl, '_blank', 'noopener,noreferrer');
-    }
+    
+    window.open(url, '_blank');
   };
 
   const handleExportPdf = () => {
-    const { present, late, absent, onLeave, isLoading } = summary;
-    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length)) {
-      toast({
-        variant: "destructive",
-        title: "No data to export",
-        description: "There is no status information for today.",
-      });
+    if (summary.isLoading) {
+      toast({ variant: 'destructive', title: 'Data not ready', description: 'Please wait for the summary to load.' });
       return;
     }
     
     const doc = new jsPDF();
-    const reportDate = format(new Date(), 'MMMM d, yyyy');
-    const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'HR/Admin';
+    const reportDate = format(new Date(), 'PPP');
+    const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
 
-    // Title
-    doc.setFontSize(18);
-    doc.text("Daily Attendance Summary", 14, 22);
-    doc.setFontSize(11);
+    const addPageContent = (data: any) => {
+        // Header
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text("FortuMars AI Technologies & Business Solutions.", doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+        
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(8);
+        doc.text(`Page ${pageCount}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+    };
+
+    // First page title and info
+    doc.setFontSize(12);
     doc.setTextColor(100);
-    doc.text(`Date: ${reportDate}`, 14, 30);
-    doc.text(`Generated by: ${generatorName}`, 14, 36);
+    doc.text(`Daily Attendance Summary - ${reportDate}`, doc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(`Generated by: ${generatorName}`, 14, 48);
 
-    const addSection = (title: string, users: UserData[], columns: any[], body: any[], startY: number) => {
+    let finalY = 55;
+
+    const addSection = (title: string, users: UserData[], columns: any[], body: any[][]) => {
       if (users.length > 0) {
         autoTable(doc, {
-          startY: startY,
-          head: [[{ content: title, styles: { fontStyle: 'bold', fontSize: 14 } }]],
+          startY: finalY,
+          head: [[{ content: `${title} (${users.length})`, styles: { fontStyle: 'bold', fontSize: 12, halign: 'left', fillColor: [240,240,240], textColor: 0 } }]],
           body: [],
           theme: 'plain',
+          didDrawPage: addPageContent,
+          margin: { top: 50 },
         });
+
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY,
           head: [columns],
           body: body,
           theme: 'striped',
           headStyles: { fillColor: [39, 55, 70] },
+          didDrawPage: addPageContent,
+          margin: { top: 50 },
         });
-        return (doc as any).lastAutoTable.finalY + 10;
+        finalY = (doc as any).lastAutoTable.finalY + 10;
       }
-      return startY;
-    }
+    };
     
-    let currentY = 45;
-
-    // Present Users
-    const presentBody = present.map(u => {
+    const presentBody = summary.present.map(u => {
         const rec = attendanceRecords.get(u.id);
         const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
         return [u.firstName, u.lastName, u.jobTitle, time];
     });
-    currentY = addSection(
-        `Present (${present.length})`,
-        present,
-        [['First Name', 'Last Name', 'Job Title', 'Clock In']],
-        presentBody,
-        currentY
-    );
+    addSection( 'Present', summary.present, [['First Name', 'Last Name', 'Job Title', 'Clock In']], presentBody );
     
-    // Late Users
-    const lateBody = late.map(u => {
+    const lateBody = summary.late.map(u => {
         const rec = attendanceRecords.get(u.id);
         const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
         return [u.firstName, u.lastName, u.jobTitle, time];
     });
-    currentY = addSection(
-        `Late (${late.length})`,
-        late,
-        [['First Name', 'Last Name', 'Job Title', 'Clock In']],
-        lateBody,
-        currentY
-    );
+    addSection( 'Late', summary.late, [['First Name', 'Last Name', 'Job Title', 'Clock In']], lateBody );
 
-    // Absent Users
-    const absentBody = absent.map(u => [u.firstName, u.lastName, u.jobTitle]);
-    currentY = addSection(
-        `Absent (${absent.length})`,
-        absent,
-        [['First Name', 'Last Name', 'Job Title']],
-        absentBody,
-        currentY
-    );
+    const absentBody = summary.absent.map(u => [u.firstName, u.lastName, u.jobTitle]);
+    addSection( 'Absent', summary.absent, [['First Name', 'Last Name', 'Job Title']], absentBody );
 
-    // On Leave Users
-    const onLeaveBody = onLeave.map(u => [u.firstName, u.lastName, u.jobTitle]);
-    currentY = addSection(
-        `On Leave (${onLeave.length})`,
-        onLeave,
-        [['First Name', 'Last Name', 'Job Title']],
-        onLeaveBody,
-        currentY
-    );
+    const onLeaveBody = summary.onLeave.map(u => [u.firstName, u.lastName, u.jobTitle]);
+    addSection( 'On Leave', summary.onLeave, [['First Name', 'Last Name', 'Job Title']], onLeaveBody );
+    
+    addPageContent({ settings: { margin: { left: 14 } } });
 
     doc.save(`daily_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
