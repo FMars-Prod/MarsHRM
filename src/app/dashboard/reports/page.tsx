@@ -126,6 +126,7 @@ export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = React.useState<Report | null>(null);
   const [selectedUser, setSelectedUser] = React.useState<UserData | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedDepartment, setSelectedDepartment] = React.useState("All Departments");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
@@ -202,7 +203,17 @@ export default function ReportsPage() {
     form.reset();
   };
 
-  const filteredUsers = usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()));
+  const departments = React.useMemo(() => {
+    if (!usersData) return [];
+    const allDepts = usersData.map(u => u.department).filter(Boolean);
+    return ["All Departments", ...Array.from(new Set(allDepts))];
+  }, [usersData]);
+
+  const filteredUsers = usersData?.filter(u => {
+    const nameMatch = `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase());
+    const departmentMatch = selectedDepartment === 'All Departments' || u.department === selectedDepartment;
+    return nameMatch && departmentMatch;
+  });
 
   const BusinessFormFields = () => (
     <>
@@ -261,8 +272,8 @@ export default function ReportsPage() {
   const AdminView = () => (
     <>
       <PageHeader title="Employee Reports" description="View daily reports submitted by employees." />
-      <div className="mb-4">
-        <div className="relative">
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
             placeholder="Search for an employee..." 
@@ -271,6 +282,16 @@ export default function ReportsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter by department" />
+            </SelectTrigger>
+            <SelectContent>
+                {departments.map(dept => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
       </div>
       <div className="border rounded-lg overflow-x-auto">
         <Table>
