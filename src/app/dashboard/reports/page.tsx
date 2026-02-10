@@ -249,10 +249,10 @@ export default function ReportsPage() {
     return (
         <>
             <FormField control={control} name="outreachTotal" render={({ field }) => (
-                <FormItem><FormLabel>Total Outreach</FormLabel><FormControl><Input type="number" {...field} placeholder="e.g., 30" /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Total Outreach</FormLabel><FormControl><Input type="number" min="0" {...field} placeholder="e.g., 30" /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={control} name="potentialClients" render={({ field }) => (
-                <FormItem><FormLabel>Potential Clients</FormLabel><FormControl><Input type="number" {...field} placeholder="e.g., 6" /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Potential Clients</FormLabel><FormControl><Input type="number" min="0" {...field} placeholder="e.g., 6" /></FormControl><FormMessage /></FormItem>
             )} />
             <div className="col-span-2">
                 <Label>Conversion Rate</Label>
@@ -270,7 +270,7 @@ export default function ReportsPage() {
                 <FormItem className="col-span-2"><FormLabel>Meetings/Demos Secured & Quotations</FormLabel><FormControl><Textarea {...field} placeholder="Client names and brief context..." /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={control} name="pipelineValue" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>Pipeline Business Value ($)</FormLabel><FormControl><Input type="number" {...field} placeholder="e.g., 100000" /></FormControl><FormMessage /></FormItem>
+                <FormItem className="col-span-2"><FormLabel>Pipeline Business Value ($)</FormLabel><FormControl><Input type="number" min="0" {...field} placeholder="e.g., 100000" /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={control} name="strategicLearning" render={({ field }) => (
                 <FormItem className="col-span-2"><FormLabel>Strategic Learning</FormLabel><FormControl><Textarea {...field} placeholder="What did you learn today about the industry, product, or client behavior?" /></FormControl><FormMessage /></FormItem>
