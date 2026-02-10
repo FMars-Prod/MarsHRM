@@ -284,12 +284,21 @@
         "employeeId": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
         "reportType": { "type": "string", "enum": ["Business", "Technical"] },
-        "subject": { "type": "string" },
         "signature": { "type": "string" },
-        "callsMade": { "type": "number" },
-        "connectionsAchieved": { "type": "number" },
-        "leadsGenerated": { "type": "number" },
-        "clientInteractions": { "type": "number" },
+
+        "outreachTotal": { "type": "number" },
+        "potentialClients": { "type": "number" },
+        "followUpsCompleted": { "type": "string" },
+        "meetingsSecured": { "type": "string" },
+        "pipelineValue": { "type": "number" },
+        "strategicLearning": { "type": "string" },
+        "clientWinHighlight": { "type": "string" },
+        "pendingDeliverables": { "type": "string" },
+        "meetingsBookedTomorrow": { "type": "string" },
+        "criticalPathTomorrow": { "type": "string" },
+        "interventionTrigger": { "type": "string", "enum": ["None", "Coaching", "Technical Support", "Client meeting"] },
+
+        "subject": { "type": "string" },
         "technologyUsed": { "type": "string" },
         "taskDescription": { "type": "string" },
         "workDone": { "type": "string" },
@@ -299,7 +308,7 @@
         "logOutTime": { "type": "string", "format": "time" },
         "otherWork": { "type": "string" }
       },
-      "required": ["id", "employeeId", "date", "reportType", "subject", "signature"]
+      "required": ["id", "employeeId", "date", "reportType", "signature"]
     },
     "Announcement": {
       "$schema": "http://json-schema.org/draft-07/schema#",
