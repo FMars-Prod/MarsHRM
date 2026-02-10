@@ -126,7 +126,7 @@ export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = React.useState<Report | null>(null);
   const [selectedUser, setSelectedUser] = React.useState<UserData | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [selectedDepartment, setSelectedDepartment] = React.useState("All Departments");
+  const [selectedJobTitle, setSelectedJobTitle] = React.useState("All Job Titles");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
@@ -203,16 +203,16 @@ export default function ReportsPage() {
     form.reset();
   };
 
-  const departments = React.useMemo(() => {
+  const jobTitles = React.useMemo(() => {
     if (!usersData) return [];
-    const allDepts = usersData.map(u => u.department).filter(Boolean);
-    return ["All Departments", ...Array.from(new Set(allDepts))];
+    const allJobTitles = usersData.map(u => u.jobTitle).filter(Boolean);
+    return ["All Job Titles", ...Array.from(new Set(allJobTitles))];
   }, [usersData]);
 
   const filteredUsers = usersData?.filter(u => {
     const nameMatch = `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase());
-    const departmentMatch = selectedDepartment === 'All Departments' || u.department === selectedDepartment;
-    return nameMatch && departmentMatch;
+    const jobTitleMatch = selectedJobTitle === 'All Job Titles' || u.jobTitle === selectedJobTitle;
+    return nameMatch && jobTitleMatch;
   });
 
   const BusinessFormFields = () => (
@@ -282,13 +282,13 @@ export default function ReportsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+        <Select value={selectedJobTitle} onValueChange={setSelectedJobTitle}>
             <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filter by department" />
+                <SelectValue placeholder="Filter by job title" />
             </SelectTrigger>
             <SelectContent>
-                {departments.map(dept => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                {jobTitles.map(title => (
+                    <SelectItem key={title} value={title}>{title}</SelectItem>
                 ))}
             </SelectContent>
         </Select>
