@@ -9,7 +9,7 @@ import { useAuth, useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc } from "firebase/firestore";
-import { Edit, Building2, Smile } from "lucide-react";
+import { Edit, Smile } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { updateDocumentNonBlocking } from "@/firebase";
+import Image from 'next/image';
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -133,8 +134,16 @@ export default function ProfilePage() {
         return (
             <div className="flex h-full w-full items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
-                <Building2 className="h-12 w-12 animate-pulse" />
-                <p className="text-muted-foreground">Loading Profile...</p>
+                    <div className="relative h-16 w-48 animate-pulse">
+                        <Image
+                          src="https://fortumars.com/fortumarslogo.png"
+                          alt="FortuMars Logo"
+                          fill
+                          style={{ objectFit: 'contain' }}
+                          priority
+                        />
+                    </div>
+                    <p className="text-muted-foreground">Loading Profile...</p>
                 </div>
             </div>
         );

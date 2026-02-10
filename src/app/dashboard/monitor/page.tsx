@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download } from 'lucide-react';
+import { User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 type UserData = {
   id: string;
@@ -292,7 +293,17 @@ const MonitorPage = () => {
       
       {summary.isLoading ? (
         <div className="flex h-64 items-center justify-center">
-            <Building2 className="h-12 w-12 animate-pulse text-muted-foreground" />
+            <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                <div className="relative h-16 w-48 animate-pulse">
+                    <Image
+                      src="https://fortumars.com/fortumarslogo.png"
+                      alt="FortuMars Logo"
+                      fill
+                      style={{ objectFit: 'contain' }}
+                      priority
+                    />
+                </div>
+            </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

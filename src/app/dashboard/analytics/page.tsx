@@ -27,6 +27,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import Image from 'next/image';
 
 
 type User = {
@@ -497,7 +498,18 @@ const AnalyticsPage = () => {
         </div>
       ) : isAttendanceLoading ? (
          <div className="border rounded-lg p-6 min-h-[400px] flex items-center justify-center">
-            <p className="text-muted-foreground">Loading attendance data...</p>
+            <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                <div className="relative h-16 w-48 animate-pulse">
+                    <Image
+                      src="https://fortumars.com/fortumarslogo.png"
+                      alt="FortuMars Logo"
+                      fill
+                      style={{ objectFit: 'contain' }}
+                      priority
+                    />
+                </div>
+                <p>Loading attendance data...</p>
+            </div>
         </div>
       ) : (
       <div className="grid gap-6">

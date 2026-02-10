@@ -14,10 +14,11 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Hourglass, Coffee, FileText, Building2 } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Hourglass, Coffee, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { WithId } from '@/firebase/firestore/use-collection';
+import Image from 'next/image';
 
 type AttendanceRecord = {
   checkInTime?: any;
@@ -108,7 +109,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
       return weeklyAttendanceData.map(rec => {
           let workHours = 0;
           if (rec.checkInTime && rec.checkOutTime) {
-              const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate());
+              const workSeconds = differenceInSeconds(rec.checkInTime.toDate(), rec.checkOutTime.toDate());
               workHours = (workSeconds - (rec.totalBreakDuration || 0)) / 3600;
           }
           const breakHours = (rec.totalBreakDuration || 0) / 3600;
@@ -131,7 +132,15 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
     return (
         <div className="flex h-full w-full items-center justify-center p-10">
             <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                <Building2 className="h-12 w-12 animate-pulse" />
+                <div className="relative h-16 w-48 animate-pulse">
+                  <Image
+                    src="https://fortumars.com/fortumarslogo.png"
+                    alt="FortuMars Logo"
+                    fill
+                    style={{ objectFit: 'contain' }}
+                    priority
+                  />
+                </div>
                 <p>Loading User Profile...</p>
             </div>
         </div>

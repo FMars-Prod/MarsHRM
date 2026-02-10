@@ -10,6 +10,7 @@ import { format, isSameDay, startOfMonth, eachDayOfInterval, isWithinInterval } 
 import { CheckCircle, XCircle, AlertTriangle, Briefcase } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
+import Image from "next/image";
 
 type Status = "present" | "late" | "absent" | "on_leave";
 type AttendanceRecord = { 
@@ -149,7 +150,20 @@ export default function AttendancePage() {
           <Card>
             <CardContent className="p-0">
                {isLoading ? (
-                 <div className="flex justify-center items-center h-[350px]">Loading calendar...</div>
+                 <div className="flex justify-center items-center h-[350px]">
+                    <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                        <div className="relative h-16 w-48 animate-pulse">
+                            <Image
+                              src="https://fortumars.com/fortumarslogo.png"
+                              alt="FortuMars Logo"
+                              fill
+                              style={{ objectFit: 'contain' }}
+                              priority
+                            />
+                        </div>
+                        <p>Loading calendar...</p>
+                    </div>
+                 </div>
                ) : (
                 <Calendar
                     mode="single"

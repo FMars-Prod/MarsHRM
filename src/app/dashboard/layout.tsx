@@ -17,6 +17,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
 import { isToday } from 'date-fns';
+import Image from 'next/image';
 
 type LeaveRequest = {
   status: string;
@@ -102,9 +103,17 @@ export default function DashboardLayout({
 
   if (isUserLoading || !user || isUserDocLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <Building2 className="h-12 w-12 animate-pulse" />
+          <div className="relative h-16 w-48 animate-pulse">
+            <Image
+              src="https://fortumars.com/fortumarslogo.png"
+              alt="FortuMars Logo"
+              fill
+              style={{ objectFit: 'contain' }}
+              priority
+            />
+          </div>
           <p className="text-muted-foreground">Loading MarsHRM...</p>
         </div>
       </div>

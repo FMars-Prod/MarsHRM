@@ -35,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import type { WithId } from "@/firebase/firestore/use-collection";
+import Image from "next/image";
 
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'Briefcase' | 'Building' | 'Home' | 'Milestone' | 'Trophy';
 
@@ -335,7 +336,20 @@ export default function EventsPage() {
         )}
       </PageHeader>
        {isLoading ? (
-        <p>Loading events...</p>
+        <div className="flex h-64 items-center justify-center">
+            <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                <div className="relative h-16 w-48 animate-pulse">
+                    <Image
+                        src="https://fortumars.com/fortumarslogo.png"
+                        alt="FortuMars Logo"
+                        fill
+                        style={{ objectFit: 'contain' }}
+                        priority
+                    />
+                </div>
+                <p>Loading events...</p>
+            </div>
+        </div>
       ) : (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {events?.map((event) => (
