@@ -118,7 +118,7 @@ const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactN
 const OutreachReportDetails = ({ report }: { report: Report }) => {
     const currencySymbol = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
     const conversionRate = (report.outreachTotal && report.outreachTotal > 0) ? ((report.potentialClients || 0) / report.outreachTotal) * 100 : 0;
-    const isHighPerformer = conversionRate >= 75;
+    const isHighPerformer = conversionRate >= 15;
     const [randomQuote, setRandomQuote] = React.useState('');
 
     React.useEffect(() => {
@@ -303,24 +303,32 @@ export default function ReportsPage() {
             workDone: "",
             moduleWorkedOn: "",
             taskStatus: "In Progress",
-            logInTime: todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'HH:mm') : "09:30",
-            logOutTime: todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'HH:mm') : "18:30",
+            logInTime: "09:30",
+            logOutTime: "18:30",
             otherWork: "",
         })
       });
-  }, [form, currentUserData, isBusinessUser, todaysAttendance]);
+  }, [form, currentUserData, isBusinessUser]);
 
   React.useEffect(() => {
-    if (isTechnicalUser && todaysAttendance?.checkInTime) {
-      form.setValue('logInTime', format(todaysAttendance.checkInTime.toDate(), 'HH:mm'));
-      if(todaysAttendance.checkOutTime){
-        form.setValue('logOutTime', format(todaysAttendance.checkOutTime.toDate(), 'HH:mm'));
+    if (isAddDialogOpen) {
+      if (isTechnicalUser) {
+        if (todaysAttendance?.checkInTime) {
+          form.setValue('logInTime', format(todaysAttendance.checkInTime.toDate(), 'HH:mm'));
+        }
+        
+        if (todaysAttendance?.checkOutTime) {
+          form.setValue('logOutTime', format(todaysAttendance.checkOutTime.toDate(), 'HH:mm'));
+        } else {
+          form.setValue('logOutTime', format(new Date(), 'HH:mm'));
+        }
+      }
+      
+      if (currentUserData) {
+          form.setValue('signature', `${currentUserData.firstName} ${currentUserData.lastName}`)
       }
     }
-    if (currentUserData) {
-        form.setValue('signature', `${currentUserData.firstName} ${currentUserData.lastName}`)
-    }
-  }, [todaysAttendance, isTechnicalUser, form, currentUserData]);
+  }, [isAddDialogOpen, todaysAttendance, isTechnicalUser, form, currentUserData]);
 
   const onSubmit = async (values: ReportFormValues) => {
     if (!user || !currentUserData) return;
@@ -601,12 +609,10 @@ export default function ReportsPage() {
       {isAdmin ? <AdminView /> : <EmployeeView />}
       
       <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          if (!open) {
-              resetForm();
-          }
+          if (!open) resetForm();
           setIsAddDialogOpen(open);
       }}>
-        <DialogContent className="max-w-4xl w-full h-[95vh] flex flex-col p-0">
+        <DialogContent className="max-w-4xl w-full h-[90vh] max-h-[90vh] flex flex-col p-0">
           <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
               <DialogHeader className="p-6 pb-4 border-b">
@@ -639,19 +645,19 @@ export default function ReportsPage() {
                     />
                 </div>
               </ScrollArea>
-               <DialogFooter className="p-6 pt-4 border-t bg-background/95 backdrop-blur-sm flex-col-reverse sm:flex-row sm:justify-between items-center">
-                  <FormField control={form.control} name="signature" render={({ field }) => (
-                      <FormItem className="text-xs text-muted-foreground text-center sm:text-left">
-                          <FormControl><Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto" /></FormControl>
-                          <FormMessage />
-                      </FormItem>
-                  )} />
-                  <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
-                        {form.formState.isSubmitting ? 'Submitting...' : 'Submit Report'}
-                    </Button>
-                  </div>
+              <DialogFooter className="p-4 border-t bg-background/95 backdrop-blur-sm flex flex-col sm:flex-row sm:justify-between items-center gap-4">
+                <FormField control={form.control} name="signature" render={({ field }) => (
+                  <FormItem className="text-xs text-muted-foreground text-center sm:text-left">
+                      <FormControl><Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto" /></FormControl>
+                      <FormMessage />
+                  </FormItem>
+                )} />
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
+                      {form.formState.isSubmitting ? 'Submitting...' : 'Submit Report'}
+                  </Button>
+                </div>
               </DialogFooter>
           </form>
           </Form>
