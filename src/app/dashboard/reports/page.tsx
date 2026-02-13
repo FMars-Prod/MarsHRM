@@ -466,7 +466,6 @@ export default function ReportsPage() {
 
   const AdminView = () => (
     <>
-      <PageHeader title="Employee Reports" description="View daily reports submitted by employees." />
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -521,7 +520,6 @@ export default function ReportsPage() {
 
   const EmployeeView = () => (
     <>
-      <PageHeader title="My Daily Reports" description="Submit and review your daily work reports." />
       <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Subject / Type</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
@@ -544,11 +542,7 @@ export default function ReportsPage() {
                 <TableRow>
                     <TableCell colSpan={3} className="h-48 text-center text-muted-foreground">
                         <p className="mb-4">No reports submitted yet. Time to file one!</p>
-                         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
-                            </DialogTrigger>
-                        </Dialog>
+                        <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
                     </TableCell>
                 </TableRow>
             )}
@@ -560,80 +554,79 @@ export default function ReportsPage() {
 
   return (
     <>
-        {isAdmin ? (
-            <PageHeader title="Employee Reports" description="Review and analyze daily reports." />
-        ) : (
-            <PageHeader title="My Daily Reports" description="Submit and view your work reports.">
-                <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-                    if (!open) {
-                        resetForm();
-                    }
-                    setIsAddDialogOpen(open);
-                }}>
-                    <DialogTrigger asChild>
-                        <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
-                    </DialogTrigger>
-                </Dialog>
-            </PageHeader>
+      <PageHeader
+        title={isAdmin ? "Employee Reports" : "My Daily Reports"}
+        description={isAdmin ? "Review and analyze daily reports." : "Submit and view your work reports."}
+      >
+        {!isAdmin && (
+            <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
         )}
+      </PageHeader>
       
       {isAdmin ? <AdminView /> : <EmployeeView />}
       
-      <DialogContent className="max-w-4xl w-full h-[95vh] flex flex-col p-0">
-        <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-            <DialogHeader className="p-6 pb-4 border-b">
-            <DialogTitle className="font-headline text-xl">New Daily Report</DialogTitle>
-            <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
-            </DialogHeader>
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
-                 <Card>
-                    <CardContent className="pt-6">
-                        <FormField
-                            control={form.control}
-                            name="declaration"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel>Declaration</FormLabel>
-                                    <FormDescription>
-                                    I hereby declare that the information provided in this report is true and accurate to the best of my knowledge.
-                                    </FormDescription>
-                                    <FormMessage />
-                                </div>
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
-            </div>
-             <DialogFooter className="p-6 pt-4 border-t bg-background/95 backdrop-blur-sm">
-                <div className="flex-1">
-                    <FormField control={form.control} name="signature" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="sr-only">Signature</FormLabel>
-                            <FormControl>
-                                <Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto text-xs" />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                </div>
-                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
-                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Report'}
-                </Button>
-            </DialogFooter>
-        </form>
-        </Form>
-      </DialogContent>
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+          if (!open) {
+              resetForm();
+          }
+          setIsAddDialogOpen(open);
+      }}>
+        <DialogContent className="max-w-4xl w-full h-[95vh] flex flex-col p-0">
+          <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+              <DialogHeader className="p-6 pb-4 border-b">
+              <DialogTitle className="font-headline text-xl">New Daily Report</DialogTitle>
+              <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
+              </DialogHeader>
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
+                   <Card>
+                      <CardContent className="pt-6">
+                          <FormField
+                              control={form.control}
+                              name="declaration"
+                              render={({ field }) => (
+                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                  <FormControl>
+                                      <Checkbox
+                                          checked={field.value}
+                                          onCheckedChange={field.onChange}
+                                      />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                      <FormLabel>Declaration</FormLabel>
+                                      <FormDescription>
+                                      I hereby declare that the information provided in this report is true and accurate to the best of my knowledge.
+                                      </FormDescription>
+                                      <FormMessage />
+                                  </div>
+                                  </FormItem>
+                              )}
+                          />
+                      </CardContent>
+                  </Card>
+              </div>
+               <DialogFooter className="p-6 pt-4 border-t bg-background/95 backdrop-blur-sm">
+                  <div className="flex-1">
+                      <FormField control={form.control} name="signature" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel className="sr-only">Signature</FormLabel>
+                              <FormControl>
+                                  <Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto text-xs" />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                  </div>
+                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
+                      {form.formState.isSubmitting ? 'Submitting...' : 'Submit Report'}
+                  </Button>
+              </DialogFooter>
+          </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
       
       <Sheet open={!!selectedUser && !selectedReport} onOpenChange={(isOpen) => {
         if (!isOpen) {
