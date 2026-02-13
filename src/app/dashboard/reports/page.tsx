@@ -5,11 +5,11 @@ import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, FileText, Search } from "lucide-react";
+import { PlusCircle, Search } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -23,9 +23,11 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
-const outreachReportSchema = z.object({
+const businessReportSchema = z.object({
+  currency: z.enum(["USD", "EUR", "GBP", "INR"]),
   outreachTotal: z.coerce.number().min(0, "Cannot be negative.").default(0),
   potentialClients: z.coerce.number().min(0, "Cannot be negative.").default(0),
   followUpsCompleted: z.string().min(1, "This field is required."),
@@ -37,7 +39,10 @@ const outreachReportSchema = z.object({
   meetingsBookedTomorrow: z.string().min(1, "This field is required."),
   criticalPathTomorrow: z.string().min(1, "This field is required."),
   interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]),
-  signature: z.string().min(1, "Signature is required."),
+  declaration: z.literal<boolean>(true, {
+    errorMap: () => ({ message: "You must acknowledge the declaration." }),
+  }),
+  signature: z.string(),
 });
 
 const technicalReportSchema = z.object({
@@ -50,11 +55,14 @@ const technicalReportSchema = z.object({
   logInTime: z.string().min(1, "Login time is required."),
   logOutTime: z.string().min(1, "Logout time is required."),
   otherWork: z.string().optional(),
-  signature: z.string().min(1, "Signature is required."),
+  declaration: z.literal<boolean>(true, {
+    errorMap: () => ({ message: "You must acknowledge the declaration." }),
+  }),
+  signature: z.string(),
 });
 
-
-type ReportFormValues = z.infer<typeof outreachReportSchema> | z.infer<typeof technicalReportSchema>;
+const formSchema = z.union([businessReportSchema, technicalReportSchema]);
+type ReportFormValues = z.infer<typeof formSchema>;
 
 type Report = { 
   id: string; 
@@ -63,6 +71,7 @@ type Report = {
   reportType: 'Business' | 'Technical';
   signature: string;
   // Business
+  currency?: 'USD' | 'EUR' | 'GBP' | 'INR';
   outreachTotal?: number;
   potentialClients?: number;
   followUpsCompleted?: string;
@@ -95,42 +104,69 @@ const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactN
   </div>
 );
 
-const OutreachReportDetails = ({ report }: { report: Report }) => (
-  <>
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <ReportDetailItem label="Total Outreach" value={report.outreachTotal} />
-        <ReportDetailItem label="Potential Clients" value={report.potentialClients} />
-        <ReportDetailItem label="Pipeline Value" value={`$${(report.pipelineValue || 0).toLocaleString()}`} />
-        <ReportDetailItem label="Intervention" value={report.interventionTrigger} />
-    </div>
-    <ReportDetailItem label="Follow-ups Completed" value={report.followUpsCompleted} />
-    <ReportDetailItem label="Meetings/Demos Secured & Quotations" value={report.meetingsSecured} />
-    <ReportDetailItem label="Strategic Learning" value={report.strategicLearning} />
-    <ReportDetailItem label="Client Win/Highlight" value={report.clientWinHighlight} />
-    <ReportDetailItem label="Pending Deliverables / Pipeline Impact" value={report.pendingDeliverables} />
-    <ReportDetailItem label="Meetings/Demos Booked for Tomorrow" value={report.meetingsBookedTomorrow} />
-    <ReportDetailItem label="Tomorrow's Critical Path" value={report.criticalPathTomorrow} />
-    <ReportDetailItem label="Signature" value={report.signature} />
-  </>
-);
+const OutreachReportDetails = ({ report }: { report: Report }) => {
+    const currencySymbol = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
+    const conversionRate = (report.outreachTotal && report.outreachTotal > 0) ? ((report.potentialClients || 0) / report.outreachTotal) * 100 : 0;
+    return (
+        <>
+            <Card>
+                <CardHeader><CardTitle>Outreach Analytics</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <ReportDetailItem label="Total Outreach" value={report.outreachTotal} />
+                        <ReportDetailItem label="Potential Clients" value={report.potentialClients} />
+                        <ReportDetailItem label="Pipeline Value" value={`${currencySymbol[report.currency || 'USD']}${(report.pipelineValue || 0).toLocaleString()}`} />
+                        <ReportDetailItem label="Intervention" value={report.interventionTrigger} />
+                    </div>
+                     <Card className={cn(conversionRate < 15 && "bg-gradient-to-r from-red-50 to-orange-50 border-red-200")}>
+                        <CardContent className="p-4">
+                            <p className={cn("text-2xl font-bold", conversionRate < 15 && "text-red-600")}>{conversionRate.toFixed(2)}%</p>
+                            <p className="text-sm text-muted-foreground">Conversion Rate</p>
+                        </CardContent>
+                    </Card>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Daily Summary</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <ReportDetailItem label="Follow-ups Completed" value={report.followUpsCompleted} />
+                    <ReportDetailItem label="Meetings/Demos Secured & Quotations" value={report.meetingsSecured} />
+                    <ReportDetailItem label="Strategic Learning" value={report.strategicLearning} />
+                    <ReportDetailItem label="Client Win/Highlight" value={report.clientWinHighlight} />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Planning & Outlook</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <ReportDetailItem label="Pending Deliverables / Pipeline Impact" value={report.pendingDeliverables} />
+                    <ReportDetailItem label="Meetings/Demos Booked for Tomorrow" value={report.meetingsBookedTomorrow} />
+                    <ReportDetailItem label="Tomorrow's Critical Path" value={report.criticalPathTomorrow} />
+                </CardContent>
+            </Card>
+            <ReportDetailItem label="Signature" value={report.signature} />
+        </>
+    );
+};
 
 const TechnicalReportDetails = ({ report }: { report: Report }) => (
-  <>
-    <ReportDetailItem label="Subject" value={report.subject} />
-    <ReportDetailItem label="Technology / Tool Used" value={report.technologyUsed} />
-    <ReportDetailItem label="Task Description" value={report.taskDescription} />
-    <ReportDetailItem label="Code / Design / Testing Work Done" value={report.workDone} />
-    <ReportDetailItem label="Module / Feature Worked On" value={report.moduleWorkedOn} />
-    <ReportDetailItem label="Status" value={report.taskStatus} />
-     <div className="grid grid-cols-2 gap-4">
-        <ReportDetailItem label="Log in Time" value={report.logInTime} />
-        <ReportDetailItem label="Log out Time" value={report.logOutTime} />
-    </div>
-    {report.otherWork && (
-        <ReportDetailItem label="Other Work / Pending" value={report.otherWork} />
-    )}
-    <ReportDetailItem label="Signature" value={report.signature} />
-  </>
+  <Card>
+    <CardContent className="space-y-4 pt-6">
+        <ReportDetailItem label="Subject" value={report.subject} />
+        <ReportDetailItem label="Technology / Tool Used" value={report.technologyUsed} />
+        <ReportDetailItem label="Task Description" value={report.taskDescription} />
+        <ReportDetailItem label="Code / Design / Testing Work Done" value={report.workDone} />
+        <ReportDetailItem label="Module / Feature Worked On" value={report.moduleWorkedOn} />
+        <ReportDetailItem label="Status" value={report.taskStatus} />
+        <div className="grid grid-cols-2 gap-4">
+            <ReportDetailItem label="Log in Time" value={report.logInTime} />
+            <ReportDetailItem label="Log out Time" value={report.logOutTime} />
+        </div>
+        {report.otherWork && (
+            <ReportDetailItem label="Other Work / Pending" value={report.otherWork} />
+        )}
+        <ReportDetailItem label="Signature" value={report.signature} />
+    </CardContent>
+  </Card>
 );
 
 
@@ -150,8 +186,8 @@ export default function ReportsPage() {
   const userRole = currentUserData?.role;
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
-  const technicalDepartments = ['Engineering', 'Technology', 'IT'];
-  const isTechnicalUser = currentUserData?.department ? technicalDepartments.includes(currentUserData.department) : false;
+  const isBusinessUser = currentUserData?.jobTitle?.toLowerCase().includes('business') ?? false;
+  const isTechnicalUser = !isBusinessUser;
 
   const usersQuery = useMemoFirebase(() => {
     if (!isAdmin) return null;
@@ -159,29 +195,30 @@ export default function ReportsPage() {
   }, [firestore, isAdmin]);
   const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(usersQuery);
 
-  const reportsQuery = useMemoFirebase(() => {
-    const targetUserId = isAdmin ? selectedUser?.id : user?.uid;
-    if (!targetUserId) return null;
-    return query(collection(firestore, `users/${targetUserId}/reports`), orderBy('date', 'desc'));
-  }, [firestore, user, isAdmin, selectedUser]);
+  const reportUserId = isAdmin ? selectedUser?.id : user?.uid;
   
+  const reportsQuery = useMemoFirebase(() => {
+    if (!reportUserId) return null;
+    return query(collection(firestore, `users/${reportUserId}/reports`), orderBy('date', 'desc'));
+  }, [firestore, reportUserId]);
   const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
+  
+  const attendanceQuery = useMemoFirebase(() => {
+      if (!user) return null;
+      const todayId = format(new Date(), 'yyyy-MM-dd');
+      return query(collection(firestore, `users/${user.uid}/attendances`), where('id', '==', todayId));
+  }, [user, firestore]);
+
+  const { data: attendanceData } = useCollection(attendanceQuery);
+  const todaysAttendance = attendanceData?.[0];
 
   const form = useForm<ReportFormValues>({
-    resolver: zodResolver(isTechnicalUser ? technicalReportSchema : outreachReportSchema),
+    resolver: zodResolver(isBusinessUser ? businessReportSchema : technicalReportSchema),
     defaultValues: {
       signature: currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName}` : "",
-      ...(isTechnicalUser ? {
-        subject: "",
-        technologyUsed: "",
-        taskDescription: "",
-        workDone: "",
-        moduleWorkedOn: "",
-        taskStatus: "In Progress",
-        logInTime: "09:30",
-        logOutTime: "18:30",
-        otherWork: "",
-      } : {
+      declaration: false,
+      ...(isBusinessUser ? {
+        currency: "USD",
         outreachTotal: 0,
         potentialClients: 0,
         followUpsCompleted: "",
@@ -193,27 +230,74 @@ export default function ReportsPage() {
         meetingsBookedTomorrow: "",
         criticalPathTomorrow: "",
         interventionTrigger: "None",
+      } : {
+        subject: "",
+        technologyUsed: "",
+        taskDescription: "",
+        workDone: "",
+        moduleWorkedOn: "",
+        taskStatus: "In Progress",
+        logInTime: "09:30",
+        logOutTime: "18:30",
+        otherWork: "",
       })
     },
   });
+  
+  const resetForm = React.useCallback(() => {
+      form.reset({
+        signature: currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName}` : "",
+        declaration: false,
+        ...(isBusinessUser ? {
+            currency: "USD",
+            outreachTotal: 0,
+            potentialClients: 0,
+            followUpsCompleted: "",
+            meetingsSecured: "",
+            pipelineValue: 0,
+            strategicLearning: "",
+            clientWinHighlight: "",
+            pendingDeliverables: "",
+            meetingsBookedTomorrow: "",
+            criticalPathTomorrow: "",
+            interventionTrigger: "None",
+        } : {
+            subject: "",
+            technologyUsed: "",
+            taskDescription: "",
+            workDone: "",
+            moduleWorkedOn: "",
+            taskStatus: "In Progress",
+            logInTime: todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'HH:mm') : "09:30",
+            logOutTime: todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'HH:mm') : "18:30",
+            otherWork: "",
+        })
+      });
+  }, [form, currentUserData, isBusinessUser, todaysAttendance]);
 
   React.useEffect(() => {
-    if(currentUserData) {
-      form.reset({
-        ...form.getValues(),
-        signature: `${currentUserData.firstName} ${currentUserData.lastName}`
-      });
+    if (isTechnicalUser && todaysAttendance?.checkInTime) {
+      form.setValue('logInTime', format(todaysAttendance.checkInTime.toDate(), 'HH:mm'));
+      if(todaysAttendance.checkOutTime){
+        form.setValue('logOutTime', format(todaysAttendance.checkOutTime.toDate(), 'HH:mm'));
+      }
     }
-  }, [currentUserData, form]);
+    if (currentUserData) {
+        form.setValue('signature', `${currentUserData.firstName} ${currentUserData.lastName}`)
+    }
+  }, [todaysAttendance, isTechnicalUser, form, currentUserData]);
 
   const onSubmit = async (values: ReportFormValues) => {
-    if (!user) return;
+    if (!user || !currentUserData) return;
+    
+    const signatureWithTimestamp = `${values.signature} | ${currentUserData.jobTitle} | ${format(new Date(), 'PPpp')}`;
     
     const reportPayload = {
       ...values,
       employeeId: user.uid,
       date: new Date(),
-      reportType: isTechnicalUser ? 'Technical' : 'Business',
+      reportType: isBusinessUser ? 'Business' : 'Technical',
+      signature: signatureWithTimestamp,
     }
     
     await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), reportPayload);
@@ -223,7 +307,7 @@ export default function ReportsPage() {
         description: "Your daily work report has been saved."
     });
     setIsAddDialogOpen(false);
-    form.reset();
+    resetForm();
   };
 
   const jobTitles = React.useMemo(() => {
@@ -238,115 +322,146 @@ export default function ReportsPage() {
     return nameMatch && jobTitleMatch;
   });
 
-  const OutreachFormFields = () => {
+  const BusinessFormFields = () => {
     const { control } = form;
     const [outreach, potential] = useWatch({
         control,
         name: ["outreachTotal", "potentialClients"]
     });
-    const conversionRate = (outreach > 0) ? ((potential / outreach) * 100).toFixed(1) : 0;
+    const conversionRate = (outreach > 0) ? ((potential / outreach) * 100) : 0;
 
     return (
         <>
-            <FormField control={control} name="outreachTotal" render={({ field }) => (
-                <FormItem><FormLabel>Total Outreach</FormLabel><FormControl><Input type="number" min="0" {...field} placeholder="e.g., 30" /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={control} name="potentialClients" render={({ field }) => (
-                <FormItem><FormLabel>Potential Clients</FormLabel><FormControl><Input type="number" min="0" {...field} placeholder="e.g., 6" /></FormControl><FormMessage /></FormItem>
-            )} />
-            <div className="col-span-2">
-                <Label>Conversion Rate</Label>
-                <Card className="mt-2">
-                    <CardContent className="p-4">
-                        <p className="text-2xl font-bold">{conversionRate}%</p>
-                        <p className="text-sm text-muted-foreground">({potential} conversions / {outreach} outreach)</p>
-                    </CardContent>
-                </Card>
-            </div>
-            <FormField control={control} name="followUpsCompleted" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>Follow-ups Completed</FormLabel><FormControl><Textarea {...field} placeholder="Details on existing client follow-ups..." /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={control} name="meetingsSecured" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>Meetings/Demos Secured & Quotations</FormLabel><FormControl><Textarea {...field} placeholder="Client names and brief context..." /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={control} name="pipelineValue" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>Pipeline Business Value ($)</FormLabel><FormControl><Input type="number" min="0" {...field} placeholder="e.g., 100000" /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={control} name="strategicLearning" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>Strategic Learning</FormLabel><FormControl><Textarea {...field} placeholder="What did you learn today about the industry, product, or client behavior?" /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={control} name="clientWinHighlight" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>Client Win/Highlight</FormLabel><FormControl><Textarea {...field} placeholder="A brief narrative of the best conversation of the day..." /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={control} name="pendingDeliverables" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>Pending Deliverables / Pipeline Impact</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={control} name="meetingsBookedTomorrow" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>Meetings/Demos Booked for Tomorrow</FormLabel><FormControl><Textarea {...field} placeholder="Confirmed calendar invites sent..." /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={control} name="criticalPathTomorrow" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>T+1 Critical Path</FormLabel><FormControl><Textarea {...field} placeholder="Tomorrow's plan and the #1 most important task..." /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={control} name="interventionTrigger" render={({ field }) => (
-                <FormItem className="col-span-2">
-                    <FormLabel>Intervention Trigger</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                            <SelectItem value="None">None</SelectItem>
-                            <SelectItem value="Coaching">Coaching</SelectItem>
-                            <SelectItem value="Technical Support">Technical Support</SelectItem>
-                            <SelectItem value="Client meeting">Client meeting</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-            )} />
+            <Card>
+                <CardHeader><CardTitle>Outreach Analytics</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField control={control} name="currency" render={({ field }) => (
+                        <FormItem><FormLabel>Currency</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="USD">USD ($)</SelectItem>
+                                <SelectItem value="EUR">EUR (€)</SelectItem>
+                                <SelectItem value="GBP">GBP (£)</SelectItem>
+                                <SelectItem value="INR">INR (₹)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        <FormMessage /></FormItem>
+                    )} />
+                    <FormField control={control} name="pipelineValue" render={({ field }) => (
+                        <FormItem><FormLabel>Pipeline Business Value</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={control} name="outreachTotal" render={({ field }) => (
+                        <FormItem><FormLabel>Outreach (Total)</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={control} name="potentialClients" render={({ field }) => (
+                        <FormItem><FormLabel>Potential Clients (Conversions)</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <div className="md:col-span-2">
+                        <Label>Conversion Rate</Label>
+                        <Card className={cn("mt-2", conversionRate < 15 && "bg-gradient-to-r from-red-50 to-orange-50 border-red-200")}>
+                            <CardContent className="p-4">
+                                <p className={cn("text-2xl font-bold", conversionRate < 15 && "text-red-600")}>{conversionRate.toFixed(2)}%</p>
+                                <p className="text-sm text-muted-foreground">({potential} conversions / {outreach} outreach)</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Daily Summary</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <FormField control={control} name="followUpsCompleted" render={({ field }) => (
+                        <FormItem><FormLabel>Follow-ups Completed</FormLabel><FormControl><Textarea {...field} placeholder="Details on existing client follow-ups..." /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={control} name="meetingsSecured" render={({ field }) => (
+                        <FormItem><FormLabel>Meetings/Demos Secured & Quotations</FormLabel><FormControl><Textarea {...field} placeholder="Client names and brief context..." /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={control} name="strategicLearning" render={({ field }) => (
+                        <FormItem><FormLabel>Strategic Learning</FormLabel><FormControl><Textarea {...field} placeholder="What did you learn today about the industry, product, or client behavior?" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={control} name="clientWinHighlight" render={({ field }) => (
+                        <FormItem><FormLabel>Client Win/Highlight</FormLabel><FormControl><Textarea {...field} placeholder="A brief narrative of the best conversation of the day..." /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Planning & Outlook</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                     <FormField control={control} name="pendingDeliverables" render={({ field }) => (
+                        <FormItem><FormLabel>Pending Deliverables / Pipeline Impact</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={control} name="meetingsBookedTomorrow" render={({ field }) => (
+                        <FormItem><FormLabel>Meetings/Demos Booked for Tomorrow</FormLabel><FormControl><Textarea {...field} placeholder="Confirmed calendar invites sent..." /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={control} name="criticalPathTomorrow" render={({ field }) => (
+                        <FormItem><FormLabel>T+1 Critical Path</FormLabel><FormControl><Textarea {...field} placeholder="Tomorrow's plan and the #1 most important task..." /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={control} name="interventionTrigger" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Intervention Trigger</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="None">None</SelectItem>
+                                    <SelectItem value="Coaching">Coaching</SelectItem>
+                                    <SelectItem value="Technical Support">Technical Support</SelectItem>
+                                    <SelectItem value="Client meeting">Client meeting</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </CardContent>
+            </Card>
         </>
     );
   }
 
   const TechnicalFormFields = () => (
-    <>
-      <FormField control={form.control} name="subject" render={({ field }) => (
-          <FormItem className="col-span-2"><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-      )} />
-      <FormField control={form.control} name="technologyUsed" render={({ field }) => (
-        <FormItem className="col-span-2"><FormLabel>Technology / Tool Used / Learnt</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-      )} />
-      <FormField control={form.control} name="taskDescription" render={({ field }) => (
-        <FormItem className="col-span-2"><FormLabel>Task Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-      )} />
-      <FormField control={form.control} name="workDone" render={({ field }) => (
-        <FormItem className="col-span-2"><FormLabel>Code / Design / Testing Work Done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-      )} />
-      <FormField control={form.control} name="moduleWorkedOn" render={({ field }) => (
-        <FormItem className="col-span-2"><FormLabel>Module / Feature Worked On</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-      )} />
-       <FormField control={form.control} name="taskStatus" render={({ field }) => (
-        <FormItem>
-          <FormLabel>Status</FormLabel>
-            <Select onValueChange={field.onChange} value={field.value}>
-              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-              <SelectContent>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-              </SelectContent>
-            </Select>
-          <FormMessage />
-        </FormItem>
-      )} />
-      <div/>
-      <FormField control={form.control} name="logInTime" render={({ field }) => (
-        <FormItem><FormLabel>Log in Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-      )} />
-      <FormField control={form.control} name="logOutTime" render={({ field }) => (
-        <FormItem><FormLabel>Log out Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-      )} />
-      <FormField control={form.control} name="otherWork" render={({ field }) => (
-          <FormItem className="col-span-2"><FormLabel>Other work done / yet to be done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-      )} />
-    </>
+    <Card>
+        <CardHeader><CardTitle>Technical Work Report</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField control={form.control} name="subject" render={({ field }) => (
+                <FormItem className="md:col-span-2"><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="technologyUsed" render={({ field }) => (
+                <FormItem className="md:col-span-2"><FormLabel>Technology / Tool Used / Learnt</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="taskDescription" render={({ field }) => (
+                <FormItem className="md:col-span-2"><FormLabel>Task Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="workDone" render={({ field }) => (
+                <FormItem className="md:col-span-2"><FormLabel>Code / Design / Testing Work Done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="moduleWorkedOn" render={({ field }) => (
+                <FormItem className="md:col-span-2"><FormLabel>Module / Feature Worked On</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="taskStatus" render={({ field }) => (
+                <FormItem>
+                <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
+                    </SelectContent>
+                    </Select>
+                <FormMessage />
+                </FormItem>
+            )} />
+            <div/>
+            <FormField control={form.control} name="logInTime" render={({ field }) => (
+                <FormItem><FormLabel>Log in Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="logOutTime" render={({ field }) => (
+                <FormItem><FormLabel>Log out Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="otherWork" render={({ field }) => (
+                <FormItem className="md:col-span-2"><FormLabel>Other work done (Optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+        </CardContent>
+    </Card>
   );
 
   const AdminView = () => (
@@ -387,12 +502,12 @@ export default function ReportsPage() {
             {areUsersLoading ? (
               <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading users...</TableCell></TableRow>
             ) : filteredUsers?.map(u => (
-              <TableRow key={u.id} className="cursor-pointer" onClick={() => setSelectedUser(u)}>
+              <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(u)}>
                 <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
                 <TableCell>{u.jobTitle}</TableCell>
                 <TableCell>{u.department}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" onClick={() => setSelectedUser(u)}>
+                  <Button variant="outline" size="sm">
                     View Reports
                   </Button>
                 </TableCell>
@@ -406,39 +521,7 @@ export default function ReportsPage() {
 
   const EmployeeView = () => (
     <>
-      <PageHeader title="My Daily Reports" description="Submit and review your daily work reports.">
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-3xl p-0 flex flex-col h-[90vh] max-h-[90vh]">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-                <DialogHeader className="p-6 pb-4">
-                  <DialogTitle>New Daily Report</DialogTitle>
-                  <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
-                </DialogHeader>
-                <div className="flex-1 overflow-y-auto px-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 py-4">
-                    
-                    {isTechnicalUser ? <TechnicalFormFields /> : <OutreachFormFields />}
-                    
-                    <div className="col-span-2">
-                      <FormField control={form.control} name="signature" render={({ field }) => (
-                        <FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
-                      )} />
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter className="p-6 pt-4 border-t">
-                  <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                  <Button type="submit" disabled={form.formState.isSubmitting}>Submit Report</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </PageHeader>
+      <PageHeader title="My Daily Reports" description="Submit and review your daily work reports." />
       <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Subject / Type</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
@@ -447,18 +530,27 @@ export default function ReportsPage() {
               <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading reports...</TableCell></TableRow>
             ) : reports && reports.length > 0 ? (
               reports.map(report => (
-                <TableRow key={report.id} onClick={() => setSelectedReport(report)} className="cursor-pointer">
+                <TableRow key={report.id} onClick={() => setSelectedReport(report)} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>{format(report.date.toDate(), "PPP")}</TableCell>
-                  <TableCell>{report.reportType === 'Technical' ? report.subject : `Outreach Report`}</TableCell>
+                  <TableCell>{report.reportType === 'Technical' ? report.subject : `Business Report`}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => setSelectedReport(report)}>
+                    <Button variant="outline" size="sm">
                       View Details
                     </Button>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
-              <TableRow><TableCell colSpan={3} className="h-24 text-center">No reports submitted yet.</TableCell></TableRow>
+                <TableRow>
+                    <TableCell colSpan={3} className="h-48 text-center text-muted-foreground">
+                        <p className="mb-4">No reports submitted yet. Time to file one!</p>
+                         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
+                            </DialogTrigger>
+                        </Dialog>
+                    </TableCell>
+                </TableRow>
             )}
           </TableBody>
         </Table>
@@ -468,7 +560,80 @@ export default function ReportsPage() {
 
   return (
     <>
+        {isAdmin ? (
+            <PageHeader title="Employee Reports" description="Review and analyze daily reports." />
+        ) : (
+            <PageHeader title="My Daily Reports" description="Submit and view your work reports.">
+                <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+                    if (!open) {
+                        resetForm();
+                    }
+                    setIsAddDialogOpen(open);
+                }}>
+                    <DialogTrigger asChild>
+                        <Button><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
+                    </DialogTrigger>
+                </Dialog>
+            </PageHeader>
+        )}
+      
       {isAdmin ? <AdminView /> : <EmployeeView />}
+      
+      <DialogContent className="max-w-4xl w-full h-[95vh] flex flex-col p-0">
+        <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+            <DialogHeader className="p-6 pb-4 border-b">
+            <DialogTitle className="font-headline text-xl">New Daily Report</DialogTitle>
+            <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
+                 <Card>
+                    <CardContent className="pt-6">
+                        <FormField
+                            control={form.control}
+                            name="declaration"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel>Declaration</FormLabel>
+                                    <FormDescription>
+                                    I hereby declare that the information provided in this report is true and accurate to the best of my knowledge.
+                                    </FormDescription>
+                                    <FormMessage />
+                                </div>
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+            </div>
+             <DialogFooter className="p-6 pt-4 border-t bg-background/95 backdrop-blur-sm">
+                <div className="flex-1">
+                    <FormField control={form.control} name="signature" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="sr-only">Signature</FormLabel>
+                            <FormControl>
+                                <Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto text-xs" />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
+                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit Report'}
+                </Button>
+            </DialogFooter>
+        </form>
+        </Form>
+      </DialogContent>
       
       <Sheet open={!!selectedUser && !selectedReport} onOpenChange={(isOpen) => {
         if (!isOpen) {
@@ -488,11 +653,11 @@ export default function ReportsPage() {
           <Separator className="my-4" />
           <div className="flex-1 overflow-y-auto -mx-6">
             <div className="px-6">
-              {areReportsLoading ? <p>Loading...</p> : reports && reports.length > 0 ? (
+              {areReportsLoading ? <p className="text-center py-6">Loading...</p> : reports && reports.length > 0 ? (
                   <div className="space-y-4">
                       {reports.map(report => (
                           <div key={report.id} className="border p-4 rounded-lg cursor-pointer hover:bg-muted/50" onClick={() => setSelectedReport(report)}>
-                              <p className="font-semibold">{report.reportType === 'Technical' ? report.subject : 'Outreach Report'}</p>
+                              <p className="font-semibold">{report.reportType === 'Technical' ? report.subject : 'Business Report'}</p>
                               <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
                           </div>
                       ))}
@@ -503,23 +668,19 @@ export default function ReportsPage() {
         </SheetContent>
       </Sheet>
       
-      <Dialog open={!!selectedReport} onOpenChange={(isOpen) => {
-        if (!isOpen) setSelectedReport(null)
-      }}>
-        <DialogContent className="sm:max-w-3xl p-0 flex flex-col h-[90vh] max-h-[90vh]">
-          <DialogHeader className="p-6 pb-4">
+      <Dialog open={!!selectedReport} onOpenChange={(isOpen) => !isOpen && setSelectedReport(null)}>
+        <DialogContent className="max-w-3xl w-full h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-4 border-b">
             <DialogTitle>Report Details</DialogTitle>
             <DialogDescription>
               Submitted on {selectedReport?.date ? format(selectedReport.date.toDate(), "PPpp") : ''}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6">
-            <div className="space-y-6 py-4">
-              {selectedReport?.reportType === 'Business'
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {selectedReport?.reportType === 'Business'
                 ? <OutreachReportDetails report={selectedReport} />
                 : selectedReport && <TechnicalReportDetails report={selectedReport} />
-              }
-            </div>
+            }
           </div>
           <DialogFooter className="p-6 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setSelectedReport(null)}>Close</Button>
