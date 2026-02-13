@@ -9,8 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { PlusCircle, Search, PartyPopper } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -25,6 +24,8 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const businessReportSchema = z.object({
   currency: z.enum(["USD", "EUR", "GBP", "INR"]),
@@ -97,6 +98,16 @@ type Report = {
 
 type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; department?: string; };
 
+const motivationalQuotes = [
+    "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+    "The only way to do great work is to love what you do.",
+    "Believe you can and you're halfway there.",
+    "Your limitation is only your imagination.",
+    "The secret of getting ahead is getting started.",
+    "Well done is better than well said.",
+    "The future depends on what you do today."
+];
+
 const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => (
   <div>
     <p className="text-sm font-medium text-muted-foreground">{label}</p>
@@ -107,8 +118,33 @@ const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactN
 const OutreachReportDetails = ({ report }: { report: Report }) => {
     const currencySymbol = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
     const conversionRate = (report.outreachTotal && report.outreachTotal > 0) ? ((report.potentialClients || 0) / report.outreachTotal) * 100 : 0;
+    const isHighPerformer = conversionRate >= 75;
+    const [randomQuote, setRandomQuote] = React.useState('');
+
+    React.useEffect(() => {
+        if (isHighPerformer) {
+            setRandomQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
+        }
+    }, [isHighPerformer]);
+    
     return (
-        <>
+        <div className="space-y-4">
+            {isHighPerformer && (
+                <Card className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
+                    <CardHeader className="flex-row items-center gap-4">
+                        <PartyPopper className="h-10 w-10 text-green-600 animate-pulse" />
+                        <div>
+                            <CardTitle className="text-green-700 dark:text-green-400">Well Done!</CardTitle>
+                            <CardDescription className="text-green-600 dark:text-green-500">Exceptional performance on this report.</CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <blockquote className="border-l-2 border-green-300 pl-4 italic text-green-800/80 dark:text-green-300/80">
+                            {randomQuote}
+                        </blockquote>
+                    </CardContent>
+                </Card>
+            )}
             <Card>
                 <CardHeader><CardTitle>Outreach Analytics</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -118,9 +154,9 @@ const OutreachReportDetails = ({ report }: { report: Report }) => {
                         <ReportDetailItem label="Pipeline Value" value={`${currencySymbol[report.currency || 'USD']}${(report.pipelineValue || 0).toLocaleString()}`} />
                         <ReportDetailItem label="Intervention" value={report.interventionTrigger} />
                     </div>
-                     <Card className={cn(conversionRate < 15 && "bg-gradient-to-r from-red-50 to-orange-50 border-red-200")}>
+                     <Card className={cn(conversionRate < 15 && conversionRate > 0 && "bg-gradient-to-r from-red-50 to-orange-50 border-red-200")}>
                         <CardContent className="p-4">
-                            <p className={cn("text-2xl font-bold", conversionRate < 15 && "text-red-600")}>{conversionRate.toFixed(2)}%</p>
+                            <p className={cn("text-2xl font-bold", conversionRate < 15 && conversionRate > 0 && "text-red-600")}>{conversionRate.toFixed(2)}%</p>
                             <p className="text-sm text-muted-foreground">Conversion Rate</p>
                         </CardContent>
                     </Card>
@@ -144,7 +180,7 @@ const OutreachReportDetails = ({ report }: { report: Report }) => {
                 </CardContent>
             </Card>
             <ReportDetailItem label="Signature" value={report.signature} />
-        </>
+        </div>
     );
 };
 
@@ -175,7 +211,6 @@ export default function ReportsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [selectedReport, setSelectedReport] = React.useState<Report | null>(null);
   const [selectedUser, setSelectedUser] = React.useState<UserData | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedJobTitle, setSelectedJobTitle] = React.useState("All Job Titles");
@@ -359,9 +394,9 @@ export default function ReportsPage() {
                     )} />
                     <div className="md:col-span-2">
                         <Label>Conversion Rate</Label>
-                        <Card className={cn("mt-2", conversionRate < 15 && "bg-gradient-to-r from-red-50 to-orange-50 border-red-200")}>
+                        <Card className={cn("mt-2", conversionRate < 15 && conversionRate > 0 && "bg-gradient-to-r from-red-50 to-orange-50 border-red-200")}>
                             <CardContent className="p-4">
-                                <p className={cn("text-2xl font-bold", conversionRate < 15 && "text-red-600")}>{conversionRate.toFixed(2)}%</p>
+                                <p className={cn("text-2xl font-bold", conversionRate < 15 && conversionRate > 0 && "text-red-600")}>{conversionRate.toFixed(2)}%</p>
                                 <p className="text-sm text-muted-foreground">({potential} conversions / {outreach} outreach)</p>
                             </CardContent>
                         </Card>
@@ -519,37 +554,37 @@ export default function ReportsPage() {
   );
 
   const EmployeeView = () => (
-    <>
-      <div className="border rounded-lg overflow-x-auto">
-        <Table>
-          <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Subject / Type</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-          <TableBody>
-            {areReportsLoading ? (
-              <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading reports...</TableCell></TableRow>
-            ) : reports && reports.length > 0 ? (
-              reports.map(report => (
-                <TableRow key={report.id} onClick={() => setSelectedReport(report)} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell>{format(report.date.toDate(), "PPP")}</TableCell>
-                  <TableCell>{report.reportType === 'Technical' ? report.subject : `Business Report`}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-                <TableRow>
-                    <TableCell colSpan={3} className="h-48 text-center text-muted-foreground">
-                        <p className="mb-4">No reports submitted yet. Time to file one!</p>
-                        <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
-                    </TableCell>
-                </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </>
+    <div className="space-y-2">
+      {areReportsLoading ? (
+          <p className="text-center py-10 text-muted-foreground">Loading reports...</p>
+      ) : reports && reports.length > 0 ? (
+        <Accordion type="single" collapsible className="w-full space-y-2">
+          {reports.map(report => (
+            <AccordionItem value={report.id} key={report.id} className="border-none">
+              <AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50 data-[state=open]:bg-muted/50 data-[state=open]:rounded-b-none">
+                  <div className="flex-1 text-left">
+                      <p className="font-semibold">{report.reportType === 'Technical' ? report.subject : 'Business Report'}</p>
+                      <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
+                  </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 border border-t-0 rounded-b-md">
+                {report.reportType === 'Business'
+                    ? <OutreachReportDetails report={report} />
+                    : <TechnicalReportDetails report={report} />
+                }
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      ) : (
+          <Card>
+              <CardContent className="h-48 flex flex-col items-center justify-center text-center text-muted-foreground">
+                  <p className="mb-4">No reports submitted yet. Time to file one!</p>
+                  <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
+              </CardContent>
+          </Card>
+      )}
+    </div>
   );
 
   return (
@@ -578,108 +613,87 @@ export default function ReportsPage() {
               <DialogTitle className="font-headline text-xl">New Daily Report</DialogTitle>
               <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
               </DialogHeader>
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                  {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
-                   <Card>
-                      <CardContent className="pt-6">
-                          <FormField
-                              control={form.control}
-                              name="declaration"
-                              render={({ field }) => (
-                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                  <FormControl>
-                                      <Checkbox
-                                          checked={field.value}
-                                          onCheckedChange={field.onChange}
-                                      />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none">
-                                      <FormLabel>Declaration</FormLabel>
-                                      <FormDescription>
-                                      I hereby declare that the information provided in this report is true and accurate to the best of my knowledge.
-                                      </FormDescription>
-                                      <FormMessage />
-                                  </div>
-                                  </FormItem>
-                              )}
-                          />
-                      </CardContent>
-                  </Card>
-              </div>
-               <DialogFooter className="p-6 pt-4 border-t bg-background/95 backdrop-blur-sm">
-                  <div className="flex-1">
-                      <FormField control={form.control} name="signature" render={({ field }) => (
-                          <FormItem>
-                              <FormLabel className="sr-only">Signature</FormLabel>
-                              <FormControl>
-                                  <Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto text-xs" />
-                              </FormControl>
-                              <FormMessage />
-                          </FormItem>
-                      )} />
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-6">
+                    {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
+                    <FormField
+                        control={form.control}
+                        name="declaration"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                                <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>Declaration</FormLabel>
+                                <FormDescription>
+                                I hereby declare that the information provided in this report is true and accurate to the best of my knowledge.
+                                </FormDescription>
+                                <FormMessage />
+                            </div>
+                            </FormItem>
+                        )}
+                    />
+                </div>
+              </ScrollArea>
+               <DialogFooter className="p-6 pt-4 border-t bg-background/95 backdrop-blur-sm flex-col-reverse sm:flex-row sm:justify-between items-center">
+                  <FormField control={form.control} name="signature" render={({ field }) => (
+                      <FormItem className="text-xs text-muted-foreground text-center sm:text-left">
+                          <FormControl><Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto" /></FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )} />
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
+                        {form.formState.isSubmitting ? 'Submitting...' : 'Submit Report'}
+                    </Button>
                   </div>
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
-                      {form.formState.isSubmitting ? 'Submitting...' : 'Submit Report'}
-                  </Button>
               </DialogFooter>
           </form>
           </Form>
         </DialogContent>
       </Dialog>
       
-      <Sheet open={!!selectedUser && !selectedReport} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          setSelectedReport(null);
-          if (isAdmin) setSelectedUser(null);
-        }
-      }}>
-        <SheetContent className="sm:max-w-lg flex flex-col">
-          <SheetHeader>
+      <Sheet open={!!selectedUser} onOpenChange={(isOpen) => !isOpen && setSelectedUser(null)}>
+        <SheetContent className="sm:max-w-2xl w-full flex flex-col p-0">
+          <SheetHeader className="p-6 pb-4 border-b">
             <SheetTitle>
-              {isAdmin && selectedUser ? `${selectedUser.firstName}'s Reports` : "Report Details"}
+              {selectedUser ? `${selectedUser.firstName}'s Reports` : "Reports"}
             </SheetTitle>
             <SheetDescription>
-              {isAdmin && selectedUser ? `Daily reports submitted by ${selectedUser.firstName}.` : "Details of your submitted report."}
+              {selectedUser ? `Daily reports submitted by ${selectedUser.firstName}.` : ""}
             </SheetDescription>
           </SheetHeader>
-          <Separator className="my-4" />
-          <div className="flex-1 overflow-y-auto -mx-6">
-            <div className="px-6">
+          <ScrollArea className="flex-1">
+            <div className="p-6 space-y-2">
               {areReportsLoading ? <p className="text-center py-6">Loading...</p> : reports && reports.length > 0 ? (
-                  <div className="space-y-4">
+                  <Accordion type="single" collapsible className="w-full">
                       {reports.map(report => (
-                          <div key={report.id} className="border p-4 rounded-lg cursor-pointer hover:bg-muted/50" onClick={() => setSelectedReport(report)}>
-                              <p className="font-semibold">{report.reportType === 'Technical' ? report.subject : 'Business Report'}</p>
-                              <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
-                          </div>
+                          <AccordionItem value={report.id} key={report.id} className="border-none">
+                              <AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50 data-[state=open]:bg-muted/50 data-[state=open]:rounded-b-none">
+                                  <div className="flex-1 text-left">
+                                      <p className="font-semibold">{report.reportType === 'Technical' ? report.subject : 'Business Report'}</p>
+                                      <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
+                                  </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="p-4 border border-t-0 rounded-b-md">
+                                {report.reportType === 'Business'
+                                    ? <OutreachReportDetails report={report} />
+                                    : <TechnicalReportDetails report={report} />
+                                }
+                              </AccordionContent>
+                          </AccordionItem>
                       ))}
-                  </div>
+                  </Accordion>
               ) : <p className="text-center text-muted-foreground py-6">No reports found for this user.</p>}
             </div>
-          </div>
+          </ScrollArea>
         </SheetContent>
       </Sheet>
-      
-      <Dialog open={!!selectedReport} onOpenChange={(isOpen) => !isOpen && setSelectedReport(null)}>
-        <DialogContent className="max-w-3xl w-full h-[90vh] flex flex-col p-0">
-          <DialogHeader className="p-6 pb-4 border-b">
-            <DialogTitle>Report Details</DialogTitle>
-            <DialogDescription>
-              Submitted on {selectedReport?.date ? format(selectedReport.date.toDate(), "PPpp") : ''}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {selectedReport?.reportType === 'Business'
-                ? <OutreachReportDetails report={selectedReport} />
-                : selectedReport && <TechnicalReportDetails report={selectedReport} />
-            }
-          </div>
-          <DialogFooter className="p-6 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => setSelectedReport(null)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
