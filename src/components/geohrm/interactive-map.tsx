@@ -39,7 +39,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, o
             console.warn('Geocoder failed due to: ' + status);
         }
         setSelectedAddress(address);
-        onLocationSelect({ lat: latLng.lat(), lng: latLng.lng(), address });
+        // Handle both google.maps.LatLng and {lat, lng} objects
+        const lat = typeof latLng.lat === 'function' ? latLng.lat() : latLng.lat;
+        const lng = typeof latLng.lng === 'function' ? latLng.lng() : latLng.lng;
+        onLocationSelect({ lat, lng, address });
     });
   };
 
