@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, useUser } from "@/firebase";
-import { collection, query, where, doc, writeBatch, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, doc, writeBatch, serverTimestamp, getDoc } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
@@ -46,23 +46,39 @@ export default function LocationRequestsPage() {
 
     const handleApprove = async (request: WithId<LocationChangeRequest>) => {
         if (!currentUser) return;
-        const batch = writeBatch(firestore);
         
-        const requestRef = doc(firestore, 'location_change_requests', request.id);
-        batch.update(requestRef, {
-            status: 'approved',
-            processedDate: serverTimestamp(),
-            approvedBy: currentUser.uid,
-        });
-
         const userRef = doc(firestore, 'users', request.employeeId);
-        batch.update(userRef, {
-            homeLatitude: request.newLatitude,
-            homeLongitude: request.newLongitude,
-        });
+        try {
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) {
+                toast({ variant: 'destructive', title: 'Approval Failed', description: `User ${request.employeeName} no longer exists.` });
+                // Optionally, also delete the stale request document
+                // const requestRef = doc(firestore, 'location_change_requests', request.id);
+                // await deleteDoc(requestRef);
+                return;
+            }
 
-        await batch.commit();
-        toast({ title: 'Request Approved', description: `${request.employeeName}'s location has been updated.` });
+            const batch = writeBatch(firestore);
+            
+            const requestRef = doc(firestore, 'location_change_requests', request.id);
+            batch.update(requestRef, {
+                status: 'approved',
+                processedDate: serverTimestamp(),
+                approvedBy: currentUser.uid,
+            });
+
+            batch.update(userRef, {
+                homeLatitude: request.newLatitude,
+                homeLongitude: request.newLongitude,
+            });
+
+            await batch.commit();
+            toast({ title: 'Request Approved', description: `${request.employeeName}'s location has been updated.` });
+
+        } catch (error: any) {
+            console.error("Failed to approve location change:", error);
+            toast({ variant: 'destructive', title: 'Error', description: "An unexpected error occurred during approval." });
+        }
     };
 
     const handleReject = async () => {
