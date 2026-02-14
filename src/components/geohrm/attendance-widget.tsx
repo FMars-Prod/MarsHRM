@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -119,6 +118,9 @@ export function AttendanceWidget() {
   const [outOfRangeAction, setOutOfRangeAction] = useState<(() => void) | null>(null);
   const [isWorkFromHome, setIsWorkFromHome] = useState(false);
   
+  const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = useState(false);
+  const [capturedLocation, setCapturedLocation] = useState<Location | null>(null);
+
   useEffect(() => {
     if (officeLocation) {
         setNewLatitude(officeLocation.latitude?.toString() || "");
@@ -347,26 +349,27 @@ export function AttendanceWidget() {
         const homeLon = (userData as any)?.homeLongitude;
         const homeRange = (userData as any)?.homeLocationRangeKm;
 
-        if (!homeLat || !homeLon) {
-            toast({ variant: "destructive", title: "Home Location Not Set", description: "Please set your home location in your profile before clocking in from home." });
-            return;
-        }
-        
-        const homeLocation: Location = { latitude: homeLat, longitude: homeLon };
-
         navigator.geolocation.getCurrentPosition(
             (position) => {
               const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-              const dist = getDistanceInKm(userLocation, homeLocation);
               
-              if (dist > (homeRange || 0.5)) { 
-                  toast({ variant: "destructive", title: "Out of Range", description: `You must be within ${homeRange || 0.5}km of your home location to clock in.` });
-                  return;
+              if (homeLat && homeLon) {
+                  const homeLocation: Location = { latitude: homeLat, longitude: homeLon };
+                  const dist = getDistanceInKm(userLocation, homeLocation);
+                  
+                  if (dist > (homeRange || 0.5)) { 
+                      toast({ variant: "destructive", title: "Out of Range", description: `You must be within ${homeRange || 0.5}km of your home location to clock in.` });
+                      return;
+                  }
+                  
+                  proceedWithClockIn(userLocation, dist, "Work From Home");
+              } else {
+                  // Home location is NOT set, prompt to set it.
+                  setCapturedLocation(userLocation);
+                  setIsSetHomeLocationDialogOpen(true);
               }
-              
-              proceedWithClockIn(userLocation, dist, "Work From Home");
             },
-            () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
+            () => toast({ variant: "destructive", title: "Location Error", description: "Could not get your location. Please enable location services."}),
             { enableHighAccuracy: true }
         );
     } else {
@@ -467,6 +470,28 @@ export function AttendanceWidget() {
         );
     }
   };
+  
+  const handleConfirmSetHomeLocation = () => {
+    if (!userDocRef || !capturedLocation) return;
+
+    // 1. Update the user's profile with the new home location.
+    updateDocumentNonBlocking(userDocRef, {
+        homeLatitude: capturedLocation.latitude,
+        homeLongitude: capturedLocation.longitude,
+    });
+
+    // 2. Proceed with the clock-in process.
+    // The distance will be 0 since we're using the captured location as the home base.
+    proceedWithClockIn(capturedLocation, 0, "Work From Home (Initial Location Set)");
+    
+    toast({
+        title: "Home Location Saved",
+        description: "Your current location has been set as your home address for WFH.",
+    });
+
+    setCapturedLocation(null);
+  };
+
 
   const handleSaveSettings = async () => {
       const lat = parseFloat(newLatitude);
@@ -767,31 +792,44 @@ export function AttendanceWidget() {
         )}
       </CardFooter>
 
-        <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Out of Range</DialogTitle>
-                    <DialogDescription>
-                        You are outside the designated office radius. Please provide a reason to continue.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <Label htmlFor="reason">Reason</Label>
-                    <Textarea 
-                        id="reason" 
-                        value={outOfRangeReason}
-                        onChange={(e) => setOutOfRangeReason(e.target.value)}
-                        placeholder="e.g., Working from a client's office" 
-                    />
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsOutOfRangeReasonDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleOutOfRangeSubmit}>Submit</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+      <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Out of Range</DialogTitle>
+                <DialogDescription>
+                    You are outside the designated office radius. Please provide a reason to continue.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <Label htmlFor="reason">Reason</Label>
+                <Textarea 
+                    id="reason" 
+                    value={outOfRangeReason}
+                    onChange={(e) => setOutOfRangeReason(e.target.value)}
+                    placeholder="e.g., Working from a client's office" 
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsOutOfRangeReasonDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleOutOfRangeSubmit}>Submit</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <AlertDialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Set Home Location?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    You have not set a home location yet. Would you like to use your current location as your Work From Home address? This can be changed later in your profile.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmSetHomeLocation}>Confirm & Clock In</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
-
-    
