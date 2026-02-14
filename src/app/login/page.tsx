@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -64,11 +63,20 @@ export default function LoginPage() {
           toast({ title: 'Success', description: 'Logged in successfully.' });
           router.push('/dashboard');
       } catch (error: any) {
-          if (error.message && error.message.includes('identitytoolkit')) {
+          console.error("Login Error:", error); // For debugging
+          if (error.code === 'auth/network-request-failed') {
+             toast({
+                  variant: 'destructive',
+                  title: 'Network Error',
+                  description: "Couldn't connect to Firebase. This can be caused by API key restrictions. Please ensure your API key allows your domain.",
+                  duration: 9000,
+              });
+          } else if (error.message && error.message.includes('identitytoolkit')) {
               toast({
                   variant: 'destructive',
-                  title: 'Login Service Disabled',
-                  description: 'The authentication service is not enabled for this project. An admin needs to enable the Identity Toolkit API in the Google Cloud Console.'
+                  title: 'Authentication API Disabled',
+                  description: 'The Identity Toolkit API is not enabled for this project. Please enable it in your Google Cloud Console.',
+                  duration: 9000,
               });
           } else {
               toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
