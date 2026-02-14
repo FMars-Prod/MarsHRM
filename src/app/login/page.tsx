@@ -64,7 +64,15 @@ export default function LoginPage() {
           toast({ title: 'Success', description: 'Logged in successfully.' });
           router.push('/dashboard');
       } catch (error: any) {
-          toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
+          if (error.message && error.message.includes('identitytoolkit')) {
+              toast({
+                  variant: 'destructive',
+                  title: 'Login Service Disabled',
+                  description: 'The authentication service is not enabled for this project. An admin needs to enable the Identity Toolkit API in the Google Cloud Console.'
+              });
+          } else {
+              toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
+          }
       } finally {
           setIsLoading(false);
       }
