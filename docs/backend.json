@@ -61,6 +61,10 @@
         "homeLocationRangeKm": {
           "type": "number",
           "description": "The permissible clock-in radius in kilometers for WFH."
+        },
+        "isWfhAllowed": {
+          "type": "boolean",
+          "description": "Whether the employee is allowed to work from home."
         }
       },
       "required": [

@@ -93,6 +93,7 @@ export function AttendanceWidget() {
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
   const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
+  const isWfhAllowed = (userData as any)?.isWfhAllowed;
 
   const officeLocationDocRef = useMemoFirebase(
     () => doc(firestore, "settings", "location"),
@@ -598,19 +599,21 @@ export function AttendanceWidget() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col items-center justify-center gap-4 text-center">
-        <div className="flex items-center justify-center space-x-2 mb-2">
-            <Building2 className="size-4" />
-            <Label htmlFor="wfh-switch">Office</Label>
-            <Switch
-                id="wfh-switch"
-                checked={isWorkFromHome}
-                onCheckedChange={setIsWorkFromHome}
-                disabled={status !== 'out' || hasClockedOutToday}
-                aria-label="Toggle work location"
-            />
-            <Label htmlFor="wfh-switch">Home</Label>
-            <Home className="size-4" />
-        </div>
+        {isWfhAllowed && (
+            <div className="flex items-center justify-center space-x-2 mb-2">
+                <Building2 className="size-4" />
+                <Label htmlFor="wfh-switch">Office</Label>
+                <Switch
+                    id="wfh-switch"
+                    checked={isWorkFromHome}
+                    onCheckedChange={setIsWorkFromHome}
+                    disabled={status !== 'out' || hasClockedOutToday}
+                    aria-label="Toggle work location"
+                />
+                <Label htmlFor="wfh-switch">Home</Label>
+                <Home className="size-4" />
+            </div>
+        )}
         {isLocationLoading && !isWorkFromHome ? (
              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <Building2 className="h-10 w-10 animate-pulse" />
@@ -790,3 +793,5 @@ export function AttendanceWidget() {
     </Card>
   );
 }
+
+    

@@ -44,11 +44,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
@@ -65,6 +66,7 @@ const userSchema = z.object({
   homeLatitude: z.coerce.number().optional(),
   homeLongitude: z.coerce.number().optional(),
   homeLocationRangeKm: z.coerce.number().min(0, "Range cannot be negative.").optional(),
+  isWfhAllowed: z.boolean().optional(),
 }).refine(data => {
     if (data.password && data.password.length < 6) {
         return false;
@@ -115,6 +117,7 @@ export default function UsersPage() {
       homeLatitude: undefined,
       homeLongitude: undefined,
       homeLocationRangeKm: 0.5,
+      isWfhAllowed: false,
     },
   });
 
@@ -133,6 +136,7 @@ export default function UsersPage() {
       homeLatitude: undefined,
       homeLongitude: undefined,
       homeLocationRangeKm: 0.5,
+      isWfhAllowed: false,
     });
   };
 
@@ -150,6 +154,7 @@ export default function UsersPage() {
       homeLatitude: (userToEdit as any).homeLatitude || undefined,
       homeLongitude: (userToEdit as any).homeLongitude || undefined,
       homeLocationRangeKm: (userToEdit as any).homeLocationRangeKm === 0 ? 0 : (userToEdit as any).homeLocationRangeKm || 0.5,
+      isWfhAllowed: (userToEdit as any).isWfhAllowed || false,
     });
     setIsDialogOpen(true);
   };
@@ -249,6 +254,7 @@ export default function UsersPage() {
               hireDate: new Date().toISOString(),
               ...userData,
               homeLocationRangeKm: values.homeLocationRangeKm || 0.5,
+              isWfhAllowed: values.isWfhAllowed || false,
             }
             
             const batch = writeBatch(firestore);
@@ -398,6 +404,22 @@ export default function UsersPage() {
                         <Separator className="my-4"/>
                         <div className="space-y-4">
                             <h4 className="font-semibold text-foreground">Work From Home Settings</h4>
+                             <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                    <div className="space-y-0.5">
+                                        <FormLabel>Allow Work From Home</FormLabel>
+                                        <FormDescription>
+                                            Let this user clock in from home.
+                                        </FormDescription>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )} />
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField control={form.control} name="homeLatitude" render={({ field }) => (
                                     <FormItem><FormLabel>Home Latitude</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>
@@ -484,3 +506,5 @@ export default function UsersPage() {
     </>
   );
 }
+
+    
