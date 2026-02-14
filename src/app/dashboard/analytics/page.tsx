@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -68,6 +69,8 @@ type EditableAttendance = {
     checkInTime: string;
     checkOutTime: string;
     totalBreakDuration: string;
+    checkInNotes: string;
+    checkOutNotes: string;
 }
 
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
@@ -115,6 +118,8 @@ const AnalyticsPage = () => {
       checkInTime: '',
       checkOutTime: '',
       totalBreakDuration: '0',
+      checkInNotes: '',
+      checkOutNotes: '',
   });
 
   const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
@@ -205,9 +210,11 @@ const AnalyticsPage = () => {
               checkInTime: record.checkInTime ? format(record.checkInTime.toDate(), 'HH:mm') : '',
               checkOutTime: record.checkOutTime ? format(record.checkOutTime.toDate(), 'HH:mm') : '',
               totalBreakDuration: record.totalBreakDuration ? (record.totalBreakDuration / 60).toString() : '0',
+              checkInNotes: record.checkInNotes || '',
+              checkOutNotes: record.checkOutNotes || '',
           });
       } else {
-          setEditableAttendance({ status: 'absent', checkInTime: '', checkOutTime: '', totalBreakDuration: '0' });
+          setEditableAttendance({ status: 'absent', checkInTime: '', checkOutTime: '', totalBreakDuration: '0', checkInNotes: '', checkOutNotes: '' });
       }
   }, [attendanceData, isEditDialogOpen, filterMode]);
 
@@ -361,6 +368,8 @@ const AnalyticsPage = () => {
           checkInTime: checkInDateTime ? Timestamp.fromDate(checkInDateTime) : null,
           checkOutTime: checkOutDateTime ? Timestamp.fromDate(checkOutDateTime) : null,
           totalBreakDuration: parseInt(editableAttendance.totalBreakDuration) * 60 || 0,
+          checkInNotes: editableAttendance.checkInNotes,
+          checkOutNotes: editableAttendance.checkOutNotes,
       };
 
       setDocumentNonBlocking(attendanceRef, payload, { merge: true });
@@ -454,6 +463,14 @@ const AnalyticsPage = () => {
                                         <SelectItem value="on_leave">On Leave</SelectItem>
                                     </SelectContent>
                                 </Select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="checkin-notes">Clock In Notes</Label>
+                                <Textarea id="checkin-notes" value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="checkout-notes">Clock Out Notes</Label>
+                                <Textarea id="checkout-notes" value={editableAttendance.checkOutNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutNotes: e.target.value}))} />
                             </div>
                         </div>
                         <DialogFooter className="sm:justify-between">
