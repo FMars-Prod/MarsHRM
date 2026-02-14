@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -765,7 +764,7 @@ export function AttendanceWidget() {
             <DialogHeader>
                 <DialogTitle>Out of Range</DialogTitle>
                 <DialogDescription>
-                    You are outside the designated office radius. Please provide a reason to continue.
+                    You are outside the designated {isWfhAllowed ? 'home or office' : 'office'} radius. Please provide a reason to continue.
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
