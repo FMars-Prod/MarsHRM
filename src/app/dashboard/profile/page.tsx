@@ -75,6 +75,7 @@ export default function ProfilePage() {
     const [changeReason, setChangeReason] = React.useState("");
     const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = React.useState(false);
     const [capturedLocation, setCapturedLocation] = React.useState<Location | null>(null);
+    const [selectedAddress, setSelectedAddress] = React.useState<string>("Getting address...");
 
     const userDocRef = useMemoFirebase(
         () => (user ? doc(firestore, "users", user.uid) : null),
@@ -192,7 +193,7 @@ export default function ProfilePage() {
         });
         toast({
             title: "Home Location Saved",
-            description: "Your current location has been set as your home address.",
+            description: selectedAddress,
         });
         setCapturedLocation(null);
         setIsSetHomeLocationDialogOpen(false);
@@ -216,7 +217,7 @@ export default function ProfilePage() {
         
         addDocumentNonBlocking(collection(firestore, 'location_change_requests'), requestPayload);
 
-        toast({ title: 'Request Submitted', description: 'Your location change request has been sent for approval.' });
+        toast({ title: 'Request Submitted', description: `New location: ${selectedAddress}` });
         setIsRequestChangeOpen(false);
         setChangeReason("");
         setCapturedLocation(null);
@@ -473,15 +474,21 @@ export default function ProfilePage() {
                     <DialogHeader>
                         <DialogTitle>Set Home Location</DialogTitle>
                         <DialogDescription>
-                            Your current location is pinned on the map below. Drag the pin to adjust, then confirm to set this as your permanent Work From Home address.
+                            Your current location is pinned below. Drag the pin, click the map, or use search to adjust it.
                         </DialogDescription>
                     </DialogHeader>
                     {capturedLocation && (
-                        <div className="aspect-video w-full rounded-md overflow-hidden border">
-                            <InteractiveMap
-                                initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }}
-                                onLocationSelect={(loc) => setCapturedLocation({ latitude: loc.lat, longitude: loc.lng })}
-                            />
+                        <div className="space-y-2">
+                            <div className="aspect-video w-full rounded-md overflow-hidden border">
+                                <InteractiveMap
+                                    initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }}
+                                    onLocationSelect={({ lat, lng, address }) => {
+                                        setCapturedLocation({ latitude: lat, longitude: lng });
+                                        setSelectedAddress(address);
+                                    }}
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground p-2 bg-muted rounded-md">{selectedAddress}</p>
                         </div>
                     )}
                     <DialogFooter>
@@ -493,20 +500,26 @@ export default function ProfilePage() {
             
             <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
                  <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] p-0">
-                    <DialogHeader className="p-6 border-b">
+                    <DialogHeader className="p-6 pb-4 border-b">
                         <DialogTitle>Request Home Location Change</DialogTitle>
                         <DialogDescription>
-                            Drag the pin to your new location, provide a reason for the change, and submit for approval.
+                            Use search, your current location, or drag the pin to your new address. Provide a reason and submit for approval.
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1">
                         <div className="grid gap-4 p-6">
                             {capturedLocation && (
-                                <div className="aspect-video w-full rounded-md overflow-hidden border">
-                                    <InteractiveMap
-                                        initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }}
-                                        onLocationSelect={(loc) => setCapturedLocation({ latitude: loc.lat, longitude: loc.lng })}
-                                    />
+                                <div className="space-y-2">
+                                    <div className="aspect-video w-full rounded-md overflow-hidden border">
+                                        <InteractiveMap
+                                            initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }}
+                                            onLocationSelect={({ lat, lng, address }) => {
+                                                setCapturedLocation({ latitude: lat, longitude: lng });
+                                                setSelectedAddress(address);
+                                            }}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground p-2 bg-muted rounded-md">{selectedAddress}</p>
                                 </div>
                             )}
                             <div>

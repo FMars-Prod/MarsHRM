@@ -37,7 +37,7 @@ export default function RootLayout({
         </FirebaseClientProvider>
         <Toaster />
         <Script
-          src={`https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}`}
+          src={`https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places`}
           strategy="beforeInteractive"
         />
       </body>
