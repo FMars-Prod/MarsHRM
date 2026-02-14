@@ -40,7 +40,8 @@ const businessReportSchema = z.object({
   meetingsBookedTomorrow: z.string().min(1, "This field is required."),
   criticalPathTomorrow: z.string().min(1, "This field is required."),
   interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]),
-  audioRecording: z.string().optional(),
+  bestCallRecording: z.string().optional(),
+  worstCallRecording: z.string().optional(),
   declaration: z.literal<boolean>(true, {
     errorMap: () => ({ message: "You must acknowledge the declaration." }),
   }),
@@ -72,7 +73,8 @@ type Report = {
   date: any; 
   reportType: 'Business' | 'Technical';
   signature: string;
-  audioRecording?: string;
+  bestCallRecording?: string;
+  worstCallRecording?: string;
   // Business
   currency?: 'USD' | 'EUR' | 'GBP' | 'INR';
   outreachTotal?: number;
@@ -181,10 +183,16 @@ const OutreachReportDetails = ({ report }: { report: Report }) => {
                     <ReportDetailItem label="Tomorrow's Critical Path" value={report.criticalPathTomorrow} />
                 </CardContent>
             </Card>
-             {report.audioRecording && (
+             {report.bestCallRecording && (
                 <ReportDetailItem
-                    label="Audio Note"
-                    value={<audio controls src={report.audioRecording} className="w-full" />}
+                    label="Best Call Record"
+                    value={<audio controls src={report.bestCallRecording} className="w-full" />}
+                />
+            )}
+            {report.worstCallRecording && (
+                <ReportDetailItem
+                    label="Worst Call Record"
+                    value={<audio controls src={report.worstCallRecording} className="w-full" />}
                 />
             )}
             <ReportDetailItem label="Signature" value={report.signature} />
@@ -224,7 +232,8 @@ export default function ReportsPage() {
   const [selectedJobTitle, setSelectedJobTitle] = React.useState("All Job Titles");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
-  const [audioURL, setAudioURL] = React.useState<string | undefined>();
+  const [bestCallAudioURL, setBestCallAudioURL] = React.useState<string | undefined>();
+  const [worstCallAudioURL, setWorstCallAudioURL] = React.useState<string | undefined>();
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<UserData>(userDocRef);
@@ -275,7 +284,8 @@ export default function ReportsPage() {
         meetingsBookedTomorrow: "",
         criticalPathTomorrow: "",
         interventionTrigger: "None",
-        audioRecording: undefined,
+        bestCallRecording: undefined,
+        worstCallRecording: undefined,
       } : {
         subject: "",
         technologyUsed: "",
@@ -307,7 +317,8 @@ export default function ReportsPage() {
             meetingsBookedTomorrow: "",
             criticalPathTomorrow: "",
             interventionTrigger: "None",
-            audioRecording: undefined,
+            bestCallRecording: undefined,
+            worstCallRecording: undefined,
         } : {
             subject: "",
             technologyUsed: "",
@@ -320,7 +331,8 @@ export default function ReportsPage() {
             otherWork: "",
         })
       });
-      setAudioURL(undefined);
+      setBestCallAudioURL(undefined);
+      setWorstCallAudioURL(undefined);
   }, [form, currentUserData, isBusinessUser]);
 
   React.useEffect(() => {
@@ -343,7 +355,11 @@ export default function ReportsPage() {
     }
   }, [isAddDialogOpen, todaysAttendance, isTechnicalUser, form, currentUserData]);
 
-  const handleAudioUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAudioUpload = (
+      event: React.ChangeEvent<HTMLInputElement>,
+      fieldName: 'bestCallRecording' | 'worstCallRecording',
+      setUrl: React.Dispatch<React.SetStateAction<string | undefined>>
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -357,17 +373,21 @@ export default function ReportsPage() {
         const reader = new FileReader();
         reader.onload = (e) => {
             const dataUrl = e.target?.result as string;
-            setAudioURL(dataUrl);
-            form.setValue('audioRecording', dataUrl);
+            setUrl(dataUrl);
+            form.setValue(fieldName, dataUrl);
         };
         reader.readAsDataURL(file);
     }
   };
 
-  const handleDeleteRecording = () => {
-    setAudioURL(undefined);
-    form.setValue('audioRecording', undefined);
+  const handleDeleteRecording = (
+      fieldName: 'bestCallRecording' | 'worstCallRecording',
+      setUrl: React.Dispatch<React.SetStateAction<string | undefined>>
+  ) => {
+    setUrl(undefined);
+    form.setValue(fieldName, undefined);
   };
+
 
   const onSubmit = async (values: ReportFormValues) => {
     if (!user || !currentUserData) return;
@@ -498,26 +518,52 @@ export default function ReportsPage() {
             </Card>
              <Card>
                 <CardHeader>
-                    <CardTitle>Audio Note</CardTitle>
-                    <CardDescription>Upload a short audio file (max 5MB) to add more context to your report.</CardDescription>
+                    <CardTitle>Best Call Record</CardTitle>
+                    <CardDescription>Upload the best call recording of the day (max 5MB).</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {!audioURL && (
+                    {!bestCallAudioURL && (
                         <div className="grid w-full max-w-sm items-center gap-1.5">
-                            <Label htmlFor="audio-upload">Upload Audio</Label>
-                            <Input id="audio-upload" type="file" accept="audio/*" onChange={handleAudioUpload} />
+                            <Label htmlFor="best-call-upload">Upload Audio</Label>
+                            <Input id="best-call-upload" type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'bestCallRecording', setBestCallAudioURL)} />
                         </div>
                     )}
-                    {audioURL && (
+                    {bestCallAudioURL && (
                         <div className="space-y-2">
-                            <audio src={audioURL} controls className="w-full" />
-                            <Button type="button" onClick={handleDeleteRecording} variant="outline" size="sm" className="w-full">
+                            <audio src={bestCallAudioURL} controls className="w-full" />
+                            <Button type="button" onClick={() => handleDeleteRecording('bestCallRecording', setBestCallAudioURL)} variant="outline" size="sm" className="w-full">
                                 <Trash2 className="mr-2" />
-                                Remove Audio
+                                Remove Recording
                             </Button>
                         </div>
                     )}
-                    <FormField control={control} name="audioRecording" render={({ field }) => (
+                    <FormField control={control} name="bestCallRecording" render={({ field }) => (
+                        <FormItem className="hidden"><FormControl><Input {...field} /></FormControl></FormItem>
+                    )} />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Worst Call Record</CardTitle>
+                    <CardDescription>Upload the call recording that needs improvement (max 5MB).</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {!worstCallAudioURL && (
+                        <div className="grid w-full max-w-sm items-center gap-1.5">
+                            <Label htmlFor="worst-call-upload">Upload Audio</Label>
+                            <Input id="worst-call-upload" type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'worstCallRecording', setWorstCallAudioURL)} />
+                        </div>
+                    )}
+                    {worstCallAudioURL && (
+                        <div className="space-y-2">
+                            <audio src={worstCallAudioURL} controls className="w-full" />
+                            <Button type="button" onClick={() => handleDeleteRecording('worstCallRecording', setWorstCallAudioURL)} variant="outline" size="sm" className="w-full">
+                                <Trash2 className="mr-2" />
+                                Remove Recording
+                            </Button>
+                        </div>
+                    )}
+                    <FormField control={control} name="worstCallRecording" render={({ field }) => (
                         <FormItem className="hidden"><FormControl><Input {...field} /></FormControl></FormItem>
                     )} />
                 </CardContent>

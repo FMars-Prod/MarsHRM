@@ -301,7 +301,7 @@
         "date": { "type": "string", "format": "date-time" },
         "reportType": { "type": "string", "enum": ["Business", "Technical"] },
         "signature": { "type": "string" },
-
+        "currency": { "type": "string", "enum": ["USD", "EUR", "GBP", "INR"] },
         "outreachTotal": { "type": "number" },
         "potentialClients": { "type": "number" },
         "followUpsCompleted": { "type": "string" },
@@ -313,8 +313,8 @@
         "meetingsBookedTomorrow": { "type": "string" },
         "criticalPathTomorrow": { "type": "string" },
         "interventionTrigger": { "type": "string", "enum": ["None", "Coaching", "Technical Support", "Client meeting"] },
-        "audioRecording": { "type": "string", "description": "A base64 encoded data URI of the recorded audio clip for the report." },
-
+        "bestCallRecording": { "type": "string", "description": "A base64 encoded data URI of the best call recording for the report." },
+        "worstCallRecording": { "type": "string", "description": "A base64 encoded data URI of the worst call recording for the report." },
         "subject": { "type": "string" },
         "technologyUsed": { "type": "string" },
         "taskDescription": { "type": "string" },
