@@ -6,3 +6,5 @@ export const firebaseConfig = {
   "measurementId": "",
   "messagingSenderId": "1071692184412"
 };
+
+export const mapsApiKey = "AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI";

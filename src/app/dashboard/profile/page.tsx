@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { updateDocumentNonBlocking, addDocumentNonBlocking, useCollection } from "@/firebase";
 import Image from 'next/image';
 import { Textarea } from "@/components/ui/textarea";
-import { firebaseConfig } from "@/firebase/config";
+import { mapsApiKey } from "@/firebase/config";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const profileFormSchema = z.object({
@@ -483,7 +483,7 @@ export default function ProfilePage() {
                                 style={{ border: 0 }}
                                 loading="lazy"
                                 allowFullScreen
-                                src={`https://www.google.com/maps/embed/v1/view?key=${firebaseConfig.apiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
+                                src={`https://www.google.com/maps/embed/v1/view?key=${mapsApiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
                             ></iframe>
                         </div>
                     )}
@@ -512,7 +512,7 @@ export default function ProfilePage() {
                                         style={{ border: 0 }}
                                         loading="lazy"
                                         allowFullScreen
-                                        src={`https://www.google.com/maps/embed/v1/view?key=${firebaseConfig.apiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
+                                        src={`https://www.google.com/maps/embed/v1/view?key=${mapsApiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
                                     ></iframe>
                                 </div>
                             )}
