@@ -22,11 +22,9 @@ interface InteractiveMapProps {
 
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, onLocationSelect, className }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const [map, setMap] = useState<any>(null);
   const [marker, setMarker] = useState<any>(null);
   const [geocoder, setGeocoder] = useState<any>(null);
-  const [autocomplete, setAutocomplete] = useState<any>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('Getting address...');
 
   // Function to get address from lat/lng
@@ -94,30 +92,6 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, o
   }, [marker, geocoder, onLocationSelect, map]);
 
 
-  // Setup autocomplete
-  useEffect(() => {
-    if (searchInputRef.current && map && !autocomplete && window.google?.maps?.places) {
-        const ac = new window.google.maps.places.Autocomplete(searchInputRef.current, {
-            fields: ["formatted_address", "geometry", "name"],
-            types: ["address"],
-        });
-        ac.bindTo("bounds", map);
-        setAutocomplete(ac);
-
-        ac.addListener("place_changed", () => {
-            const place = ac.getPlace();
-            if (place.geometry && place.geometry.location) {
-                map.setCenter(place.geometry.location);
-                map.setZoom(17);
-                marker.setPosition(place.geometry.location);
-                getAddressFromLatLng(place.geometry.location);
-            } else {
-                window.alert("No details available for input: '" + place.name + "'");
-            }
-        });
-    }
-  }, [searchInputRef, map, marker, autocomplete]);
-  
   // Re-center map when initialCenter changes
   useEffect(() => {
       if (map && marker) {
@@ -147,11 +121,6 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, o
 
   return (
     <div className={cn('relative w-full h-full rounded-md', className)}>
-        <Input
-            ref={searchInputRef}
-            placeholder="Search for a location..."
-            className="absolute top-2 left-1/2 -translate-x-1/2 z-10 w-3/4 max-w-sm"
-        />
         <div ref={mapRef} className='w-full h-full' />
         <Button
             type="button"
