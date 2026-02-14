@@ -26,6 +26,7 @@ import Image from 'next/image';
 import { Textarea } from "@/components/ui/textarea";
 import { mapsApiKey } from "@/firebase/config";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { InteractiveMap } from "@/components/geohrm/interactive-map";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -472,19 +473,15 @@ export default function ProfilePage() {
                     <DialogHeader>
                         <DialogTitle>Set Home Location</DialogTitle>
                         <DialogDescription>
-                            Your current location is pinned on the map below. Please confirm if you want to set this as your permanent Work From Home address.
+                            Your current location is pinned on the map below. Drag the pin to adjust, then confirm to set this as your permanent Work From Home address.
                         </DialogDescription>
                     </DialogHeader>
                     {capturedLocation && (
                         <div className="aspect-video w-full rounded-md overflow-hidden border">
-                            <iframe
-                                width="100%"
-                                height="100%"
-                                style={{ border: 0 }}
-                                loading="lazy"
-                                allowFullScreen
-                                src={`https://www.google.com/maps/embed/v1/view?key=${mapsApiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
-                            ></iframe>
+                            <InteractiveMap
+                                initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }}
+                                onLocationSelect={(loc) => setCapturedLocation({ latitude: loc.lat, longitude: loc.lng })}
+                            />
                         </div>
                     )}
                     <DialogFooter>
@@ -499,21 +496,17 @@ export default function ProfilePage() {
                     <DialogHeader className="p-6 border-b">
                         <DialogTitle>Request Home Location Change</DialogTitle>
                         <DialogDescription>
-                            Your proposed new location is pinned below. Provide a reason for this change and submit it for approval.
+                            Drag the pin to your new location, provide a reason for the change, and submit for approval.
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1">
                         <div className="grid gap-4 p-6">
                             {capturedLocation && (
                                 <div className="aspect-video w-full rounded-md overflow-hidden border">
-                                    <iframe
-                                        width="100%"
-                                        height="100%"
-                                        style={{ border: 0 }}
-                                        loading="lazy"
-                                        allowFullScreen
-                                        src={`https://www.google.com/maps/embed/v1/view?key=${mapsApiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
-                                    ></iframe>
+                                    <InteractiveMap
+                                        initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }}
+                                        onLocationSelect={(loc) => setCapturedLocation({ latitude: loc.lat, longitude: loc.lng })}
+                                    />
                                 </div>
                             )}
                             <div>

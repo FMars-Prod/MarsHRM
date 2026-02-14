@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
+import Script from "next/script";
+import { mapsApiKey } from "@/firebase/config";
 
 const fontBody = Inter({ subsets: ["latin"], variable: "--font-body" });
 const fontHeadline = Space_Grotesk({
@@ -34,6 +36,10 @@ export default function RootLayout({
           {children}
         </FirebaseClientProvider>
         <Toaster />
+        <Script
+          src={`https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}`}
+          strategy="beforeInteractive"
+        />
       </body>
     </html>
   );
