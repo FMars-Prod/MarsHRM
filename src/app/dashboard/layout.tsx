@@ -28,6 +28,9 @@ type Announcement = {
 type EventItem = {
   date: Timestamp;
 }
+type LocationRequest = {
+  status: string;
+};
 
 export default function DashboardLayout({
   children,
@@ -76,6 +79,13 @@ export default function DashboardLayout({
     [user, firestore]
   );
   const { data: readAnnouncements } = useCollection<{id: string}>(readAnnouncementsQuery);
+
+  const locationRequestsQuery = useMemoFirebase(() => {
+    if (!userRole || (userRole !== 'HR Manager' && userRole !== 'CEO/Admin')) return null;
+    return query(collection(firestore, "location_change_requests"), where("status", "==", "pending"));
+  }, [firestore, userRole]);
+  const { data: locationRequests } = useCollection<LocationRequest>(locationRequestsQuery);
+  const pendingLocationRequestsCount = locationRequests?.length || 0;
 
   useEffect(() => {
     if (allAnnouncements && readAnnouncements) {
@@ -137,6 +147,7 @@ export default function DashboardLayout({
             pendingLeaveCount={pendingLeaveCount}
             unreadAnnouncementsCount={unreadAnnouncements}
             todaysEventsCount={todaysEventsCount}
+            pendingLocationRequestsCount={pendingLocationRequestsCount}
           />
         </SidebarContent>
         <SidebarFooter>
@@ -158,3 +169,5 @@ export default function DashboardLayout({
     </SidebarProvider>
   );
 }
+
+    

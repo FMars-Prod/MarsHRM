@@ -609,6 +609,62 @@
         "downloadUrl": { "type": "string", "description": "A public URL to download the payslip PDF." }
       },
       "required": ["id", "employeeId", "month", "year", "issueDate", "netSalary", "downloadUrl"]
+    },
+    "LocationChangeRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LocationChangeRequest",
+      "type": "object",
+      "description": "Represents an employee's request to change their designated Work From Home location.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the request."
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "ID of the employee making the request."
+        },
+        "employeeName": {
+            "type": "string",
+            "description": "Name of the employee making the request."
+        },
+        "requestDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the request was submitted."
+        },
+        "newLatitude": {
+          "type": "number",
+          "description": "The proposed new latitude for the home location."
+        },
+        "newLongitude": {
+          "type": "number",
+          "description": "The proposed new longitude for the home location."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason provided by the employee for the change."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected"],
+          "description": "The current status of the request."
+        },
+        "approvedBy": {
+          "type": "string",
+          "description": "The ID of the admin who processed the request."
+        },
+        "rejectionReason": {
+            "type": "string",
+            "description": "Reason for rejection, if applicable."
+        },
+        "processedDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the request was approved or rejected."
+        }
+      },
+      "required": ["id", "employeeId", "employeeName", "requestDate", "newLatitude", "newLongitude", "reason", "status"]
     }
   },
   "auth": {
@@ -903,6 +959,22 @@
             {
               "name": "payslipId",
               "description": "The unique identifier of the payslip."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/location_change_requests/{requestId}",
+        "definition": {
+          "entityName": "LocationChangeRequest",
+          "schema": {
+            "$ref": "#/backend/entities/LocationChangeRequest"
+          },
+          "description": "Stores employee requests to change their WFH location.",
+          "params": [
+            {
+              "name": "requestId",
+              "description": "The unique identifier of the location change request."
             }
           ]
         }

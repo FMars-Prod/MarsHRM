@@ -23,6 +23,7 @@ import {
   BarChart2,
   FileText,
   Activity,
+  MapPin,
 } from "lucide-react";
 import React from "react";
 
@@ -40,6 +41,7 @@ const links = [
   { href: "/dashboard/monitor", label: "Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/location-requests", label: "Location Requests", icon: MapPin, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
 ];
 
@@ -48,20 +50,23 @@ interface MainNavProps {
   pendingLeaveCount?: number;
   unreadAnnouncementsCount?: number;
   todaysEventsCount?: number;
+  pendingLocationRequestsCount?: number;
 }
 
 export function MainNav({ 
   userRole,
   pendingLeaveCount = 0,
   unreadAnnouncementsCount = 0,
-  todaysEventsCount = 0
+  todaysEventsCount = 0,
+  pendingLocationRequestsCount = 0
 }: MainNavProps) {
   const pathname = usePathname();
 
   const badgeCounts: { [key: string]: number } = {
     pendingLeaveCount,
     unreadAnnouncementsCount,
-    todaysEventsCount
+    todaysEventsCount,
+    pendingLocationRequestsCount
   };
 
   return (
@@ -90,6 +95,8 @@ export function MainNav({
     </SidebarMenu>
   );
 }
+
+    
 
     
 

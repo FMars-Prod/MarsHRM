@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth, useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { doc } from "firebase/firestore";
+import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
 import { Edit, Smile, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -21,8 +21,10 @@ import { updateProfile, updatePassword } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { updateDocumentNonBlocking } from "@/firebase";
+import { updateDocumentNonBlocking, addDocumentNonBlocking, useCollection } from "@/firebase";
 import Image from 'next/image';
+import { Textarea } from "@/components/ui/textarea";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -42,11 +44,22 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+type LocationChangeRequest = {
+    id: string;
+    status: 'pending' | 'approved' | 'rejected';
+    reason: string;
+    requestDate: any;
+};
+
 const emojiCategories = {
     "People": ["🧑", "👨", "👩", "🧓", "👴", "👵", "👮", "👷", "💂", "🕵️", "🧑‍⚕️", "👨‍⚕️", "👩‍⚕️", "🧑‍🌾", "👨‍🌾", "👩‍🌾", "🧑‍🍳", "👨‍🍳", "👩‍🍳", "🧑‍🎓", "👨‍🎓", "👩‍🎓", "🧑‍🎤", "👨‍🎤", "👩‍🎤", "🧑‍🏫", "👨‍🏫", "👩‍🏫", "🧑‍🏭", "👨‍🏭", "👩‍🏭", "🧑‍💻", "👨‍💻", "👩‍💻", "🧑‍💼", "👨‍💼", "👩‍💼", "🧑‍🔧", "👨‍🔧", "👩‍🔧", "🧑‍🔬", "👨‍🔬", "👩‍🔬", "🧑‍🎨", "👨‍🎨", "👩‍🎨", "🧑‍🚒", "👨‍🚒", "👩‍🚒", "🧑‍✈️", "👨‍✈️", "👩‍✈️", "🧑‍🚀", "👨‍🚀", "👩‍🚀", "🧑‍⚖️", "👨‍⚖️", "👩‍⚖️", "🦸", "🦹", "🧙", "🧚", "🧛", "🧜", "🧝", "🧞", "🧟"],
     "Smileys": ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠"],
 };
 
+interface Location {
+  latitude: number;
+  longitude: number;
+}
 
 export default function ProfilePage() {
     const { user, isUserLoading } = useUser();
@@ -56,13 +69,27 @@ export default function ProfilePage() {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
     const [isAvatarDialogOpen, setIsAvatarDialogOpen] = React.useState(false);
-
+    const [isRequestChangeOpen, setIsRequestChangeOpen] = React.useState(false);
+    const [changeReason, setChangeReason] = React.useState("");
+    const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = React.useState(false);
+    const [capturedLocation, setCapturedLocation] = React.useState<Location | null>(null);
 
     const userDocRef = useMemoFirebase(
         () => (user ? doc(firestore, "users", user.uid) : null),
         [user, firestore]
     );
     const { data: employee, isLoading: isEmployeeLoading } = useDoc(userDocRef);
+
+    const pendingLocationRequestQuery = useMemoFirebase(
+        () => user ? query(
+            collection(firestore, "location_change_requests"),
+            where("employeeId", "==", user.uid),
+            where("status", "==", "pending")
+        ) : null,
+        [user, firestore]
+    );
+    const { data: pendingRequests } = useCollection<LocationChangeRequest>(pendingLocationRequestQuery);
+    const hasPendingRequest = pendingRequests && pendingRequests.length > 0;
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -129,28 +156,73 @@ export default function ProfilePage() {
         setIsAvatarDialogOpen(false);
     }
     
-    const handleSetHomeLocation = () => {
+    const handleLocationAction = () => {
         if (!userDocRef) return;
+        
+        if ((employee as any)?.homeLatitude) {
+            setIsRequestChangeOpen(true);
+        } else {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    setCapturedLocation({ latitude, longitude });
+                    setIsSetHomeLocationDialogOpen(true);
+                },
+                () => {
+                    toast({
+                        variant: "destructive",
+                        title: "Location Error",
+                        description: "Could not get your location. Please enable location services.",
+                    });
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+    };
+    
+    const handleConfirmSetHomeLocation = () => {
+        if (!userDocRef || !capturedLocation) return;
+        updateDocumentNonBlocking(userDocRef, {
+            homeLatitude: capturedLocation.latitude,
+            homeLongitude: capturedLocation.longitude,
+        });
+        toast({
+            title: "Home Location Saved",
+            description: "Your current location has been set as your home address.",
+        });
+        setCapturedLocation(null);
+        setIsSetHomeLocationDialogOpen(false);
+    };
+
+    const handleSubmitChangeRequest = () => {
+        if (!user || !userDocRef || !changeReason) {
+            toast({ variant: 'destructive', title: 'Reason Required', description: 'Please explain why you need to change your location.'});
+            return;
+        }
+
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
-                updateDocumentNonBlocking(userDocRef, {
-                    homeLatitude: latitude,
-                    homeLongitude: longitude,
-                });
-                toast({
-                    title: "Home Location Saved",
-                    description: `Your home location has been updated.`,
-                });
+                
+                const requestPayload = {
+                    employeeId: user.uid,
+                    employeeName: `${(employee as any).firstName} ${(employee as any).lastName}`,
+                    requestDate: serverTimestamp(),
+                    newLatitude: latitude,
+                    newLongitude: longitude,
+                    reason: changeReason,
+                    status: 'pending',
+                };
+                
+                addDocumentNonBlocking(collection(firestore, 'location_change_requests'), requestPayload);
+
+                toast({ title: 'Request Submitted', description: 'Your location change request has been sent for approval.' });
+                setIsRequestChangeOpen(false);
+                setChangeReason("");
             },
             () => {
-                toast({
-                    variant: "destructive",
-                    title: "Location Error",
-                    description: "Could not get your location. Please enable location services.",
-                });
-            },
-            { enableHighAccuracy: true }
+                 toast({ variant: "destructive", title: "Location Error", description: "Could not get your location. Please enable location services." });
+            }
         );
     };
 
@@ -381,14 +453,60 @@ export default function ProfilePage() {
                                     <p className="font-semibold text-muted-foreground">Not set</p>
                                 )}
                             </div>
-                            <Button onClick={handleSetHomeLocation}>
+                            <Button onClick={handleLocationAction} disabled={hasPendingRequest}>
                                 <MapPin className="mr-2 h-4 w-4" />
-                                Set/Update Home Location
+                                {(employee as any)?.homeLatitude ? 'Request Location Change' : 'Set Home Location'}
                             </Button>
+                             {hasPendingRequest && (
+                                <p className="text-sm text-yellow-600 mt-2">
+                                    You have a pending location change request.
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
             </div>
+
+            <AlertDialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Set Home Location?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Your home location has not been set. Would you like to use your current location as your permanent Work From Home address?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmSetHomeLocation}>Save and Set Location</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            
+            <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Request Home Location Change</DialogTitle>
+                        <DialogDescription>
+                            Your current live location will be captured and sent for approval. Please provide a reason for this change.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Label htmlFor="reason">Reason for Change</Label>
+                        <Textarea 
+                            id="reason" 
+                            value={changeReason}
+                            onChange={(e) => setChangeReason(e.target.value)}
+                            placeholder="e.g., I have moved to a new address." 
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsRequestChangeOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSubmitChangeRequest}>Submit Request</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }
+
+    
