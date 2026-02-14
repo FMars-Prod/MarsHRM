@@ -211,7 +211,16 @@ export default function UsersPage() {
             
             const batch = writeBatch(firestore);
             const userDocRef = doc(firestore, 'users', editingUser.id);
-            const { password, confirmPassword, email, ...updateData } = values; // Exclude email from update
+            const { password, confirmPassword, email, ...updateData } = values;
+
+            // Clean undefined values from the object before sending to Firestore
+            Object.keys(updateData).forEach(key => {
+                const k = key as keyof typeof updateData;
+                if (updateData[k] === undefined) {
+                    delete updateData[k];
+                }
+            });
+
             batch.update(userDocRef, updateData);
 
             // Handle role change
@@ -250,14 +259,21 @@ export default function UsersPage() {
             const userDocRef = doc(firestore, 'users', newUserId);
             const { password, confirmPassword, ...userData } = values;
             
-            const newUserPayload = {
+            const newUserPayload: { [key: string]: any } = {
               id: newUserId,
               employeeId: newUserId,
               hireDate: new Date().toISOString(),
               ...userData,
               homeLocationRangeKm: values.homeLocationRangeKm || 0.5,
               isWfhAllowed: values.isWfhAllowed || false,
-            }
+            };
+
+            // Clean undefined values from the object before sending to Firestore
+            Object.keys(newUserPayload).forEach(key => {
+                if (newUserPayload[key] === undefined) {
+                    delete newUserPayload[key];
+                }
+            });
             
             const batch = writeBatch(firestore);
             batch.set(userDocRef, newUserPayload);
