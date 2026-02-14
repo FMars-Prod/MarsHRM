@@ -22,9 +22,11 @@ interface InteractiveMapProps {
 
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, onLocationSelect, className }) => {
   const mapRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [map, setMap] = useState<any>(null);
   const [marker, setMarker] = useState<any>(null);
   const [geocoder, setGeocoder] = useState<any>(null);
+  const [autocomplete, setAutocomplete] = useState<any>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('Getting address...');
 
   // Function to get address from lat/lng
@@ -68,7 +70,18 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, o
     }
   }, [mapRef, map, initialCenter]);
   
-  // Setup marker listeners
+  // Setup Autocomplete
+  useEffect(() => {
+      if (map && searchInputRef.current && !autocomplete && window.google?.maps?.places) {
+          const ac = new window.google.maps.places.Autocomplete(searchInputRef.current, {
+              fields: ["formatted_address", "geometry"],
+          });
+          ac.bindTo("bounds", map);
+          setAutocomplete(ac);
+      }
+  }, [map, autocomplete]);
+
+  // Setup listeners
   useEffect(() => {
       if(marker && geocoder) {
         getAddressFromLatLng(marker.getPosition()); // Initial address fetch
@@ -84,12 +97,31 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, o
             }
         });
 
+        if (autocomplete) {
+            const placeChangedListener = autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                if (place.geometry) {
+                    map.setCenter(place.geometry.location);
+                    map.setZoom(17);
+                    marker.setPosition(place.geometry.location);
+                    getAddressFromLatLng(place.geometry.location);
+                } else if (searchInputRef.current) {
+                    searchInputRef.current.placeholder = 'Enter a location';
+                }
+            });
+            return () => {
+                window.google.maps.event.removeListener(dragListener);
+                window.google.maps.event.removeListener(mapClickListener);
+                window.google.maps.event.removeListener(placeChangedListener);
+            }
+        }
+
         return () => {
             window.google.maps.event.removeListener(dragListener);
             window.google.maps.event.removeListener(mapClickListener);
         }
       }
-  }, [marker, geocoder, onLocationSelect, map]);
+  }, [marker, geocoder, onLocationSelect, map, autocomplete]);
 
 
   // Re-center map when initialCenter changes
@@ -121,6 +153,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, o
 
   return (
     <div className={cn('relative w-full h-full rounded-md', className)}>
+        <Input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search for a location..."
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-10 w-[95%] max-w-sm shadow-md"
+        />
         <div ref={mapRef} className='w-full h-full' />
         <Button
             type="button"
