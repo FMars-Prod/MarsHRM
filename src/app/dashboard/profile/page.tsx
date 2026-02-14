@@ -168,30 +168,46 @@ export default function ProfilePage() {
     const handleLocationAction = () => {
         if (!userDocRef) return;
 
-        const hasHomeLocation = (employee as any)?.homeLatitude && (employee as any)?.homeLongitude;
-        
-        let initialLat, initialLng;
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                setCapturedLocation({ latitude, longitude });
 
-        if (hasHomeLocation) {
-            initialLat = (employee as any).homeLatitude;
-            initialLng = (employee as any).homeLongitude;
-        } else if (officeLocation) {
-            initialLat = officeLocation.latitude;
-            initialLng = officeLocation.longitude;
-        } else {
-            // A sensible default if no location is available, e.g., center of a major city
-            initialLat = 51.5074;
-            initialLng = -0.1278;
-            setSelectedAddress("Search for an address or use 'My Location'");
-        }
-
-        setCapturedLocation({ latitude: initialLat, longitude: initialLng });
-
-        if (hasHomeLocation) {
-            setIsRequestChangeOpen(true);
-        } else {
-            setIsSetHomeLocationDialogOpen(true);
-        }
+                const hasHomeLocation = (employee as any)?.homeLatitude && (employee as any)?.homeLongitude;
+                if (hasHomeLocation) {
+                    setIsRequestChangeOpen(true);
+                } else {
+                    setIsSetHomeLocationDialogOpen(true);
+                }
+            },
+            (error) => {
+                toast({
+                    variant: 'destructive',
+                    title: 'Location Error',
+                    description: `Could not get your location: ${error.message}. Please enable location services in your browser.`
+                });
+                // Fallback behavior if GPS fails
+                const hasHomeLocation = (employee as any)?.homeLatitude && (employee as any)?.homeLongitude;
+                let initialLat, initialLng;
+                if (hasHomeLocation) {
+                    initialLat = (employee as any).homeLatitude;
+                    initialLng = (employee as any).homeLongitude;
+                } else if (officeLocation) {
+                    initialLat = officeLocation.latitude;
+                    initialLng = officeLocation.longitude;
+                } else {
+                    initialLat = 51.5074; // Default to London
+                    initialLng = -0.1278;
+                }
+                setCapturedLocation({ latitude: initialLat, longitude: initialLng });
+                if (hasHomeLocation) {
+                    setIsRequestChangeOpen(true);
+                } else {
+                    setIsSetHomeLocationDialogOpen(true);
+                }
+            },
+            { enableHighAccuracy: true }
+        );
     };
     
     const handleConfirmSetHomeLocation = () => {
