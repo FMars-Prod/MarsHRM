@@ -72,6 +72,7 @@ export default function ProfilePage() {
     const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
     const [isAvatarDialogOpen, setIsAvatarDialogOpen] = React.useState(false);
     const [isRequestChangeOpen, setIsRequestChangeOpen] = React.useState(false);
+    const [isReasonDialogOpen, setIsReasonDialogOpen] = React.useState(false);
     const [changeReason, setChangeReason] = React.useState("");
     const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = React.useState(false);
     const [capturedLocation, setCapturedLocation] = React.useState<Location | null>(null);
@@ -186,25 +187,6 @@ export default function ProfilePage() {
                     title: 'Location Error',
                     description: `Could not get your location: ${error.message}. Please enable location services in your browser.`
                 });
-                // Fallback behavior if GPS fails
-                const hasHomeLocation = (employee as any)?.homeLatitude && (employee as any)?.homeLongitude;
-                let initialLat, initialLng;
-                if (hasHomeLocation) {
-                    initialLat = (employee as any).homeLatitude;
-                    initialLng = (employee as any).homeLongitude;
-                } else if (officeLocation) {
-                    initialLat = officeLocation.latitude;
-                    initialLng = officeLocation.longitude;
-                } else {
-                    initialLat = 51.5074; // Default to London
-                    initialLng = -0.1278;
-                }
-                setCapturedLocation({ latitude: initialLat, longitude: initialLng });
-                if (hasHomeLocation) {
-                    setIsRequestChangeOpen(true);
-                } else {
-                    setIsSetHomeLocationDialogOpen(true);
-                }
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
@@ -222,6 +204,11 @@ export default function ProfilePage() {
         });
         setCapturedLocation(null);
         setIsSetHomeLocationDialogOpen(false);
+    };
+
+    const handleLocationConfirmed = () => {
+        setIsRequestChangeOpen(false);
+        setIsReasonDialogOpen(true);
     };
 
     const handleSubmitChangeRequest = () => {
@@ -243,7 +230,7 @@ export default function ProfilePage() {
         addDocumentNonBlocking(collection(firestore, 'location_change_requests'), requestPayload);
 
         toast({ title: 'Request Submitted', description: `New location: ${selectedAddress}` });
-        setIsRequestChangeOpen(false);
+        setIsReasonDialogOpen(false);
         setChangeReason("");
         setCapturedLocation(null);
     };
@@ -526,13 +513,13 @@ export default function ProfilePage() {
             <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
                  <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
                     <DialogHeader className="p-6 pb-4 border-b">
-                        <DialogTitle>Request Home Location Change</DialogTitle>
+                        <DialogTitle>Step 1: Select New Location</DialogTitle>
                         <DialogDescription>
-                            Use your current location, click the map, or drag the pin to your new address. Provide a reason and submit for approval.
+                            Use the map to pinpoint your new home location for approval.
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1">
-                        <div className="grid gap-4 p-6">
+                       <div className="p-6">
                             {capturedLocation && (
                                 <div className="space-y-2">
                                     <div className="aspect-video w-full rounded-md overflow-hidden border">
@@ -547,19 +534,34 @@ export default function ProfilePage() {
                                     <p className="text-xs text-muted-foreground p-2 bg-muted rounded-md">{selectedAddress}</p>
                                 </div>
                             )}
-                            <div>
-                                <Label htmlFor="reason">Reason for Change</Label>
-                                <Textarea 
-                                    id="reason" 
-                                    value={changeReason}
-                                    onChange={(e) => setChangeReason(e.target.value)}
-                                    placeholder="e.g., I have moved to a new address." 
-                                />
-                            </div>
                         </div>
                     </ScrollArea>
                     <DialogFooter className="p-6 pt-4 border-t">
-                        <Button variant="outline" onClick={() => { setIsRequestChangeOpen(false); setChangeReason(""); setCapturedLocation(null); }}>Cancel</Button>
+                        <Button variant="outline" onClick={() => { setIsRequestChangeOpen(false); setCapturedLocation(null); }}>Cancel</Button>
+                        <Button onClick={handleLocationConfirmed}>Confirm & Continue</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isReasonDialogOpen} onOpenChange={setIsReasonDialogOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Step 2: Reason for Change</DialogTitle>
+                        <DialogDescription>
+                            Please provide a brief reason for this location change request.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Label htmlFor="reason">Reason</Label>
+                        <Textarea 
+                            id="reason" 
+                            value={changeReason}
+                            onChange={(e) => setChangeReason(e.target.value)}
+                            placeholder="e.g., I have moved to a new address." 
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => { setIsReasonDialogOpen(false); setChangeReason(""); }}>Cancel</Button>
                         <Button onClick={handleSubmitChangeRequest}>Submit Request</Button>
                     </DialogFooter>
                 </DialogContent>
@@ -567,3 +569,5 @@ export default function ProfilePage() {
         </>
     )
 }
+
+    
