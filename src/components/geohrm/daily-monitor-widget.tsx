@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, differenceInSeconds } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText } from 'lucide-react';
+import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -37,6 +37,7 @@ type AttendanceRecord = {
   checkOutNotes?: string;
   locationCheckInLatitude?: number;
   locationCheckInLongitude?: number;
+  isOutOfRange?: boolean;
 };
 
 type LeaveRequest = {
@@ -55,6 +56,7 @@ export function DailyMonitorWidget() {
     absent: [] as UserData[],
     onLeave: [] as UserData[],
     present: [] as UserData[],
+    outOfRange: [] as UserData[],
     isLoading: true,
   });
   const [attendanceRecords, setAttendanceRecords] = React.useState<Map<string, AttendanceRecord>>(new Map());
@@ -109,8 +111,12 @@ export function DailyMonitorWidget() {
       
       const presentUserIds = new Set<string>();
       const lateUserIds = new Set<string>();
+      const outOfRangeUserIds = new Set<string>();
       
       attendanceMap.forEach((att, employeeId) => {
+        if (att.isOutOfRange) {
+          outOfRangeUserIds.add(employeeId);
+        }
         if (att.status === 'late') {
           lateUserIds.add(employeeId);
         } else if (att.status === 'present') {
@@ -122,6 +128,7 @@ export function DailyMonitorWidget() {
       const onLeaveUsers: UserData[] = [];
       const presentUsers: UserData[] = [];
       const absentUsers: UserData[] = [];
+      const outOfRangeUsers: UserData[] = [];
 
       users.forEach(u => {
         if (lateUserIds.has(u.id)) {
@@ -135,6 +142,10 @@ export function DailyMonitorWidget() {
              absentUsers.push(u);
           }
         }
+
+        if (outOfRangeUserIds.has(u.id)) {
+            outOfRangeUsers.push(u);
+        }
       });
       
       setSummary({
@@ -142,6 +153,7 @@ export function DailyMonitorWidget() {
         absent: absentUsers,
         onLeave: onLeaveUsers,
         present: presentUsers,
+        outOfRange: outOfRangeUsers,
         isLoading: false,
       });
     };
@@ -253,6 +265,7 @@ export function DailyMonitorWidget() {
 
     reportText += createSection('Present', summary.present, true);
     reportText += createSection('Late', summary.late, true);
+    reportText += createSection('Out of Range', summary.outOfRange, true);
     reportText += createSection('Absent', summary.absent);
     reportText += createSection('On Leave', summary.onLeave);
 
@@ -340,6 +353,13 @@ export function DailyMonitorWidget() {
     });
     addSection( 'Late', summary.late, [['First Name', 'Last Name', 'Job Title', 'Clock In']], lateBody );
 
+    const outOfRangeBody = summary.outOfRange.map(u => {
+        const rec = attendanceRecords.get(u.id);
+        const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
+        return [u.firstName, u.lastName, u.jobTitle, time];
+    });
+    addSection( 'Out of Range', summary.outOfRange, [['First Name', 'Last Name', 'Job Title', 'Clock In']], outOfRangeBody );
+
     const absentBody = summary.absent.map(u => [u.firstName, u.lastName, u.jobTitle]);
     addSection( 'Absent', summary.absent, [['First Name', 'Last Name', 'Job Title']], absentBody );
 
@@ -412,12 +432,15 @@ export function DailyMonitorWidget() {
                     <Building2 className="h-12 w-12 animate-pulse text-muted-foreground" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   <SheetTrigger asChild>
                     <UserListCard title="Present" users={summary.present} Icon={UserCheck} iconColor="text-green-500" onClick={() => setSheetContent({title: "Present Today", users: summary.present})} />
                   </SheetTrigger>
                   <SheetTrigger asChild>
                     <UserListCard title="Late" users={summary.late} Icon={UserX} iconColor="text-yellow-500" onClick={() => setSheetContent({title: "Arrived Late", users: summary.late})} />
+                  </SheetTrigger>
+                  <SheetTrigger asChild>
+                    <UserListCard title="Out of Range" users={summary.outOfRange} Icon={AlertTriangle} iconColor="text-orange-500" onClick={() => setSheetContent({title: "Out of Range", users: summary.outOfRange})} />
                   </SheetTrigger>
                   <SheetTrigger asChild>
                     <UserListCard title="Absent" users={summary.absent} Icon={UserRoundX} iconColor="text-red-500" onClick={() => setSheetContent({title: "Absent Today", users: summary.absent})} />

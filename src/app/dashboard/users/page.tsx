@@ -118,7 +118,7 @@ export default function UsersPage() {
       confirmPassword: "",
       homeLatitude: undefined,
       homeLongitude: undefined,
-      homeLocationRangeKm: 0.5,
+      homeLocationRangeKm: 5,
       isWfhAllowed: false,
     },
   });
@@ -137,7 +137,7 @@ export default function UsersPage() {
       confirmPassword: "",
       homeLatitude: undefined,
       homeLongitude: undefined,
-      homeLocationRangeKm: 0.5,
+      homeLocationRangeKm: 5,
       isWfhAllowed: false,
     });
   };
@@ -155,7 +155,7 @@ export default function UsersPage() {
       confirmPassword: "",
       homeLatitude: (userToEdit as any).homeLatitude || undefined,
       homeLongitude: (userToEdit as any).homeLongitude || undefined,
-      homeLocationRangeKm: (userToEdit as any).homeLocationRangeKm === 0 ? 0 : (userToEdit as any).homeLocationRangeKm || 0.5,
+      homeLocationRangeKm: (userToEdit as any).homeLocationRangeKm === 0 ? 0 : (userToEdit as any).homeLocationRangeKm || 5,
       isWfhAllowed: (userToEdit as any).isWfhAllowed || false,
     });
     setIsDialogOpen(true);
@@ -264,7 +264,7 @@ export default function UsersPage() {
               employeeId: newUserId,
               hireDate: new Date().toISOString(),
               ...userData,
-              homeLocationRangeKm: values.homeLocationRangeKm || 0.5,
+              homeLocationRangeKm: values.homeLocationRangeKm === 0 ? 0 : (values.homeLocationRangeKm || 5),
               isWfhAllowed: values.isWfhAllowed || false,
             };
 

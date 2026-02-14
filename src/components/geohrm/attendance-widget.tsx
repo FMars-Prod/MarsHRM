@@ -301,7 +301,7 @@ export function AttendanceWidget() {
     return () => clearInterval(breakInterval);
   }, [status]);
   
-  const proceedWithClockIn = (userLocation: Location, dist: number, reason?: string) => {
+  const proceedWithClockIn = (userLocation: Location, dist: number, reason?: string, isOutOfRange: boolean = false) => {
       setCurrentUserLocation(userLocation);
       const now = new Date();
       const clockInTime = serverTimestamp();
@@ -324,6 +324,7 @@ export function AttendanceWidget() {
               locationCheckInLatitude: userLocation.latitude,
               locationCheckInLongitude: userLocation.longitude,
               checkInNotes: reason,
+              isOutOfRange: isOutOfRange,
           };
           setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
       }
@@ -351,7 +352,7 @@ export function AttendanceWidget() {
             if (officeLocation) {
                 const officeDist = getDistanceInKm(userLocation, officeLocation);
                 if (officeDist <= maxDistanceKm) {
-                    proceedWithClockIn(userLocation, officeDist, "Office");
+                    proceedWithClockIn(userLocation, officeDist, "Office", false);
                     return;
                 }
             }
@@ -360,14 +361,14 @@ export function AttendanceWidget() {
             if (isWfhAllowed) {
                 const homeLat = (userData as any)?.homeLatitude;
                 const homeLon = (userData as any)?.homeLongitude;
-                const homeRange = (userData as any)?.homeLocationRangeKm || 0.5;
+                const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
 
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
                     const homeDist = getDistanceInKm(userLocation, homeLocation);
 
                     if (homeDist <= homeRange) {
-                        proceedWithClockIn(userLocation, homeDist, "Work From Home");
+                        proceedWithClockIn(userLocation, homeDist, "Work From Home", false);
                         return;
                     }
                 } else {
@@ -380,7 +381,7 @@ export function AttendanceWidget() {
             // 3. Out of all valid ranges
             const distForPrompt = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
             setDistance(distForPrompt);
-            setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, distForPrompt, outOfRangeReason));
+            setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, distForPrompt, outOfRangeReason, true));
             setIsOutOfRangeReasonDialogOpen(true);
         },
         () => toast({ variant: "destructive", title: "Location Error", description: "Could not get your location. Please enable location services." }),
@@ -430,7 +431,7 @@ export function AttendanceWidget() {
             if (isWfhAllowed) {
                 const homeLat = (userData as any)?.homeLatitude;
                 const homeLon = (userData as any)?.homeLongitude;
-                const homeRange = (userData as any)?.homeLocationRangeKm || 0.5;
+                const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
 
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
@@ -460,7 +461,7 @@ export function AttendanceWidget() {
         homeLongitude: capturedLocation.longitude,
     });
 
-    proceedWithClockIn(capturedLocation, 0, "Work From Home (Initial Location Set)");
+    proceedWithClockIn(capturedLocation, 0, "Work From Home (Initial Location Set)", false);
     
     toast({
         title: "Home Location Saved",

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
-import { User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download } from 'lucide-react';
+import { User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download, AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,7 @@ type AttendanceRecord = {
   checkOutNotes?: string;
   locationCheckInLatitude?: number;
   locationCheckInLongitude?: number;
+  isOutOfRange?: boolean;
 };
 
 type LeaveRequest = {
@@ -54,6 +55,7 @@ const MonitorPage = () => {
     absent: [] as UserData[],
     onLeave: [] as UserData[],
     present: [] as UserData[],
+    outOfRange: [] as UserData[],
     isLoading: true,
   });
   const [attendanceRecords, setAttendanceRecords] = React.useState<Map<string, AttendanceRecord>>(new Map());
@@ -105,8 +107,12 @@ const MonitorPage = () => {
       
       const presentUserIds = new Set<string>();
       const lateUserIds = new Set<string>();
+      const outOfRangeUserIds = new Set<string>();
       
       attendanceMap.forEach((att, employeeId) => {
+        if (att.isOutOfRange) {
+            outOfRangeUserIds.add(employeeId);
+        }
         if (att.status === 'late') {
           lateUserIds.add(employeeId);
         } else if (att.status === 'present') {
@@ -118,6 +124,7 @@ const MonitorPage = () => {
       const onLeaveUsers: UserData[] = [];
       const presentUsers: UserData[] = [];
       const absentUsers: UserData[] = [];
+      const outOfRangeUsers: UserData[] = [];
 
       users.forEach(u => {
         if (lateUserIds.has(u.id)) {
@@ -132,6 +139,9 @@ const MonitorPage = () => {
              absentUsers.push(u);
           }
         }
+        if (outOfRangeUserIds.has(u.id)) {
+            outOfRangeUsers.push(u);
+        }
       });
       
       setSummary({
@@ -139,6 +149,7 @@ const MonitorPage = () => {
         absent: absentUsers,
         onLeave: onLeaveUsers,
         present: presentUsers,
+        outOfRange: outOfRangeUsers,
         isLoading: false,
       });
     };
@@ -306,9 +317,10 @@ const MonitorPage = () => {
             </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <UserListCard title="Present" users={summary.present} Icon={UserCheck} iconColor="text-green-500" />
           <UserListCard title="Late" users={summary.late} Icon={UserX} iconColor="text-yellow-500" />
+          <UserListCard title="Out of Range" users={summary.outOfRange} Icon={AlertTriangle} iconColor="text-orange-500" />
           <UserListCard title="Absent" users={summary.absent} Icon={UserRoundX} iconColor="text-red-500" />
           <UserListCard title="On Leave" users={summary.onLeave} Icon={User} iconColor="text-blue-500" />
         </div>

@@ -162,6 +162,10 @@
         "checkOutNotes": {
             "type": "string",
             "description": "Notes or reason provided by the employee for clocking out, especially if out of range."
+        },
+        "isOutOfRange": {
+          "type": "boolean",
+          "description": "Whether the employee clocked in outside the designated radius."
         }
       },
       "required": [
