@@ -232,7 +232,7 @@ export function AttendanceWidget() {
                     handleBreak(); 
                     toast({
                         title: "Lunch Time!",
-                        description: "You have been automatically placed on a break. Please clock back in when you return.",
+                        description: "You have been automatically signed out for lunch. Please sign back in when you return.",
                     });
                 }
             }
@@ -509,13 +509,13 @@ export function AttendanceWidget() {
               {status === "break" && <Coffee className="size-5" />}
               {status === "out" && <CheckCircle2 className="size-5" />}
 
-              {hasClockedOutToday
-                ? "You have clocked out for the day"
-                : `You are currently Clocked ${
-                    status === "break"
-                      ? "on a Break"
-                      : status.charAt(0).toUpperCase() + status.slice(1)
-                  }`}
+              {
+                hasClockedOutToday
+                  ? "You have clocked out for the day"
+                  : status === 'break'
+                    ? (autoLunchTriggered ? "You are Clocked Out for Lunch" : "You are currently on a Break")
+                    : `You are currently Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
+              }
             </div>
             <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter">
               {formatTime(timer)}
@@ -604,8 +604,14 @@ export function AttendanceWidget() {
                     variant={status === "break" ? "default" : "outline"}
                     className="w-full"
                 >
-                    <Coffee className="mr-2" />
-                    {status === "break" ? "End Break" : "Start Break"}
+                    {status === 'break' && autoLunchTriggered
+                        ? <Clock className="mr-2" />
+                        : <Coffee className="mr-2" />
+                    }
+                    {status === 'break' 
+                        ? autoLunchTriggered ? 'Clock In' : 'End Break'
+                        : 'Start Break'
+                    }
                 </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -660,5 +666,3 @@ export function AttendanceWidget() {
     </Card>
   );
 }
-
-    
