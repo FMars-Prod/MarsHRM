@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper } from "lucide-react";
+import { PlusCircle, Search, PartyPopper, Mic, StopCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -40,6 +40,7 @@ const businessReportSchema = z.object({
   meetingsBookedTomorrow: z.string().min(1, "This field is required."),
   criticalPathTomorrow: z.string().min(1, "This field is required."),
   interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]),
+  audioRecording: z.string().optional(),
   declaration: z.literal<boolean>(true, {
     errorMap: () => ({ message: "You must acknowledge the declaration." }),
   }),
@@ -71,6 +72,7 @@ type Report = {
   date: any; 
   reportType: 'Business' | 'Technical';
   signature: string;
+  audioRecording?: string;
   // Business
   currency?: 'USD' | 'EUR' | 'GBP' | 'INR';
   outreachTotal?: number;
@@ -179,6 +181,12 @@ const OutreachReportDetails = ({ report }: { report: Report }) => {
                     <ReportDetailItem label="Tomorrow's Critical Path" value={report.criticalPathTomorrow} />
                 </CardContent>
             </Card>
+             {report.audioRecording && (
+                <ReportDetailItem
+                    label="Audio Note"
+                    value={<audio controls src={report.audioRecording} className="w-full" />}
+                />
+            )}
             <ReportDetailItem label="Signature" value={report.signature} />
         </div>
     );
@@ -215,6 +223,11 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedJobTitle, setSelectedJobTitle] = React.useState("All Job Titles");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+
+  const [isRecording, setIsRecording] = React.useState(false);
+  const [audioURL, setAudioURL] = React.useState<string | undefined>();
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const audioChunksRef = React.useRef<Blob[]>([]);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<UserData>(userDocRef);
@@ -265,6 +278,7 @@ export default function ReportsPage() {
         meetingsBookedTomorrow: "",
         criticalPathTomorrow: "",
         interventionTrigger: "None",
+        audioRecording: undefined,
       } : {
         subject: "",
         technologyUsed: "",
@@ -296,6 +310,7 @@ export default function ReportsPage() {
             meetingsBookedTomorrow: "",
             criticalPathTomorrow: "",
             interventionTrigger: "None",
+            audioRecording: undefined,
         } : {
             subject: "",
             technologyUsed: "",
@@ -308,6 +323,13 @@ export default function ReportsPage() {
             otherWork: "",
         })
       });
+      setAudioURL(undefined);
+      setIsRecording(false);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
   }, [form, currentUserData, isBusinessUser]);
 
   React.useEffect(() => {
@@ -329,6 +351,59 @@ export default function ReportsPage() {
       }
     }
   }, [isAddDialogOpen, todaysAttendance, isTechnicalUser, form, currentUserData]);
+
+  const handleStartRecording = async () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            setIsRecording(true);
+            setAudioURL(undefined);
+            form.setValue('audioRecording', undefined);
+            
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            audioChunksRef.current = []; 
+
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+            mediaRecorderRef.current.onstop = () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                setAudioURL(audioUrl);
+
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    const base64data = reader.result as string;
+                    form.setValue('audioRecording', base64data);
+                };
+                stream.getTracks().forEach(track => track.stop());
+            };
+            mediaRecorderRef.current.start();
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            toast({
+                variant: "destructive",
+                title: "Microphone Access Denied",
+                description: "Please allow microphone access in your browser settings.",
+            });
+        }
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+        setIsRecording(false);
+    }
+  };
+
+  const handleDeleteRecording = () => {
+    setAudioURL(undefined);
+    form.setValue('audioRecording', undefined);
+  };
 
   const onSubmit = async (values: ReportFormValues) => {
     if (!user || !currentUserData) return;
@@ -454,6 +529,37 @@ export default function ReportsPage() {
                             </Select>
                             <FormMessage />
                         </FormItem>
+                    )} />
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle>Audio Note</CardTitle>
+                    <CardDescription>Record a short audio message to add more context to your report.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {!isRecording && !audioURL && (
+                        <Button type="button" onClick={handleStartRecording} variant="outline">
+                            <Mic className="mr-2" />
+                            Start Recording
+                        </Button>
+                    )}
+                    {isRecording && (
+                        <Button type="button" onClick={handleStopRecording} variant="destructive">
+                            <StopCircle className="mr-2" />
+                            Stop Recording
+                        </Button>
+                    )}
+                    {audioURL && (
+                        <div className="flex items-center gap-4">
+                            <audio src={audioURL} controls className="w-full" />
+                            <Button type="button" onClick={handleDeleteRecording} variant="ghost" size="icon">
+                                <Trash2 className="text-destructive" />
+                            </Button>
+                        </div>
+                    )}
+                    <FormField control={control} name="audioRecording" render={({ field }) => (
+                        <FormItem className="hidden"><FormControl><Input {...field} /></FormControl></FormItem>
                     )} />
                 </CardContent>
             </Card>
