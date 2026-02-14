@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { updateDocumentNonBlocking, addDocumentNonBlocking, useCollection } from "@/firebase";
 import Image from 'next/image';
 import { Textarea } from "@/components/ui/textarea";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { firebaseConfig } from "@/firebase/config";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -158,26 +158,28 @@ export default function ProfilePage() {
     
     const handleLocationAction = () => {
         if (!userDocRef) return;
-        
-        if ((employee as any)?.homeLatitude) {
-            setIsRequestChangeOpen(true);
-        } else {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    setCapturedLocation({ latitude, longitude });
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                const newLocation = { latitude, longitude };
+                setCapturedLocation(newLocation);
+
+                if ((employee as any)?.homeLatitude) {
+                    setIsRequestChangeOpen(true);
+                } else {
                     setIsSetHomeLocationDialogOpen(true);
-                },
-                () => {
-                    toast({
-                        variant: "destructive",
-                        title: "Location Error",
-                        description: "Could not get your location. Please enable location services.",
-                    });
-                },
-                { enableHighAccuracy: true }
-            );
-        }
+                }
+            },
+            () => {
+                toast({
+                    variant: "destructive",
+                    title: "Location Error",
+                    description: "Could not get your location. Please enable location services.",
+                });
+            },
+            { enableHighAccuracy: true }
+        );
     };
     
     const handleConfirmSetHomeLocation = () => {
@@ -195,35 +197,27 @@ export default function ProfilePage() {
     };
 
     const handleSubmitChangeRequest = () => {
-        if (!user || !userDocRef || !changeReason) {
+        if (!user || !userDocRef || !changeReason || !capturedLocation) {
             toast({ variant: 'destructive', title: 'Reason Required', description: 'Please explain why you need to change your location.'});
             return;
         }
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                
-                const requestPayload = {
-                    employeeId: user.uid,
-                    employeeName: `${(employee as any).firstName} ${(employee as any).lastName}`,
-                    requestDate: serverTimestamp(),
-                    newLatitude: latitude,
-                    newLongitude: longitude,
-                    reason: changeReason,
-                    status: 'pending',
-                };
-                
-                addDocumentNonBlocking(collection(firestore, 'location_change_requests'), requestPayload);
+        const requestPayload = {
+            employeeId: user.uid,
+            employeeName: `${(employee as any).firstName} ${(employee as any).lastName}`,
+            requestDate: serverTimestamp(),
+            newLatitude: capturedLocation.latitude,
+            newLongitude: capturedLocation.longitude,
+            reason: changeReason,
+            status: 'pending',
+        };
+        
+        addDocumentNonBlocking(collection(firestore, 'location_change_requests'), requestPayload);
 
-                toast({ title: 'Request Submitted', description: 'Your location change request has been sent for approval.' });
-                setIsRequestChangeOpen(false);
-                setChangeReason("");
-            },
-            () => {
-                 toast({ variant: "destructive", title: "Location Error", description: "Could not get your location. Please enable location services." });
-            }
-        );
+        toast({ title: 'Request Submitted', description: 'Your location change request has been sent for approval.' });
+        setIsRequestChangeOpen(false);
+        setChangeReason("");
+        setCapturedLocation(null);
     };
 
 
@@ -453,7 +447,7 @@ export default function ProfilePage() {
                                     <p className="font-semibold text-muted-foreground">Not set</p>
                                 )}
                             </div>
-                            <Button onClick={handleLocationAction} disabled={hasPendingRequest}>
+                            <Button onClick={handleLocationAction} disabled={hasPendingRequest || !(employee as any)?.isWfhAllowed}>
                                 <MapPin className="mr-2 h-4 w-4" />
                                 {(employee as any)?.homeLatitude ? 'Request Location Change' : 'Set Home Location'}
                             </Button>
@@ -462,45 +456,76 @@ export default function ProfilePage() {
                                     You have a pending location change request.
                                 </p>
                             )}
+                             {!(employee as any)?.isWfhAllowed && (
+                                <p className="text-sm text-muted-foreground mt-2">
+                                    Work From Home is not enabled for your account. Please contact an administrator.
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
             </div>
 
-            <AlertDialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Set Home Location?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Your home location has not been set. Would you like to use your current location as your permanent Work From Home address?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmSetHomeLocation}>Save and Set Location</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <Dialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Set Home Location</DialogTitle>
+                        <DialogDescription>
+                            Your current location is pinned on the map below. Please confirm if you want to set this as your permanent Work From Home address.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {capturedLocation && (
+                        <div className="aspect-video w-full rounded-md overflow-hidden border">
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                style={{ border: 0 }}
+                                loading="lazy"
+                                allowFullScreen
+                                src={`https://www.google.com/maps/embed/v1/view?key=${firebaseConfig.apiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
+                            ></iframe>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => { setIsSetHomeLocationDialogOpen(false); setCapturedLocation(null); }}>Cancel</Button>
+                        <Button onClick={handleConfirmSetHomeLocation}>Save and Set Location</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             
             <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
-                <DialogContent>
+                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Request Home Location Change</DialogTitle>
                         <DialogDescription>
-                            Your current live location will be captured and sent for approval. Please provide a reason for this change.
+                            Your proposed new location is pinned below. Provide a reason for this change and submit it for approval.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <Label htmlFor="reason">Reason for Change</Label>
-                        <Textarea 
-                            id="reason" 
-                            value={changeReason}
-                            onChange={(e) => setChangeReason(e.target.value)}
-                            placeholder="e.g., I have moved to a new address." 
-                        />
+                        {capturedLocation && (
+                            <div className="aspect-video w-full rounded-md overflow-hidden border">
+                                <iframe
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: 0 }}
+                                    loading="lazy"
+                                    allowFullScreen
+                                    src={`https://www.google.com/maps/embed/v1/view?key=${firebaseConfig.apiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
+                                ></iframe>
+                            </div>
+                        )}
+                        <div>
+                            <Label htmlFor="reason">Reason for Change</Label>
+                            <Textarea 
+                                id="reason" 
+                                value={changeReason}
+                                onChange={(e) => setChangeReason(e.target.value)}
+                                placeholder="e.g., I have moved to a new address." 
+                            />
+                        </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsRequestChangeOpen(false)}>Cancel</Button>
+                        <Button variant="outline" onClick={() => { setIsRequestChangeOpen(false); setChangeReason(""); setCapturedLocation(null); }}>Cancel</Button>
                         <Button onClick={handleSubmitChangeRequest}>Submit Request</Button>
                     </DialogFooter>
                 </DialogContent>
@@ -508,5 +533,3 @@ export default function ProfilePage() {
         </>
     )
 }
-
-    

@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, ChevronDown, UserPlus } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch } from "firebase/firestore";
@@ -483,7 +483,10 @@ export default function UsersPage() {
             </DialogContent>
           </Dialog>
           <Button asChild variant="outline" disabled={!canAddUser}>
-            <Link href="/dashboard/users/bulk">Bulk Create</Link>
+            <Link href="/dashboard/users/bulk">
+              <UserPlus className="mr-2 h-4 w-4" />
+              Bulk Create
+            </Link>
           </Button>
         </div>
       </PageHeader>

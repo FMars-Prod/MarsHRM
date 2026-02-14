@@ -54,5 +54,6 @@ export {
   Circle,
   Smile,
   Activity,
-  RotateCcw
+  RotateCcw,
+  UserPlus
 } from "lucide-react";
