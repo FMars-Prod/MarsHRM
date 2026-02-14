@@ -599,7 +599,10 @@ export function AttendanceWidget() {
             )}
         </div>
         <CardDescription>
-          Your real-time attendance and break tracker.
+          Your real-time attendance tracker. Your designated location is
+          <span className="font-semibold text-foreground">
+            {isWfhAllowed ? " Work From Home" : " Work From Office"}
+          </span>.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col items-center justify-center gap-4 text-center">
