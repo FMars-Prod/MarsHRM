@@ -52,6 +52,8 @@ interface Location {
   maxDistanceKm?: number;
   shiftStartTime?: string;
   shiftEndTime?: string;
+  lunchBreakStartTime?: string;
+  lunchBreakDurationMinutes?: number;
 }
 
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
@@ -106,6 +108,9 @@ export function AttendanceWidget() {
   const [newMaxDistance, setNewMaxDistance] = useState("");
   const [newShiftStart, setNewShiftStart] = useState("");
   const [newShiftEnd, setNewShiftEnd] = useState("");
+  const [newLunchStart, setNewLunchStart] = useState("");
+  const [newLunchDuration, setNewLunchDuration] = useState("");
+  const [autoLunchTriggered, setAutoLunchTriggered] = useState(false);
   
   const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
@@ -118,6 +123,8 @@ export function AttendanceWidget() {
         setNewMaxDistance((officeLocation.maxDistanceKm || 2).toString());
         setNewShiftStart(officeLocation.shiftStartTime || "09:00");
         setNewShiftEnd(officeLocation.shiftEndTime || "17:00");
+        setNewLunchStart(officeLocation.lunchBreakStartTime || "13:00");
+        setNewLunchDuration((officeLocation.lunchBreakDurationMinutes || 60).toString());
     }
   }, [officeLocation])
 
@@ -153,6 +160,7 @@ export function AttendanceWidget() {
             setTotalBreakTime(todaysAttendance.totalBreakDuration || 0);
           }
         }
+        setAutoLunchTriggered((todaysAttendance as any).autoLunchBreakStarted || false);
     } else {
         setStatus("out");
         setHasClockedOutToday(false);
@@ -160,6 +168,7 @@ export function AttendanceWidget() {
         setBreakTimer(0);
         setTotalBreakTime(0);
         setLastClockInTime(null);
+        setAutoLunchTriggered(false);
     }
   }, [todaysAttendance]);
 
@@ -185,6 +194,22 @@ export function AttendanceWidget() {
     }
   }
 
+  const handleBreak = () => {
+    const updatedBreakTime = totalBreakTime + breakTimer;
+    if (status === "break") {
+      setTotalBreakTime(updatedBreakTime);
+      if (getTodaysAttendanceRef) {
+        updateDocumentNonBlocking(getTodaysAttendanceRef, {
+            totalBreakDuration: updatedBreakTime
+        });
+      }
+      setBreakTimer(0);
+      setStatus("in");
+    } else {
+      setStatus("break");
+    }
+  };
+
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     if (status === "in") {
@@ -193,11 +218,30 @@ export function AttendanceWidget() {
             handleAutoClockOut();
         } else {
             setTimer((prev) => prev + 1);
+
+            const now = new Date();
+            if (officeLocation?.lunchBreakStartTime && !autoLunchTriggered) {
+                const [hours, minutes] = officeLocation.lunchBreakStartTime.split(':');
+                const lunchTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes), 0);
+
+                if (now >= lunchTime) {
+                    if (getTodaysAttendanceRef) {
+                        updateDocumentNonBlocking(getTodaysAttendanceRef, { autoLunchBreakStarted: true });
+                    }
+                    setAutoLunchTriggered(true);
+                    handleBreak(); 
+                    toast({
+                        title: "Lunch Time!",
+                        description: "You have been automatically placed on a break. Please clock back in when you return.",
+                    });
+                }
+            }
         }
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [status, lastClockInTime]);
+  }, [status, lastClockInTime, officeLocation, autoLunchTriggered, getTodaysAttendanceRef]);
+
 
   useEffect(() => {
     let breakInterval: NodeJS.Timeout | undefined;
@@ -314,33 +358,13 @@ export function AttendanceWidget() {
     );
   };
 
-  const handleBreak = () => {
-    const updatedBreakTime = totalBreakTime + breakTimer;
-    if (status === "break") {
-      setTotalBreakTime(updatedBreakTime);
-      if (getTodaysAttendanceRef) {
-        updateDocumentNonBlocking(getTodaysAttendanceRef, {
-            totalBreakDuration: updatedBreakTime
-        });
-      }
-      setBreakTimer(0);
-      setStatus("in");
-    } else {
-      if (getTodaysAttendanceRef) {
-        updateDocumentNonBlocking(getTodaysAttendanceRef, {
-            totalBreakDuration: updatedBreakTime
-        });
-      }
-      setStatus("break");
-    }
-  };
-
   const handleSaveSettings = async () => {
       const lat = parseFloat(newLatitude);
       const lon = parseFloat(newLongitude);
       const range = parseFloat(newMaxDistance);
+      const lunchDuration = parseInt(newLunchDuration);
 
-      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd) {
+      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
           toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
@@ -351,7 +375,9 @@ export function AttendanceWidget() {
             longitude: lon, 
             maxDistanceKm: range,
             shiftStartTime: newShiftStart,
-            shiftEndTime: newShiftEnd
+            shiftEndTime: newShiftEnd,
+            lunchBreakStartTime: newLunchStart,
+            lunchBreakDurationMinutes: lunchDuration
         }, { merge: true });
         toast({ title: "Settings Update Initiated", description: "The office settings are being updated." });
         setIsSettingsDialogOpen(false);
@@ -433,6 +459,16 @@ export function AttendanceWidget() {
                              <div className="grid gap-2">
                                   <Label htmlFor="shift-end">Shift End Time</Label>
                                   <Input id="shift-end" type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
+                             </div>
+                           </div>
+                           <div className="grid grid-cols-2 gap-4">
+                             <div className="grid gap-2">
+                                  <Label htmlFor="lunch-start">Lunch Start Time</Label>
+                                  <Input id="lunch-start" type="time" value={newLunchStart} onChange={(e) => setNewLunchStart(e.target.value)} />
+                             </div>
+                             <div className="grid gap-2">
+                                  <Label htmlFor="lunch-duration">Lunch Duration (mins)</Label>
+                                  <Input id="lunch-duration" type="number" value={newLunchDuration} onChange={(e) => setNewLunchDuration(e.target.value)} />
                              </div>
                            </div>
                         </div>
@@ -624,3 +660,5 @@ export function AttendanceWidget() {
     </Card>
   );
 }
+
+    
