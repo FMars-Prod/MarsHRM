@@ -25,6 +25,7 @@ import { updateDocumentNonBlocking, addDocumentNonBlocking, useCollection } from
 import Image from 'next/image';
 import { Textarea } from "@/components/ui/textarea";
 import { firebaseConfig } from "@/firebase/config";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -494,37 +495,39 @@ export default function ProfilePage() {
             </Dialog>
             
             <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
-                 <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
+                 <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] p-0">
+                    <DialogHeader className="p-6 border-b">
                         <DialogTitle>Request Home Location Change</DialogTitle>
                         <DialogDescription>
                             Your proposed new location is pinned below. Provide a reason for this change and submit it for approval.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        {capturedLocation && (
-                            <div className="aspect-video w-full rounded-md overflow-hidden border">
-                                <iframe
-                                    width="100%"
-                                    height="100%"
-                                    style={{ border: 0 }}
-                                    loading="lazy"
-                                    allowFullScreen
-                                    src={`https://www.google.com/maps/embed/v1/view?key=${firebaseConfig.apiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
-                                ></iframe>
+                    <ScrollArea className="flex-1">
+                        <div className="grid gap-4 p-6">
+                            {capturedLocation && (
+                                <div className="aspect-video w-full rounded-md overflow-hidden border">
+                                    <iframe
+                                        width="100%"
+                                        height="100%"
+                                        style={{ border: 0 }}
+                                        loading="lazy"
+                                        allowFullScreen
+                                        src={`https://www.google.com/maps/embed/v1/view?key=${firebaseConfig.apiKey}&center=${capturedLocation.latitude},${capturedLocation.longitude}&zoom=17`}
+                                    ></iframe>
+                                </div>
+                            )}
+                            <div>
+                                <Label htmlFor="reason">Reason for Change</Label>
+                                <Textarea 
+                                    id="reason" 
+                                    value={changeReason}
+                                    onChange={(e) => setChangeReason(e.target.value)}
+                                    placeholder="e.g., I have moved to a new address." 
+                                />
                             </div>
-                        )}
-                        <div>
-                            <Label htmlFor="reason">Reason for Change</Label>
-                            <Textarea 
-                                id="reason" 
-                                value={changeReason}
-                                onChange={(e) => setChangeReason(e.target.value)}
-                                placeholder="e.g., I have moved to a new address." 
-                            />
                         </div>
-                    </div>
-                    <DialogFooter>
+                    </ScrollArea>
+                    <DialogFooter className="p-6 border-t">
                         <Button variant="outline" onClick={() => { setIsRequestChangeOpen(false); setChangeReason(""); setCapturedLocation(null); }}>Cancel</Button>
                         <Button onClick={handleSubmitChangeRequest}>Submit Request</Button>
                     </DialogFooter>
