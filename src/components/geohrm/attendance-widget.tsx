@@ -194,21 +194,66 @@ export function AttendanceWidget() {
     }
   }
 
-  const handleBreak = () => {
-    const updatedBreakTime = totalBreakTime + breakTimer;
-    if (status === "break") {
-      setTotalBreakTime(updatedBreakTime);
+  const proceedWithLunchClockIn = (userLocation: Location, dist: number, reason?: string) => {
+      const updatedBreakTime = totalBreakTime + breakTimer;
       if (getTodaysAttendanceRef) {
-        updateDocumentNonBlocking(getTodaysAttendanceRef, {
-            totalBreakDuration: updatedBreakTime
-        });
+          const payload: any = {
+              totalBreakDuration: updatedBreakTime,
+          };
+          if (reason) {
+              const newNote = `Post-Lunch Clock-In (${format(new Date(), 'p')}): ${reason}`;
+              const existingNotes = (todaysAttendance as any)?.checkInNotes || "";
+              payload.checkInNotes = existingNotes ? `${existingNotes}\n${newNote}` : newNote;
+          }
+          updateDocumentNonBlocking(getTodaysAttendanceRef, payload);
       }
+      
+      setTotalBreakTime(updatedBreakTime);
       setBreakTimer(0);
       setStatus("in");
+      setCurrentUserLocation(userLocation);
+      setDistance(dist);
+      toast({ title: "Clocked In from Lunch", description: `Location recorded, ${dist.toFixed(2)} km from office.` });
+  }
+
+  const handleBreak = () => {
+    if (status === "break") {
+        if (autoLunchTriggered) {
+            if (!officeLocation || !user) {
+                toast({ variant: "destructive", title: "Cannot Clock In", description: "Office location not set." });
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+                  const dist = getDistanceInKm(userLocation, officeLocation);
+                  
+                  if (dist > maxDistanceKm) {
+                      setOutOfRangeAction(() => () => proceedWithLunchClockIn(userLocation, dist, outOfRangeReason));
+                      setIsOutOfRangeReasonDialogOpen(true);
+                  } else {
+                      proceedWithLunchClockIn(userLocation, dist);
+                  }
+                },
+                () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            const updatedBreakTime = totalBreakTime + breakTimer;
+            setTotalBreakTime(updatedBreakTime);
+            if (getTodaysAttendanceRef) {
+                updateDocumentNonBlocking(getTodaysAttendanceRef, {
+                    totalBreakDuration: updatedBreakTime
+                });
+            }
+            setBreakTimer(0);
+            setStatus("in");
+        }
     } else {
       setStatus("break");
     }
   };
+
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -431,14 +476,14 @@ export function AttendanceWidget() {
                             <Settings className="size-5" />
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-md flex flex-col max-h-[90vh]">
                         <DialogHeader>
                             <DialogTitle>Company Settings</DialogTitle>
                             <DialogDescription>
                                 Set global settings for attendance and location.
                             </DialogDescription>
                         </DialogHeader>
-                         <div className="max-h-[60vh] overflow-y-auto">
+                         <div className="flex-1 overflow-y-auto -mx-6 px-6">
                             <div className="grid gap-4 py-4 pr-2">
                                <div className="grid gap-2">
                                     <Label htmlFor="latitude">Office Latitude</Label>
@@ -474,7 +519,7 @@ export function AttendanceWidget() {
                                </div>
                             </div>
                         </div>
-                        <DialogFooter>
+                        <DialogFooter className="mt-auto pt-4 border-t">
                             <DialogClose asChild>
                                 <Button variant="outline">Cancel</Button>
                             </DialogClose>
