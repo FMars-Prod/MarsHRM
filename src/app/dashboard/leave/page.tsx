@@ -287,6 +287,8 @@ export default function LeavePage() {
   const { data: leaveRequests, isLoading: requestsLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
   const isLoading = usersLoading || requestsLoading;
   
+  const allLeaveRequests = leaveRequests || [];
+
   const handleRequestStatus = (requestId: string, newStatus: LeaveStatus, approverId: string, approvalField: string) => {
     const requestDocRef = doc(firestore, 'leave_requests', requestId);
     updateDocumentNonBlocking(requestDocRef, { 
@@ -379,16 +381,6 @@ export default function LeavePage() {
         setIsRequesting(false);
       });
   }
-  
-  const allLeaveRequests = (leaveRequests || []).filter(req => {
-    if (userRole === 'Team Lead') {
-      return true; // Team lead sees all their members' requests + their own
-    }
-    if (userRole === 'HR Manager') {
-      return ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(req.status);
-    }
-    return true; // Members and Admins see everything they are allowed to by rules
-  });
 
   const formatDate = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'PP') : '';
 
