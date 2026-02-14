@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -42,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, parse, isSameDay, endOfDay } from "date-fns";
 import { Textarea } from "../ui/textarea";
+import { ScrollArea } from "../ui/scroll-area";
 
 
 type AttendanceStatus = "out" | "in" | "break";
@@ -431,48 +431,50 @@ export function AttendanceWidget() {
                             <Settings className="size-5" />
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
+                    <DialogContent className="flex flex-col max-h-[90vh] p-0">
+                        <DialogHeader className="p-6 pb-4 border-b">
                             <DialogTitle>Company Settings</DialogTitle>
                             <DialogDescription>
                                 Set global settings for attendance and location.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                           <div className="grid gap-2">
-                                <Label htmlFor="latitude">Office Latitude</Label>
-                                <Input id="latitude" value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} placeholder="e.g., 37.7749" />
-                           </div>
-                           <div className="grid gap-2">
-                                <Label htmlFor="longitude">Office Longitude</Label>
-                                <Input id="longitude" value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} placeholder="e.g., -122.4194" />
-                           </div>
-                           <div className="grid gap-2">
-                                <Label htmlFor="range">Clock-in Range (km)</Label>
-                                <Input id="range" type="number" value={newMaxDistance} onChange={(e) => setNewMaxDistance(e.target.value)} placeholder="e.g., 2" />
-                           </div>
-                           <div className="grid grid-cols-2 gap-4">
-                             <div className="grid gap-2">
-                                  <Label htmlFor="shift-start">Shift Start Time</Label>
-                                  <Input id="shift-start" type="time" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)} />
-                             </div>
-                             <div className="grid gap-2">
-                                  <Label htmlFor="shift-end">Shift End Time</Label>
-                                  <Input id="shift-end" type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
-                             </div>
-                           </div>
-                           <div className="grid grid-cols-2 gap-4">
-                             <div className="grid gap-2">
-                                  <Label htmlFor="lunch-start">Lunch Start Time</Label>
-                                  <Input id="lunch-start" type="time" value={newLunchStart} onChange={(e) => setNewLunchStart(e.target.value)} />
-                             </div>
-                             <div className="grid gap-2">
-                                  <Label htmlFor="lunch-duration">Lunch Duration (mins)</Label>
-                                  <Input id="lunch-duration" type="number" value={newLunchDuration} onChange={(e) => setNewLunchDuration(e.target.value)} />
-                             </div>
-                           </div>
-                        </div>
-                        <DialogFooter>
+                        <ScrollArea className="flex-1">
+                            <div className="grid gap-4 p-6">
+                               <div className="grid gap-2">
+                                    <Label htmlFor="latitude">Office Latitude</Label>
+                                    <Input id="latitude" value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} placeholder="e.g., 37.7749" />
+                               </div>
+                               <div className="grid gap-2">
+                                    <Label htmlFor="longitude">Office Longitude</Label>
+                                    <Input id="longitude" value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} placeholder="e.g., -122.4194" />
+                               </div>
+                               <div className="grid gap-2">
+                                    <Label htmlFor="range">Clock-in Range (km)</Label>
+                                    <Input id="range" type="number" value={newMaxDistance} onChange={(e) => setNewMaxDistance(e.target.value)} placeholder="e.g., 2" />
+                               </div>
+                               <div className="grid grid-cols-2 gap-4">
+                                 <div className="grid gap-2">
+                                      <Label htmlFor="shift-start">Shift Start Time</Label>
+                                      <Input id="shift-start" type="time" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)} />
+                                 </div>
+                                 <div className="grid gap-2">
+                                      <Label htmlFor="shift-end">Shift End Time</Label>
+                                      <Input id="shift-end" type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
+                                 </div>
+                               </div>
+                               <div className="grid grid-cols-2 gap-4">
+                                 <div className="grid gap-2">
+                                      <Label htmlFor="lunch-start">Lunch Start Time</Label>
+                                      <Input id="lunch-start" type="time" value={newLunchStart} onChange={(e) => setNewLunchStart(e.target.value)} />
+                                 </div>
+                                 <div className="grid gap-2">
+                                      <Label htmlFor="lunch-duration">Lunch Duration (mins)</Label>
+                                      <Input id="lunch-duration" type="number" value={newLunchDuration} onChange={(e) => setNewLunchDuration(e.target.value)} />
+                                 </div>
+                               </div>
+                            </div>
+                        </ScrollArea>
+                        <DialogFooter className="p-6 pt-4 border-t">
                             <DialogClose asChild>
                                 <Button variant="outline">Cancel</Button>
                             </DialogClose>
