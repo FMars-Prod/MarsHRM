@@ -82,6 +82,12 @@ export default function ProfilePage() {
         [user, firestore]
     );
     const { data: employee, isLoading: isEmployeeLoading } = useDoc(userDocRef);
+    
+    const officeLocationDocRef = useMemoFirebase(
+        () => doc(firestore, "settings", "location"),
+        [firestore]
+    );
+    const { data: officeLocation } = useDoc<Location>(officeLocationDocRef);
 
     const pendingLocationRequestQuery = useMemoFirebase(
         () => user ? query(
@@ -162,27 +168,30 @@ export default function ProfilePage() {
     const handleLocationAction = () => {
         if (!userDocRef) return;
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                const newLocation = { latitude, longitude };
-                setCapturedLocation(newLocation);
+        const hasHomeLocation = (employee as any)?.homeLatitude && (employee as any)?.homeLongitude;
+        
+        let initialLat, initialLng;
 
-                if ((employee as any)?.homeLatitude) {
-                    setIsRequestChangeOpen(true);
-                } else {
-                    setIsSetHomeLocationDialogOpen(true);
-                }
-            },
-            () => {
-                toast({
-                    variant: "destructive",
-                    title: "Location Error",
-                    description: "Could not get your location. Please enable location services.",
-                });
-            },
-            { enableHighAccuracy: true }
-        );
+        if (hasHomeLocation) {
+            initialLat = (employee as any).homeLatitude;
+            initialLng = (employee as any).homeLongitude;
+        } else if (officeLocation) {
+            initialLat = officeLocation.latitude;
+            initialLng = officeLocation.longitude;
+        } else {
+            // A sensible default if no location is available, e.g., center of a major city
+            initialLat = 51.5074;
+            initialLng = -0.1278;
+            setSelectedAddress("Search for an address or use 'My Location'");
+        }
+
+        setCapturedLocation({ latitude: initialLat, longitude: initialLng });
+
+        if (hasHomeLocation) {
+            setIsRequestChangeOpen(true);
+        } else {
+            setIsSetHomeLocationDialogOpen(true);
+        }
     };
     
     const handleConfirmSetHomeLocation = () => {
@@ -470,7 +479,7 @@ export default function ProfilePage() {
             </div>
 
             <Dialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="sm:max-w-lg" onCloseAutoFocus={(e) => e.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>Set Home Location</DialogTitle>
                         <DialogDescription>
@@ -499,7 +508,7 @@ export default function ProfilePage() {
             </Dialog>
             
             <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
-                 <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] p-0">
+                 <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
                     <DialogHeader className="p-6 pb-4 border-b">
                         <DialogTitle>Request Home Location Change</DialogTitle>
                         <DialogDescription>

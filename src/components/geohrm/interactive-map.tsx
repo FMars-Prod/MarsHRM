@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -154,13 +155,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, o
         <div ref={mapRef} className='w-full h-full' />
         <Button
             type="button"
-            size="icon"
             variant="secondary"
             onClick={handleGetCurrentLocation}
-            className="absolute bottom-10 right-2 z-10"
+            className="absolute bottom-2 right-2 z-10"
         >
-            <LocateFixed className="h-5 w-5" />
-            <span className="sr-only">Get Current Location</span>
+            <LocateFixed className="mr-2 h-4 w-4" />
+            My Location
         </Button>
     </div>
   );
