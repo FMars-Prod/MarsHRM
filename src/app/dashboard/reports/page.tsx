@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper, Mic, StopCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Search, PartyPopper, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -224,10 +224,7 @@ export default function ReportsPage() {
   const [selectedJobTitle, setSelectedJobTitle] = React.useState("All Job Titles");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
-  const [isRecording, setIsRecording] = React.useState(false);
   const [audioURL, setAudioURL] = React.useState<string | undefined>();
-  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
-  const audioChunksRef = React.useRef<Blob[]>([]);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<UserData>(userDocRef);
@@ -324,12 +321,6 @@ export default function ReportsPage() {
         })
       });
       setAudioURL(undefined);
-      setIsRecording(false);
-      if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      }
-      mediaRecorderRef.current = null;
-      audioChunksRef.current = [];
   }, [form, currentUserData, isBusinessUser]);
 
   React.useEffect(() => {
@@ -352,51 +343,24 @@ export default function ReportsPage() {
     }
   }, [isAddDialogOpen, todaysAttendance, isTechnicalUser, form, currentUserData]);
 
-  const handleStartRecording = async () => {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            setIsRecording(true);
-            setAudioURL(undefined);
-            form.setValue('audioRecording', undefined);
-            
-            mediaRecorderRef.current = new MediaRecorder(stream);
-            audioChunksRef.current = []; 
-
-            mediaRecorderRef.current.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
-            };
-            mediaRecorderRef.current.onstop = () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-                const audioUrl = URL.createObjectURL(audioBlob);
-                setAudioURL(audioUrl);
-
-                const reader = new FileReader();
-                reader.readAsDataURL(audioBlob);
-                reader.onloadend = () => {
-                    const base64data = reader.result as string;
-                    form.setValue('audioRecording', base64data);
-                };
-                stream.getTracks().forEach(track => track.stop());
-            };
-            mediaRecorderRef.current.start();
-        } catch (err) {
-            console.error("Error accessing microphone:", err);
+  const handleAudioUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
             toast({
                 variant: "destructive",
-                title: "Microphone Access Denied",
-                description: "Please allow microphone access in your browser settings.",
+                title: "File too large",
+                description: "Please upload an audio file smaller than 5MB.",
             });
+            return;
         }
-    }
-  };
-
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-        setIsRecording(false);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
+            setAudioURL(dataUrl);
+            form.setValue('audioRecording', dataUrl);
+        };
+        reader.readAsDataURL(file);
     }
   };
 
@@ -535,26 +499,21 @@ export default function ReportsPage() {
              <Card>
                 <CardHeader>
                     <CardTitle>Audio Note</CardTitle>
-                    <CardDescription>Record a short audio message to add more context to your report.</CardDescription>
+                    <CardDescription>Upload a short audio file (max 5MB) to add more context to your report.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {!isRecording && !audioURL && (
-                        <Button type="button" onClick={handleStartRecording} variant="outline">
-                            <Mic className="mr-2" />
-                            Start Recording
-                        </Button>
-                    )}
-                    {isRecording && (
-                        <Button type="button" onClick={handleStopRecording} variant="destructive">
-                            <StopCircle className="mr-2" />
-                            Stop Recording
-                        </Button>
+                    {!audioURL && (
+                        <div className="grid w-full max-w-sm items-center gap-1.5">
+                            <Label htmlFor="audio-upload">Upload Audio</Label>
+                            <Input id="audio-upload" type="file" accept="audio/*" onChange={handleAudioUpload} />
+                        </div>
                     )}
                     {audioURL && (
-                        <div className="flex items-center gap-4">
+                        <div className="space-y-2">
                             <audio src={audioURL} controls className="w-full" />
-                            <Button type="button" onClick={handleDeleteRecording} variant="ghost" size="icon">
-                                <Trash2 className="text-destructive" />
+                            <Button type="button" onClick={handleDeleteRecording} variant="outline" size="sm" className="w-full">
+                                <Trash2 className="mr-2" />
+                                Remove Audio
                             </Button>
                         </div>
                     )}
