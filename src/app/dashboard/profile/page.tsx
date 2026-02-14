@@ -528,7 +528,7 @@ export default function ProfilePage() {
                     <DialogHeader className="p-6 pb-4 border-b">
                         <DialogTitle>Request Home Location Change</DialogTitle>
                         <DialogDescription>
-                            Use search, your current location, or drag the pin to your new address. Provide a reason and submit for approval.
+                            Use your current location, click the map, or drag the pin to your new address. Provide a reason and submit for approval.
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1">
@@ -558,7 +558,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
                     </ScrollArea>
-                    <DialogFooter className="p-6 border-t">
+                    <DialogFooter className="p-6 pt-4 border-t">
                         <Button variant="outline" onClick={() => { setIsRequestChangeOpen(false); setChangeReason(""); setCapturedLocation(null); }}>Cancel</Button>
                         <Button onClick={handleSubmitChangeRequest}>Submit Request</Button>
                     </DialogFooter>
