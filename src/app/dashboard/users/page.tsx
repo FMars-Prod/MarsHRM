@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch } from "firebase/firestore";
@@ -50,6 +50,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
@@ -95,6 +96,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = React.useState<UserData | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
   const { data: users, isLoading } = useCollection<UserData>(usersQuery);
@@ -278,6 +280,21 @@ export default function UsersPage() {
         toast({ variant: "destructive", title: "Operation Failed", description: error.message });
     }
   };
+  
+    const handleBulkWfhUpdate = async (enable: boolean) => {
+        if (selectedUserIds.length === 0) return;
+        const batch = writeBatch(firestore);
+        selectedUserIds.forEach(userId => {
+            const userRef = doc(firestore, 'users', userId);
+            batch.update(userRef, { isWfhAllowed: enable });
+        });
+        await batch.commit();
+        toast({
+            title: "Bulk Update Successful",
+            description: `${selectedUserIds.length} users have been updated.`
+        });
+        setSelectedUserIds([]);
+    };
 
   const canModify = (targetRole: Role) => {
       if (currentUserRole === 'CEO/Admin') return true;
@@ -294,6 +311,25 @@ export default function UsersPage() {
         description="View, add, and manage all users in the system."
       >
         <div className="flex gap-2">
+            {selectedUserIds.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    Bulk Actions ({selectedUserIds.length})
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Apply to selected users</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleBulkWfhUpdate(true)}>
+                    Enable Work From Home
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkWfhUpdate(false)}>
+                    Disable Work From Home
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           <Dialog open={isDialogOpen} onOpenChange={(open) => !open && resetDialog()}>
             <DialogTrigger asChild>
               <Button onClick={() => setIsDialogOpen(true)} disabled={!canAddUser}>
@@ -455,6 +491,19 @@ export default function UsersPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={selectedUserIds.length > 0 && users ? selectedUserIds.length === users.length : false}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedUserIds(users?.map(u => u.id) || []);
+                    } else {
+                      setSelectedUserIds([]);
+                    }
+                  }}
+                  aria-label="Select all rows"
+                />
+              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Job Title</TableHead>
               <TableHead>Role</TableHead>
@@ -463,9 +512,22 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center h-24">Loading users...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center h-24">Loading users...</TableCell></TableRow>
             ) : users?.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow key={user.id} data-state={selectedUserIds.includes(user.id) && "selected"}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedUserIds.includes(user.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedUserIds(prev => [...prev, user.id]);
+                      } else {
+                        setSelectedUserIds(prev => prev.filter(id => id !== user.id));
+                      }
+                    }}
+                    aria-label={`Select row for ${user.firstName}`}
+                  />
+                </TableCell>
                 <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                 <TableCell>{user.jobTitle}</TableCell>
                 <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
@@ -506,5 +568,3 @@ export default function UsersPage() {
     </>
   );
 }
-
-    
