@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, RotateCcw } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, RotateCcw, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -42,6 +42,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, parse, isSameDay, endOfDay } from "date-fns";
 import { Textarea } from "../ui/textarea";
+import { Switch } from "../ui/switch";
 
 
 type AttendanceStatus = "out" | "in" | "break";
@@ -115,6 +116,7 @@ export function AttendanceWidget() {
   const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
   const [outOfRangeAction, setOutOfRangeAction] = useState<(() => void) | null>(null);
+  const [isWorkFromHome, setIsWorkFromHome] = useState(false);
   
   useEffect(() => {
     if (officeLocation) {
@@ -302,7 +304,7 @@ export function AttendanceWidget() {
       const clockInTime = serverTimestamp();
       
       let attendanceStatus = 'present';
-      if (officeLocation?.shiftStartTime) {
+      if (!isWorkFromHome && officeLocation?.shiftStartTime) {
           const shiftStart = parse(officeLocation.shiftStartTime, 'HH:mm', new Date());
           if (now > shiftStart) {
               attendanceStatus = 'late';
@@ -318,10 +320,8 @@ export function AttendanceWidget() {
               totalBreakDuration: 0,
               locationCheckInLatitude: userLocation.latitude,
               locationCheckInLongitude: userLocation.longitude,
+              checkInNotes: reason,
           };
-          if (reason) {
-            attendancePayload.checkInNotes = reason;
-          }
           setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
       }
 
@@ -331,35 +331,66 @@ export function AttendanceWidget() {
       setBreakTimer(0);
       setTotalBreakTime(0);
       setHasClockedOutToday(false);
-      toast({ title: "Clocked In", description: `Location recorded, ${dist.toFixed(2)} km from office.` });
+      toast({ title: "Clocked In", description: `Location recorded, ${dist.toFixed(2)} km from designated location.` });
   }
 
   const handleClockIn = () => {
-    if (!officeLocation || !user) {
-        toast({
-            variant: "destructive",
-            title: "Cannot Clock In",
-            description: "Office location not set or user not logged in.",
-        });
+    if (!user) {
+        toast({ variant: "destructive", title: "Cannot Clock In", description: "User not logged in." });
         return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-          const dist = getDistanceInKm(userLocation, officeLocation);
-          setDistance(dist);
+    if (isWorkFromHome) {
+        // WFH Logic
+        const homeLat = (userData as any)?.homeLatitude;
+        const homeLon = (userData as any)?.homeLongitude;
+        const homeRange = (userData as any)?.homeLocationRangeKm;
 
-          if (dist > maxDistanceKm) {
-              setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, dist, outOfRangeReason));
-              setIsOutOfRangeReasonDialogOpen(true);
-          } else {
-              proceedWithClockIn(userLocation, dist);
-          }
-        },
-        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+        if (!homeLat || !homeLon) {
+            toast({ variant: "destructive", title: "Home Location Not Set", description: "Please set your home location in your profile before clocking in from home." });
+            return;
+        }
+        
+        const homeLocation: Location = { latitude: homeLat, longitude: homeLon };
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+              const dist = getDistanceInKm(userLocation, homeLocation);
+              
+              if (dist > (homeRange || 0.5)) { 
+                  toast({ variant: "destructive", title: "Out of Range", description: `You must be within ${homeRange || 0.5}km of your home location to clock in.` });
+                  return;
+              }
+              
+              proceedWithClockIn(userLocation, dist, "Work From Home");
+            },
+            () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
+            { enableHighAccuracy: true }
+        );
+    } else {
+        // Office Logic
+        if (!officeLocation) {
+            toast({ variant: "destructive", title: "Cannot Clock In", description: "Office location not set." });
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+              const dist = getDistanceInKm(userLocation, officeLocation);
+              setDistance(dist);
+    
+              if (dist > maxDistanceKm) {
+                  setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, dist, outOfRangeReason));
+                  setIsOutOfRangeReasonDialogOpen(true);
+              } else {
+                  proceedWithClockIn(userLocation, dist);
+              }
+            },
+            () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
   };
   
   const proceedWithClockOut = (userLocation: Location, reason?: string) => {
@@ -382,25 +413,58 @@ export function AttendanceWidget() {
   }
 
   const handleClockOut = () => {
-    if (!officeLocation || !user) {
+    if (!user) {
       toast({ variant: "destructive", title: "Cannot Clock Out" });
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-            const dist = getDistanceInKm(userLocation, officeLocation);
 
-            if (dist > maxDistanceKm) {
-                setOutOfRangeAction(() => () => proceedWithClockOut(userLocation, outOfRangeReason));
-                setIsOutOfRangeReasonDialogOpen(true);
-            } else {
-                proceedWithClockOut(userLocation);
-            }
-        },
-        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."}),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+    if (isWorkFromHome) {
+        const homeLat = (userData as any)?.homeLatitude;
+        const homeLon = (userData as any)?.homeLongitude;
+        const homeRange = (userData as any)?.homeLocationRangeKm;
+
+        if (!homeLat || !homeLon) {
+            toast({ variant: "destructive", title: "Home Location Not Set", description: "Cannot clock out from home without a saved location." });
+            return;
+        }
+
+        const homeLocation: Location = { latitude: homeLat, longitude: homeLon };
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+                const dist = getDistanceInKm(userLocation, homeLocation);
+
+                if (dist > (homeRange || 0.5)) {
+                    toast({ variant: "destructive", title: "Out of Range", description: `You must be within ${homeRange || 0.5}km of your home location to clock out.` });
+                    return;
+                }
+                proceedWithClockOut(userLocation, "Work From Home");
+            },
+            () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out." }),
+            { enableHighAccuracy: true }
+        );
+    } else {
+        if (!officeLocation) {
+            toast({ variant: "destructive", title: "Cannot Clock Out" });
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+                const dist = getDistanceInKm(userLocation, officeLocation);
+
+                if (dist > maxDistanceKm) {
+                    setOutOfRangeAction(() => () => proceedWithClockOut(userLocation, outOfRangeReason));
+                    setIsOutOfRangeReasonDialogOpen(true);
+                } else {
+                    proceedWithClockOut(userLocation);
+                }
+            },
+            () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."}),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
   };
 
   const handleSaveSettings = async () => {
@@ -530,16 +594,29 @@ export function AttendanceWidget() {
             )}
         </div>
         <CardDescription>
-          Your real-time attendance and break tracker. Please enable location services on your device.
+          Your real-time attendance and break tracker.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col items-center justify-center gap-4 text-center">
-        {isLocationLoading ? (
+        <div className="flex items-center justify-center space-x-2 mb-2">
+            <Building2 className="size-4" />
+            <Label htmlFor="wfh-switch">Office</Label>
+            <Switch
+                id="wfh-switch"
+                checked={isWorkFromHome}
+                onCheckedChange={setIsWorkFromHome}
+                disabled={status !== 'out' || hasClockedOutToday}
+                aria-label="Toggle work location"
+            />
+            <Label htmlFor="wfh-switch">Home</Label>
+            <Home className="size-4" />
+        </div>
+        {isLocationLoading && !isWorkFromHome ? (
              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <Building2 className="h-10 w-10 animate-pulse" />
                 <p>Loading Location Data...</p>
             </div>
-        ) : officeLocation ? (
+        ) : (officeLocation || isWorkFromHome) ? (
           <>
             <div
               className={cn(
@@ -601,7 +678,7 @@ export function AttendanceWidget() {
                   4
                 )}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
                 {distance !== null && (
-                  <span>({distance.toFixed(2)} km from office)</span>
+                  <span>({distance.toFixed(2)} km from designated location)</span>
                 )}
               </div>
             )}
@@ -618,7 +695,7 @@ export function AttendanceWidget() {
             <Button
                 onClick={handleClockIn}
                 className="w-full col-span-2"
-                disabled={!officeLocation}
+                disabled={!isWorkFromHome && !officeLocation}
             >
                 <Clock className="mr-2" /> Clock In
             </Button>

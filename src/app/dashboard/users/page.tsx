@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -47,6 +48,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
@@ -60,6 +62,9 @@ const userSchema = z.object({
   role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/Admin']),
   password: z.string().optional(),
   confirmPassword: z.string().optional(),
+  homeLatitude: z.coerce.number().optional(),
+  homeLongitude: z.coerce.number().optional(),
+  homeLocationRangeKm: z.coerce.number().min(0, "Range cannot be negative.").optional(),
 }).refine(data => {
     if (data.password && data.password.length < 6) {
         return false;
@@ -107,6 +112,9 @@ export default function UsersPage() {
       role: "Member",
       password: "",
       confirmPassword: "",
+      homeLatitude: undefined,
+      homeLongitude: undefined,
+      homeLocationRangeKm: 0.5,
     },
   });
 
@@ -122,6 +130,9 @@ export default function UsersPage() {
       role: "Member",
       password: "",
       confirmPassword: "",
+      homeLatitude: undefined,
+      homeLongitude: undefined,
+      homeLocationRangeKm: 0.5,
     });
   };
 
@@ -136,6 +147,9 @@ export default function UsersPage() {
       role: userToEdit.role || "Member",
       password: "",
       confirmPassword: "",
+      homeLatitude: (userToEdit as any).homeLatitude || undefined,
+      homeLongitude: (userToEdit as any).homeLongitude || undefined,
+      homeLocationRangeKm: (userToEdit as any).homeLocationRangeKm === 0 ? 0 : (userToEdit as any).homeLocationRangeKm || 0.5,
     });
     setIsDialogOpen(true);
   };
@@ -233,7 +247,8 @@ export default function UsersPage() {
               id: newUserId,
               employeeId: newUserId,
               hireDate: new Date().toISOString(),
-              ...userData
+              ...userData,
+              homeLocationRangeKm: values.homeLocationRangeKm || 0.5,
             }
             
             const batch = writeBatch(firestore);
@@ -378,6 +393,25 @@ export default function UsersPage() {
                           </FormItem>
                       )}
                   />
+                  {(currentUserRole === 'CEO/Admin' || currentUserRole === 'HR Manager') && (
+                    <>
+                        <Separator className="my-4"/>
+                        <div className="space-y-4">
+                            <h4 className="font-semibold text-foreground">Work From Home Settings</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="homeLatitude" render={({ field }) => (
+                                    <FormItem><FormLabel>Home Latitude</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="homeLongitude" render={({ field }) => (
+                                    <FormItem><FormLabel>Home Longitude</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </div>
+                             <FormField control={form.control} name="homeLocationRangeKm" render={({ field }) => (
+                                <FormItem><FormLabel>Home Clock-in Range (km)</FormLabel><FormControl><Input type="number" min="0" step="0.1" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
+                    </>
+                  )}
                   <DialogFooter className="pt-4">
                     <DialogClose asChild><Button type="button" variant="outline" onClick={resetDialog}>Cancel</Button></DialogClose>
                     <Button type="submit" disabled={form.formState.isSubmitting}>

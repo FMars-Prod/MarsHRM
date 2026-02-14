@@ -49,6 +49,18 @@
         "avatar": {
           "type": "string",
           "description": "A single emoji character to be used as the user's avatar."
+        },
+        "homeLatitude": {
+          "type": "number",
+          "description": "The latitude of the employee's home address for WFH."
+        },
+        "homeLongitude": {
+          "type": "number",
+          "description": "The longitude of the employee's home address for WFH."
+        },
+        "homeLocationRangeKm": {
+          "type": "number",
+          "description": "The permissible clock-in radius in kilometers for WFH."
         }
       },
       "required": [
