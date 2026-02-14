@@ -206,7 +206,7 @@ export default function ProfilePage() {
                     setIsSetHomeLocationDialogOpen(true);
                 }
             },
-            { enableHighAccuracy: true }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     };
     

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -383,7 +384,7 @@ export function AttendanceWidget() {
             setIsOutOfRangeReasonDialogOpen(true);
         },
         () => toast({ variant: "destructive", title: "Location Error", description: "Could not get your location. Please enable location services." }),
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
   
@@ -447,7 +448,7 @@ export function AttendanceWidget() {
             setIsOutOfRangeReasonDialogOpen(true);
         },
         () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."}),
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
   
@@ -570,7 +571,7 @@ export function AttendanceWidget() {
                                       <Label htmlFor="shift-start">Shift Start Time</Label>
                                       <Input id="shift-start" type="time" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)} />
                                  </div>
-                                 <div className="grid gap-2">
+                                 <div className="grid grid-cols-2 gap-4">
                                       <Label htmlFor="shift-end">Shift End Time</Label>
                                       <Input id="shift-end" type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
                                  </div>
