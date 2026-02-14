@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -41,7 +42,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, parse, isSameDay, endOfDay } from "date-fns";
 import { Textarea } from "../ui/textarea";
-import { ScrollArea } from "../ui/scroll-area";
 
 
 type AttendanceStatus = "out" | "in" | "break";
@@ -431,15 +431,15 @@ export function AttendanceWidget() {
                             <Settings className="size-5" />
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="flex flex-col max-h-[90vh] p-0">
-                        <DialogHeader className="p-6 pb-4 border-b">
+                    <DialogContent>
+                        <DialogHeader>
                             <DialogTitle>Company Settings</DialogTitle>
                             <DialogDescription>
                                 Set global settings for attendance and location.
                             </DialogDescription>
                         </DialogHeader>
-                        <ScrollArea className="flex-1">
-                            <div className="grid gap-4 p-6">
+                         <div className="max-h-[60vh] overflow-y-auto">
+                            <div className="grid gap-4 py-4 pr-2">
                                <div className="grid gap-2">
                                     <Label htmlFor="latitude">Office Latitude</Label>
                                     <Input id="latitude" value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} placeholder="e.g., 37.7749" />
@@ -473,8 +473,8 @@ export function AttendanceWidget() {
                                  </div>
                                </div>
                             </div>
-                        </ScrollArea>
-                        <DialogFooter className="p-6 pt-4 border-t">
+                        </div>
+                        <DialogFooter>
                             <DialogClose asChild>
                                 <Button variant="outline">Cancel</Button>
                             </DialogClose>
