@@ -351,24 +351,24 @@ const MonitorPage = () => {
     
     const presentBody = summary.present.map(u => {
         const rec = attendanceRecords.get(u.id);
-        const clockIn = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        const clockOut = rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
+        const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
+        const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
         return [u.firstName, u.lastName, u.jobTitle, clockIn, clockOut];
     });
     addSection( 'Present', summary.present, [['First Name', 'Last Name', 'Job Title', 'Clock In', 'Clock Out']], presentBody );
     
     const lateBody = summary.late.map(u => {
         const rec = attendanceRecords.get(u.id);
-        const clockIn = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        const clockOut = rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
+        const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
+        const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
         return [u.firstName, u.lastName, u.jobTitle, clockIn, clockOut];
     });
     addSection( 'Late', summary.late, [['First Name', 'Last Name', 'Job Title', 'Clock In', 'Clock Out']], lateBody );
 
     const outOfRangeBody = summary.outOfRange.map(u => {
         const rec = attendanceRecords.get(u.id);
-        const clockIn = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        const clockOut = rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
+        const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
+        const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
         return [u.firstName, u.lastName, u.jobTitle, clockIn, clockOut];
     });
     addSection( 'Out of Range', summary.outOfRange, [['First Name', 'Last Name', 'Job Title', 'Clock In', 'Clock Out']], outOfRangeBody );
