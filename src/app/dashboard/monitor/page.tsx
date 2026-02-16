@@ -351,24 +351,27 @@ const MonitorPage = () => {
     
     const presentBody = summary.present.map(u => {
         const rec = attendanceRecords.get(u.id);
-        const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        return [u.firstName, u.lastName, u.jobTitle, time];
+        const clockIn = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
+        const clockOut = rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
+        return [u.firstName, u.lastName, u.jobTitle, clockIn, clockOut];
     });
-    addSection( 'Present', summary.present, [['First Name', 'Last Name', 'Job Title', 'Clock In']], presentBody );
+    addSection( 'Present', summary.present, [['First Name', 'Last Name', 'Job Title', 'Clock In', 'Clock Out']], presentBody );
     
     const lateBody = summary.late.map(u => {
         const rec = attendanceRecords.get(u.id);
-        const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        return [u.firstName, u.lastName, u.jobTitle, time];
+        const clockIn = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
+        const clockOut = rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
+        return [u.firstName, u.lastName, u.jobTitle, clockIn, clockOut];
     });
-    addSection( 'Late', summary.late, [['First Name', 'Last Name', 'Job Title', 'Clock In']], lateBody );
+    addSection( 'Late', summary.late, [['First Name', 'Last Name', 'Job Title', 'Clock In', 'Clock Out']], lateBody );
 
     const outOfRangeBody = summary.outOfRange.map(u => {
         const rec = attendanceRecords.get(u.id);
-        const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        return [u.firstName, u.lastName, u.jobTitle, time];
+        const clockIn = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
+        const clockOut = rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
+        return [u.firstName, u.lastName, u.jobTitle, clockIn, clockOut];
     });
-    addSection( 'Out of Range', summary.outOfRange, [['First Name', 'Last Name', 'Job Title', 'Clock In']], outOfRangeBody );
+    addSection( 'Out of Range', summary.outOfRange, [['First Name', 'Last Name', 'Job Title', 'Clock In', 'Clock Out']], outOfRangeBody );
 
     const absentBody = summary.absent.map(u => [u.firstName, u.lastName, u.jobTitle]);
     addSection( 'Absent', summary.absent, [['First Name', 'Last Name', 'Job Title']], absentBody );
@@ -504,6 +507,8 @@ const MonitorPage = () => {
 };
 
 export default MonitorPage;
+
+    
 
     
 
