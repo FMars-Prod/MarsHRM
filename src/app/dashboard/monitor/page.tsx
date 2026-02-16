@@ -255,7 +255,7 @@ const MonitorPage = () => {
       return;
     }
 
-    const reportDate = format(new Date(), 'PPP');
+    const reportDate = format(date, 'PPP');
     const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
 
     let reportText = `FortuMars - Daily Attendance Summary\n`;
@@ -301,7 +301,7 @@ const MonitorPage = () => {
     }
     
     const doc = new jsPDF();
-    const reportDate = format(new Date(), 'PPP');
+    const reportDate = format(date, 'PPP');
     const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
 
     const addPageContent = (data: any) => {
@@ -378,7 +378,7 @@ const MonitorPage = () => {
     
     addPageContent({ settings: { margin: { left: 14 } } });
 
-    doc.save(`daily_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    doc.save(`daily_report_${format(date, 'yyyy-MM-dd')}.pdf`);
   };
 
   const UserListCard = ({ title, users, Icon, iconColor }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; }) => (
@@ -504,5 +504,7 @@ const MonitorPage = () => {
 };
 
 export default MonitorPage;
+
+    
 
     
