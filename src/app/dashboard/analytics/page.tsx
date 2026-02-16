@@ -29,6 +29,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import Image from 'next/image';
+import { type DateRange } from "react-day-picker";
 
 
 type User = {
@@ -100,7 +101,7 @@ const chartConfig = {
   },
 } satisfies React.ComponentProps<typeof ChartContainer>['config'];
 
-type FilterMode = "day" | "month" | "all";
+type FilterMode = "day" | "month" | "range" | "all";
 
 const AnalyticsPage = () => {
   const { user: currentUser } = useUser();
@@ -110,6 +111,7 @@ const AnalyticsPage = () => {
   const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
   const [date, setDate] = React.useState<Date>(new Date());
   const [month, setMonth] = React.useState<Date | null>(null);
+  const [range, setRange] = React.useState<DateRange | undefined>();
   const [filterMode, setFilterMode] = React.useState<FilterMode>("day");
 
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
@@ -136,25 +138,30 @@ const AnalyticsPage = () => {
   const selectedUser = users?.find(u => u.id === selectedUserId);
 
   const { start, end } = React.useMemo(() => {
-    let start: Date;
-    let end: Date;
+    let start: Date | null = null;
+    let end: Date | null = null;
 
     switch (filterMode) {
       case 'day':
-        if (!date) return { start: null, end: null };
-        start = startOfDay(date);
-        end = endOfDay(date);
+        start = date ? startOfDay(date) : null;
+        end = date ? endOfDay(date) : null;
         break;
       case 'month':
-        if (!month) return { start: null, end: null };
-        start = startOfMonth(month);
-        end = endOfMonth(month);
+        start = month ? startOfMonth(month) : null;
+        end = month ? endOfMonth(month) : null;
+        break;
+      case 'range':
+        start = range?.from ? startOfDay(range.from) : null;
+        end = range?.to ? endOfDay(range.to) : (range?.from ? endOfDay(range.from) : null);
         break;
       default:
-        return { start: null, end: null };
+        start = null;
+        end = null;
+        break;
     }
+    if (filterMode !== 'all' && (!start || !end)) return { start: null, end: null };
     return { start, end };
-  }, [date, month, filterMode]);
+  }, [date, month, range, filterMode]);
   
   const attendanceQuery = useMemoFirebase(() => {
     if (!selectedUserId) return null;
@@ -297,11 +304,17 @@ const AnalyticsPage = () => {
     return `${hours}h ${minutes}m`;
   };
   
-    const getFilterPeriodText = () => {
-      if (filterMode === 'day' && date) return format(date, 'MMM d, yyyy');
-      if (filterMode === 'month' && month) return format(month, 'MMMM yyyy');
-      if (filterMode === 'all') return 'All time';
-      return 'Selected period';
+  const getFilterPeriodText = () => {
+    if (filterMode === 'day' && date) return format(date, 'MMM d, yyyy');
+    if (filterMode === 'month' && month) return format(month, 'MMMM yyyy');
+    if (filterMode === 'range' && range?.from) {
+        if (range.to) {
+            return `${format(range.from, "LLL dd, y")} - ${format(range.to, "LLL dd, y")}`;
+        }
+        return format(range.from, "LLL dd, y");
+    }
+    if (filterMode === 'all') return 'All time';
+    return 'Selected period';
   }
 
   const handleExport = () => {
@@ -342,9 +355,18 @@ const AnalyticsPage = () => {
     link.href = url;
     
     let datePart = 'data';
-    if (filterMode === 'day' && date) datePart = format(date, 'yyyy-MM-dd');
-    if (filterMode === 'month' && month) datePart = format(month, 'yyyy-MM');
-    if (filterMode === 'all') datePart = 'all_time';
+    if (filterMode === 'day' && date) {
+        datePart = format(date, 'yyyy-MM-dd');
+    } else if (filterMode === 'month' && month) {
+        datePart = format(month, 'yyyy-MM');
+    } else if (filterMode === 'range' && range?.from) {
+        const fromDate = format(range.from, 'yyyy-MM-dd');
+        const toDate = range.to ? format(range.to, 'yyyy-MM-dd') : fromDate;
+        datePart = `${fromDate}_to_${toDate}`;
+    } else if (filterMode === 'all') {
+        datePart = 'all_time';
+    }
+
 
     link.setAttribute('download', `FortuMars_AttendanceReport_${datePart}.csv`);
     document.body.appendChild(link);
@@ -417,6 +439,37 @@ const AnalyticsPage = () => {
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar mode="single" selected={date} onSelect={(d) => { if(d) { setDate(d); setFilterMode('day'); } }} initialFocus />
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+                <Button id="daterange" variant={"outline"} className={cn("w-full md:w-[300px] justify-start text-left font-normal", filterMode !== 'range' && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {range?.from ? (
+                        range.to ? (
+                            <>
+                                {format(range.from, "LLL dd, y")} - {format(range.to, "LLL dd, y")}
+                            </>
+                        ) : (
+                            format(range.from, "LLL dd, y")
+                        )
+                    ) : (
+                        <span>Pick a date range</span>
+                    )}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={range?.from}
+                    selected={range}
+                    onSelect={(r) => {
+                        setRange(r);
+                        setFilterMode('range');
+                    }}
+                    numberOfMonths={2}
+                />
             </PopoverContent>
           </Popover>
           <Button variant={filterMode === 'all' ? 'default' : 'outline'} onClick={() => setFilterMode('all')}>{filterMode === 'all' ? "Viewing Full History" : "View Full History"}</Button>
