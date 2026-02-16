@@ -116,6 +116,7 @@ export function AttendanceWidget() {
   const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
   const [outOfRangeAction, setOutOfRangeAction] = useState<(() => void) | null>(null);
+  const [outOfRangeInfo, setOutOfRangeInfo] = useState('');
   
   const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = useState(false);
   const [capturedLocation, setCapturedLocation] = useState<Location | null>(null);
@@ -346,6 +347,9 @@ export function AttendanceWidget() {
     navigator.geolocation.getCurrentPosition(
         (position) => {
             const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+            const homeLat = (userData as any)?.homeLatitude;
+            const homeLon = (userData as any)?.homeLongitude;
+            const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
             
             // 1. Check against Office Location
             if (officeLocation) {
@@ -358,10 +362,6 @@ export function AttendanceWidget() {
 
             // 2. Not at the office, check WFH possibility
             if (isWfhAllowed) {
-                const homeLat = (userData as any)?.homeLatitude;
-                const homeLon = (userData as any)?.homeLongitude;
-                const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
-
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
                     const homeDist = getDistanceInKm(userLocation, homeLocation);
@@ -378,9 +378,22 @@ export function AttendanceWidget() {
             }
             
             // 3. Out of all valid ranges
-            const distForPrompt = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
-            setDistance(distForPrompt);
-            setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, distForPrompt, outOfRangeReason, true));
+            const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
+
+            let infoMsg = '';
+            if (isWfhAllowed && homeLat && homeLon) {
+                 const homeLocation = { latitude: homeLat, longitude: homeLon };
+                 const homeDist = getDistanceInKm(userLocation, homeLocation);
+                 infoMsg = `You are outside your designated locations. You are ${officeDist.toFixed(2)} km from the office (max ${maxDistanceKm} km) and ${homeDist.toFixed(2)} km from home (max ${homeRange} km).`
+            } else if (officeLocation) {
+                infoMsg = `You are ${officeDist.toFixed(2)} km from the office. The allowed clock-in radius is ${maxDistanceKm} km.`
+            } else {
+                infoMsg = 'You are not within any designated clock-in area.'
+            }
+            setOutOfRangeInfo(infoMsg);
+            
+            setDistance(officeDist);
+            setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, officeDist, outOfRangeReason, true));
             setIsOutOfRangeReasonDialogOpen(true);
         },
         () => toast({ variant: "destructive", title: "Location Error", description: "Could not get your location. Please enable location services." }),
@@ -416,6 +429,9 @@ export function AttendanceWidget() {
     navigator.geolocation.getCurrentPosition(
         (position) => {
             const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+            const homeLat = (userData as any)?.homeLatitude;
+            const homeLon = (userData as any)?.homeLongitude;
+            const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
             
             // 1. Check Office
             if (officeLocation) {
@@ -428,10 +444,6 @@ export function AttendanceWidget() {
             
             // 2. Check Home
             if (isWfhAllowed) {
-                const homeLat = (userData as any)?.homeLatitude;
-                const homeLon = (userData as any)?.homeLongitude;
-                const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
-
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
                     const homeDist = getDistanceInKm(userLocation, homeLocation);
@@ -443,7 +455,20 @@ export function AttendanceWidget() {
             }
 
             // 3. Out of Range
-            const distForPrompt = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
+            const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
+
+            let infoMsg = '';
+            if (isWfhAllowed && homeLat && homeLon) {
+                 const homeLocation = { latitude: homeLat, longitude: homeLon };
+                 const homeDist = getDistanceInKm(userLocation, homeLocation);
+                 infoMsg = `You are outside your designated locations. You are ${officeDist.toFixed(2)} km from the office (max ${maxDistanceKm} km) and ${homeDist.toFixed(2)} km from home (max ${homeRange} km).`
+            } else if (officeLocation) {
+                infoMsg = `You are ${officeDist.toFixed(2)} km from the office. The allowed clock-out radius is ${maxDistanceKm} km.`
+            } else {
+                infoMsg = 'You are not within any designated clock-out area.'
+            }
+            setOutOfRangeInfo(infoMsg);
+            
             setOutOfRangeAction(() => () => proceedWithClockOut(userLocation, outOfRangeReason));
             setIsOutOfRangeReasonDialogOpen(true);
         },
@@ -764,7 +789,7 @@ export function AttendanceWidget() {
             <DialogHeader>
                 <DialogTitle>Out of Range</DialogTitle>
                 <DialogDescription>
-                    You are outside the designated {isWfhAllowed ? 'home or office' : 'office'} radius. Please provide a reason to continue.
+                    {outOfRangeInfo} Please provide a reason to continue.
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -777,7 +802,11 @@ export function AttendanceWidget() {
                 />
             </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => setIsOutOfRangeReasonDialogOpen(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => {
+                    setIsOutOfRangeReasonDialogOpen(false);
+                    setOutOfRangeReason("");
+                    setOutOfRangeAction(null);
+                }}>Cancel</Button>
                 <Button onClick={handleOutOfRangeSubmit}>Submit</Button>
             </DialogFooter>
         </DialogContent>
