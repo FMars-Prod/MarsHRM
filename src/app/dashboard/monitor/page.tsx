@@ -351,33 +351,33 @@ const MonitorPage = () => {
     
     const presentBody = summary.present.map(u => {
         const rec = attendanceRecords.get(u.id);
-        const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
-        return [u.firstName, u.lastName, u.jobTitle, clockIn, clockOut];
+        const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+        const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+        return [`${u.firstName} ${u.lastName} - Present - ${clockIn} / ${clockOut}`];
     });
-    addSection( 'Present', summary.present, [['First Name', 'Last Name', 'Job Title', 'Clock In', 'Clock Out']], presentBody );
+    addSection( 'Present', summary.present, [['Details']], presentBody );
     
     const lateBody = summary.late.map(u => {
         const rec = attendanceRecords.get(u.id);
-        const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
-        return [u.firstName, u.lastName, u.jobTitle, clockIn, clockOut];
+        const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+        const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+        return [`${u.firstName} ${u.lastName} - Late - ${clockIn} / ${clockOut}`];
     });
-    addSection( 'Late', summary.late, [['First Name', 'Last Name', 'Job Title', 'Clock In', 'Clock Out']], lateBody );
+    addSection( 'Late', summary.late, [['Details']], lateBody );
 
     const outOfRangeBody = summary.outOfRange.map(u => {
         const rec = attendanceRecords.get(u.id);
-        const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : 'N/A';
-        return [u.firstName, u.lastName, u.jobTitle, clockIn, clockOut];
+        const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+        const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+        return [`${u.firstName} ${u.lastName} - Out of Range - ${clockIn} / ${clockOut}`];
     });
-    addSection( 'Out of Range', summary.outOfRange, [['First Name', 'Last Name', 'Job Title', 'Clock In', 'Clock Out']], outOfRangeBody );
+    addSection( 'Out of Range', summary.outOfRange, [['Details']], outOfRangeBody );
 
-    const absentBody = summary.absent.map(u => [u.firstName, u.lastName, u.jobTitle]);
-    addSection( 'Absent', summary.absent, [['First Name', 'Last Name', 'Job Title']], absentBody );
+    const absentBody = summary.absent.map(u => [`${u.firstName} ${u.lastName} - Absent`]);
+    addSection( 'Absent', summary.absent, [['Details']], absentBody );
 
-    const onLeaveBody = summary.onLeave.map(u => [u.firstName, u.lastName, u.jobTitle]);
-    addSection( 'On Leave', summary.onLeave, [['First Name', 'Last Name', 'Job Title']], onLeaveBody );
+    const onLeaveBody = summary.onLeave.map(u => [`${u.firstName} ${u.lastName} - On Leave`]);
+    addSection( 'On Leave', summary.onLeave, [['Details']], onLeaveBody );
     
     addPageContent({ settings: { margin: { left: 14 } } });
 
@@ -513,3 +513,4 @@ export default MonitorPage;
     
 
     
+
