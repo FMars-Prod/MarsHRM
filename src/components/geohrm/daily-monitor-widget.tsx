@@ -109,21 +109,6 @@ export function DailyMonitorWidget() {
         }
       });
       
-      const presentUserIds = new Set<string>();
-      const lateUserIds = new Set<string>();
-      const outOfRangeUserIds = new Set<string>();
-      
-      attendanceMap.forEach((att, employeeId) => {
-        if (att.isOutOfRange) {
-          outOfRangeUserIds.add(employeeId);
-        }
-        if (att.status === 'late') {
-          lateUserIds.add(employeeId);
-        } else if (att.status === 'present') {
-          presentUserIds.add(employeeId);
-        }
-      });
-
       const lateUsers: UserData[] = [];
       const onLeaveUsers: UserData[] = [];
       const presentUsers: UserData[] = [];
@@ -131,20 +116,21 @@ export function DailyMonitorWidget() {
       const outOfRangeUsers: UserData[] = [];
 
       users.forEach(u => {
-        if (lateUserIds.has(u.id)) {
-          lateUsers.push(u);
-        } else if (presentUserIds.has(u.id)) {
-          presentUsers.push(u);
+        const att = attendanceMap.get(u.id);
+        if (att) {
+            if (att.isOutOfRange) {
+                outOfRangeUsers.push(u);
+            } else if (att.status === 'late') {
+                lateUsers.push(u);
+            } else if (att.status === 'present') {
+                presentUsers.push(u);
+            }
         } else if (onLeaveTodayIds.has(u.id)) {
           onLeaveUsers.push(u);
         } else {
           if ((u as any).role !== 'CEO/Admin' && (u as any).role !== 'HR Manager') {
              absentUsers.push(u);
           }
-        }
-
-        if (outOfRangeUserIds.has(u.id)) {
-            outOfRangeUsers.push(u);
         }
       });
       
@@ -169,8 +155,8 @@ export function DailyMonitorWidget() {
   };
 
   const handleExport = () => {
-    const { present, late, absent, onLeave, isLoading } = summary;
-    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length)) {
+    const { present, late, absent, onLeave, outOfRange, isLoading } = summary;
+    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length && !outOfRange.length)) {
       toast({
         variant: "destructive",
         title: "No data to export",
@@ -182,6 +168,7 @@ export function DailyMonitorWidget() {
     const allUsersWithStatus = [
       ...present.map(u => ({ ...u, status: 'Present' })),
       ...late.map(u => ({ ...u, status: 'Late' })),
+      ...outOfRange.map(u => ({ ...u, status: 'Out of Range' })),
       ...absent.map(u => ({ ...u, status: 'Absent' })),
       ...onLeave.map(u => ({ ...u, status: 'On Leave' })),
     ];
@@ -256,9 +243,13 @@ export function DailyMonitorWidget() {
         if (users.length === 0) return '';
         let section = `${title} (${users.length})\n`;
         users.forEach(u => {
-            const time = attendanceRecords.get(u.id)?.checkInTime;
-            const timeStr = time ? ` (${format(time.toDate(), 'p')})` : '';
-            section += `- ${u.firstName} ${u.lastName}${includeTime ? timeStr : ''}\n`;
+            const rec = attendanceRecords.get(u.id);
+            const timeIn = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+            const timeOut = rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+            const breakTime = rec?.totalBreakDuration ? formatDuration(rec.totalBreakDuration) : '0m';
+            
+            const detailStr = includeTime ? ` (In: ${timeIn} / Out: ${timeOut} - Break: ${breakTime})` : '';
+            section += `- ${u.firstName} ${u.lastName}${detailStr}\n`;
         });
         return section + '\n';
     };
@@ -315,8 +306,21 @@ export function DailyMonitorWidget() {
 
     let finalY = 55;
 
-    const addSection = (title: string, users: UserData[], columns: any[], body: any[][]) => {
+    const addSection = (title: string, users: UserData[], statusLabel: string, includeTime: boolean = false) => {
       if (users.length > 0) {
+        const body = users.map(u => {
+            const rec = attendanceRecords.get(u.id);
+            const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+            const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+            const breakTime = (rec && rec.totalBreakDuration) ? formatDuration(rec.totalBreakDuration) : '0m';
+            
+            const detailLine = includeTime 
+                ? `${u.firstName} ${u.lastName} - ${statusLabel} - In: ${clockIn} / Out: ${clockOut} - Break: ${breakTime}`
+                : `${u.firstName} ${u.lastName} - ${statusLabel}`;
+            
+            return [detailLine];
+        });
+
         autoTable(doc, {
           startY: finalY,
           head: [[{ content: `${title} (${users.length})`, styles: { fontStyle: 'bold', fontSize: 12, halign: 'left', fillColor: [240,240,240], textColor: 0 } }]],
@@ -328,7 +332,7 @@ export function DailyMonitorWidget() {
 
         autoTable(doc, {
           startY: (doc as any).lastAutoTable.finalY,
-          head: [columns],
+          head: [['Employee Status Details']],
           body: body,
           theme: 'striped',
           headStyles: { fillColor: [39, 55, 70] },
@@ -339,32 +343,11 @@ export function DailyMonitorWidget() {
       }
     };
     
-    const presentBody = summary.present.map(u => {
-        const rec = attendanceRecords.get(u.id);
-        const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        return [u.firstName, u.lastName, u.jobTitle, time];
-    });
-    addSection( 'Present', summary.present, [['First Name', 'Last Name', 'Job Title', 'Clock In']], presentBody );
-    
-    const lateBody = summary.late.map(u => {
-        const rec = attendanceRecords.get(u.id);
-        const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        return [u.firstName, u.lastName, u.jobTitle, time];
-    });
-    addSection( 'Late', summary.late, [['First Name', 'Last Name', 'Job Title', 'Clock In']], lateBody );
-
-    const outOfRangeBody = summary.outOfRange.map(u => {
-        const rec = attendanceRecords.get(u.id);
-        const time = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : 'N/A';
-        return [u.firstName, u.lastName, u.jobTitle, time];
-    });
-    addSection( 'Out of Range', summary.outOfRange, [['First Name', 'Last Name', 'Job Title', 'Clock In']], outOfRangeBody );
-
-    const absentBody = summary.absent.map(u => [u.firstName, u.lastName, u.jobTitle]);
-    addSection( 'Absent', summary.absent, [['First Name', 'Last Name', 'Job Title']], absentBody );
-
-    const onLeaveBody = summary.onLeave.map(u => [u.firstName, u.lastName, u.jobTitle]);
-    addSection( 'On Leave', summary.onLeave, [['First Name', 'Last Name', 'Job Title']], onLeaveBody );
+    addSection('Present', summary.present, 'Present', true);
+    addSection('Late', summary.late, 'Late', true);
+    addSection('Out of Range', summary.outOfRange, 'Out of Range', true);
+    addSection('Absent', summary.absent, 'Absent', false);
+    addSection('On Leave', summary.onLeave, 'On Leave', false);
     
     addPageContent({ settings: { margin: { left: 14 } } });
 
