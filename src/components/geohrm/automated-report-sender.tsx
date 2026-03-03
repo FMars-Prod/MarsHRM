@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -19,6 +20,13 @@ export function AutomatedReportSender() {
   const userRole = (currentUserData as any)?.role;
   const isAdminOrHR = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
+  const formatDuration = (seconds: number) => {
+    if (seconds < 0) seconds = 0;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
+
   const checkAndSendReport = React.useCallback(async () => {
     if (!isAdminOrHR || !firestore) return;
 
@@ -38,18 +46,7 @@ export function AutomatedReportSender() {
     const reportLogRef = doc(firestore, 'automated_reports', reportId);
 
     try {
-      // Use a Firestore check to ensure we only send once per slot globally
-      const reportSnap = await getDocs(query(collection(firestore, 'automated_reports'), where('id', '==', reportId)));
-      
-      // Note: We use a simple doc check first
-      const lockRef = doc(firestore, 'automated_reports', reportId);
-      // We'll try to create it. If it exists, we skip.
-      // This is a simple client-side concurrency control.
-      
-      // In a real app, you'd use a transaction or a cloud function.
-      // Here we check if it exists in state or via a fetch.
-      // For this prototype, we'll try a fetch.
-      
+      // Concurrency control: check if this specific slot has been sent already today
       const checkDocs = await getDocs(query(collection(firestore, 'automated_reports'), where('__name__', '==', reportId)));
       if (!checkDocs.empty) return;
 
@@ -99,13 +96,18 @@ export function AutomatedReportSender() {
         const name = `${u.firstName} ${u.lastName} (${u.jobTitle})`;
         
         if (att) {
-          const timeStr = att.checkInTime ? format(att.checkInTime.toDate(), 'p') : '--:--';
+          const timeIn = att.checkInTime ? format(att.checkInTime.toDate(), 'p') : '--:--';
+          const timeOut = att.checkOutTime ? format(att.checkOutTime.toDate(), 'p') : '--:--';
+          const breakTime = att.totalBreakDuration ? formatDuration(att.totalBreakDuration) : '0m';
+          
+          const detailStr = `(In: ${timeIn} / Out: ${timeOut} - Break: ${breakTime})`;
+
           if (att.isOutOfRange) {
-            categories.outOfRange.push(`${name} - In: ${timeStr}`);
+            categories.outOfRange.push(`${name} - Out of Range ${detailStr}`);
           } else if (att.status === 'late') {
-            categories.late.push(`${name} - In: ${timeStr}`);
+            categories.late.push(`${name} - Late ${detailStr}`);
           } else {
-            categories.present.push(`${name} - In: ${timeStr}`);
+            categories.present.push(`${name} ${detailStr}`);
           }
         } else if (onLeaveTodayIds.has(u.id)) {
           categories.onLeave.push(name);
@@ -140,7 +142,7 @@ export function AutomatedReportSender() {
       });
 
       if (result.success) {
-        // Mark as sent
+        // Mark as sent in Firestore
         await setDoc(reportLogRef, {
           id: reportId,
           sentAt: serverTimestamp(),
