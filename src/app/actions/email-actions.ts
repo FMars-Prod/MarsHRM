@@ -2,8 +2,6 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface SendReportInput {
   date: string;
   summaryText: string;
@@ -14,12 +12,15 @@ interface SendReportInput {
  * Server Action to send the daily attendance report via email.
  */
 export async function sendDailySummaryEmail({ date, summaryText, recipients }: SendReportInput) {
-  if (!process.env.RESEND_API_KEY) {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
     console.warn("RESEND_API_KEY is not set. Email will not be sent.");
     return { success: false, message: "Email API key not configured." };
   }
 
   try {
+    const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
       from: 'MarsHRM Reports <reports@fortumars.com>',
       to: recipients,
