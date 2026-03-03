@@ -5,7 +5,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { collection, doc, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,7 +13,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,6 +48,8 @@ type Location = {
 
 type AttendanceRecord = {
   id: string;
+  employeeId: string;
+  employeeName?: string;
   checkInTime?: Timestamp;
   checkOutTime?: Timestamp;
   totalBreakDuration?: number;
@@ -60,6 +62,7 @@ type AttendanceRecord = {
 
 type LeaveRequest = {
   id: string;
+  employeeId: string;
   startDate: Timestamp;
   endDate: Timestamp;
   status: string;
@@ -73,22 +76,6 @@ type EditableAttendance = {
     checkInNotes: string;
     checkOutNotes: string;
 }
-
-const getDistanceInKm = (loc1: Location, loc2: Location) => {
-  if (!loc1 || !loc2) return Infinity;
-  const R = 6371; // Radius of the Earth in km
-  const dLat = (loc2.latitude - loc1.latitude) * (Math.PI / 180);
-  const dLon = (loc2.longitude - loc1.longitude) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(loc1.latitude * (Math.PI / 180)) *
-      Math.cos(loc2.latitude * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
 
 const chartConfig = {
   work: {
@@ -108,7 +95,7 @@ const AnalyticsPage = () => {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [selectedUserId, setSelectedUserId] = React.useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = React.useState<string | 'all'>('all');
   const [date, setDate] = React.useState<Date>(new Date());
   const [month, setMonth] = React.useState<Date | null>(null);
   const [range, setRange] = React.useState<DateRange | undefined>();
@@ -129,13 +116,10 @@ const AnalyticsPage = () => {
   const currentUserRole = (currentUserData as any)?.role;
   const isAdmin = currentUserRole === 'CEO/Admin' || currentUserRole === 'HR Manager' || currentUserRole === 'Team Lead';
   
-  const officeLocationDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'location'), [firestore]);
-  const { data: officeLocation } = useDoc<Location>(officeLocationDocRef);
-
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
 
-  const selectedUser = users?.find(u => u.id === selectedUserId);
+  const selectedUser = selectedUserId !== 'all' ? users?.find(u => u.id === selectedUserId) : null;
 
   const { start, end } = React.useMemo(() => {
     let start: Date | null = null;
@@ -159,72 +143,82 @@ const AnalyticsPage = () => {
         end = null;
         break;
     }
-    if (filterMode !== 'all' && (!start || !end)) return { start: null, end: null };
     return { start, end };
   }, [date, month, range, filterMode]);
   
-  const attendanceQuery = useMemoFirebase(() => {
-    if (!selectedUserId) return null;
-
-    if (filterMode === 'all') {
-      return query(
-        collection(firestore, `users/${selectedUserId}/attendances`),
-        orderBy('checkInTime', 'desc')
-      );
-    }
-
-    if (!start || !end) return null;
-    
-    return query(
-      collection(firestore, `users/${selectedUserId}/attendances`),
-      where('checkInTime', '>=', start),
-      where('checkInTime', '<=', end),
-      orderBy('checkInTime', 'desc')
-    );
-  }, [firestore, selectedUserId, start, end, filterMode]);
-
-
-  const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
-
-  const leaveQuery = useMemoFirebase(() => {
-    if (!selectedUserId) return null;
-    return query(
-      collection(firestore, `users/${selectedUserId}/leave_requests`),
-      where('status', '==', 'Approved')
-    );
-  }, [firestore, selectedUserId]);
-  
-  const { data: leaveData } = useCollection<LeaveRequest>(leaveQuery);
-  
-  const weeklyChartQuery = useMemoFirebase(() => {
-    if(!selectedUserId) return null;
-    const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
-    const today = endOfDay(new Date());
-    return query(
-        collection(firestore, `users/${selectedUserId}/attendances`),
-        where('checkInTime', '>=', sevenDaysAgo),
-        where('checkInTime', '<=', today),
-        orderBy('checkInTime', 'asc')
-    );
-  }, [firestore, selectedUserId]);
-  const {data: weeklyAttendance} = useCollection<AttendanceRecord>(weeklyChartQuery);
+  const [attendanceData, setAttendanceData] = React.useState<AttendanceRecord[] | null>(null);
+  const [isAttendanceLoading, setIsAttendanceLoading] = React.useState(false);
 
   React.useEffect(() => {
-      if (attendanceData && attendanceData.length > 0 && filterMode === 'day') {
-          const record = attendanceData[0];
-          setEditableAttendance({
-              status: record.status,
-              checkInTime: record.checkInTime ? format(record.checkInTime.toDate(), 'HH:mm') : '',
-              checkOutTime: record.checkOutTime ? format(record.checkOutTime.toDate(), 'HH:mm') : '',
-              totalBreakDuration: record.totalBreakDuration ? (record.totalBreakDuration / 60).toString() : '0',
-              checkInNotes: record.checkInNotes || '',
-              checkOutNotes: record.checkOutNotes || '',
-          });
-      } else {
-          setEditableAttendance({ status: 'absent', checkInTime: '', checkOutTime: '', totalBreakDuration: '0', checkInNotes: '', checkOutNotes: '' });
-      }
-  }, [attendanceData, isEditDialogOpen, filterMode]);
+    const fetchData = async () => {
+      if (!firestore || areUsersLoading || !users) return;
+      setIsAttendanceLoading(true);
 
+      try {
+        let q;
+        const startTs = start ? Timestamp.fromDate(start) : null;
+        const endTs = end ? Timestamp.fromDate(end) : null;
+
+        if (selectedUserId === 'all') {
+          // Global view uses collectionGroup
+          if (filterMode === 'all') {
+            q = query(collectionGroup(firestore, 'attendances'), orderBy('checkInTime', 'desc'));
+          } else if (startTs && endTs) {
+            q = query(collectionGroup(firestore, 'attendances'), where('checkInTime', '>=', startTs), where('checkInTime', '<=', endTs), orderBy('checkInTime', 'desc'));
+          } else {
+            setAttendanceData([]);
+            setIsAttendanceLoading(false);
+            return;
+          }
+        } else {
+          // Individual view
+          const colRef = collection(firestore, `users/${selectedUserId}/attendances`);
+          if (filterMode === 'all') {
+            q = query(colRef, orderBy('checkInTime', 'desc'));
+          } else if (startTs && endTs) {
+            q = query(colRef, where('checkInTime', '>=', startTs), where('checkInTime', '<=', endTs), orderBy('checkInTime', 'desc'));
+          } else {
+            setAttendanceData([]);
+            setIsAttendanceLoading(false);
+            return;
+          }
+        }
+
+        const snap = await getDocs(q);
+        const records = snap.docs.map(doc => {
+          const data = doc.data() as AttendanceRecord;
+          const user = users.find(u => u.id === data.employeeId);
+          return {
+            ...data,
+            id: doc.id,
+            employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown'
+          };
+        });
+        setAttendanceData(records);
+      } catch (e) {
+        console.error("Error fetching analytics data:", e);
+        toast({ variant: 'destructive', title: 'Data load failed' });
+      } finally {
+        setIsAttendanceLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [firestore, selectedUserId, start, end, filterMode, users, areUsersLoading, toast]);
+
+  const [leaveData, setLeaveData] = React.useState<LeaveRequest[] | null>(null);
+  React.useEffect(() => {
+    const fetchLeaves = async () => {
+        if (!firestore) return;
+        let q = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
+        if (selectedUserId !== 'all') {
+            q = query(q, where('employeeId', '==', selectedUserId));
+        }
+        const snap = await getDocs(q);
+        setLeaveData(snap.docs.map(d => ({ ...d.data(), id: d.id } as LeaveRequest)));
+    };
+    fetchLeaves();
+  }, [firestore, selectedUserId]);
 
   const stats = React.useMemo(() => {
     if (!attendanceData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0 };
@@ -267,23 +261,25 @@ const AnalyticsPage = () => {
   }, [attendanceData, leaveData, start, end, filterMode]);
   
   const chartData = React.useMemo(() => {
-      if (!weeklyAttendance) return [];
+      if (!attendanceData) return [];
       
       const dataMap = new Map<string, { work: number, break: number }>();
+      const last7Days = eachDayOfInterval({ start: startOfDay(subDays(new Date(), 6)), end: endOfDay(new Date()) });
+      
+      last7Days.forEach(day => dataMap.set(format(day, 'yyyy-MM-dd'), { work: 0, break: 0 }));
 
-      weeklyAttendance.forEach(rec => {
+      attendanceData.forEach(rec => {
           if (rec.checkInTime) {
               const day = format(rec.checkInTime.toDate(), 'yyyy-MM-dd');
-              let workHours = 0, breakHours = 0;
-              if (rec.checkOutTime) {
-                  workHours = (differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0)) / 3600;
-                  breakHours = (rec.totalBreakDuration || 0) / 3600;
+              if (dataMap.has(day)) {
+                  let workHours = 0, breakHours = 0;
+                  if (rec.checkOutTime) {
+                      workHours = (differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0)) / 3600;
+                      breakHours = (rec.totalBreakDuration || 0) / 3600;
+                  }
+                  const existing = dataMap.get(day)!;
+                  dataMap.set(day, { work: existing.work + workHours, break: existing.break + breakHours });
               }
-              const existing = dataMap.get(day) || { work: 0, break: 0 };
-              dataMap.set(day, {
-                  work: existing.work + workHours,
-                  break: existing.break + breakHours
-              });
           }
       });
       
@@ -291,11 +287,9 @@ const AnalyticsPage = () => {
           date: format(new Date(date), 'EEE, MMM d'),
           work: parseFloat(values.work.toFixed(2)),
           break: parseFloat(values.break.toFixed(2)),
-      })).reverse();
-  }, [weeklyAttendance]);
+      }));
+  }, [attendanceData]);
 
-
-  const userAvatar = PlaceHolderImages.find((image) => image.id === 'user-avatar-1');
 
   const formatDuration = (seconds: number) => {
     if (seconds < 0) seconds = 0;
@@ -322,7 +316,7 @@ const AnalyticsPage = () => {
         toast({ variant: 'destructive', title: 'No data to export' });
         return;
     }
-    const headers = ['Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Location', 'Notes'];
+    const headers = ['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Location', 'Notes'];
     const csvRows = [
         headers.join(','),
         ...attendanceData.map(rec => {
@@ -338,6 +332,7 @@ const AnalyticsPage = () => {
 
 
             const row = [
+                `"${rec.employeeName}"`,
                 rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "PP")}"` : "N/A",
                 timeInOut,
                 durationWorkBreak,
@@ -368,14 +363,14 @@ const AnalyticsPage = () => {
     }
 
 
-    link.setAttribute('download', `FortuMars_AttendanceReport_${datePart}.csv`);
+    link.setAttribute('download', `FortuMars_FullAttendanceReport_${datePart}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
 
   const handleAttendanceUpdate = () => {
-      if (!selectedUserId || !date) return;
+      if (selectedUserId === 'all' || !date) return;
 
       const attendanceId = format(date, 'yyyy-MM-dd');
       const attendanceRef = doc(firestore, `users/${selectedUserId}/attendances/${attendanceId}`);
@@ -400,7 +395,7 @@ const AnalyticsPage = () => {
   }
 
   const handleResetDay = () => {
-    if (!selectedUserId || !date) return;
+    if (selectedUserId === 'all' || !date) return;
     const attendanceId = format(date, 'yyyy-MM-dd');
     const attendanceRef = doc(firestore, `users/${selectedUserId}/attendances/${attendanceId}`);
     deleteDocumentNonBlocking(attendanceRef);
@@ -410,15 +405,16 @@ const AnalyticsPage = () => {
   
   return (
     <>
-      <PageHeader title="Employee Analytics" description="Select an employee to view their performance and attendance." />
+      <PageHeader title="Employee Analytics" description="Analyze performance and attendance across the entire organization." />
 
       <div className="flex flex-wrap items-center gap-4 mb-6">
         <div className="w-full sm:w-auto sm:min-w-64">
-            <Select onValueChange={setSelectedUserId} value={selectedUserId || ''}>
+            <Select onValueChange={(val) => setSelectedUserId(val as any)} value={selectedUserId}>
                 <SelectTrigger>
                     <SelectValue placeholder={areUsersLoading ? "Loading users..." : "Select an employee"} />
                 </SelectTrigger>
                 <SelectContent>
+                    <SelectItem value="all">All Employees</SelectItem>
                     {users?.map(user => (
                         <SelectItem key={user.id} value={user.id}>{user.firstName} {user.lastName}</SelectItem>
                     ))}
@@ -429,7 +425,6 @@ const AnalyticsPage = () => {
           <Button variant={filterMode === 'day' && date && format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setFilterMode('day'); }}>Today</Button>
           <Button variant={filterMode === 'day' && date && format(date, 'yyyy-MM-dd') === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setFilterMode('day'); }}>Yesterday</Button>
            <Button variant={filterMode === 'month' && month && format(month, 'yyyy-MM') === format(new Date(), 'yyyy-MM') ? 'default' : 'outline'} onClick={() => { setMonth(new Date()); setFilterMode('month'); }}>This Month</Button>
-          <Button variant={filterMode === 'month' && month && format(month, 'yyyy-MM') === format(subMonths(new Date(), 1), 'yyyy-MM') ? 'default' : 'outline'} onClick={() => { setMonth(subMonths(new Date(), 1)); setFilterMode('month'); }}>Last Month</Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button id="date" variant={"outline"} className={cn("w-full md:w-[200px] justify-start text-left font-normal", filterMode !== 'day' && "text-muted-foreground")}>
@@ -443,13 +438,11 @@ const AnalyticsPage = () => {
           </Popover>
           <Popover>
             <PopoverTrigger asChild>
-                <Button id="daterange" variant={"outline"} className={cn("w-full md:w-[300px] justify-start text-left font-normal", filterMode !== 'range' && "text-muted-foreground")}>
+                <Button id="daterange" variant={"outline"} className={cn("w-full md:w-[280px] justify-start text-left font-normal", filterMode !== 'range' && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {range?.from ? (
                         range.to ? (
-                            <>
-                                {format(range.from, "LLL dd, y")} - {format(range.to, "LLL dd, y")}
-                            </>
+                            <>{format(range.from, "LLL dd")} - {format(range.to, "LLL dd, y")}</>
                         ) : (
                             format(range.from, "LLL dd, y")
                         )
@@ -475,7 +468,7 @@ const AnalyticsPage = () => {
           <Button variant={filterMode === 'all' ? 'default' : 'outline'} onClick={() => setFilterMode('all')}>{filterMode === 'all' ? "Viewing Full History" : "View Full History"}</Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-            {isAdmin && selectedUserId && filterMode === 'day' && (
+            {isAdmin && selectedUserId !== 'all' && filterMode === 'day' && (
                 <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                     <DialogTrigger asChild>
                         <Button variant="secondary">
@@ -555,18 +548,14 @@ const AnalyticsPage = () => {
                     </DialogContent>
                 </Dialog>
             )}
-            <Button onClick={handleExport} disabled={!selectedUserId || !attendanceData || attendanceData.length === 0}>
+            <Button onClick={handleExport} disabled={isAttendanceLoading || !attendanceData || attendanceData.length === 0}>
                 <Download className="mr-2 h-4 w-4"/>
                 Export CSV
             </Button>
         </div>
       </div>
 
-      {!selectedUserId ? (
-        <div className="border rounded-lg p-6 min-h-[400px] flex items-center justify-center">
-            <p className="text-muted-foreground">Please select an employee to view their analytics.</p>
-        </div>
-      ) : isAttendanceLoading ? (
+      {isAttendanceLoading ? (
          <div className="border rounded-lg p-6 min-h-[400px] flex items-center justify-center">
             <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <div className="relative h-16 w-48 animate-pulse">
@@ -578,16 +567,27 @@ const AnalyticsPage = () => {
                       priority
                     />
                 </div>
-                <p>Loading attendance data...</p>
+                <p>Syncing attendance records...</p>
             </div>
         </div>
       ) : (
       <div className="grid gap-6">
-        {selectedUser && (
+        {selectedUserId === 'all' ? (
+            <Card className="bg-primary/5 border-primary/20">
+                <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+                    <div className="p-3 bg-primary text-primary-foreground rounded-lg">
+                        <Users className="h-8 w-8" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-2xl">Organization Overview</CardTitle>
+                        <CardDescription>Aggregated analytics for all active employees.</CardDescription>
+                    </div>
+                </CardHeader>
+            </Card>
+        ) : selectedUser && (
           <Card>
             <CardHeader className="flex flex-col items-center text-center sm:flex-row sm:text-left gap-4 space-y-0 p-4 sm:p-6">
               <Avatar className="h-20 w-20">
-                {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt={selectedUser.firstName} />}
                 <AvatarFallback>{selectedUser.firstName?.[0]}{selectedUser.lastName?.[0]}</AvatarFallback>
               </Avatar>
               <div>
@@ -646,7 +646,7 @@ const AnalyticsPage = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Last 7 Days Work Hours</CardTitle>
-                        <CardDescription>Work vs. Break hours over the last 7 days.</CardDescription>
+                        <CardDescription>Work vs. Break hours for the past week.</CardDescription>
                     </CardHeader>
                     <CardContent className="pl-2">
                        <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
@@ -669,7 +669,7 @@ const AnalyticsPage = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle>Attendance Log</CardTitle>
-                        <CardDescription>{filterMode === 'all' ? "Full activity history for the selected employee." : `Activity for ${getFilterPeriodText()}.`}</CardDescription>
+                        <CardDescription>{filterMode === 'all' ? "Full history." : `Activity for ${getFilterPeriodText()}.`}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <TooltipProvider>
@@ -677,6 +677,7 @@ const AnalyticsPage = () => {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
+                                            {selectedUserId === 'all' && <TableHead>Employee</TableHead>}
                                             <TableHead>Date</TableHead>
                                             <TableHead>Time (In/Out)</TableHead>
                                             <TableHead>Duration (Work/Break)</TableHead>
@@ -694,10 +695,9 @@ const AnalyticsPage = () => {
                                             const notes = (rec.checkInNotes ? `In: ${rec.checkInNotes}` : '') + 
                                                           (rec.checkOutNotes ? `\nOut: ${rec.checkOutNotes}` : '');
                                             
-                                            const distance = null;
-
                                             return (
-                                            <TableRow key={rec.id}>
+                                            <TableRow key={`${rec.employeeId}-${rec.id}`}>
+                                                {selectedUserId === 'all' && <TableCell className="font-medium whitespace-nowrap">{rec.employeeName}</TableCell>}
                                                 <TableCell className="font-medium whitespace-nowrap">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     <div>{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</div>
