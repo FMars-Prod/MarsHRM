@@ -12,12 +12,17 @@ To enable automated emails, you must set the following environment variable in y
 - `RESEND_API_KEY`: Your API key from Resend.com.
 
 ### 3. Service Account Details
-If you need to create a service account for advanced integrations, use these details:
+If you need to create a service account for advanced integrations (like real server-side cron jobs), use these details:
 
 - **Service account name**: MarsHRM Server Tasks
 - **Service account ID**: `marshrm-server`
 - **Description**: `Service account for MarsHRM server-side operations, including automated reports and data management.`
 - **Email**: `marshrm-server@studio-6661404512-7e22c.iam.gserviceaccount.com`
+
+#### Recommended IAM Roles (Permissions):
+When prompted to "Grant this service account access to project", add the following roles:
+1. **Firebase Firestore Admin**: Allows the service account to read and write attendance data, logs, and reports.
+2. **Firebase Authentication Admin**: Allows management of user accounts (useful for future server-side user creation).
 
 ## Features
 - **Geolocation Attendance**: Clock in/out within office or home radius.
