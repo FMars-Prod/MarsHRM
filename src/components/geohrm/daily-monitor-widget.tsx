@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -118,11 +117,12 @@ export function DailyMonitorWidget() {
       users.forEach(u => {
         const att = attendanceMap.get(u.id);
         if (att) {
+            // PRIORITY: If isOutOfRange is true, they MUST go into the Out of Range category
             if (att.isOutOfRange) {
                 outOfRangeUsers.push(u);
             } else if (att.status === 'late') {
                 lateUsers.push(u);
-            } else if (att.status === 'present') {
+            } else {
                 presentUsers.push(u);
             }
         } else if (onLeaveTodayIds.has(u.id)) {
