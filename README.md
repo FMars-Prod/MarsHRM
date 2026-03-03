@@ -24,6 +24,10 @@ When prompted to "Grant this service account access to project", add the followi
 1. **Firebase Firestore Admin**: Allows the service account to read and write attendance data, logs, and reports.
 2. **Firebase Authentication Admin**: Allows management of user accounts (useful for future server-side user creation).
 
+#### Key Generation:
+- **Key Type**: Select **JSON** (Recommended).
+- **Security Warning**: Once downloaded, the JSON key file allows full administrative access to your project. **NEVER** commit this file to your source control (Git). Store it in a secure location or use its contents as an environment variable (`FIREBASE_SERVICE_ACCOUNT_KEY`).
+
 ## Features
 - **Geolocation Attendance**: Clock in/out within office or home radius.
 - **Leave Management**: Multi-stage approval workflow (Member -> Team Lead -> HR).
