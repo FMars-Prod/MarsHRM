@@ -1,6 +1,10 @@
 # MarsHRM - Firebase Studio
 
-This is a NextJS HRM application with geolocation features.
+This is a comprehensive NextJS HRM application with advanced geolocation, reporting, and automated workflow features.
+
+## Project Replication Prompt
+Use the following prompt to replicate this project in a new environment:
+"Create a professional HRM system called MarsHRM using Next.js (App Router), Firebase (Auth/Firestore), Tailwind CSS, and ShadCN. Key Features: Geofenced Attendance (Office/WFH radius), 3-Stage Leave Approval (Lead -> HR), Daily Monitor with PDF/CSV exports and WhatsApp/Teams sharing, Automated Email Reports at 9:50 AM and 6:50 PM via Resend, Global Analytics with Date Range filtering, and Dual-Type Work Reports (Business/Technical) with audio upload support."
 
 ## Setup Instructions
 
@@ -8,32 +12,26 @@ This is a NextJS HRM application with geolocation features.
 Ensure your `src/firebase/config.ts` is up to date with your project's credentials.
 
 ### 2. Environment Variables
-To enable automated emails, you must set the following environment variable in your hosting provider (e.g., Firebase App Hosting or Vercel):
+To enable automated emails, you must set the following environment variable in your hosting provider:
 - `RESEND_API_KEY`: Your API key from Resend.com.
 
 ### 3. Service Account Details
-If you need to create a service account for advanced integrations (like real server-side cron jobs), use these details:
+**Service account name**: MarsHRM Server Tasks
+**Service account ID**: `marshrm-server`
+**Email**: `marshrm-server@studio-6661404512-7e22c.iam.gserviceaccount.com`
 
-- **Service account name**: MarsHRM Server Tasks
-- **Service account ID**: `marshrm-server`
-- **Description**: `Service account for MarsHRM server-side operations, including automated reports and data management.`
-- **Email**: `marshrm-server@studio-6661404512-7e22c.iam.gserviceaccount.com`
+#### Recommended IAM Roles:
+1. **Firebase Firestore Admin**: For reading/writing attendance and logs.
+2. **Firebase Authentication Admin**: For managing user accounts.
 
-#### Recommended IAM Roles (Permissions):
-When prompted to "Grant this service account access to project", add the following roles:
-1. **Firebase Firestore Admin**: Allows the service account to read and write attendance data, logs, and reports.
-2. **Firebase Authentication Admin**: Allows management of user accounts (useful for future server-side user creation).
+**Security Warning**: The downloaded JSON key file allows full administrative access. **NEVER** commit this file to source control.
 
-#### Key Generation:
-- **Key Type**: Select **JSON** (Recommended).
-- **Security Warning**: Once downloaded, the JSON key file allows full administrative access to your project. **NEVER** commit this file to your source control (Git). Store it in a secure location or use its contents as an environment variable (`FIREBASE_SERVICE_ACCOUNT_KEY`).
-
-## Features
-- **Geolocation Attendance**: Clock in/out within office or home radius.
-- **Leave Management**: Multi-stage approval workflow (Member -> Team Lead -> HR).
-- **Daily Monitor**: Real-time status overview for Admins/HR with map integration.
+## Core Features
+- **Geolocation Attendance**: Clock in/out within office or home radius. Features auto-lunch breaks and auto-clock-out at midnight.
+- **Leave Management**: Multi-stage approval workflow (Member -> Team Lead -> HR) with a visual status tracker.
+- **Daily Monitor**: Real-time status overview for Admins/HR with map integration and formatted PDF exports (`Name - Status - In/Out`).
 - **Automated Reports**: Attendance summaries sent automatically at 9:50 AM and 6:50 PM.
-- **PDF Export**: Comprehensive daily activity reports.
-- **Dual Audio Reporting**: Submit Business reports with both "Best" and "Worst" call recordings for coaching.
+- **Analytics**: Organization-wide data view with custom date range selection and CSV export for Excel.
+- **Dual Reporting**: Business reports (with call recordings) and Technical reports.
 
 Developed by FortuMars
