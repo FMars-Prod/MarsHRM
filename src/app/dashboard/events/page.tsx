@@ -111,10 +111,11 @@ export default function EventsPage() {
     if (!user) return;
     const eventRef = doc(firestore, 'events', id);
     const event = events?.find(e => e.id === id);
-    const liked = event?.likedBy.includes(user.uid);
+    if (!event) return;
+    const liked = event.likedBy.includes(user.uid);
 
     updateDocumentNonBlocking(eventRef, {
-        likes: liked ? event.likes -1 : event.likes + 1,
+        likes: liked ? event.likes - 1 : event.likes + 1,
         likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid)
     });
   };
@@ -146,27 +147,30 @@ export default function EventsPage() {
 
     const eventDate = new Date(parseInt(year), parseInt(month), parseInt(day));
 
-    const eventPayload = {
+    const eventPayload: any = {
         name: newEventName,
         event: eventType,
         date: eventDate,
         icon: newEventIcon,
         color: newEventColor,
-        time: newEventTime || undefined,
     };
+
+    if (newEventTime) {
+        eventPayload.time = newEventTime;
+    }
     
     if (editingEvent) {
       const eventRef = doc(firestore, 'events', editingEvent.id);
       updateDocumentNonBlocking(eventRef, eventPayload);
       toast({ title: "Event Updated", description: "The event has been successfully updated." });
     } else {
+      const newId = `evt-${Date.now()}`;
       const newEventPayload = {
           ...eventPayload,
-          id: `evt-${Date.now()}`,
+          id: newId,
           likes: 0,
           likedBy: [],
       }
-      const eventRef = doc(firestore, 'events', newEventPayload.id);
       addDocumentNonBlocking(collection(firestore, 'events'), newEventPayload);
       toast({ title: "Event Created", description: "The new event has been added to the calendar." });
     }
