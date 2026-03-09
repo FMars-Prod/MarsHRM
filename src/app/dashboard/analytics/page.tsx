@@ -21,8 +21,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -187,9 +187,17 @@ const AnalyticsPage = () => {
           };
         });
         setAttendanceData(records);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Error fetching analytics data:", e);
-        toast({ variant: 'destructive', title: 'Data load failed' });
+        if (e.code === 'failed-precondition') {
+            toast({
+                variant: 'destructive',
+                title: 'Index Required',
+                description: 'Organization-wide sorting requires a specific Firestore index. Please click the link in the developer console to enable it.'
+            });
+        } else {
+            toast({ variant: 'destructive', title: 'Data load failed' });
+        }
       } finally {
         setIsAttendanceLoading(false);
       }
@@ -513,12 +521,12 @@ const AnalyticsPage = () => {
                         </div>
                         <DialogFooter className="sm:justify-between">
                             <AlertDialog>
-                                <DialogTrigger asChild>
+                                <AlertDialogTrigger asChild>
                                     <Button variant="destructive">
                                         <RotateCcw className="mr-2 h-4 w-4"/>
                                         Reset Day
                                     </Button>
-                                </DialogTrigger>
+                                </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
