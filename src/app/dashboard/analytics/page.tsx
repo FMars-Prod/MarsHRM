@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +29,9 @@ import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 import Image from 'next/image';
 import { type DateRange } from "react-day-picker";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import autoTable from 'jspdf-autotable';
 
 type User = {
   id: string;
@@ -50,6 +53,7 @@ type AttendanceRecord = {
   checkOutNotes?: string;
   locationCheckInLatitude?: number;
   locationCheckInLongitude?: number;
+  isOutOfRange?: boolean;
 };
 
 type LeaveRequest = {
@@ -328,6 +332,7 @@ const AnalyticsPage = () => {
             const timeInOut = rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"` : "N/A";
             const durationWorkBreak = `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
             const location = rec.locationCheckInLatitude && rec.locationCheckInLongitude ? `"${rec.locationCheckInLatitude}, ${rec.locationCheckInLongitude}"` : "N/A";
+            const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status;
             const notes = `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"`;
 
 
@@ -336,7 +341,7 @@ const AnalyticsPage = () => {
                 rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "PP")}"` : "N/A",
                 timeInOut,
                 durationWorkBreak,
-                `"${rec.status}"`,
+                `"${statusStr}"`,
                 location,
                 notes,
             ];
@@ -368,6 +373,85 @@ const AnalyticsPage = () => {
     link.click();
     document.body.removeChild(link);
   }
+
+  const handleExportPdf = () => {
+    if (!attendanceData || attendanceData.length === 0) {
+        toast({ variant: 'destructive', title: 'No data to export' });
+        return;
+    }
+    
+    const doc = new jsPDF();
+    const reportDate = format(new Date(), 'PPP');
+    const period = getFilterPeriodText();
+    const employeeName = selectedUserId === 'all' ? 'Organization Overview' : `${selectedUser?.firstName} ${selectedUser?.lastName}`;
+
+    const addPageContent = (data: any) => {
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text("FortuMars AI Technologies & Business Solutions.", doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+        
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(8);
+        doc.text(`Page ${pageCount}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+    };
+
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Attendance Analytics Report - ${reportDate}`, doc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(`Employee: ${employeeName}`, 14, 48);
+    doc.text(`Period: ${period}`, 14, 53);
+
+    // Add Stats Summary
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text("Summary Stats", 14, 62);
+    doc.setFontSize(9);
+    doc.text(`Total Work Hours: ${stats.totalHours} hrs`, 14, 68);
+    doc.text(`Total Break Time: ${stats.totalBreakHours} hrs`, 70, 68);
+    doc.text(`Late Days: ${stats.lateDays}`, 130, 68);
+    doc.text(`Leaves: ${stats.totalLeaves}`, 170, 68);
+
+    const headers = [['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Notes']];
+    const body = attendanceData.map(rec => {
+        let workDuration = 0;
+        if (rec.checkInTime && rec.checkOutTime) {
+            workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
+        }
+        
+        const timeIn = rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+        const timeOut = rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+        const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status;
+        const notes = ((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim();
+
+        return [
+            rec.employeeName || 'N/A',
+            rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A',
+            `${timeIn} / ${timeOut}`,
+            `${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}`,
+            statusStr,
+            notes
+        ];
+    });
+
+    autoTable(doc, {
+        startY: 75,
+        head: headers,
+        body: body,
+        theme: 'striped',
+        headStyles: { fillColor: [39, 55, 70] },
+        styles: { fontSize: 8 },
+        columnStyles: {
+            5: { cellWidth: 40 }
+        },
+        didDrawPage: addPageContent,
+        margin: { top: 50 },
+    });
+
+    addPageContent({ settings: { margin: { left: 14 } } });
+
+    doc.save(`Attendance_Report_${employeeName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
 
   const handleAttendanceUpdate = () => {
       if (selectedUserId === 'all' || !date) return;
@@ -548,10 +632,24 @@ const AnalyticsPage = () => {
                     </DialogContent>
                 </Dialog>
             )}
-            <Button onClick={handleExport} disabled={isAttendanceLoading || !attendanceData || attendanceData.length === 0}>
-                <Download className="mr-2 h-4 w-4"/>
-                Export CSV
-            </Button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" disabled={isAttendanceLoading || !attendanceData || attendanceData.length === 0}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Export
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExport}>
+                        <Download className="mr-2 h-4 w-4" />
+                        CSV for Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportPdf}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        PDF Document
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </div>
 
@@ -667,9 +765,27 @@ const AnalyticsPage = () => {
             </div>
             <div className="lg:col-span-3">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Attendance Log</CardTitle>
-                        <CardDescription>{filterMode === 'all' ? "Full history." : `Activity for ${getFilterPeriodText()}.`}</CardDescription>
+                    <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                        <div>
+                            <CardTitle>Attendance Log</CardTitle>
+                            <CardDescription>{filterMode === 'all' ? "Full history." : `Activity for ${getFilterPeriodText()}.`}</CardDescription>
+                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" disabled={isAttendanceLoading || !attendanceData || attendanceData.length === 0}>
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Export Log
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={handleExport}>
+                                    CSV for Excel
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleExportPdf}>
+                                    PDF Document
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </CardHeader>
                     <CardContent>
                         <TooltipProvider>
@@ -708,15 +824,20 @@ const AnalyticsPage = () => {
                                                     <div className="text-xs text-muted-foreground">{formatDuration(rec.totalBreakDuration || 0)}</div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={cn(
-                                                            rec.status === 'present' && 'text-green-600 border-green-600/50',
-                                                            rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
-                                                            rec.status === 'absent' && 'text-red-600 border-red-600/50',
-                                                            rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
+                                                    <div className="flex flex-col gap-1 items-start">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={cn(
+                                                                rec.status === 'present' && 'text-green-600 border-green-600/50',
+                                                                rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
+                                                                rec.status === 'absent' && 'text-red-600 border-red-600/50',
+                                                                rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
+                                                            )}
+                                                        >{rec.status}</Badge>
+                                                        {rec.isOutOfRange && (
+                                                            <Badge variant="destructive" className="text-[10px] py-0 h-4 px-1.5 font-normal">Out of Range</Badge>
                                                         )}
-                                                    >{rec.status}</Badge>
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
                                                   {rec.locationCheckInLatitude && rec.locationCheckInLongitude ? (
