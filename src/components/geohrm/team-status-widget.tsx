@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -42,55 +41,60 @@ export function TeamStatusWidget() {
 
     React.useEffect(() => {
         const fetchAttendanceSummary = async () => {
-            if (!users) return;
+            if (!users || !firestore) return;
 
             setIsLoading(true);
             
-            const todayStart = startOfDay(new Date());
-            const todayEnd = endOfDay(new Date());
+            try {
+                const todayStart = startOfDay(new Date());
+                const todayEnd = endOfDay(new Date());
 
-            const attendanceQuery = query(
-                collectionGroup(firestore, 'attendances'),
-                where('checkInTime', '>=', todayStart),
-                where('checkInTime', '<=', todayEnd)
-            );
-            
-            const attendanceSnapshot = await getDocs(attendanceQuery);
-            const todaysAttendance = attendanceSnapshot.docs.map(doc => doc.data() as AttendanceRecord);
+                const attendanceQuery = query(
+                    collectionGroup(firestore, 'attendances'),
+                    where('checkInTime', '>=', todayStart),
+                    where('checkInTime', '<=', todayEnd)
+                );
+                
+                const attendanceSnapshot = await getDocs(attendanceQuery);
+                const todaysAttendance = attendanceSnapshot.docs.map(doc => doc.data() as AttendanceRecord);
 
-            const presentIds = new Set<string>();
-            const lateIds = new Set<string>();
-            todaysAttendance.forEach(rec => {
-                if (rec.status === 'late') {
-                    lateIds.add(rec.employeeId);
-                } else {
-                    presentIds.add(rec.employeeId);
-                }
-            });
-            
-            const notLoggedInUsers: UserData[] = [];
-            const lateUsersList: UserData[] = [];
-            
-            users.forEach(user => {
-                const isAdmin = user.role === 'CEO/Admin' || user.role === 'HR Manager';
-                if (isAdmin) return;
+                const presentIds = new Set<string>();
+                const lateIds = new Set<string>();
+                todaysAttendance.forEach(rec => {
+                    if (rec.status === 'late') {
+                        lateIds.add(rec.employeeId);
+                    } else {
+                        presentIds.add(rec.employeeId);
+                    }
+                });
+                
+                const notLoggedInUsers: UserData[] = [];
+                const lateUsersList: UserData[] = [];
+                
+                users.forEach(user => {
+                    const isAdmin = user.role === 'CEO/Admin' || user.role === 'HR Manager';
+                    if (isAdmin) return;
 
-                if (!presentIds.has(user.id) && !lateIds.has(user.id)) {
-                    notLoggedInUsers.push(user);
-                }
-                if (lateIds.has(user.id)) {
-                    lateUsersList.push(user);
-                }
-            });
+                    if (!presentIds.has(user.id) && !lateIds.has(user.id)) {
+                        notLoggedInUsers.push(user);
+                    }
+                    if (lateIds.has(user.id)) {
+                        lateUsersList.push(user);
+                    }
+                });
 
-            const nonAdminUsers = users.filter(u => u.role !== 'CEO/Admin' && u.role !== 'HR Manager').length;
+                const nonAdminUsers = users.filter(u => u.role !== 'CEO/Admin' && u.role !== 'HR Manager').length;
 
-            setTotalUsers(nonAdminUsers);
-            setPresentCount(presentIds.size);
-            setLateCount(lateIds.size);
-            setNotLoggedIn(notLoggedInUsers);
-            setLateUsers(lateUsersList);
-            setIsLoading(false);
+                setTotalUsers(nonAdminUsers);
+                setPresentCount(presentIds.size);
+                setLateCount(lateIds.size);
+                setNotLoggedIn(notLoggedInUsers);
+                setLateUsers(lateUsersList);
+            } catch (error: any) {
+                console.error("Team status error:", error);
+            } finally {
+                setIsLoading(false);
+            }
         };
 
         fetchAttendanceSummary();

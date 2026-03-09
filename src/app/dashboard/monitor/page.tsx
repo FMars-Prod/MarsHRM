@@ -79,7 +79,7 @@ const MonitorPage = () => {
 
   React.useEffect(() => {
     const fetchMonitorData = async () => {
-      if (!users || users.length === 0) {
+      if (!users || users.length === 0 || !firestore) {
         if (!usersLoading) {
             setSummary(prev => ({ ...prev, isLoading: false }));
         }
@@ -88,75 +88,89 @@ const MonitorPage = () => {
 
       setSummary(prev => ({ ...prev, isLoading: true }));
 
-      const selectedDayStart = startOfDay(date);
-      const selectedDayEnd = endOfDay(date);
+      try {
+        const selectedDayStart = startOfDay(date);
+        const selectedDayEnd = endOfDay(date);
 
-      // 1. Fetch today's attendance records using a collectionGroup query
-      const attendanceQuery = query(
-        collectionGroup(firestore, 'attendances'),
-        where('checkInTime', '>=', selectedDayStart),
-        where('checkInTime', '<=', selectedDayEnd)
-      );
-      const attendanceSnapshot = await getDocs(attendanceQuery);
-      const attendanceMap = new Map<string, AttendanceRecord>();
-      attendanceSnapshot.docs.forEach(doc => {
-          const data = doc.data() as AttendanceRecord;
-          attendanceMap.set(data.employeeId, data);
-      });
-      setAttendanceRecords(attendanceMap);
+        // 1. Fetch today's attendance records using a collectionGroup query
+        const attendanceQuery = query(
+          collectionGroup(firestore, 'attendances'),
+          where('checkInTime', '>=', selectedDayStart),
+          where('checkInTime', '<=', selectedDayEnd)
+        );
+        const attendanceSnapshot = await getDocs(attendanceQuery);
+        const attendanceMap = new Map<string, AttendanceRecord>();
+        attendanceSnapshot.docs.forEach(doc => {
+            const data = doc.data() as AttendanceRecord;
+            attendanceMap.set(data.employeeId, data);
+        });
+        setAttendanceRecords(attendanceMap);
 
-      // 2. Fetch approved leaves that cover today
-      const leavesQuery = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
-      const leavesSnapshot = await getDocs(leavesQuery);
-      const allApprovedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveRequest);
-      
-      const onLeaveTodayIds = new Set<string>();
-      allApprovedLeaves.forEach(leave => {
-        const leaveInterval = { start: leave.startDate.toDate(), end: leave.endDate.toDate() };
-        if (isWithinInterval(date, leaveInterval)) {
-          onLeaveTodayIds.add(leave.employeeId);
-        }
-      });
-      
-      const lateUsers: UserData[] = [];
-      const onLeaveUsers: UserData[] = [];
-      const presentUsers: UserData[] = [];
-      const absentUsers: UserData[] = [];
-      const outOfRangeUsers: UserData[] = [];
-
-      users.forEach(u => {
-        const att = attendanceMap.get(u.id);
-        if (att) {
-            // PRIORITY: Out of Range should be the top category if detected
-            if (att.isOutOfRange) {
-                outOfRangeUsers.push(u);
-            } else if (att.status === 'late') {
-                lateUsers.push(u);
-            } else {
-                presentUsers.push(u);
+        // 2. Fetch approved leaves that cover today
+        const leavesQuery = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
+        const leavesSnapshot = await getDocs(leavesQuery);
+        const allApprovedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveRequest);
+        
+        const onLeaveTodayIds = new Set<string>();
+        allApprovedLeaves.forEach(leave => {
+          const leaveStart = leave.startDate?.toDate();
+          const leaveEnd = leave.endDate?.toDate();
+          if (leaveStart && leaveEnd) {
+            const leaveInterval = { start: leaveStart, end: leaveEnd };
+            if (isWithinInterval(date, leaveInterval)) {
+              onLeaveTodayIds.add(leave.employeeId);
             }
-        } else if (onLeaveTodayIds.has(u.id)) {
-          onLeaveUsers.push(u);
-        } else {
-          // Exclude admins/CEOs from being marked as absent
-          if ((u as any).role !== 'CEO/Admin' && (u as any).role !== 'HR Manager') {
-             absentUsers.push(u);
           }
+        });
+        
+        const lateUsers: UserData[] = [];
+        const onLeaveUsers: UserData[] = [];
+        const presentUsers: UserData[] = [];
+        const absentUsers: UserData[] = [];
+        const outOfRangeUsers: UserData[] = [];
+
+        users.forEach(u => {
+          const att = attendanceMap.get(u.id);
+          if (att) {
+              if (att.isOutOfRange) {
+                  outOfRangeUsers.push(u);
+              } else if (att.status === 'late') {
+                  lateUsers.push(u);
+              } else {
+                  presentUsers.push(u);
+              }
+          } else if (onLeaveTodayIds.has(u.id)) {
+            onLeaveUsers.push(u);
+          } else {
+            if ((u as any).role !== 'CEO/Admin' && (u as any).role !== 'HR Manager') {
+               absentUsers.push(u);
+            }
+          }
+        });
+        
+        setSummary({
+          late: lateUsers,
+          absent: absentUsers,
+          onLeave: onLeaveUsers,
+          present: presentUsers,
+          outOfRange: outOfRangeUsers,
+          isLoading: false,
+        });
+      } catch (error: any) {
+        console.error("Monitor error:", error);
+        if (error.code === 'failed-precondition') {
+          toast({
+            variant: "destructive",
+            title: "Index Required",
+            description: "Please click the link in the console/error to create the required Firestore index.",
+          });
         }
-      });
-      
-      setSummary({
-        late: lateUsers,
-        absent: absentUsers,
-        onLeave: onLeaveUsers,
-        present: presentUsers,
-        outOfRange: outOfRangeUsers,
-        isLoading: false,
-      });
+        setSummary(prev => ({ ...prev, isLoading: false }));
+      }
     };
 
     fetchMonitorData();
-  }, [users, usersLoading, firestore, date]);
+  }, [users, usersLoading, firestore, date, toast]);
   
   const formatDuration = (seconds: number) => {
     if (seconds < 0) seconds = 0;
@@ -292,28 +306,25 @@ const MonitorPage = () => {
       return;
     }
     
-    const doc = new jsPDF();
+    const pdfDoc = new jsPDF();
     const reportDate = format(date, 'PPP');
     const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
 
     const addPageContent = (data: any) => {
-        // Header
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text("FortuMars AI Technologies & Business Solutions.", doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+        pdfDoc.setFontSize(16);
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.text("FortuMars AI Technologies & Business Solutions.", pdfDoc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
         
-        // Footer
-        const pageCount = doc.internal.getNumberOfPages();
-        doc.setFontSize(8);
-        doc.text(`Page ${pageCount}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+        const pageCount = pdfDoc.internal.getNumberOfPages();
+        pdfDoc.setFontSize(8);
+        pdfDoc.text(`Page ${pageCount}`, data.settings.margin.left, pdfDoc.internal.pageSize.height - 10);
     };
 
-    // First page title and info
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text(`Daily Attendance Summary - ${reportDate}`, doc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text(`Generated by: ${generatorName}`, 14, 48);
+    pdfDoc.setFontSize(12);
+    pdfDoc.setTextColor(100);
+    pdfDoc.text(`Daily Attendance Summary - ${reportDate}`, pdfDoc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
+    pdfDoc.setFontSize(10);
+    pdfDoc.text(`Generated by: ${generatorName}`, 14, 48);
 
     let finalY = 55;
 
@@ -332,7 +343,7 @@ const MonitorPage = () => {
             return [detailLine];
         });
 
-        autoTable(doc, {
+        autoTable(pdfDoc, {
           startY: finalY,
           head: [[{ content: `${title} (${users.length})`, styles: { fontStyle: 'bold', fontSize: 12, halign: 'left', fillColor: [240,240,240], textColor: 0 } }]],
           body: [],
@@ -341,8 +352,8 @@ const MonitorPage = () => {
           margin: { top: 50 },
         });
 
-        autoTable(doc, {
-          startY: (doc as any).lastAutoTable.finalY,
+        autoTable(pdfDoc, {
+          startY: (pdfDoc as any).lastAutoTable.finalY,
           head: [['Employee Status Details']],
           body: body,
           theme: 'striped',
@@ -350,7 +361,7 @@ const MonitorPage = () => {
           didDrawPage: addPageContent,
           margin: { top: 50 },
         });
-        finalY = (doc as any).lastAutoTable.finalY + 10;
+        finalY = (pdfDoc as any).lastAutoTable.finalY + 10;
       }
     };
     
@@ -362,7 +373,7 @@ const MonitorPage = () => {
     
     addPageContent({ settings: { margin: { left: 14 } } });
 
-    doc.save(`daily_report_${format(date, 'yyyy-MM-dd')}.pdf`);
+    pdfDoc.save(`daily_report_${format(date, 'yyyy-MM-dd')}.pdf`);
   };
 
   const UserListCard = ({ title, users, Icon, iconColor }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; }) => (

@@ -4,12 +4,12 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
-import { format, startOfDay, endOfDay, isWithinInterval, differenceInSeconds } from 'date-fns';
+import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
 import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
+import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -69,7 +69,7 @@ export function DailyMonitorWidget() {
 
   React.useEffect(() => {
     const fetchMonitorData = async () => {
-      if (!users || users.length === 0) {
+      if (!users || users.length === 0 || !firestore) {
         if (!usersLoading) {
             setSummary(prev => ({ ...prev, isLoading: false }));
         }
@@ -78,70 +78,79 @@ export function DailyMonitorWidget() {
 
       setSummary(prev => ({ ...prev, isLoading: true }));
 
-      const selectedDayStart = startOfDay(new Date());
-      const selectedDayEnd = endOfDay(new Date());
+      try {
+        const now = new Date();
+        const selectedDayStart = startOfDay(now);
+        const selectedDayEnd = endOfDay(now);
 
-      // 1. Fetch today's attendance records using a collectionGroup query
-      const attendanceQuery = query(
-        collectionGroup(firestore, 'attendances'),
-        where('checkInTime', '>=', selectedDayStart),
-        where('checkInTime', '<=', selectedDayEnd)
-      );
-      const attendanceSnapshot = await getDocs(attendanceQuery);
-      const attendanceMap = new Map<string, AttendanceRecord>();
-      attendanceSnapshot.docs.forEach(doc => {
-          const data = doc.data() as AttendanceRecord;
-          attendanceMap.set(data.employeeId, data);
-      });
-      setAttendanceRecords(attendanceMap);
+        // 1. Fetch today's attendance records using a collectionGroup query
+        const attendanceQuery = query(
+          collectionGroup(firestore, 'attendances'),
+          where('checkInTime', '>=', selectedDayStart),
+          where('checkInTime', '<=', selectedDayEnd)
+        );
+        const attendanceSnapshot = await getDocs(attendanceQuery);
+        const attendanceMap = new Map<string, AttendanceRecord>();
+        attendanceSnapshot.docs.forEach(doc => {
+            const data = doc.data() as AttendanceRecord;
+            attendanceMap.set(data.employeeId, data);
+        });
+        setAttendanceRecords(attendanceMap);
 
-      // 2. Fetch approved leaves that cover today
-      const leavesQuery = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
-      const leavesSnapshot = await getDocs(leavesQuery);
-      const allApprovedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveRequest);
-      
-      const onLeaveTodayIds = new Set<string>();
-      allApprovedLeaves.forEach(leave => {
-        const leaveInterval = { start: leave.startDate.toDate(), end: leave.endDate.toDate() };
-        if (isWithinInterval(new Date(), leaveInterval)) {
-          onLeaveTodayIds.add(leave.employeeId);
-        }
-      });
-      
-      const lateUsers: UserData[] = [];
-      const onLeaveUsers: UserData[] = [];
-      const presentUsers: UserData[] = [];
-      const absentUsers: UserData[] = [];
-      const outOfRangeUsers: UserData[] = [];
-
-      users.forEach(u => {
-        const att = attendanceMap.get(u.id);
-        if (att) {
-            // PRIORITY: If isOutOfRange is true, they MUST go into the Out of Range category
-            if (att.isOutOfRange) {
-                outOfRangeUsers.push(u);
-            } else if (att.status === 'late') {
-                lateUsers.push(u);
-            } else {
-                presentUsers.push(u);
+        // 2. Fetch approved leaves that cover today
+        const leavesQuery = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
+        const leavesSnapshot = await getDocs(leavesQuery);
+        const allApprovedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveRequest);
+        
+        const onLeaveTodayIds = new Set<string>();
+        allApprovedLeaves.forEach(leave => {
+          const leaveStart = leave.startDate?.toDate();
+          const leaveEnd = leave.endDate?.toDate();
+          if (leaveStart && leaveEnd) {
+            const leaveInterval = { start: leaveStart, end: leaveEnd };
+            if (isWithinInterval(now, leaveInterval)) {
+              onLeaveTodayIds.add(leave.employeeId);
             }
-        } else if (onLeaveTodayIds.has(u.id)) {
-          onLeaveUsers.push(u);
-        } else {
-          if ((u as any).role !== 'CEO/Admin' && (u as any).role !== 'HR Manager') {
-             absentUsers.push(u);
           }
-        }
-      });
-      
-      setSummary({
-        late: lateUsers,
-        absent: absentUsers,
-        onLeave: onLeaveUsers,
-        present: presentUsers,
-        outOfRange: outOfRangeUsers,
-        isLoading: false,
-      });
+        });
+        
+        const lateUsers: UserData[] = [];
+        const onLeaveUsers: UserData[] = [];
+        const presentUsers: UserData[] = [];
+        const absentUsers: UserData[] = [];
+        const outOfRangeUsers: UserData[] = [];
+
+        users.forEach(u => {
+          const att = attendanceMap.get(u.id);
+          if (att) {
+              if (att.isOutOfRange) {
+                  outOfRangeUsers.push(u);
+              } else if (att.status === 'late') {
+                  lateUsers.push(u);
+              } else {
+                  presentUsers.push(u);
+              }
+          } else if (onLeaveTodayIds.has(u.id)) {
+            onLeaveUsers.push(u);
+          } else {
+            if ((u as any).role !== 'CEO/Admin' && (u as any).role !== 'HR Manager') {
+               absentUsers.push(u);
+            }
+          }
+        });
+        
+        setSummary({
+          late: lateUsers,
+          absent: absentUsers,
+          onLeave: onLeaveUsers,
+          present: presentUsers,
+          outOfRange: outOfRangeUsers,
+          isLoading: false,
+        });
+      } catch (error: any) {
+        console.error("Widget monitor error:", error);
+        setSummary(prev => ({ ...prev, isLoading: false }));
+      }
     };
 
     fetchMonitorData();
@@ -232,7 +241,8 @@ export function DailyMonitorWidget() {
       return;
     }
 
-    const reportDate = format(new Date(), 'PPP');
+    const now = new Date();
+    const reportDate = format(now, 'PPP');
     const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
 
     let reportText = `FortuMars - Daily Attendance Summary\n`;
@@ -281,28 +291,26 @@ export function DailyMonitorWidget() {
       return;
     }
     
-    const doc = new jsPDF();
-    const reportDate = format(new Date(), 'PPP');
+    const pdfDoc = new jsPDF();
+    const now = new Date();
+    const reportDate = format(now, 'PPP');
     const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
 
     const addPageContent = (data: any) => {
-        // Header
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text("FortuMars AI Technologies & Business Solutions.", doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+        pdfDoc.setFontSize(16);
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.text("FortuMars AI Technologies & Business Solutions.", pdfDoc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
         
-        // Footer
-        const pageCount = doc.internal.getNumberOfPages();
-        doc.setFontSize(8);
-        doc.text(`Page ${pageCount}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+        const pageCount = pdfDoc.internal.getNumberOfPages();
+        pdfDoc.setFontSize(8);
+        pdfDoc.text(`Page ${pageCount}`, data.settings.margin.left, pdfDoc.internal.pageSize.height - 10);
     };
 
-    // First page title and info
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text(`Daily Attendance Summary - ${reportDate}`, doc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text(`Generated by: ${generatorName}`, 14, 48);
+    pdfDoc.setFontSize(12);
+    pdfDoc.setTextColor(100);
+    pdfDoc.text(`Daily Attendance Summary - ${reportDate}`, pdfDoc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
+    pdfDoc.setFontSize(10);
+    pdfDoc.text(`Generated by: ${generatorName}`, 14, 48);
 
     let finalY = 55;
 
@@ -321,7 +329,7 @@ export function DailyMonitorWidget() {
             return [detailLine];
         });
 
-        autoTable(doc, {
+        autoTable(pdfDoc, {
           startY: finalY,
           head: [[{ content: `${title} (${users.length})`, styles: { fontStyle: 'bold', fontSize: 12, halign: 'left', fillColor: [240,240,240], textColor: 0 } }]],
           body: [],
@@ -330,8 +338,8 @@ export function DailyMonitorWidget() {
           margin: { top: 50 },
         });
 
-        autoTable(doc, {
-          startY: (doc as any).lastAutoTable.finalY,
+        autoTable(pdfDoc, {
+          startY: (pdfDoc as any).lastAutoTable.finalY,
           head: [['Employee Status Details']],
           body: body,
           theme: 'striped',
@@ -339,7 +347,7 @@ export function DailyMonitorWidget() {
           didDrawPage: addPageContent,
           margin: { top: 50 },
         });
-        finalY = (doc as any).lastAutoTable.finalY + 10;
+        finalY = (pdfDoc as any).lastAutoTable.finalY + 10;
       }
     };
     
@@ -351,7 +359,7 @@ export function DailyMonitorWidget() {
     
     addPageContent({ settings: { margin: { left: 14 } } });
 
-    doc.save(`daily_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    pdfDoc.save(`daily_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   const UserListCard = ({ title, users, Icon, iconColor, onClick }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; onClick: () => void; }) => (
