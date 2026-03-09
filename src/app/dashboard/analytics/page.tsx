@@ -77,7 +77,11 @@ const AnalyticsPage = () => {
   const [range, setRange] = React.useState<DateRange | undefined>();
   const [filterMode, setFilterMode] = React.useState<FilterMode>("day");
 
+  // Edit States
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [editingDate, setEditingDate] = React.useState<Date | null>(null);
+  const [editingEmployeeId, setEditingEmployeeId] = React.useState<string | null>(null);
+  const [editingEmployeeName, setEditingEmployeeName] = React.useState("");
   const [editableAttendance, setEditableAttendance] = React.useState<EditableAttendance>({
       status: 'present',
       checkInTime: '',
@@ -285,7 +289,7 @@ const AnalyticsPage = () => {
     if (filterMode === 'month' && month) return format(month, 'MMMM yyyy');
     if (filterMode === 'range' && range?.from) {
         if (range.to) {
-            return `${format(range.from, "LLL dd, y")} - ${format(range.to, "LLL dd, y")}`;
+            return `${format(range.from, "LLL dd")} - ${format(range.to, "LLL dd, y")}`;
         }
         return format(range.from, "LLL dd, y");
     }
@@ -435,8 +439,9 @@ const AnalyticsPage = () => {
 
   const handleEditClick = (rec: AttendanceRecord) => {
       const recDate = rec.checkInTime ? rec.checkInTime.toDate() : new Date(rec.id);
-      setDate(recDate);
-      setSelectedUserId(rec.employeeId);
+      setEditingDate(recDate);
+      setEditingEmployeeId(rec.employeeId);
+      setEditingEmployeeName(rec.employeeName || "Employee");
       
       setEditableAttendance({
           status: (['holiday', 'on_leave'].includes(rec.status) ? 'absent' : rec.status) as any,
@@ -450,17 +455,17 @@ const AnalyticsPage = () => {
   }
 
   const handleAttendanceUpdate = () => {
-      if (selectedUserId === 'all' || !date) return;
+      if (!editingEmployeeId || !editingDate) return;
 
-      const attendanceId = format(date, 'yyyy-MM-dd');
-      const attendanceRef = doc(firestore, `users/${selectedUserId}/attendances/${attendanceId}`);
+      const attendanceId = format(editingDate, 'yyyy-MM-dd');
+      const attendanceRef = doc(firestore, `users/${editingEmployeeId}/attendances/${attendanceId}`);
       
-      const checkInDateTime = editableAttendance.checkInTime ? parse(editableAttendance.checkInTime, 'HH:mm', date) : null;
-      const checkOutDateTime = editableAttendance.checkOutTime ? parse(editableAttendance.checkOutTime, 'HH:mm', date) : null;
+      const checkInDateTime = editableAttendance.checkInTime ? parse(editableAttendance.checkInTime, 'HH:mm', editingDate) : null;
+      const checkOutDateTime = editableAttendance.checkOutTime ? parse(editableAttendance.checkOutTime, 'HH:mm', editingDate) : null;
 
       const payload: any = {
           id: attendanceId,
-          employeeId: selectedUserId,
+          employeeId: editingEmployeeId,
           status: editableAttendance.status,
           checkInTime: checkInDateTime ? Timestamp.fromDate(checkInDateTime) : null,
           checkOutTime: checkOutDateTime ? Timestamp.fromDate(checkOutDateTime) : null,
@@ -470,16 +475,16 @@ const AnalyticsPage = () => {
       };
 
       setDocumentNonBlocking(attendanceRef, payload, { merge: true });
-      toast({ title: "Attendance Updated", description: "The record has been saved." });
+      toast({ title: "Attendance Updated", description: `Record for ${editingEmployeeName} on ${format(editingDate, "PP")} saved.` });
       setIsEditDialogOpen(false);
   }
 
   const handleResetDay = () => {
-    if (selectedUserId === 'all' || !date) return;
-    const attendanceId = format(date, 'yyyy-MM-dd');
-    const attendanceRef = doc(firestore, `users/${selectedUserId}/attendances/${attendanceId}`);
+    if (!editingEmployeeId || !editingDate) return;
+    const attendanceId = format(editingDate, 'yyyy-MM-dd');
+    const attendanceRef = doc(firestore, `users/${editingEmployeeId}/attendances/${attendanceId}`);
     deleteDocumentNonBlocking(attendanceRef);
-    toast({ title: "Day Reset", description: `Attendance for ${selectedUser?.firstName || 'employee'} on ${format(date, "PPP")} has been reset.` });
+    toast({ title: "Day Reset", description: `Attendance for ${editingEmployeeName} on ${format(editingDate, "PPP")} has been reset.` });
     setIsEditDialogOpen(false);
   }
   
@@ -548,85 +553,6 @@ const AnalyticsPage = () => {
           <Button variant={filterMode === 'all' ? 'default' : 'outline'} onClick={() => setFilterMode('all')}>{filterMode === 'all' ? "Viewing Full History" : "View Full History"}</Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-            {isAdmin && selectedUserId !== 'all' && filterMode === 'day' && (
-                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="secondary">
-                            <Edit className="mr-2 h-4 w-4"/>
-                            Edit Attendance
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Edit Attendance for {selectedUser?.firstName}</DialogTitle>
-                            <DialogDescription>
-                                Manually adjust the record for {date && format(date, "PPP")}.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="check-in">Clock In Time</Label>
-                                    <Input id="check-in" type="time" value={editableAttendance.checkInTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInTime: e.target.value}))}/>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="check-out">Clock Out Time</Label>
-                                    <Input id="check-out" type="time" value={editableAttendance.checkOutTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutTime: e.target.value}))}/>
-                                </div>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="break">Total Break (minutes)</Label>
-                                <Input id="break" type="number" value={editableAttendance.totalBreakDuration} onChange={(e) => setEditableAttendance(prev => ({...prev, totalBreakDuration: e.target.value}))}/>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="status">Status</Label>
-                                <Select value={editableAttendance.status} onValueChange={(value) => setEditableAttendance(prev => ({...prev, status: value as any}))}>
-                                    <SelectTrigger><SelectValue/></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="present">Present</SelectItem>
-                                        <SelectItem value="late">Late</SelectItem>
-                                        <SelectItem value="absent">Absent</SelectItem>
-                                        <SelectItem value="on_leave">On Leave</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="checkin-notes">Clock In Notes</Label>
-                                <Textarea id="checkin-notes" value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="checkout-notes">Clock Out Notes</Label>
-                                <Textarea id="checkout-notes" value={editableAttendance.checkOutNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutNotes: e.target.value}))} />
-                            </div>
-                        </div>
-                        <DialogFooter className="sm:justify-between">
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive">
-                                        <RotateCcw className="mr-2 h-4 w-4"/>
-                                        Reset Day
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                        <DialogDescription>
-                                            This will delete the attendance record for {selectedUser?.firstName || 'this employee'} on {date ? format(date, 'PPP') : 'this day'}. This action cannot be undone.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <DialogFooter>
-                                        <AlertDialogAction onClick={handleResetDay}>Confirm Reset</AlertDialogAction>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </AlertDialog>
-                            <div className="flex gap-2">
-                              <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                              <Button onClick={handleAttendanceUpdate}>Save Changes</Button>
-                            </div>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            )}
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" disabled={isAttendanceLoading || !attendanceData || attendanceData.length === 0}>
@@ -782,7 +708,7 @@ const AnalyticsPage = () => {
                                             <TableHead>Status</TableHead>
                                             <TableHead>Location</TableHead>
                                             <TableHead>Notes</TableHead>
-                                            {isAdmin && selectedUserId !== 'all' && <TableHead className="text-right">Actions</TableHead>}
+                                            {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -868,7 +794,7 @@ const AnalyticsPage = () => {
                                                         <span className="text-muted-foreground/50">-</span>
                                                     )}
                                                 </TableCell>
-                                                {isAdmin && selectedUserId !== 'all' && (
+                                                {isAdmin && (
                                                     <TableCell className="text-right">
                                                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(rec)}>
                                                             <Edit className="h-4 w-4" />
@@ -893,30 +819,16 @@ const AnalyticsPage = () => {
       </div>
       )}
 
-      {/* Manual Edit Dialog - Controlled via Row Actions or Top Button */}
+      {/* Manual Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
               <DialogHeader>
-                  <DialogTitle>Edit Attendance for {selectedUser?.firstName}</DialogTitle>
+                  <DialogTitle>Edit Attendance: {editingEmployeeName}</DialogTitle>
                   <DialogDescription>
-                      Manually adjust the record for {date && format(date, "PPP")}.
+                      Manually adjust the record for {editingDate && format(editingDate, "PPP")}.
                   </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                          <Label htmlFor="check-in">Clock In Time</Label>
-                          <Input id="check-in" type="time" value={editableAttendance.checkInTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInTime: e.target.value}))}/>
-                      </div>
-                      <div className="grid gap-2">
-                          <Label htmlFor="check-out">Clock Out Time</Label>
-                          <Input id="check-out" type="time" value={editableAttendance.checkOutTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutTime: e.target.value}))}/>
-                      </div>
-                  </div>
-                  <div className="grid gap-2">
-                      <Label htmlFor="break">Total Break (minutes)</Label>
-                      <Input id="break" type="number" value={editableAttendance.totalBreakDuration} onChange={(e) => setEditableAttendance(prev => ({...prev, totalBreakDuration: e.target.value}))}/>
-                  </div>
                   <div className="grid gap-2">
                       <Label htmlFor="status">Status</Label>
                       <Select value={editableAttendance.status} onValueChange={(value) => setEditableAttendance(prev => ({...prev, status: value as any}))}>
@@ -929,13 +841,25 @@ const AnalyticsPage = () => {
                           </SelectContent>
                       </Select>
                   </div>
+                  {(editableAttendance.status === 'present' || editableAttendance.status === 'late') && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="check-in">Login In Time</Label>
+                            <Input id="check-in" type="time" value={editableAttendance.checkInTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInTime: e.target.value}))}/>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="check-out">Log Out Time</Label>
+                            <Input id="check-out" type="time" value={editableAttendance.checkOutTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutTime: e.target.value}))}/>
+                        </div>
+                    </div>
+                  )}
                   <div className="grid gap-2">
-                      <Label htmlFor="checkin-notes">Clock In Notes</Label>
-                      <Textarea id="checkin-notes" value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
+                      <Label htmlFor="break">Total Break (minutes)</Label>
+                      <Input id="break" type="number" value={editableAttendance.totalBreakDuration} onChange={(e) => setEditableAttendance(prev => ({...prev, totalBreakDuration: e.target.value}))}/>
                   </div>
                   <div className="grid gap-2">
-                      <Label htmlFor="checkout-notes">Clock Out Notes</Label>
-                      <Textarea id="checkout-notes" value={editableAttendance.checkOutNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutNotes: e.target.value}))} />
+                      <Label htmlFor="checkin-notes">Manually Adjustment Notes</Label>
+                      <Textarea id="checkin-notes" placeholder="Reason for manual correction..." value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
                   </div>
               </div>
               <DialogFooter className="sm:justify-between">
@@ -950,10 +874,11 @@ const AnalyticsPage = () => {
                           <DialogHeader>
                               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                  This will delete the attendance record for {selectedUser?.firstName || 'this employee'} on {date ? format(date, 'PPP') : 'this day'}. This action cannot be undone.
+                                  This will delete the attendance record for {editingEmployeeName} on {editingDate ? format(editingDate, 'PPP') : 'this day'}. This action cannot be undone.
                               </AlertDialogDescription>
                           </DialogHeader>
                           <DialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction onClick={handleResetDay}>Confirm Reset</AlertDialogAction>
                           </DialogFooter>
                       </DialogContent>
