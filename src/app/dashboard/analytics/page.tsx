@@ -9,8 +9,8 @@ import { collection, doc, query, where, orderBy, Timestamp, getDocs, collectionG
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, differenceInDays, min, max, isSameDay } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun } from 'lucide-react';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isSameDay } from 'date-fns';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun, Palmtree } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,20 +47,12 @@ type AttendanceRecord = {
   checkInTime?: Timestamp;
   checkOutTime?: Timestamp;
   totalBreakDuration?: number;
-  status: 'present' | 'late' | 'absent' | 'on_leave';
+  status: 'present' | 'late' | 'absent' | 'on_leave' | 'holiday';
   checkInNotes?: string;
   checkOutNotes?: string;
   locationCheckInLatitude?: number;
   locationCheckInLongitude?: number;
   isOutOfRange?: boolean;
-};
-
-type LeaveRequest = {
-  id: string;
-  employeeId: string;
-  startDate: Timestamp;
-  endDate: Timestamp;
-  status: string;
 };
 
 type EditableAttendance = {
@@ -196,96 +188,10 @@ const AnalyticsPage = () => {
     fetchData();
   }, [firestore, selectedUserId, start, end, filterMode, users, areUsersLoading, toast]);
 
-  const [leaveData, setLeaveData] = React.useState<LeaveRequest[] | null>(null);
-  React.useEffect(() => {
-    const fetchLeaves = async () => {
-        if (!firestore) return;
-        let q = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
-        if (selectedUserId !== 'all') {
-            q = query(q, where('employeeId', '==', selectedUserId));
-        }
-        const snap = await getDocs(q);
-        setLeaveData(snap.docs.map(d => ({ ...d.data(), id: d.id } as LeaveRequest)));
-    };
-    fetchLeaves();
-  }, [firestore, selectedUserId]);
-
+  // Logic to fill gaps: missed dates = On Leave, Sundays = Holiday
   const mergedData = React.useMemo(() => {
-    if (!attendanceData) return null;
+    if (!attendanceData || !users) return null;
     
-    const data = [...attendanceData];
-    const attendanceDatesMap = new Map<string, Set<string>>(); // employeeId -> Set of dates
-    
-    attendanceData.forEach(a => {
-        if (!attendanceDatesMap.has(a.employeeId)) {
-            attendanceDatesMap.set(a.employeeId, new Set());
-        }
-        attendanceDatesMap.get(a.employeeId)?.add(a.id);
-    });
-
-    if (leaveData) {
-        // Determine the range to check for leaves
-        let rangeStart = start;
-        let rangeEnd = end;
-
-        if (filterMode === 'all' && attendanceData.length > 0) {
-            // If viewing all, use the actual data range
-            const timestamps = attendanceData.map(a => a.checkInTime?.toDate()).filter(Boolean) as Date[];
-            if (timestamps.length > 0) {
-                rangeStart = startOfDay(min(timestamps));
-                rangeEnd = endOfDay(max(timestamps));
-            }
-        }
-
-        if (rangeStart && rangeEnd) {
-            const daysInPeriod = eachDayOfInterval({start: rangeStart, end: rangeEnd});
-            
-            leaveData.forEach(leave => {
-                const lStart = leave.startDate.toDate();
-                const lEnd = leave.endDate.toDate();
-                const interval = { start: startOfDay(lStart), end: endOfDay(lEnd) };
-                
-                daysInPeriod.forEach(day => {
-                    const dayStr = format(day, 'yyyy-MM-dd');
-                    if (isWithinInterval(day, interval)) {
-                        const employeeAttendance = attendanceDatesMap.get(leave.employeeId);
-                        if (!employeeAttendance || !employeeAttendance.has(dayStr)) {
-                            if (selectedUserId === 'all' || leave.employeeId === selectedUserId) {
-                                const user = users?.find(u => u.id === leave.employeeId);
-                                data.push({
-                                    id: dayStr,
-                                    employeeId: leave.employeeId,
-                                    employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
-                                    status: 'on_leave',
-                                    checkInTime: Timestamp.fromDate(day),
-                                } as any);
-                            }
-                        }
-                    }
-                });
-            });
-        }
-    }
-    
-    return data.sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0));
-  }, [attendanceData, leaveData, start, end, filterMode, selectedUserId, users]);
-
-  const stats = React.useMemo(() => {
-    if (!attendanceData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0, totalSundays: 0 };
-    
-    let totalWorkSeconds = 0, totalBreakSeconds = 0, lateDays = 0;
-    attendanceData.forEach(rec => {
-      if (rec.checkInTime && rec.checkOutTime) {
-        const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate());
-        totalWorkSeconds += workSeconds - (rec.totalBreakDuration || 0);
-        totalBreakSeconds += rec.totalBreakDuration || 0;
-      }
-      if (rec.status === 'late') lateDays++;
-    });
-
-    let onLeaveDays = 0;
-    let totalSundays = 0;
-
     let rangeStart = start;
     let rangeEnd = end;
 
@@ -297,39 +203,75 @@ const AnalyticsPage = () => {
         }
     }
 
-    if (rangeStart && rangeEnd) {
-        const daysInPeriod = eachDayOfInterval({start: rangeStart, end: rangeEnd});
-        totalSundays = daysInPeriod.filter(day => day.getDay() === 0).length;
+    if (!rangeStart || !rangeEnd) return attendanceData;
 
-        if (leaveData) {
-            leaveData.forEach(leave => {
-                const lStart = startOfDay(leave.startDate.toDate());
-                const lEnd = endOfDay(leave.endDate.toDate());
-                const interval = { start: lStart, end: lEnd };
-                
-                daysInPeriod.forEach(day => {
-                    if (isWithinInterval(day, interval)) {
-                        // Ensure we don't double count if user checked in on a leave day
-                        const hasAttendance = attendanceData.some(a => a.employeeId === leave.employeeId && isSameDay(a.checkInTime?.toDate()!, day));
-                        if (!hasAttendance) {
-                            if (selectedUserId === 'all' || leave.employeeId === selectedUserId) {
-                                onLeaveDays++;
-                            }
-                        }
-                    }
-                });
-            });
+    const daysInPeriod = eachDayOfInterval({start: rangeStart, end: rangeEnd});
+    const result: AttendanceRecord[] = [];
+    
+    // Group attendance by employee and date
+    const attendanceMap = new Map<string, Map<string, AttendanceRecord>>();
+    attendanceData.forEach(a => {
+        if (!attendanceMap.has(a.employeeId)) {
+            attendanceMap.set(a.employeeId, new Map());
         }
-    }
+        const dayStr = format(a.checkInTime?.toDate() || new Date(a.id), 'yyyy-MM-dd');
+        attendanceMap.get(a.employeeId)?.set(dayStr, a);
+    });
+
+    const targetUsers = selectedUserId === 'all' ? users : users.filter(u => u.id === selectedUserId);
+
+    targetUsers.forEach(u => {
+        const userAttendance = attendanceMap.get(u.id);
+        daysInPeriod.forEach(day => {
+            const dayStr = format(day, 'yyyy-MM-dd');
+            const existing = userAttendance?.get(dayStr);
+            
+            if (existing) {
+                result.push(existing);
+            } else {
+                const isSunday = day.getDay() === 0;
+                result.push({
+                    id: dayStr,
+                    employeeId: u.id,
+                    employeeName: `${u.firstName} ${u.lastName}`,
+                    status: isSunday ? 'holiday' : 'on_leave',
+                    checkInTime: Timestamp.fromDate(day),
+                } as any);
+            }
+        });
+    });
+    
+    return result.sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0));
+  }, [attendanceData, start, end, filterMode, selectedUserId, users]);
+
+  const stats = React.useMemo(() => {
+    if (!mergedData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0, totalHolidays: 0 };
+    
+    let totalWorkSeconds = 0, totalBreakSeconds = 0, lateDays = 0, onLeaveDays = 0, holidayDays = 0;
+    
+    mergedData.forEach(rec => {
+      if (rec.status === 'present' || rec.status === 'late') {
+          if (rec.checkInTime && rec.checkOutTime) {
+            const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate());
+            totalWorkSeconds += workSeconds - (rec.totalBreakDuration || 0);
+            totalBreakSeconds += rec.totalBreakDuration || 0;
+          }
+          if (rec.status === 'late') lateDays++;
+      } else if (rec.status === 'on_leave') {
+          onLeaveDays++;
+      } else if (rec.status === 'holiday') {
+          holidayDays++;
+      }
+    });
 
     return {
       totalHours: (totalWorkSeconds / 3600).toFixed(1),
       totalBreakHours: (totalBreakSeconds / 3600).toFixed(1),
       totalLeaves: onLeaveDays,
       lateDays,
-      totalSundays,
+      totalHolidays: holidayDays,
     };
-  }, [attendanceData, leaveData, start, end, filterMode, selectedUserId]);
+  }, [mergedData]);
 
   const formatDuration = (seconds: number) => {
     if (seconds < 0) seconds = 0;
@@ -365,8 +307,9 @@ const AnalyticsPage = () => {
                 workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
             }
 
-            const timeInOut = rec.checkInTime && rec.status !== 'on_leave' ? `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"` : "N/A";
-            const durationWorkBreak = rec.status === 'on_leave' ? "N/A" : `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
+            const isPresent = rec.status === 'present' || rec.status === 'late';
+            const timeInOut = isPresent && rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"` : "N/A";
+            const durationWorkBreak = !isPresent ? "N/A" : `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
             const location = rec.locationCheckInLatitude && rec.locationCheckInLongitude ? `"${rec.locationCheckInLatitude}, ${rec.locationCheckInLongitude}"` : "N/A";
             const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status;
             const notes = `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"`;
@@ -445,18 +388,19 @@ const AnalyticsPage = () => {
     doc.text(`Total Work Hours: ${stats.totalHours} hrs`, 14, 68);
     doc.text(`Total Break Time: ${stats.totalBreakHours} hrs`, 70, 68);
     doc.text(`Late Days: ${stats.lateDays}`, 130, 68);
-    doc.text(`Leaves: ${stats.totalLeaves}`, 170, 68);
-    doc.text(`Sundays: ${stats.totalSundays}`, 14, 73);
+    doc.text(`Missed (Leave): ${stats.totalLeaves}`, 170, 68);
+    doc.text(`Holidays (Sundays): ${stats.totalHolidays}`, 14, 73);
 
     const headers = [['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Notes']];
     const body = mergedData.map(rec => {
         let workDuration = 0;
-        if (rec.checkInTime && rec.checkOutTime) {
+        const isPresent = rec.status === 'present' || rec.status === 'late';
+        if (isPresent && rec.checkInTime && rec.checkOutTime) {
             workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
         }
         
-        const timeIn = (rec.checkInTime && rec.status !== 'on_leave') ? format(rec.checkInTime.toDate(), 'p') : '--:--';
-        const timeOut = (rec.checkOutTime && rec.status !== 'on_leave') ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+        const timeIn = (rec.checkInTime && isPresent) ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+        const timeOut = (rec.checkOutTime && isPresent) ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
         const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status;
         const notes = ((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim();
 
@@ -464,7 +408,7 @@ const AnalyticsPage = () => {
             rec.employeeName || 'N/A',
             rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A',
             `${timeIn} / ${timeOut}`,
-            rec.status === 'on_leave' ? 'N/A' : `${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}`,
+            !isPresent ? 'N/A' : `${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}`,
             statusStr,
             notes
         ];
@@ -641,24 +585,23 @@ const AnalyticsPage = () => {
                         </div>
                         <DialogFooter className="sm:justify-between">
                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
+                                <DialogTrigger asChild>
                                     <Button variant="destructive">
                                         <RotateCcw className="mr-2 h-4 w-4"/>
                                         Reset Day
                                     </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
                                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
+                                        <DialogDescription>
                                             This will delete the attendance record for {selectedUser?.firstName} on {date ? format(date, 'PPP') : 'this day'}. This action cannot be undone.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
                                         <AlertDialogAction onClick={handleResetDay}>Confirm Reset</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
+                                    </DialogFooter>
+                                </DialogContent>
                             </AlertDialog>
                             <div className="flex gap-2">
                               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
@@ -755,22 +698,22 @@ const AnalyticsPage = () => {
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Sundays</CardTitle>
+                    <CardTitle className="text-sm font-medium">Holidays</CardTitle>
                     <Sun className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalSundays}</div>
-                    <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
+                    <div className="text-2xl font-bold">{stats.totalHolidays}</div>
+                    <p className="text-xs text-muted-foreground">Sundays in period</p>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Leaves</CardTitle>
+                    <CardTitle className="text-sm font-medium">Leaves</CardTitle>
                     <CalendarOff className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalLeaves}</div>
-                    <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
+                    <p className="text-xs text-muted-foreground">Missed working days</p>
                 </CardContent>
             </Card>
             <Card>
@@ -828,7 +771,8 @@ const AnalyticsPage = () => {
                                     <TableBody>
                                         {mergedData?.map((rec) => {
                                             let workDuration = 0;
-                                            if (rec.checkInTime && rec.checkOutTime) {
+                                            const isPresent = rec.status === 'present' || rec.status === 'late';
+                                            if (isPresent && rec.checkInTime && rec.checkOutTime) {
                                                 workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
                                             }
                                             const notes = (rec.checkInNotes ? `In: ${rec.checkInNotes}` : '') + 
@@ -839,8 +783,8 @@ const AnalyticsPage = () => {
                                                 {selectedUserId === 'all' && <TableCell className="font-medium whitespace-nowrap">{rec.employeeName}</TableCell>}
                                                 <TableCell className="font-medium whitespace-nowrap">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {rec.status === 'on_leave' ? (
-                                                        <span className="text-muted-foreground italic">On Leave</span>
+                                                    {!isPresent ? (
+                                                        <span className="text-muted-foreground italic">{rec.status === 'holiday' ? 'Holiday' : 'On Leave'}</span>
                                                     ) : (
                                                         <>
                                                             <div>{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</div>
@@ -849,7 +793,7 @@ const AnalyticsPage = () => {
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {rec.status === 'on_leave' ? (
+                                                    {!isPresent ? (
                                                         <span className="text-muted-foreground">-</span>
                                                     ) : (
                                                         <>
@@ -867,8 +811,11 @@ const AnalyticsPage = () => {
                                                                 rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
                                                                 rec.status === 'absent' && 'text-red-600 border-red-600/50',
                                                                 rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
+                                                                rec.status === 'holiday' && 'text-purple-600 border-purple-600/50',
                                                             )}
-                                                        >{rec.status}</Badge>
+                                                        >
+                                                            {rec.status === 'holiday' ? 'Holiday' : rec.status.replace('_', ' ')}
+                                                        </Badge>
                                                         {rec.isOutOfRange && (
                                                             <Badge variant="destructive" className="text-[10px] py-0 h-4 px-1.5 font-normal">Out of Range</Badge>
                                                         )}
