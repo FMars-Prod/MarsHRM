@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -156,7 +156,6 @@ const AnalyticsPage = () => {
         const endTs = end ? Timestamp.fromDate(end) : null;
 
         if (selectedUserId === 'all') {
-          // Global view uses collectionGroup
           if (filterMode === 'all') {
             q = query(collectionGroup(firestore, 'attendances'), orderBy('checkInTime', 'desc'));
           } else if (startTs && endTs) {
@@ -167,7 +166,6 @@ const AnalyticsPage = () => {
             return;
           }
         } else {
-          // Individual view
           const colRef = collection(firestore, `users/${selectedUserId}/attendances`);
           if (filterMode === 'all') {
             q = query(colRef, orderBy('checkInTime', 'desc'));
@@ -197,7 +195,7 @@ const AnalyticsPage = () => {
             toast({
                 variant: 'destructive',
                 title: 'Index Required',
-                description: 'Organization-wide sorting requires a specific Firestore index. Please click the link in the developer console to enable it.'
+                description: 'Organization-wide sorting requires a specific Firestore index.'
             });
         } else {
             toast({ variant: 'destructive', title: 'Data load failed' });
@@ -224,8 +222,52 @@ const AnalyticsPage = () => {
     fetchLeaves();
   }, [firestore, selectedUserId]);
 
+  const mergedData = React.useMemo(() => {
+    if (!attendanceData) return null;
+    
+    const data = [...attendanceData];
+    const attendanceDatesMap = new Map<string, Set<string>>(); // employeeId -> Set of dates
+    
+    attendanceData.forEach(a => {
+        if (!attendanceDatesMap.has(a.employeeId)) {
+            attendanceDatesMap.set(a.employeeId, new Set());
+        }
+        attendanceDatesMap.get(a.employeeId)?.add(a.id);
+    });
+
+    if (leaveData && start && end) {
+        leaveData.forEach(leave => {
+            const lStart = leave.startDate.toDate();
+            const lEnd = leave.endDate.toDate();
+            const interval = { start: lStart, end: lEnd };
+            
+            const daysInPeriod = eachDayOfInterval({start, end});
+            daysInPeriod.forEach(day => {
+                const dayStr = format(day, 'yyyy-MM-dd');
+                if (isWithinInterval(day, interval)) {
+                    const employeeAttendance = attendanceDatesMap.get(leave.employeeId);
+                    if (!employeeAttendance || !employeeAttendance.has(dayStr)) {
+                        if (selectedUserId === 'all' || leave.employeeId === selectedUserId) {
+                            const user = users?.find(u => u.id === leave.employeeId);
+                            data.push({
+                                id: dayStr,
+                                employeeId: leave.employeeId,
+                                employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+                                status: 'on_leave',
+                                checkInTime: Timestamp.fromDate(day),
+                            } as any);
+                        }
+                    }
+                }
+            });
+        });
+    }
+    
+    return data.sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0));
+  }, [attendanceData, leaveData, start, end, selectedUserId, users]);
+
   const stats = React.useMemo(() => {
-    if (!attendanceData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0 };
+    if (!attendanceData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0, totalSundays: 0 };
     let totalWorkSeconds = 0, totalBreakSeconds = 0, lateDays = 0;
     attendanceData.forEach(rec => {
       if (rec.checkInTime && rec.checkOutTime) {
@@ -256,11 +298,18 @@ const AnalyticsPage = () => {
         });
     }
 
+    let totalSundays = 0;
+    if (start && end) {
+        const daysInPeriod = eachDayOfInterval({start, end});
+        totalSundays = daysInPeriod.filter(day => day.getDay() === 0).length;
+    }
+
     return {
       totalHours: (totalWorkSeconds / 3600).toFixed(1),
       totalBreakHours: (totalBreakSeconds / 3600).toFixed(1),
       totalLeaves: onLeaveDays,
       lateDays,
+      totalSundays,
     };
   }, [attendanceData, leaveData, start, end, filterMode]);
   
@@ -316,21 +365,21 @@ const AnalyticsPage = () => {
   }
 
   const handleExport = () => {
-    if (!attendanceData || attendanceData.length === 0) {
+    if (!mergedData || mergedData.length === 0) {
         toast({ variant: 'destructive', title: 'No data to export' });
         return;
     }
     const headers = ['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Location', 'Notes'];
     const csvRows = [
         headers.join(','),
-        ...attendanceData.map(rec => {
+        ...mergedData.map(rec => {
             let workDuration = 0;
             if (rec.checkInTime && rec.checkOutTime) {
                 workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
             }
 
-            const timeInOut = rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"` : "N/A";
-            const durationWorkBreak = `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
+            const timeInOut = rec.checkInTime && rec.status !== 'on_leave' ? `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"` : "N/A";
+            const durationWorkBreak = rec.status === 'on_leave' ? "N/A" : `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
             const location = rec.locationCheckInLatitude && rec.locationCheckInLongitude ? `"${rec.locationCheckInLatitude}, ${rec.locationCheckInLongitude}"` : "N/A";
             const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status;
             const notes = `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"`;
@@ -368,14 +417,14 @@ const AnalyticsPage = () => {
     }
 
 
-    link.setAttribute('download', `FortuMars_FullAttendanceReport_${datePart}.csv`);
+    link.setAttribute('download', `AttendanceReport_${datePart}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
 
   const handleExportPdf = () => {
-    if (!attendanceData || attendanceData.length === 0) {
+    if (!mergedData || mergedData.length === 0) {
         toast({ variant: 'destructive', title: 'No data to export' });
         return;
     }
@@ -402,7 +451,6 @@ const AnalyticsPage = () => {
     doc.text(`Employee: ${employeeName}`, 14, 48);
     doc.text(`Period: ${period}`, 14, 53);
 
-    // Add Stats Summary
     doc.setFontSize(11);
     doc.setTextColor(0);
     doc.text("Summary Stats", 14, 62);
@@ -411,16 +459,17 @@ const AnalyticsPage = () => {
     doc.text(`Total Break Time: ${stats.totalBreakHours} hrs`, 70, 68);
     doc.text(`Late Days: ${stats.lateDays}`, 130, 68);
     doc.text(`Leaves: ${stats.totalLeaves}`, 170, 68);
+    doc.text(`Sundays: ${stats.totalSundays}`, 14, 73);
 
     const headers = [['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Notes']];
-    const body = attendanceData.map(rec => {
+    const body = mergedData.map(rec => {
         let workDuration = 0;
         if (rec.checkInTime && rec.checkOutTime) {
             workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
         }
         
-        const timeIn = rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--';
-        const timeOut = rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+        const timeIn = (rec.checkInTime && rec.status !== 'on_leave') ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+        const timeOut = (rec.checkOutTime && rec.status !== 'on_leave') ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
         const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status;
         const notes = ((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim();
 
@@ -428,14 +477,14 @@ const AnalyticsPage = () => {
             rec.employeeName || 'N/A',
             rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A',
             `${timeIn} / ${timeOut}`,
-            `${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}`,
+            rec.status === 'on_leave' ? 'N/A' : `${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}`,
             statusStr,
             notes
         ];
     });
 
     autoTable(doc, {
-        startY: 75,
+        startY: 80,
         head: headers,
         body: body,
         theme: 'striped',
@@ -696,10 +745,10 @@ const AnalyticsPage = () => {
           </Card>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Work Hours</CardTitle>
+                    <CardTitle className="text-sm font-medium">Work Hours</CardTitle>
                     <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -709,12 +758,22 @@ const AnalyticsPage = () => {
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Break Time</CardTitle>
+                    <CardTitle className="text-sm font-medium">Break Time</CardTitle>
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalBreakHours} hrs</div>
                      <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Sundays</CardTitle>
+                    <Sun className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{stats.totalSundays}</div>
+                    <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
                 </CardContent>
             </Card>
             <Card>
@@ -729,7 +788,7 @@ const AnalyticsPage = () => {
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Late Days</CardTitle>
+                    <CardTitle className="text-sm font-medium">Late Days</CardTitle>
                     <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -740,34 +799,11 @@ const AnalyticsPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Last 7 Days Work Hours</CardTitle>
-                        <CardDescription>Work vs. Break hours for the past week.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pl-2">
-                       <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                            <BarChart accessibilityLayer data={chartData}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => value.slice(0, 3)} />
-                                <YAxis unit="h" />
-                                 <ChartTooltip 
-                                    cursor={false}
-                                    content={<ChartTooltipContent formatter={(value) => `${(value as number).toFixed(1)}h`} />}
-                                />
-                                <Bar dataKey="work" fill="var(--color-work)" radius={[4, 4, 0, 0]} name="Work" />
-                                <Bar dataKey="break" fill="var(--color-break)" radius={[4, 4, 0, 0]} name="Break" />
-                            </BarChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-            </div>
             <div className="lg:col-span-3">
                 <Card>
                     <CardHeader className="flex flex-row items-start justify-between space-y-0">
                         <div>
-                            <CardTitle>Attendance Log</CardTitle>
+                            <CardTitle>Attendance & Leave Log</CardTitle>
                             <CardDescription>{filterMode === 'all' ? "Full history." : `Activity for ${getFilterPeriodText()}.`}</CardDescription>
                         </div>
                         <DropdownMenu>
@@ -803,7 +839,7 @@ const AnalyticsPage = () => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {attendanceData?.map((rec) => {
+                                        {mergedData?.map((rec) => {
                                             let workDuration = 0;
                                             if (rec.checkInTime && rec.checkOutTime) {
                                                 workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
@@ -816,12 +852,24 @@ const AnalyticsPage = () => {
                                                 {selectedUserId === 'all' && <TableCell className="font-medium whitespace-nowrap">{rec.employeeName}</TableCell>}
                                                 <TableCell className="font-medium whitespace-nowrap">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    <div>{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</div>
-                                                    <div>{rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</div>
+                                                    {rec.status === 'on_leave' ? (
+                                                        <span className="text-muted-foreground italic">On Leave</span>
+                                                    ) : (
+                                                        <>
+                                                            <div>{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</div>
+                                                            <div>{rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</div>
+                                                        </>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div>{formatDuration(workDuration)}</div>
-                                                    <div className="text-xs text-muted-foreground">{formatDuration(rec.totalBreakDuration || 0)}</div>
+                                                    {rec.status === 'on_leave' ? (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    ) : (
+                                                        <>
+                                                            <div>{formatDuration(workDuration)}</div>
+                                                            <div className="text-xs text-muted-foreground">{formatDuration(rec.totalBreakDuration || 0)}</div>
+                                                        </>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col gap-1 items-start">
@@ -875,9 +923,9 @@ const AnalyticsPage = () => {
                                 </Table>
                             </div>
                         </TooltipProvider>
-                         {(!attendanceData || attendanceData.length === 0) && (
+                         {(!mergedData || mergedData.length === 0) && (
                             <div className="text-center py-10 text-muted-foreground">
-                                No attendance records found for this period.
+                                No records found for this period.
                             </div>
                          )}
                     </CardContent>
