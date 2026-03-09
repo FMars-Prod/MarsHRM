@@ -15,7 +15,16 @@ Ensure your `src/firebase/config.ts` is up to date with your project's credentia
 To enable automated emails, you must set the following environment variable in your hosting provider:
 - `RESEND_API_KEY`: Your API key from Resend.com.
 
-### 3. Service Account Details
+### 3. Firestore Indexes (Required)
+The application uses `collectionGroup` queries for organization-wide monitoring. You **must** manually enable the Collection Group scope for the `checkInTime` field:
+1. Go to **Firestore Database** > **Indexes** > **Single Field**.
+2. Click **Add exemption**.
+3. Collection ID: `attendances`
+4. Field path: `checkInTime`
+5. Enable **Collection Group** scope.
+6. Click **Save**.
+
+### 4. Service Account Details
 **Service account name**: MarsHRM Server Tasks
 **Service account ID**: `marshrm-server`
 **Email**: `marshrm-server@studio-6661404512-7e22c.iam.gserviceaccount.com`
