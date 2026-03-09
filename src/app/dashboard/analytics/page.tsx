@@ -3,15 +3,13 @@
 
 import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
-import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { collection, doc, query, where, orderBy, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, differenceInDays, min, max, isSameDay } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -32,6 +30,7 @@ import { type DateRange } from "react-day-picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 
 type User = {
   id: string;
@@ -73,17 +72,6 @@ type EditableAttendance = {
     checkOutNotes: string;
 }
 
-const chartConfig = {
-  work: {
-    label: "Work",
-    color: "hsl(var(--chart-1))",
-  },
-  break: {
-    label: "Break",
-    color: "hsl(var(--chart-2))",
-  },
-} satisfies React.ComponentProps<typeof ChartContainer>['config'];
-
 type FilterMode = "day" | "month" | "range" | "all";
 
 const AnalyticsPage = () => {
@@ -109,8 +97,8 @@ const AnalyticsPage = () => {
 
   const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
   const { data: currentUserData } = useDoc(currentUserDocRef);
-  const currentUserRole = (currentUserData as any)?.role;
-  const isAdmin = currentUserRole === 'CEO/Admin' || currentUserRole === 'HR Manager' || currentUserRole === 'Team Lead';
+  const userRole = (currentUserData as any)?.role;
+  const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager' || userRole === 'Team Lead';
   
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
@@ -235,39 +223,56 @@ const AnalyticsPage = () => {
         attendanceDatesMap.get(a.employeeId)?.add(a.id);
     });
 
-    if (leaveData && start && end) {
-        leaveData.forEach(leave => {
-            const lStart = leave.startDate.toDate();
-            const lEnd = leave.endDate.toDate();
-            const interval = { start: lStart, end: lEnd };
+    if (leaveData) {
+        // Determine the range to check for leaves
+        let rangeStart = start;
+        let rangeEnd = end;
+
+        if (filterMode === 'all' && attendanceData.length > 0) {
+            // If viewing all, use the actual data range
+            const timestamps = attendanceData.map(a => a.checkInTime?.toDate()).filter(Boolean) as Date[];
+            if (timestamps.length > 0) {
+                rangeStart = startOfDay(min(timestamps));
+                rangeEnd = endOfDay(max(timestamps));
+            }
+        }
+
+        if (rangeStart && rangeEnd) {
+            const daysInPeriod = eachDayOfInterval({start: rangeStart, end: rangeEnd});
             
-            const daysInPeriod = eachDayOfInterval({start, end});
-            daysInPeriod.forEach(day => {
-                const dayStr = format(day, 'yyyy-MM-dd');
-                if (isWithinInterval(day, interval)) {
-                    const employeeAttendance = attendanceDatesMap.get(leave.employeeId);
-                    if (!employeeAttendance || !employeeAttendance.has(dayStr)) {
-                        if (selectedUserId === 'all' || leave.employeeId === selectedUserId) {
-                            const user = users?.find(u => u.id === leave.employeeId);
-                            data.push({
-                                id: dayStr,
-                                employeeId: leave.employeeId,
-                                employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
-                                status: 'on_leave',
-                                checkInTime: Timestamp.fromDate(day),
-                            } as any);
+            leaveData.forEach(leave => {
+                const lStart = leave.startDate.toDate();
+                const lEnd = leave.endDate.toDate();
+                const interval = { start: startOfDay(lStart), end: endOfDay(lEnd) };
+                
+                daysInPeriod.forEach(day => {
+                    const dayStr = format(day, 'yyyy-MM-dd');
+                    if (isWithinInterval(day, interval)) {
+                        const employeeAttendance = attendanceDatesMap.get(leave.employeeId);
+                        if (!employeeAttendance || !employeeAttendance.has(dayStr)) {
+                            if (selectedUserId === 'all' || leave.employeeId === selectedUserId) {
+                                const user = users?.find(u => u.id === leave.employeeId);
+                                data.push({
+                                    id: dayStr,
+                                    employeeId: leave.employeeId,
+                                    employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+                                    status: 'on_leave',
+                                    checkInTime: Timestamp.fromDate(day),
+                                } as any);
+                            }
                         }
                     }
-                }
+                });
             });
-        });
+        }
     }
     
     return data.sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0));
-  }, [attendanceData, leaveData, start, end, selectedUserId, users]);
+  }, [attendanceData, leaveData, start, end, filterMode, selectedUserId, users]);
 
   const stats = React.useMemo(() => {
     if (!attendanceData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0, totalSundays: 0 };
+    
     let totalWorkSeconds = 0, totalBreakSeconds = 0, lateDays = 0;
     attendanceData.forEach(rec => {
       if (rec.checkInTime && rec.checkOutTime) {
@@ -279,29 +284,42 @@ const AnalyticsPage = () => {
     });
 
     let onLeaveDays = 0;
-    if (leaveData && (start || end || filterMode === 'all')) {
-        leaveData.forEach(leave => {
-            const leaveStart = leave.startDate.toDate();
-            const leaveEnd = leave.endDate.toDate();
-            
-            if (filterMode === 'all') {
-                onLeaveDays += differenceInDays(leaveEnd, leaveStart) + 1;
-            } else if(start && end) {
-                const interval = { start: leaveStart, end: leaveEnd };
-                const daysInPeriod = eachDayOfInterval({start, end});
-                daysInPeriod.forEach(day => {
-                    if (isWithinInterval(day, interval)) {
-                        onLeaveDays++;
-                    }
-                });
-            }
-        });
+    let totalSundays = 0;
+
+    let rangeStart = start;
+    let rangeEnd = end;
+
+    if (filterMode === 'all' && attendanceData.length > 0) {
+        const timestamps = attendanceData.map(a => a.checkInTime?.toDate()).filter(Boolean) as Date[];
+        if (timestamps.length > 0) {
+            rangeStart = startOfDay(min(timestamps));
+            rangeEnd = endOfDay(max(timestamps));
+        }
     }
 
-    let totalSundays = 0;
-    if (start && end) {
-        const daysInPeriod = eachDayOfInterval({start, end});
+    if (rangeStart && rangeEnd) {
+        const daysInPeriod = eachDayOfInterval({start: rangeStart, end: rangeEnd});
         totalSundays = daysInPeriod.filter(day => day.getDay() === 0).length;
+
+        if (leaveData) {
+            leaveData.forEach(leave => {
+                const lStart = startOfDay(leave.startDate.toDate());
+                const lEnd = endOfDay(leave.endDate.toDate());
+                const interval = { start: lStart, end: lEnd };
+                
+                daysInPeriod.forEach(day => {
+                    if (isWithinInterval(day, interval)) {
+                        // Ensure we don't double count if user checked in on a leave day
+                        const hasAttendance = attendanceData.some(a => a.employeeId === leave.employeeId && isSameDay(a.checkInTime?.toDate()!, day));
+                        if (!hasAttendance) {
+                            if (selectedUserId === 'all' || leave.employeeId === selectedUserId) {
+                                onLeaveDays++;
+                            }
+                        }
+                    }
+                });
+            });
+        }
     }
 
     return {
@@ -311,38 +329,7 @@ const AnalyticsPage = () => {
       lateDays,
       totalSundays,
     };
-  }, [attendanceData, leaveData, start, end, filterMode]);
-  
-  const chartData = React.useMemo(() => {
-      if (!attendanceData) return [];
-      
-      const dataMap = new Map<string, { work: number, break: number }>();
-      const last7Days = eachDayOfInterval({ start: startOfDay(subDays(new Date(), 6)), end: endOfDay(new Date()) });
-      
-      last7Days.forEach(day => dataMap.set(format(day, 'yyyy-MM-dd'), { work: 0, break: 0 }));
-
-      attendanceData.forEach(rec => {
-          if (rec.checkInTime) {
-              const day = format(rec.checkInTime.toDate(), 'yyyy-MM-dd');
-              if (dataMap.has(day)) {
-                  let workHours = 0, breakHours = 0;
-                  if (rec.checkOutTime) {
-                      workHours = (differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0)) / 3600;
-                      breakHours = (rec.totalBreakDuration || 0) / 3600;
-                  }
-                  const existing = dataMap.get(day)!;
-                  dataMap.set(day, { work: existing.work + workHours, break: existing.break + breakHours });
-              }
-          }
-      });
-      
-      return Array.from(dataMap.entries()).map(([date, values]) => ({
-          date: format(new Date(date), 'EEE, MMM d'),
-          work: parseFloat(values.work.toFixed(2)),
-          break: parseFloat(values.break.toFixed(2)),
-      }));
-  }, [attendanceData]);
-
+  }, [attendanceData, leaveData, start, end, filterMode, selectedUserId]);
 
   const formatDuration = (seconds: number) => {
     if (seconds < 0) seconds = 0;
