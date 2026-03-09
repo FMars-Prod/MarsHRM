@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isSameDay } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun, Palmtree } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun, Palmtree, MoreHorizontal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -433,6 +433,22 @@ const AnalyticsPage = () => {
     doc.save(`Attendance_Report_${employeeName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
+  const handleEditClick = (rec: AttendanceRecord) => {
+      const recDate = rec.checkInTime ? rec.checkInTime.toDate() : new Date(rec.id);
+      setDate(recDate);
+      setSelectedUserId(rec.employeeId);
+      
+      setEditableAttendance({
+          status: (['holiday', 'on_leave'].includes(rec.status) ? 'absent' : rec.status) as any,
+          checkInTime: rec.checkInTime && rec.status !== 'holiday' && rec.status !== 'on_leave' ? format(rec.checkInTime.toDate(), 'HH:mm') : '',
+          checkOutTime: rec.checkOutTime && rec.status !== 'holiday' && rec.status !== 'on_leave' ? format(rec.checkOutTime.toDate(), 'HH:mm') : '',
+          totalBreakDuration: ((rec.totalBreakDuration || 0) / 60).toString(),
+          checkInNotes: rec.checkInNotes || '',
+          checkOutNotes: rec.checkOutNotes || '',
+      });
+      setIsEditDialogOpen(true);
+  }
+
   const handleAttendanceUpdate = () => {
       if (selectedUserId === 'all' || !date) return;
 
@@ -463,7 +479,7 @@ const AnalyticsPage = () => {
     const attendanceId = format(date, 'yyyy-MM-dd');
     const attendanceRef = doc(firestore, `users/${selectedUserId}/attendances/${attendanceId}`);
     deleteDocumentNonBlocking(attendanceRef);
-    toast({ title: "Day Reset", description: `Attendance for ${selectedUser?.firstName} on ${format(date, "PPP")} has been reset.` });
+    toast({ title: "Day Reset", description: `Attendance for ${selectedUser?.firstName || 'employee'} on ${format(date, "PPP")} has been reset.` });
     setIsEditDialogOpen(false);
   }
   
@@ -585,17 +601,17 @@ const AnalyticsPage = () => {
                         </div>
                         <DialogFooter className="sm:justify-between">
                             <AlertDialog>
-                                <DialogTrigger asChild>
+                                <AlertDialogTrigger asChild>
                                     <Button variant="destructive">
                                         <RotateCcw className="mr-2 h-4 w-4"/>
                                         Reset Day
                                     </Button>
-                                </DialogTrigger>
+                                </AlertDialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
                                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                         <DialogDescription>
-                                            This will delete the attendance record for {selectedUser?.firstName} on {date ? format(date, 'PPP') : 'this day'}. This action cannot be undone.
+                                            This will delete the attendance record for {selectedUser?.firstName || 'this employee'} on {date ? format(date, 'PPP') : 'this day'}. This action cannot be undone.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <DialogFooter>
@@ -766,6 +782,7 @@ const AnalyticsPage = () => {
                                             <TableHead>Status</TableHead>
                                             <TableHead>Location</TableHead>
                                             <TableHead>Notes</TableHead>
+                                            {isAdmin && selectedUserId !== 'all' && <TableHead className="text-right">Actions</TableHead>}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -851,6 +868,13 @@ const AnalyticsPage = () => {
                                                         <span className="text-muted-foreground/50">-</span>
                                                     )}
                                                 </TableCell>
+                                                {isAdmin && selectedUserId !== 'all' && (
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(rec)}>
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                )}
                                             </TableRow>
                                         )})}
                                     </TableBody>
@@ -868,6 +892,79 @@ const AnalyticsPage = () => {
         </div>
       </div>
       )}
+
+      {/* Manual Edit Dialog - Controlled via Row Actions or Top Button */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Edit Attendance for {selectedUser?.firstName}</DialogTitle>
+                  <DialogDescription>
+                      Manually adjust the record for {date && format(date, "PPP")}.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                          <Label htmlFor="check-in">Clock In Time</Label>
+                          <Input id="check-in" type="time" value={editableAttendance.checkInTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInTime: e.target.value}))}/>
+                      </div>
+                      <div className="grid gap-2">
+                          <Label htmlFor="check-out">Clock Out Time</Label>
+                          <Input id="check-out" type="time" value={editableAttendance.checkOutTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutTime: e.target.value}))}/>
+                      </div>
+                  </div>
+                  <div className="grid gap-2">
+                      <Label htmlFor="break">Total Break (minutes)</Label>
+                      <Input id="break" type="number" value={editableAttendance.totalBreakDuration} onChange={(e) => setEditableAttendance(prev => ({...prev, totalBreakDuration: e.target.value}))}/>
+                  </div>
+                  <div className="grid gap-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select value={editableAttendance.status} onValueChange={(value) => setEditableAttendance(prev => ({...prev, status: value as any}))}>
+                          <SelectTrigger><SelectValue/></SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="present">Present</SelectItem>
+                              <SelectItem value="late">Late</SelectItem>
+                              <SelectItem value="absent">Absent</SelectItem>
+                              <SelectItem value="on_leave">On Leave</SelectItem>
+                          </SelectContent>
+                      </Select>
+                  </div>
+                  <div className="grid gap-2">
+                      <Label htmlFor="checkin-notes">Clock In Notes</Label>
+                      <Textarea id="checkin-notes" value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
+                  </div>
+                  <div className="grid gap-2">
+                      <Label htmlFor="checkout-notes">Clock Out Notes</Label>
+                      <Textarea id="checkout-notes" value={editableAttendance.checkOutNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutNotes: e.target.value}))} />
+                  </div>
+              </div>
+              <DialogFooter className="sm:justify-between">
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive">
+                              <RotateCcw className="mr-2 h-4 w-4"/>
+                              Reset Day
+                          </Button>
+                      </AlertDialogTrigger>
+                      <DialogContent>
+                          <DialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  This will delete the attendance record for {selectedUser?.firstName || 'this employee'} on {date ? format(date, 'PPP') : 'this day'}. This action cannot be undone.
+                              </AlertDialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                              <AlertDialogAction onClick={handleResetDay}>Confirm Reset</AlertDialogAction>
+                          </DialogFooter>
+                      </DialogContent>
+                  </AlertDialog>
+                  <div className="flex gap-2">
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={handleAttendanceUpdate}>Save Changes</Button>
+                  </div>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
     </>
   );
 };
