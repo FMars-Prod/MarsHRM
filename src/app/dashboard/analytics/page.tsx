@@ -423,7 +423,8 @@ const AnalyticsPage = () => {
             `${timeIn} / ${timeOut}`,
             !isPresent ? 'N/A' : `${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}`,
             statusStr,
-            notes
+            notes,
+            rec.status // Hidden column for styling in hooks
         ];
     });
 
@@ -436,6 +437,26 @@ const AnalyticsPage = () => {
         styles: { fontSize: 8 },
         columnStyles: {
             5: { cellWidth: 40 }
+        },
+        columns: [0, 1, 2, 3, 4, 5], // Only show first 6 columns
+        didParseCell: (data) => {
+            if (data.section === 'body') {
+                const rowStatus = data.row.raw[6]; // Get original status from hidden index
+                
+                // Color mapping matching UI
+                const colors: Record<string, [number, number, number]> = {
+                    present: [240, 253, 244], // Light Green
+                    late: [255, 251, 235],    // Light Yellow
+                    absent: [254, 242, 242],  // Light Red
+                    non_compliance: [255, 247, 237], // Light Orange
+                    on_leave: [239, 246, 255], // Light Blue
+                    holiday: [250, 245, 255],  // Light Purple
+                };
+
+                if (colors[rowStatus]) {
+                    data.cell.styles.fillColor = colors[rowStatus];
+                }
+            }
         },
         didDrawPage: addPageContent,
         margin: { top: 50 },
