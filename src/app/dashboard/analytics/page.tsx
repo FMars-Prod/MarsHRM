@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -929,18 +929,18 @@ const AnalyticsPage = () => {
                               Reset Day
                           </Button>
                       </AlertDialogTrigger>
-                      <DialogContent>
-                          <DialogHeader>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
                               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               <AlertDialogDescription>
                                   This will delete the attendance record for {editingEmployeeName} on {editingDate ? format(editingDate, 'PPP') : 'this day'}. This action cannot be undone.
                               </AlertDialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction onClick={handleResetDay}>Confirm Reset</AlertDialogAction>
-                          </DialogFooter>
-                      </DialogContent>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
                   </AlertDialog>
                   <div className="flex gap-2">
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
