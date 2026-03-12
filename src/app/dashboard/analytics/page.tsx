@@ -9,8 +9,8 @@ import { collection, doc, query, where, orderBy, Timestamp, getDocs, collectionG
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isSameDay } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun, Palmtree, MoreHorizontal } from 'lucide-react';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isSameDay, isBefore } from 'date-fns';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun, Palmtree, MoreHorizontal, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,7 +47,7 @@ type AttendanceRecord = {
   checkInTime?: Timestamp;
   checkOutTime?: Timestamp;
   totalBreakDuration?: number;
-  status: 'present' | 'late' | 'absent' | 'on_leave' | 'holiday';
+  status: 'present' | 'late' | 'absent' | 'on_leave' | 'holiday' | 'non_compliance';
   checkInNotes?: string;
   checkOutNotes?: string;
   locationCheckInLatitude?: number;
@@ -166,10 +166,17 @@ const AnalyticsPage = () => {
         const records = snap.docs.map(doc => {
           const data = doc.data() as AttendanceRecord;
           const user = users.find(u => u.id === data.employeeId);
+          
+          // Logic for non-compliance absence: past date, has check-in but no check-out
+          const recordDate = data.checkInTime?.toDate() || new Date(data.id);
+          const isPastDate = isBefore(startOfDay(recordDate), startOfDay(new Date()));
+          const hasCheckInNoCheckOut = data.checkInTime && !data.checkOutTime;
+          
           return {
             ...data,
             id: doc.id,
-            employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown'
+            employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+            status: (isPastDate && hasCheckInNoCheckOut) ? 'non_compliance' : data.status
           };
         });
         setAttendanceData(records);
@@ -192,7 +199,6 @@ const AnalyticsPage = () => {
     fetchData();
   }, [firestore, selectedUserId, start, end, filterMode, users, areUsersLoading, toast]);
 
-  // Logic to fill gaps: missed dates = On Leave, Sundays = Holiday
   const mergedData = React.useMemo(() => {
     if (!attendanceData || !users) return null;
     
@@ -212,7 +218,6 @@ const AnalyticsPage = () => {
     const daysInPeriod = eachDayOfInterval({start: rangeStart, end: rangeEnd});
     const result: AttendanceRecord[] = [];
     
-    // Group attendance by employee and date
     const attendanceMap = new Map<string, Map<string, AttendanceRecord>>();
     attendanceData.forEach(a => {
         if (!attendanceMap.has(a.employeeId)) {
@@ -249,9 +254,9 @@ const AnalyticsPage = () => {
   }, [attendanceData, start, end, filterMode, selectedUserId, users]);
 
   const stats = React.useMemo(() => {
-    if (!mergedData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0, totalHolidays: 0 };
+    if (!mergedData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0, totalHolidays: 0, nonCompliance: 0 };
     
-    let totalWorkSeconds = 0, totalBreakSeconds = 0, lateDays = 0, onLeaveDays = 0, holidayDays = 0;
+    let totalWorkSeconds = 0, totalBreakSeconds = 0, lateDays = 0, onLeaveDays = 0, holidayDays = 0, nonCompliance = 0;
     
     mergedData.forEach(rec => {
       if (rec.status === 'present' || rec.status === 'late') {
@@ -265,6 +270,8 @@ const AnalyticsPage = () => {
           onLeaveDays++;
       } else if (rec.status === 'holiday') {
           holidayDays++;
+      } else if (rec.status === 'non_compliance') {
+          nonCompliance++;
       }
     });
 
@@ -274,6 +281,7 @@ const AnalyticsPage = () => {
       totalLeaves: onLeaveDays,
       lateDays,
       totalHolidays: holidayDays,
+      nonCompliance
     };
   }, [mergedData]);
 
@@ -392,8 +400,9 @@ const AnalyticsPage = () => {
     doc.text(`Total Work Hours: ${stats.totalHours} hrs`, 14, 68);
     doc.text(`Total Break Time: ${stats.totalBreakHours} hrs`, 70, 68);
     doc.text(`Late Days: ${stats.lateDays}`, 130, 68);
-    doc.text(`Missed (Leave): ${stats.totalLeaves}`, 170, 68);
-    doc.text(`Holidays (Sundays): ${stats.totalHolidays}`, 14, 73);
+    doc.text(`Non-Compliance: ${stats.nonCompliance}`, 170, 68);
+    doc.text(`Missed (Leave): ${stats.totalLeaves}`, 14, 73);
+    doc.text(`Holidays (Sundays): ${stats.totalHolidays}`, 70, 73);
 
     const headers = [['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Notes']];
     const body = mergedData.map(rec => {
@@ -405,7 +414,7 @@ const AnalyticsPage = () => {
         
         const timeIn = (rec.checkInTime && isPresent) ? format(rec.checkInTime.toDate(), 'p') : '--:--';
         const timeOut = (rec.checkOutTime && isPresent) ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
-        const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status;
+        const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status.replace('_', ' ');
         const notes = ((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim();
 
         return [
@@ -444,7 +453,7 @@ const AnalyticsPage = () => {
       setEditingEmployeeName(rec.employeeName || "Employee");
       
       setEditableAttendance({
-          status: (['holiday', 'on_leave'].includes(rec.status) ? 'absent' : rec.status) as any,
+          status: (['holiday', 'on_leave', 'non_compliance'].includes(rec.status) ? 'absent' : rec.status) as any,
           checkInTime: rec.checkInTime && rec.status !== 'holiday' && rec.status !== 'on_leave' ? format(rec.checkInTime.toDate(), 'HH:mm') : '',
           checkOutTime: rec.checkOutTime && rec.status !== 'holiday' && rec.status !== 'on_leave' ? format(rec.checkOutTime.toDate(), 'HH:mm') : '',
           totalBreakDuration: ((rec.totalBreakDuration || 0) / 60).toString(),
@@ -617,7 +626,7 @@ const AnalyticsPage = () => {
           </Card>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Work Hours</CardTitle>
@@ -636,6 +645,16 @@ const AnalyticsPage = () => {
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.totalBreakHours} hrs</div>
                      <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
+                </CardContent>
+            </Card>
+            <Card className="border-orange-200 bg-orange-50/30">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Non-Compliance</CardTitle>
+                    <ShieldAlert className="h-4 w-4 text-orange-600" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold text-orange-700">{stats.nonCompliance}</div>
+                    <p className="text-xs text-muted-foreground">Missing log-outs</p>
                 </CardContent>
             </Card>
             <Card>
@@ -697,7 +716,7 @@ const AnalyticsPage = () => {
                     </CardHeader>
                     <CardContent>
                         <TooltipProvider>
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto rounded-lg border">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -721,22 +740,40 @@ const AnalyticsPage = () => {
                                             const notes = (rec.checkInNotes ? `In: ${rec.checkInNotes}` : '') + 
                                                           (rec.checkOutNotes ? `\nOut: ${rec.checkOutNotes}` : '');
                                             
+                                            // Status based gradient logic
+                                            const gradientClass = cn(
+                                                rec.status === 'present' && 'bg-gradient-to-r from-green-50 to-transparent dark:from-green-950/20',
+                                                rec.status === 'late' && 'bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-950/20',
+                                                rec.status === 'absent' && 'bg-gradient-to-r from-red-50 to-transparent dark:from-red-950/20',
+                                                rec.status === 'non_compliance' && 'bg-gradient-to-r from-orange-50 to-transparent dark:from-orange-950/20',
+                                                rec.status === 'on_leave' && 'bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950/20',
+                                                rec.status === 'holiday' && 'bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950/20',
+                                            );
+
                                             return (
-                                            <TableRow key={`${rec.employeeId}-${rec.id}`}>
+                                            <TableRow key={`${rec.employeeId}-${rec.id}`} className={gradientClass}>
                                                 {selectedUserId === 'all' && <TableCell className="font-medium whitespace-nowrap">{rec.employeeName}</TableCell>}
                                                 <TableCell className="font-medium whitespace-nowrap">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
-                                                    {!isPresent ? (
+                                                    {rec.status === 'holiday' || rec.status === 'on_leave' ? (
                                                         <span className="text-muted-foreground italic">{rec.status === 'holiday' ? 'Holiday' : 'On Leave'}</span>
                                                     ) : (
                                                         <>
-                                                            <div>{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</div>
-                                                            <div>{rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[10px] uppercase font-bold text-muted-foreground w-6">In:</span>
+                                                                <span>{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[10px] uppercase font-bold text-muted-foreground w-6">Out:</span>
+                                                                <span className={cn(!rec.checkOutTime && rec.status === 'non_compliance' && "text-orange-600 font-semibold")}>
+                                                                    {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
+                                                                </span>
+                                                            </div>
                                                         </>
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {!isPresent ? (
+                                                    {rec.status === 'holiday' || rec.status === 'on_leave' || (rec.status === 'non_compliance' && !rec.checkOutTime) ? (
                                                         <span className="text-muted-foreground">-</span>
                                                     ) : (
                                                         <>
@@ -750,17 +787,18 @@ const AnalyticsPage = () => {
                                                         <Badge
                                                             variant="outline"
                                                             className={cn(
-                                                                rec.status === 'present' && 'text-green-600 border-green-600/50',
-                                                                rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
-                                                                rec.status === 'absent' && 'text-red-600 border-red-600/50',
-                                                                rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
-                                                                rec.status === 'holiday' && 'text-purple-600 border-purple-600/50',
+                                                                rec.status === 'present' && 'text-green-600 border-green-600/50 bg-green-50/50',
+                                                                rec.status === 'late' && 'text-yellow-600 border-yellow-600/50 bg-yellow-50/50',
+                                                                rec.status === 'absent' && 'text-red-600 border-red-600/50 bg-red-50/50',
+                                                                rec.status === 'non_compliance' && 'text-orange-600 border-orange-600/50 bg-orange-50/50',
+                                                                rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50 bg-blue-50/50',
+                                                                rec.status === 'holiday' && 'text-purple-600 border-purple-600/50 bg-purple-50/50',
                                                             )}
                                                         >
                                                             {rec.status === 'holiday' ? 'Holiday' : rec.status.replace('_', ' ')}
                                                         </Badge>
                                                         {rec.isOutOfRange && (
-                                                            <Badge variant="destructive" className="text-[10px] py-0 h-4 px-1.5 font-normal">Out of Range</Badge>
+                                                            <Badge variant="destructive" className="text-[10px] py-0 h-4 px-1.5 font-normal uppercase">Out of Range</Badge>
                                                         )}
                                                     </div>
                                                 </TableCell>
@@ -784,7 +822,7 @@ const AnalyticsPage = () => {
                                                     {notes.trim() ? (
                                                         <Tooltip>
                                                             <TooltipTrigger>
-                                                                <StickyNote className="h-5 w-5 text-muted-foreground" />
+                                                                <StickyNote className={cn("h-5 w-5 transition-colors", rec.status === 'non_compliance' ? 'text-orange-500' : 'text-muted-foreground')} />
                                                             </TooltipTrigger>
                                                             <TooltipContent>
                                                                 <p className="whitespace-pre-wrap max-w-xs">{notes.trim()}</p>
@@ -858,8 +896,8 @@ const AnalyticsPage = () => {
                       <Input id="break" type="number" value={editableAttendance.totalBreakDuration} onChange={(e) => setEditableAttendance(prev => ({...prev, totalBreakDuration: e.target.value}))}/>
                   </div>
                   <div className="grid gap-2">
-                      <Label htmlFor="checkin-notes">Manually Adjustment Notes</Label>
-                      <Textarea id="checkin-notes" placeholder="Reason for manual correction..." value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
+                      <Label htmlFor="checkin-notes">Manually Adjustment Notes / Remarks</Label>
+                      <Textarea id="checkin-notes" placeholder="Reason for manual correction or performance remarks..." value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
                   </div>
               </div>
               <DialogFooter className="sm:justify-between">

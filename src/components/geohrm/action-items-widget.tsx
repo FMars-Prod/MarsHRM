@@ -4,15 +4,16 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { List, CalendarOff, ShieldCheck, MessageSquareWarning, ArrowRight } from 'lucide-react';
+import { List, CalendarOff, ShieldCheck, MessageSquareWarning, ArrowRight, ShieldAlert } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, collectionGroup } from 'firebase/firestore';
+import { subDays, startOfDay, endOfDay } from 'date-fns';
 import Link from 'next/link';
 import type { WithId } from '@/firebase/firestore/use-collection';
 
 type ActionItem = {
     id: string;
-    type: 'leave' | 'policy' | 'issue';
+    type: 'leave' | 'policy' | 'issue' | 'compliance';
     title: string;
     description: string;
     href: string;
@@ -34,13 +35,21 @@ type Issue = {
     status: 'Open' | 'In Progress' | 'Resolved';
 };
 
+type AttendanceRecord = {
+    employeeId: string;
+    checkInTime: any;
+    checkOutTime: any;
+}
+
 export function ActionItemsWidget() {
     const { user: currentUser } = useUser();
     const firestore = useFirestore();
+    const [complianceIssues, setComplianceIssues] = React.useState<ActionItem[]>([]);
 
     const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
     const { data: currentUserData } = useDoc(currentUserDocRef);
     const userRole = (currentUserData as any)?.role;
+    const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
     // Fetch pending leave requests for managers
     const leaveRequestsQuery = useMemoFirebase(() => {
@@ -81,8 +90,54 @@ export function ActionItemsWidget() {
     }, [firestore, currentUser]);
     const { data: openIssues, isLoading: issuesLoading } = useCollection<Issue>(issuesQuery);
 
+    // Logic to detect non-compliance (missing log-outs) from yesterday
+    React.useEffect(() => {
+        const checkCompliance = async () => {
+            if (!isAdmin || !firestore) return;
+            
+            const yesterday = subDays(new Date(), 1);
+            const start = startOfDay(yesterday);
+            const end = endOfDay(yesterday);
+
+            const q = query(
+                collectionGroup(firestore, 'attendances'),
+                where('checkInTime', '>=', start),
+                where('checkInTime', '<=', end)
+            );
+
+            try {
+                const snap = await getDocs(q);
+                const issues: ActionItem[] = [];
+                
+                // Get user names for better alerts
+                const usersSnap = await getDocs(collection(firestore, 'users'));
+                const userMap = new Map();
+                usersSnap.docs.forEach(d => userMap.set(d.id, `${d.data().firstName} ${d.data().lastName}`));
+
+                snap.docs.forEach(doc => {
+                    const data = doc.data() as AttendanceRecord;
+                    if (data.checkInTime && !data.checkOutTime) {
+                        const name = userMap.get(data.employeeId) || 'Unknown User';
+                        issues.push({
+                            id: `compliance-${doc.id}`,
+                            type: 'compliance',
+                            title: `Compliance Alert: ${name}`,
+                            description: `Failed to clock out on ${format(yesterday, 'MMM d')}.`,
+                            href: `/dashboard/analytics?userId=${data.employeeId}`
+                        });
+                    }
+                });
+                setComplianceIssues(issues);
+            } catch (err) {
+                console.error("Compliance check failed:", err);
+            }
+        };
+
+        checkCompliance();
+    }, [firestore, isAdmin]);
+
     const actionItems: ActionItem[] = React.useMemo(() => {
-        const items: ActionItem[] = [];
+        const items: ActionItem[] = [...complianceIssues];
         (pendingLeaves || []).forEach(leave => {
             items.push({
                 id: `leave-${leave.id}`,
@@ -111,14 +166,15 @@ export function ActionItemsWidget() {
             });
         });
         return items;
-    }, [pendingLeaves, unacknowledgedPolicies, openIssues]);
+    }, [pendingLeaves, unacknowledgedPolicies, openIssues, complianceIssues]);
 
     const isLoading = leavesLoading || policiesLoading || acksLoading || issuesLoading;
     
     const iconMap = {
         leave: <CalendarOff className="h-5 w-5 text-blue-500" />,
         policy: <ShieldCheck className="h-5 w-5 text-yellow-500" />,
-        issue: <MessageSquareWarning className="h-5 w-5 text-red-500" />
+        issue: <MessageSquareWarning className="h-5 w-5 text-red-500" />,
+        compliance: <ShieldAlert className="h-5 w-5 text-orange-500" />
     };
 
     return (
@@ -148,7 +204,7 @@ export function ActionItemsWidget() {
                         {actionItems.slice(0, 5).map(item => (
                             <Link href={item.href} key={item.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors group">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-muted rounded-lg">
+                                    <div className={cn("p-2 rounded-lg", item.type === 'compliance' ? 'bg-orange-100' : 'bg-muted')}>
                                         {iconMap[item.type]}
                                     </div>
                                     <div>
