@@ -65,6 +65,10 @@ type EditableAttendance = {
 
 type FilterMode = "day" | "month" | "range" | "all";
 
+// --- FEATURE FLAG ---
+// Set this to true to enable manual editing of attendance records.
+const ENABLE_MANUAL_EDIT = false;
+
 const AnalyticsPage = () => {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
@@ -747,7 +751,7 @@ const AnalyticsPage = () => {
                                             <TableHead>Status</TableHead>
                                             <TableHead>Location</TableHead>
                                             <TableHead>Notes</TableHead>
-                                            {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                                            {isAdmin && ENABLE_MANUAL_EDIT && <TableHead className="text-right">Actions</TableHead>}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -852,7 +856,7 @@ const AnalyticsPage = () => {
                                                         <span className="text-muted-foreground/50">-</span>
                                                     )}
                                                 </TableCell>
-                                                {isAdmin && (
+                                                {isAdmin && ENABLE_MANUAL_EDIT && (
                                                     <TableCell className="text-right">
                                                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(rec)}>
                                                             <Edit className="h-4 w-4" />
