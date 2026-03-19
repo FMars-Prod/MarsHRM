@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -8,7 +9,6 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@
 import { collection, query, where, doc, getDocs, collectionGroup } from 'firebase/firestore';
 import { subDays, startOfDay, endOfDay, format } from 'date-fns';
 import Link from 'next/link';
-import type { WithId } from '@/firebase/firestore/use-collection';
 import { cn } from '@/lib/utils';
 
 type ActionItem = {
@@ -22,6 +22,7 @@ type ActionItem = {
 type LeaveRequest = {
     status: string;
     employeeName: string;
+    id: string;
 };
 
 type Policy = {
@@ -30,6 +31,7 @@ type Policy = {
 };
 
 type Issue = {
+    id: string;
     employeeId: string;
     title: string;
     status: 'Open' | 'In Progress' | 'Resolved';
@@ -118,8 +120,9 @@ export function ActionItemsWidget() {
                     const data = doc.data() as AttendanceRecord;
                     if (data.checkInTime && !data.checkOutTime) {
                         const name = userMap.get(data.employeeId) || 'Unknown User';
+                        // Use a composite ID to ensure uniqueness across collectionGroup results
                         issues.push({
-                            id: `compliance-${doc.id}`,
+                            id: `compliance-${data.employeeId}-${doc.id}`,
                             type: 'compliance',
                             title: `Compliance Alert: ${name}`,
                             description: `Failed to clock out on ${format(yesterday, 'MMM d')}.`,
