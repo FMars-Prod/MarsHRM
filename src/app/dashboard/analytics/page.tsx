@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -492,7 +491,7 @@ const AnalyticsPage = () => {
   
   return (
     <>
-      <PageHeader title="Employee Analytics" description="Analyze performance and attendance for team members." />
+      <PageHeader title="Employee Analytics" description="Analyze performance and attendance for team members." className="animate-fade-in-up" />
 
       <div className="flex flex-wrap items-center gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         <div className="w-full sm:w-auto sm:min-w-64">

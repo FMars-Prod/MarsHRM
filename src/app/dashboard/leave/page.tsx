@@ -1,4 +1,3 @@
-
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -58,7 +57,6 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, startOfToday, getDaysInMonth, getYear, getMonth, getDate } from "date-fns";
-import { DateRange } from "react-day-picker";
 import { useToast } from "@/hooks/use-toast";
 import type { WithId } from "@/firebase/firestore/use-collection";
 
@@ -103,16 +101,6 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
   const teamLeadName = teamLeadApprover ? `${teamLeadApprover.firstName} ${teamLeadApprover.lastName}` : 'Team Lead';
   const hrName = hrApprover ? `${hrApprover.firstName} ${hrApprover.lastName}` : 'HR';
 
-  // Find who rejected it
-  let rejecterName = '';
-  if (request.status.startsWith('Rejected')) {
-      const rejecterId = request.status === 'Rejected by Team Lead' ? request.approvedByTeamLeadId : request.approvedByHRId;
-      const rejecter = users?.find(u => u.id === rejecterId);
-      rejecterName = rejecter ? `${rejecter.firstName} ${rejecter.lastName}` : 'Administrator';
-  }
-
-  const isSubmitted = true;
-  const isFinalRejected = request.status.startsWith('Rejected');
   const isApprovedByLead = ['Pending HR Approval', 'Approved', 'Rejected by HR'].includes(request.status);
   const isRejectedByLead = request.status === 'Rejected by Team Lead';
   const isApprovedByHR = request.status === 'Approved';
@@ -121,9 +109,11 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
   const isPendingLead = request.status === 'Pending';
   const isPendingHR = request.status === 'Pending HR Approval';
 
+  // Logic to check if lead stage was skipped
+  const leadSkipped = !request.approvedByTeamLeadId && isApprovedByLead;
+
   return (
     <div className="space-y-4">
-      {/* Submitted Stage */}
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
           <div className="flex items-center justify-center h-6 w-6 rounded-full bg-green-500 text-white">
@@ -133,11 +123,10 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
         </div>
         <div>
           <h4 className="font-semibold">Submitted</h4>
-          <p className="text-sm text-muted-foreground">Request submitted on {request.createdAt ? format(request.createdAt.toDate(), "PP") : '...'}.</p>
+          <p className="text-sm text-muted-foreground">Submitted on {request.createdAt ? format(request.createdAt.toDate(), "PP") : '...'}.</p>
         </div>
       </div>
       
-      {/* Team Lead Stage */}
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
           <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
@@ -154,17 +143,14 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
         <div className="flex-1">
           <h4 className={cn("font-semibold", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
           <p className="text-sm text-muted-foreground">
-            {isApprovedByLead && (request.approvedByTeamLeadId ? `Approved by ${teamLeadName}.` : 'Skipped (No Team Lead).')}
-            {isRejectedByLead && `Rejected by ${rejecterName}.`}
+            {leadSkipped && "Skipped (No Team Lead)."}
+            {!leadSkipped && isApprovedByLead && (request.approvedByTeamLeadId ? `Approved by ${teamLeadName}.` : 'Pending.')}
+            {isRejectedByLead && `Rejected.`}
             {isPendingLead && 'Pending approval.'}
           </p>
-          {isRejectedByLead && request.rejectionReason && (
-            <p className="text-xs text-destructive/80 mt-1 italic">"{request.rejectionReason}"</p>
-          )}
         </div>
       </div>
 
-      {/* HR Stage */}
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
           <div className={cn("flex items-center justify-center h-6 w-6 rounded-full",
@@ -186,14 +172,10 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
           )}>HR Approval</h4>
           <p className="text-sm text-muted-foreground">
             {isApprovedByHR && `Approved by ${hrName}.`}
-            {isRejectedByHR && `Rejected by ${rejecterName}.`}
+            {isRejectedByHR && `Rejected.`}
             {isPendingHR && 'Pending HR approval.'}
-            {isPendingLead && 'Waiting for Team Lead approval.'}
-            {isRejectedByLead && 'Not applicable.'}
+            {isPendingLead && 'Waiting for Team Lead.'}
           </p>
-           {isRejectedByHR && request.rejectionReason && (
-            <p className="text-xs text-destructive/80 mt-1 italic">"{request.rejectionReason}"</p>
-          )}
         </div>
       </div>
     </div>
@@ -202,12 +184,12 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
 
 
 const statusVariantMap: { [key in LeaveStatus]: string } = {
-    'Approved': 'bg-green-500/20 text-green-700 border-transparent hover:bg-green-500/30',
-    'Pending': 'bg-yellow-500/20 text-yellow-700 border-transparent hover:bg-yellow-500/30',
-    'Pending HR Approval': 'bg-blue-500/20 text-blue-700 border-transparent hover:bg-blue-500/30',
-    'Rejected by Team Lead': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30',
-    'Rejected by HR': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30',
-    'Rejected': 'bg-red-500/20 text-red-700 border-transparent hover:bg-red-500/30'
+    'Approved': 'bg-green-500/20 text-green-700 border-transparent',
+    'Pending': 'bg-yellow-500/20 text-yellow-700 border-transparent',
+    'Pending HR Approval': 'bg-blue-500/20 text-blue-700 border-transparent',
+    'Rejected by Team Lead': 'bg-red-500/20 text-red-700 border-transparent',
+    'Rejected by HR': 'bg-red-500/20 text-red-700 border-transparent',
+    'Rejected': 'bg-red-500/20 text-red-700 border-transparent'
 };
 
 
@@ -274,7 +256,7 @@ export default function LeavePage() {
         if (teamMemberIds.length > 0) {
           return query(baseQuery, where('employeeId', 'in', teamMemberIds));
         }
-        return query(baseQuery, where('employeeId', '==', '-----')); // No members, show no requests
+        return query(baseQuery, where('employeeId', '==', '-----'));
       case 'HR Manager':
       case 'CEO/Admin':
         return query(baseQuery);
@@ -308,7 +290,7 @@ export default function LeavePage() {
 
   const handleRejectionSubmit = () => {
     if (!requestToReject || !rejectionReason) {
-        toast({ variant: 'destructive', title: 'Reason Required', description: 'Please provide a reason for rejection.' });
+        toast({ variant: 'destructive', title: 'Reason Required' });
         return;
     }
     if (!user) return;
@@ -319,14 +301,9 @@ export default function LeavePage() {
     if (userRole === 'Team Lead') {
         newStatus = 'Rejected by Team Lead';
         approvalField = 'approvedByTeamLeadId';
-    } else if (userRole === 'HR Manager') {
+    } else {
         newStatus = 'Rejected by HR';
         approvalField = 'approvedByHRId';
-    } else if (userRole === 'CEO/Admin') {
-        newStatus = 'Rejected';
-        approvalField = 'approvedByHRId'; // Attribute to admin/HR level
-    } else {
-        return;
     }
 
     const requestDocRef = doc(firestore, 'leave_requests', requestToReject.id);
@@ -344,7 +321,7 @@ export default function LeavePage() {
 
   const handleCreateRequest = () => {
     if (!user || !userData || !leaveType || !reason || !startDay || !startMonth || !startYear || !endDay || !endMonth || !endYear) {
-        toast({ variant: "destructive", title: "Missing Information", description: "Please fill out all fields."});
+        toast({ variant: "destructive", title: "Missing Info" });
         return;
     }
     setIsRequesting(true);
@@ -353,7 +330,7 @@ export default function LeavePage() {
     const toDate = new Date(parseInt(endYear), parseInt(endMonth), parseInt(endDay));
 
     if (toDate < fromDate) {
-        toast({ variant: "destructive", title: "Invalid Date Range", description: "End date cannot be before the start date."});
+        toast({ variant: "destructive", title: "Invalid Dates" });
         setIsRequesting(false);
         return;
     }
@@ -363,7 +340,7 @@ export default function LeavePage() {
     const isUserTeamLead = userRole === 'Team Lead';
     const isManagement = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
-    // If no Team Lead exists for the employee, or the employee IS a Team Lead/Admin, go straight to HR Approval
+    // DIRECT ROUTING IF NO LEAD
     const initialStatus: LeaveStatus = (isUserTeamLead || !hasTeamLead || isManagement) ? 'Pending HR Approval' : 'Pending';
 
     const newRequest: LeaveRequest = {
@@ -380,17 +357,12 @@ export default function LeavePage() {
     
     addDocumentNonBlocking(collection(firestore, 'leave_requests'), newRequest)
       .then(() => {
-          toast({ title: "Request Submitted", description: "Your leave request has been submitted for approval."});
+          toast({ title: "Request Submitted" });
           setLeaveType("");
           setReason("");
-          setStartDay(undefined); setStartMonth(undefined); setStartYear(currentYear.toString());
-          setEndDay(undefined); setEndMonth(undefined); setEndYear(currentYear.toString());
           setIsRequesting(false);
       })
-      .catch((e) => {
-        toast({ variant: "destructive", title: "Submission Failed", description: e.message });
-        setIsRequesting(false);
-      });
+      .catch(() => setIsRequesting(false));
   }
 
   const formatDate = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'PP') : '';
@@ -400,31 +372,28 @@ export default function LeavePage() {
     <>
       <PageHeader
         title="Leave Management"
-        description="Request time off and track your leave balance."
+        description="Request time off and track approvals."
+        className="animate-fade-in-up"
       >
         {userRole === 'Member' && (
           <Dialog>
             <DialogTrigger asChild>
               <Button>
                 <PlusCircle className="mr-2" />
-                New Leave Request
+                New Request
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Submit a Leave Request</DialogTitle>
-                <DialogDescription>
-                  Fill out the details below to request time off.
-                </DialogDescription>
+                <DialogTitle>Leave Request</DialogTitle>
+                <DialogDescription>Submit your time off details.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-x-4 gap-y-2">
-                  <Label htmlFor="leaveType" className="text-left sm:text-right">
-                    Leave Type
-                  </Label>
+                  <Label htmlFor="leaveType" className="text-left sm:text-right">Type</Label>
                   <Select onValueChange={setLeaveType}>
                       <SelectTrigger className="col-span-1 sm:col-span-3">
-                          <SelectValue placeholder="Select leave type" />
+                          <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
                           <SelectItem value="Vacation">Vacation</SelectItem>
@@ -436,72 +405,37 @@ export default function LeavePage() {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
-                  <Label className="text-left sm:text-right pt-2">Start Date</Label>
+                  <Label className="text-left sm:text-right pt-2">Start</Label>
                   <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
-                    <Select onValueChange={setStartYear} value={startYear}>
-                      <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                      <SelectContent>
-                        {years.map(y => <SelectItem key={`start-year-${y}`} value={y.toString()}>{y}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select onValueChange={setStartMonth} value={startMonth}>
-                      <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                      <SelectContent>
-                        {months.map(m => <SelectItem key={`start-month-${m.value}`} value={m.value.toString()}>{m.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth || !startYear}>
-                      <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                      <SelectContent>
-                        {startDays.map(d => <SelectItem key={`start-day-${d}`} value={d.toString()}>{d}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <Select onValueChange={setStartYear} value={startYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                    <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                    <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
-                  <Label className="text-left sm:text-right pt-2">End Date</Label>
+                  <Label className="text-left sm:text-right pt-2">End</Label>
                   <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
-                    <Select onValueChange={setEndYear} value={endYear}>
-                      <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
-                      <SelectContent>
-                        {years.map(y => <SelectItem key={`end-year-${y}`} value={y.toString()}>{y}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select onValueChange={setEndMonth} value={endMonth}>
-                      <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                      <SelectContent>
-                        {months.map(m => <SelectItem key={`end-month-${m.value}`} value={m.value.toString()}>{m.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth || !endYear}>
-                      <SelectTrigger><SelectValue placeholder="Day" /></SelectTrigger>
-                      <SelectContent>
-                        {endDays.map(d => <SelectItem key={`end-day-${d}`} value={d.toString()}>{d}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <Select onValueChange={setEndYear} value={endYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                    <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                    <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
                   </div>
                 </div>
 
                  <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
-                  <Label htmlFor="reason" className="text-left sm:text-right pt-2">
-                    Reason
-                  </Label>
-                  <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide a reason for your leave..." className="col-span-1 sm:col-span-3" />
+                  <Label htmlFor="reason" className="text-left sm:text-right pt-2">Reason</Label>
+                  <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} className="col-span-1 sm:col-span-3" />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" disabled={isRequesting}>Cancel</Button>
-                <Button onClick={handleCreateRequest} disabled={isRequesting}>
-                  {isRequesting ? 'Submitting...' : 'Submit Request'}
-                </Button>
+                <Button onClick={handleCreateRequest} disabled={isRequesting}>Submit</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         )}
       </PageHeader>
       <Sheet open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}>
-        <div className="border rounded-lg overflow-x-auto">
+        <div className="border rounded-lg overflow-x-auto animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -514,9 +448,8 @@ export default function LeavePage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading requests...</TableCell></TableRow>
-              ) : allLeaveRequests && allLeaveRequests.length > 0 ? (
-                allLeaveRequests.map((request) => (
+                  <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading...</TableCell></TableRow>
+              ) : allLeaveRequests.map((request) => (
                   <TableRow key={request.id}>
                     {(userRole !== 'Member') && <TableCell className="font-medium">{request.employeeName}</TableCell>}
                     <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
@@ -533,130 +466,36 @@ export default function LeavePage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <SheetTrigger asChild>
-                            <DropdownMenuItem onClick={() => setSelectedRequest(request)}>
-                              <Eye className="mr-2 h-4 w-4" /> View Details
-                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedRequest(request)}>View Details</DropdownMenuItem>
                           </SheetTrigger>
-                           {userRole === 'Team Lead' && request.status === 'Pending' && request.employeeId !== user?.uid && (
-                              <>
-                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')}>
-                                      <ThumbsUp className="mr-2 h-4 w-4"/> Approve
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-destructive">
-                                      <ThumbsDown className="mr-2 h-4 w-4"/> Reject
-                                  </DropdownMenuItem>
-                              </>
+                           {userRole === 'Team Lead' && request.status === 'Pending' && (
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')}>Approve</DropdownMenuItem>
                           )}
-                          {(userRole === 'HR Manager') && request.status === 'Pending HR Approval' && (
-                              <>
-                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>
-                                      <ThumbsUp className="mr-2 h-4 w-4"/> Approve
-                                  </DropdownMenuItem>
-                                   <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-destructive">
-                                      <ThumbsDown className="mr-2 h-4 w-4"/> Reject
-                                  </DropdownMenuItem>
-                              </>
-                          )}
-                          {userRole === 'CEO/Admin' && !['Approved', 'Rejected'].some(s => request.status.includes(s)) && (
-                              <>
-                                  <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>
-                                      <ThumbsUp className="mr-2 h-4 w-4"/> Approve
-                                  </DropdownMenuItem>
-                                   <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-destructive">
-                                      <ThumbsDown className="mr-2 h-4 w-4"/> Reject
-                                  </DropdownMenuItem>
-                              </>
-                          )}
-                          {isUserAdmin && (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>This action cannot be undone. This will permanently delete this leave request.</AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteRequest(request.id)}>Delete</AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                          {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && request.status === 'Pending HR Approval' && (
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>Final Approve</DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                  <TableRow><TableCell colSpan={5} className="h-24 text-center">No leave requests found.</TableCell></TableRow>
-              )}
+                ))}
             </TableBody>
           </Table>
         </div>
         {selectedRequest && (
           <SheetContent>
               <SheetHeader>
-                  <SheetTitle>Leave Request Details</SheetTitle>
-                  <SheetDescription>
-                      Track the approval status of the request.
-                  </SheetDescription>
+                  <SheetTitle>Request Details</SheetTitle>
               </SheetHeader>
               <Separator className="my-4" />
-              <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
               <div className="space-y-4">
-                  <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Employee</p>
-                      <p className="font-semibold">{selectedRequest.employeeName}</p>
-                  </div>
-                  <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Leave Type</p>
-                      <p className="font-semibold">{selectedRequest.leaveType}</p>
-                  </div>
-                  <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Dates</p>
-                      <p className="font-semibold">{`${formatDate(selectedRequest.startDate)} to ${formatDate(selectedRequest.endDate)}`}</p>
-                  </div>
-                  <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Reason</p>
-                      <p className="text-sm whitespace-pre-wrap">{selectedRequest.reason}</p>
-                  </div>
-                  <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Status</p>
-                      <Badge variant='outline' className={cn(statusVariantMap[selectedRequest.status])}>
-                          {selectedRequest.status}
-                      </Badge>
-                  </div>
-                  <Separator className="my-4" />
-                  <h4 className="font-semibold">Approval History</h4>
+                  <div><p className="text-xs text-muted-foreground">Reason</p><p className="text-sm">{selectedRequest.reason}</p></div>
+                  <h4 className="font-semibold text-sm">Approval Tracker</h4>
                   <LeaveStatusTracker request={selectedRequest} users={users} />
               </div>
-              </ScrollArea>
           </SheetContent>
         )}
       </Sheet>
-        <AlertDialog open={!!requestToReject} onOpenChange={(isOpen) => { if (!isOpen) setRequestToReject(null); }}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Reason for Rejection</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Please provide a reason for rejecting this leave request. This will be shared with the employee.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <Textarea
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="e.g., Conflicting schedule, project deadline..."
-                />
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setRejectionReason("")}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleRejectionSubmit}>Confirm Rejection</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
     </>
   );
 }

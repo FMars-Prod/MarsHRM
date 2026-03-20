@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -135,7 +134,7 @@ export function EventsWidget() {
             {(!todaysEvents || todaysEvents.length === 0) && (!upcomingEvents || upcomingEvents.length === 0) && !isLoading && (
                  <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-8">
                     <PartyPopper className="size-8 mb-2 opacity-50" />
-                    <p className="text-sm">No events scheduled soon.</p>
+                    <p className="text-sm">No events scheduled.</p>
                 </div>
             )}
           </>

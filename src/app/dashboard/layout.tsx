@@ -61,7 +61,7 @@ export default function DashboardLayout({
     } else if (userRole === 'CEO/Admin') {
        q = query(q, where("status", "in", ["Pending", "Pending HR Approval"]));
     } else {
-      return null; // Members don't see a count
+      return null;
     }
     return q;
   }, [firestore, user, userRole]);
@@ -139,7 +139,7 @@ export default function DashboardLayout({
             <div className="bg-primary text-primary-foreground p-2 rounded-lg">
               <Building2 className="h-6 w-6" />
             </div>
-            <span className="font-headline text-lg font-semibold">MarsHRM</span>
+            <span className="font-headline text-lg font-semibold text-white">MarsHRM</span>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -155,17 +155,21 @@ export default function DashboardLayout({
           <UserNav user={user} />
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="flex flex-col min-h-screen">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
           <SidebarTrigger />
           <div className="flex-1">
-            {/* Automated Email Sender Worker */}
             <AutomatedReportSender />
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
-        <footer className="border-t p-4 text-center text-xs text-muted-foreground">
-            Developed by FortuMars
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
+          {children}
+        </main>
+        <footer className="mt-auto border-t py-6 px-4 md:px-6 bg-white/50 backdrop-blur-sm">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+                <p>© {new Date().getFullYear()} MarsHRM. All rights reserved.</p>
+                <p className="font-medium">Developed by FortuMars</p>
+            </div>
         </footer>
       </SidebarInset>
     </SidebarProvider>

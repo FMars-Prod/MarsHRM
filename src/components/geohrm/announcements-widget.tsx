@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -68,8 +67,8 @@ export function AnnouncementsWidget() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-4">
-            <FileText className="size-6 mb-1 opacity-50" />
+          <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-2">
+            <FileText className="size-5 mb-1 opacity-50" />
             <p className="text-xs">No announcements yet.</p>
           </div>
         )}

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -115,7 +114,7 @@ export function ActionItemsWidget() {
                     if (data.checkInTime && !data.checkOutTime) {
                         const name = userMap.get(data.employeeId) || 'Unknown User';
                         issues.push({
-                            id: `compliance-${data.employeeId}-${doc.id}`,
+                            id: `compliance-${data.employeeId}-${format(yesterday, 'yyyy-MM-dd')}`,
                             type: 'compliance',
                             title: `Compliance Alert: ${name}`,
                             description: `Failed to clock out on ${format(yesterday, 'MMM d')}.`,

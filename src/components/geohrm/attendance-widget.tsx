@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -495,7 +494,7 @@ export function AttendanceWidget() {
       const range = parseFloat(newMaxDistance);
       const lunchDuration = parseInt(newLunchDuration);
 
-      if (isNaN(lat) || isNaN(lon) || ianaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
+      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
           toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
@@ -614,7 +613,7 @@ export function AttendanceWidget() {
             )}
         </div>
         <CardDescription>
-          Your real-time attendance tracker. Designated location:
+          Real-time tracker. Designated:
           <span className="font-semibold text-foreground">
             {isWfhAllowed ? " Work From Home" : " Work From Office"}
           </span>.
@@ -624,7 +623,7 @@ export function AttendanceWidget() {
         {isLocationLoading && !isWfhAllowed ? (
              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <Building2 className="h-10 w-10 animate-pulse" />
-                <p>Loading Location Data...</p>
+                <p>Loading Location...</p>
             </div>
         ) : (officeLocation || isWfhAllowed) ? (
           <>
@@ -643,10 +642,10 @@ export function AttendanceWidget() {
 
               {
                 hasClockedOutToday
-                  ? "Clocked out for the day"
+                  ? "Clocked out for today"
                   : status === 'break'
                     ? (autoLunchTriggered ? "Clocked Out for Lunch" : "Currently on Break")
-                    : `Currently Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
+                    : `Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
               }
             </div>
             <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter drop-shadow-sm">
@@ -655,7 +654,7 @@ export function AttendanceWidget() {
             <div className="flex items-center gap-6">
               {status === "break" && (
                 <div className="flex flex-col items-center">
-                  <span className="text-sm text-muted-foreground">Current Break</span>
+                  <span className="text-sm text-muted-foreground">Break</span>
                   <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
                     {formatTime(breakTimer)}
                   </div>
@@ -672,7 +671,7 @@ export function AttendanceWidget() {
             </div>
             {lastClockInTime && status !== "out" && (
               <p className="text-sm text-muted-foreground">
-                Clocked in at {lastClockInTime.toLocaleTimeString()}
+                In at {lastClockInTime.toLocaleTimeString()}
               </p>
             )}
             {currentUserLocation && (
@@ -680,7 +679,7 @@ export function AttendanceWidget() {
                 <MapPin className="size-3" />
                 <span>{`Lat: ${currentUserLocation.latitude.toFixed(4)}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
                 {distance !== null && (
-                  <span>({distance.toFixed(2)} km from target)</span>
+                  <span>({distance.toFixed(2)} km away)</span>
                 )}
               </div>
             )}
@@ -688,7 +687,7 @@ export function AttendanceWidget() {
         ) : (
              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <Building2 className="h-10 w-10" />
-                <p className="max-w-xs">Office location not set. Contact an admin.</p>
+                <p className="max-w-xs">Location not set.</p>
             </div>
         )}
       </CardContent>
@@ -713,7 +712,7 @@ export function AttendanceWidget() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will delete today's attendance record and allow you to clock in again.
+                            This will delete today's attendance record.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -745,7 +744,7 @@ export function AttendanceWidget() {
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Confirm Clock Out</AlertDialogTitle>
-                            <AlertDialogDescription>End your work session for today?</AlertDialogDescription>
+                            <AlertDialogDescription>End your session?</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -765,7 +764,7 @@ export function AttendanceWidget() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
                 <Label htmlFor="reason">Reason</Label>
-                <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Working from a client's office" />
+                <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Client meeting" />
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => { setIsOutOfRangeReasonDialogOpen(false); setOutOfRangeReason(""); }}>Cancel</Button>
@@ -778,7 +777,7 @@ export function AttendanceWidget() {
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Set Home Location?</AlertDialogTitle>
-                <AlertDialogDescription>You haven't set a home location. Use current coordinates?</AlertDialogDescription>
+                <AlertDialogDescription>Use current coordinates for WFH?</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>
