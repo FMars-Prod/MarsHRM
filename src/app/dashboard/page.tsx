@@ -1,8 +1,6 @@
-
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
-import { AnnouncementsWidget } from "@/components/geohrm/announcements-widget";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { EventsWidget } from "@/components/geohrm/events-widget";
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -32,21 +30,20 @@ export default function DashboardPage() {
       <DashboardReminder />
 
       {isAdminOrHR && (
-        <div className="mb-6">
+        <div className="mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <DailyMonitorWidget />
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <AttendanceWidget />
           <ActionItemsWidget />
         </div>
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <WorkHoursSummaryWidget />
-          <AnnouncementsWidget />
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <EventsWidget />
         </div>
       </div>

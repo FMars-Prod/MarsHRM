@@ -383,7 +383,7 @@ export default function LeavePage() {
                 New Request
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>Leave Request</DialogTitle>
                 <DialogDescription>Submit your time off details.</DialogDescription>
@@ -450,7 +450,7 @@ export default function LeavePage() {
               {isLoading ? (
                   <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading...</TableCell></TableRow>
               ) : allLeaveRequests.map((request) => (
-                  <TableRow key={request.id}>
+                  <TableRow key={request.id} className="bg-gradient-to-br from-primary/5 to-transparent">
                     {(userRole !== 'Member') && <TableCell className="font-medium">{request.employeeName}</TableCell>}
                     <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
                     <TableCell>{request.leaveType}</TableCell>
@@ -483,7 +483,7 @@ export default function LeavePage() {
           </Table>
         </div>
         {selectedRequest && (
-          <SheetContent>
+          <SheetContent onCloseAutoFocus={(e) => e.preventDefault()}>
               <SheetHeader>
                   <SheetTitle>Request Details</SheetTitle>
               </SheetHeader>

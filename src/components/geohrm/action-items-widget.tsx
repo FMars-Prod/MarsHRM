@@ -103,7 +103,7 @@ export function ActionItemsWidget() {
 
             try {
                 const snap = await getDocs(q);
-                const issues: ActionItem[] = [];
+                const items: ActionItem[] = [];
                 
                 const usersSnap = await getDocs(collection(firestore, 'users'));
                 const userMap = new Map();
@@ -113,7 +113,7 @@ export function ActionItemsWidget() {
                     const data = doc.data() as AttendanceRecord;
                     if (data.checkInTime && !data.checkOutTime) {
                         const name = userMap.get(data.employeeId) || 'Unknown User';
-                        issues.push({
+                        items.push({
                             id: `compliance-${data.employeeId}-${format(yesterday, 'yyyy-MM-dd')}`,
                             type: 'compliance',
                             title: `Compliance Alert: ${name}`,
@@ -122,7 +122,7 @@ export function ActionItemsWidget() {
                         });
                     }
                 });
-                setComplianceIssues(issues);
+                setComplianceIssues(items);
             } catch (err) {
                 console.error("Compliance check failed:", err);
             }
@@ -173,7 +173,7 @@ export function ActionItemsWidget() {
     };
 
     return (
-        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '200ms' }}>
+        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
             <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
                     <List className="size-5" />

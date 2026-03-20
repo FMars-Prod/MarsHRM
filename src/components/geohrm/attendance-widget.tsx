@@ -545,7 +545,7 @@ export function AttendanceWidget() {
   };
 
   return (
-    <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '100ms' }}>
+    <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
       <CardHeader>
         <div className="flex items-start justify-between">
             <CardTitle className="font-headline flex items-center gap-2">
