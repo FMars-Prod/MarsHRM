@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { List, CalendarOff, ShieldCheck, MessageSquareWarning, ArrowRight, ShieldAlert } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, getDocs, collectionGroup } from 'firebase/firestore';
-import { subDays, startOfDay, endOfDay, format } from 'date-fns';
+import { subDays, startOfToday, endOfDay, format, startOfDay } from 'date-fns';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -120,7 +120,7 @@ export function ActionItemsWidget() {
                     const data = doc.data() as AttendanceRecord;
                     if (data.checkInTime && !data.checkOutTime) {
                         const name = userMap.get(data.employeeId) || 'Unknown User';
-                        // Use a composite ID to ensure uniqueness across collectionGroup results
+                        // Use a composite ID to ensure uniqueness across collectionGroup results (user-id + date-doc-id)
                         issues.push({
                             id: `compliance-${data.employeeId}-${doc.id}`,
                             type: 'compliance',

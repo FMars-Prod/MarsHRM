@@ -35,7 +35,7 @@ export function AnnouncementsWidget() {
   };
 
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <Megaphone className="size-5" />
@@ -45,7 +45,7 @@ export function AnnouncementsWidget() {
           The latest company news and updates.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1">
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -72,10 +72,12 @@ export function AnnouncementsWidget() {
             <p>No announcements yet.</p>
           </div>
         )}
-        <Button variant="outline" className="w-full mt-4" asChild>
+      </CardContent>
+      <div className="p-6 pt-0">
+        <Button variant="outline" className="w-full" asChild>
           <Link href="/dashboard/announcements">View All</Link>
         </Button>
-      </CardContent>
+      </div>
     </Card>
   );
 }
