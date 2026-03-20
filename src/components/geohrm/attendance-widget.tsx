@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -742,12 +743,12 @@ export function AttendanceWidget() {
             </AlertDialog>
         )}
         {status !== 'out' && (
-            <div className="grid grid-cols-2 gap-4 w-full">
+            <div className="grid grid-cols-2 gap-4 w-full justify-center">
                 <Button
                     onClick={handleBreak}
                     variant={status === "break" ? "default" : "outline"}
                     className={cn(
-                        "rounded-full h-12 font-semibold shadow-md transition-all active:scale-95",
+                        "rounded-full h-12 font-semibold shadow-md transition-all active:scale-95 px-8",
                         status !== "break" ? "bg-white/50 border-primary/20 text-primary hover:bg-primary/5" : "bg-primary text-white"
                     )}
                 >
@@ -762,7 +763,7 @@ export function AttendanceWidget() {
                 </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="rounded-full h-12 font-semibold shadow-md transition-all active:scale-95">
+                        <Button variant="destructive" className="rounded-full h-12 font-semibold shadow-md transition-all active:scale-95 px-8">
                             Clock Out
                         </Button>
                     </AlertDialogTrigger>

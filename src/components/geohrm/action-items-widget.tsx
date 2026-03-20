@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -119,7 +120,6 @@ export function ActionItemsWidget() {
                     const data = doc.data() as AttendanceRecord;
                     if (data.checkInTime && !data.checkOutTime) {
                         const name = userMap.get(data.employeeId) || 'Unknown User';
-                        // Use a composite ID to ensure uniqueness across collectionGroup results (user-id + date-doc-id)
                         issues.push({
                             id: `compliance-${data.employeeId}-${doc.id}`,
                             type: 'compliance',
