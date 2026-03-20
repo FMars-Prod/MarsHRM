@@ -4,12 +4,12 @@ import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { collection, doc, query, where, orderBy, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy, Timestamp, getDocs } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isSameDay, isBefore } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun, Palmtree, MoreHorizontal, ShieldAlert } from 'lucide-react';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isBefore } from 'date-fns';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -65,8 +65,6 @@ type EditableAttendance = {
 
 type FilterMode = "day" | "month" | "range" | "all";
 
-// --- FEATURE FLAG ---
-// Set this to true to enable manual editing of attendance records.
 const ENABLE_MANUAL_EDIT = false;
 
 const AnalyticsPage = () => {
@@ -74,7 +72,7 @@ const AnalyticsPage = () => {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [selectedUserId, setSelectedUserId] = React.useState<string | 'all'>('all');
+  const [selectedUserId, setSelectedUserId] = React.useState<string>("");
   const [date, setDate] = React.useState<Date>(new Date());
   const [month, setMonth] = React.useState<Date | null>(null);
   const [range, setRange] = React.useState<DateRange | undefined>();
@@ -102,7 +100,13 @@ const AnalyticsPage = () => {
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
 
-  const selectedUser = selectedUserId !== 'all' ? users?.find(u => u.id === selectedUserId) : null;
+  React.useEffect(() => {
+    if (!selectedUserId && users && users.length > 0) {
+      setSelectedUserId(users[0].id);
+    }
+  }, [users, selectedUserId]);
+
+  const selectedUser = users?.find(u => u.id === selectedUserId) || null;
 
   const { start, end } = React.useMemo(() => {
     let start: Date | null = null;
@@ -134,7 +138,7 @@ const AnalyticsPage = () => {
 
   React.useEffect(() => {
     const fetchData = async () => {
-      if (!firestore || areUsersLoading || !users) return;
+      if (!firestore || areUsersLoading || !users || !selectedUserId) return;
       setIsAttendanceLoading(true);
 
       try {
@@ -142,27 +146,15 @@ const AnalyticsPage = () => {
         const startTs = start ? Timestamp.fromDate(start) : null;
         const endTs = end ? Timestamp.fromDate(end) : null;
 
-        if (selectedUserId === 'all') {
-          if (filterMode === 'all') {
-            q = query(collectionGroup(firestore, 'attendances'), orderBy('checkInTime', 'desc'));
-          } else if (startTs && endTs) {
-            q = query(collectionGroup(firestore, 'attendances'), where('checkInTime', '>=', startTs), where('checkInTime', '<=', endTs), orderBy('checkInTime', 'desc'));
-          } else {
-            setAttendanceData([]);
-            setIsAttendanceLoading(false);
-            return;
-          }
+        const colRef = collection(firestore, `users/${selectedUserId}/attendances`);
+        if (filterMode === 'all') {
+          q = query(colRef, orderBy('checkInTime', 'desc'));
+        } else if (startTs && endTs) {
+          q = query(colRef, where('checkInTime', '>=', startTs), where('checkInTime', '<=', endTs), orderBy('checkInTime', 'desc'));
         } else {
-          const colRef = collection(firestore, `users/${selectedUserId}/attendances`);
-          if (filterMode === 'all') {
-            q = query(colRef, orderBy('checkInTime', 'desc'));
-          } else if (startTs && endTs) {
-            q = query(colRef, where('checkInTime', '>=', startTs), where('checkInTime', '<=', endTs), orderBy('checkInTime', 'desc'));
-          } else {
-            setAttendanceData([]);
-            setIsAttendanceLoading(false);
-            return;
-          }
+          setAttendanceData([]);
+          setIsAttendanceLoading(false);
+          return;
         }
 
         const snap = await getDocs(q);
@@ -170,7 +162,6 @@ const AnalyticsPage = () => {
           const data = doc.data() as AttendanceRecord;
           const user = users.find(u => u.id === data.employeeId);
           
-          // Logic for non-compliance absence: past date, has check-in but no check-out
           const recordDate = data.checkInTime?.toDate() || new Date(data.id);
           const isPastDate = isBefore(startOfDay(recordDate), startOfDay(new Date()));
           const hasCheckInNoCheckOut = data.checkInTime && !data.checkOutTime;
@@ -185,15 +176,7 @@ const AnalyticsPage = () => {
         setAttendanceData(records);
       } catch (e: any) {
         console.error("Error fetching analytics data:", e);
-        if (e.code === 'failed-precondition') {
-            toast({
-                variant: 'destructive',
-                title: 'Index Required',
-                description: 'Organization-wide sorting requires a specific Firestore index.'
-            });
-        } else {
-            toast({ variant: 'destructive', title: 'Data load failed' });
-        }
+        toast({ variant: 'destructive', title: 'Data load failed' });
       } finally {
         setIsAttendanceLoading(false);
       }
@@ -203,7 +186,7 @@ const AnalyticsPage = () => {
   }, [firestore, selectedUserId, start, end, filterMode, users, areUsersLoading, toast]);
 
   const mergedData = React.useMemo(() => {
-    if (!attendanceData || !users) return null;
+    if (!attendanceData || !users || !selectedUser) return null;
     
     let rangeStart = start;
     let rangeEnd = end;
@@ -221,40 +204,32 @@ const AnalyticsPage = () => {
     const daysInPeriod = eachDayOfInterval({start: rangeStart, end: rangeEnd});
     const result: AttendanceRecord[] = [];
     
-    const attendanceMap = new Map<string, Map<string, AttendanceRecord>>();
+    const attendanceMap = new Map<string, AttendanceRecord>();
     attendanceData.forEach(a => {
-        if (!attendanceMap.has(a.employeeId)) {
-            attendanceMap.set(a.employeeId, new Map());
-        }
         const dayStr = format(a.checkInTime?.toDate() || new Date(a.id), 'yyyy-MM-dd');
-        attendanceMap.get(a.employeeId)?.set(dayStr, a);
+        attendanceMap.set(dayStr, a);
     });
 
-    const targetUsers = selectedUserId === 'all' ? users : users.filter(u => u.id === selectedUserId);
-
-    targetUsers.forEach(u => {
-        const userAttendance = attendanceMap.get(u.id);
-        daysInPeriod.forEach(day => {
-            const dayStr = format(day, 'yyyy-MM-dd');
-            const existing = userAttendance?.get(dayStr);
-            
-            if (existing) {
-                result.push(existing);
-            } else {
-                const isSunday = day.getDay() === 0;
-                result.push({
-                    id: dayStr,
-                    employeeId: u.id,
-                    employeeName: `${u.firstName} ${u.lastName}`,
-                    status: isSunday ? 'holiday' : 'on_leave',
-                    checkInTime: Timestamp.fromDate(day),
-                } as any);
-            }
-        });
+    daysInPeriod.forEach(day => {
+        const dayStr = format(day, 'yyyy-MM-dd');
+        const existing = attendanceMap.get(dayStr);
+        
+        if (existing) {
+            result.push(existing);
+        } else {
+            const isSunday = day.getDay() === 0;
+            result.push({
+                id: dayStr,
+                employeeId: selectedUser.id,
+                employeeName: `${selectedUser.firstName} ${selectedUser.lastName}`,
+                status: isSunday ? 'holiday' : 'on_leave',
+                checkInTime: Timestamp.fromDate(day),
+            } as any);
+        }
     });
     
     return result.sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0));
-  }, [attendanceData, start, end, filterMode, selectedUserId, users]);
+  }, [attendanceData, start, end, filterMode, selectedUser, users]);
 
   const stats = React.useMemo(() => {
     if (!mergedData) return { totalHours: '0.0', totalBreakHours: '0.0', totalLeaves: 0, lateDays: 0, totalHolidays: 0, nonCompliance: 0 };
@@ -377,7 +352,7 @@ const AnalyticsPage = () => {
     const doc = new jsPDF();
     const reportDate = format(new Date(), 'PPP');
     const period = getFilterPeriodText();
-    const employeeName = selectedUserId === 'all' ? 'Organization Overview' : `${selectedUser?.firstName} ${selectedUser?.lastName}`;
+    const employeeName = `${selectedUser?.firstName} ${selectedUser?.lastName}`;
 
     const addPageContent = (data: any) => {
         doc.setFontSize(16);
@@ -427,7 +402,7 @@ const AnalyticsPage = () => {
             !isPresent ? 'N/A' : `${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}`,
             statusStr,
             notes,
-            rec.status // Hidden column for styling in hooks
+            rec.status
         ];
     });
 
@@ -441,21 +416,18 @@ const AnalyticsPage = () => {
         columnStyles: {
             5: { cellWidth: 40 }
         },
-        columns: [0, 1, 2, 3, 4, 5], // Only show first 6 columns
+        columns: [0, 1, 2, 3, 4, 5],
         didParseCell: (data) => {
             if (data.section === 'body') {
-                const rowStatus = data.row.raw[6]; // Get original status from hidden index
-                
-                // Color mapping matching UI
+                const rowStatus = data.row.raw[6];
                 const colors: Record<string, [number, number, number]> = {
-                    present: [240, 253, 244], // Light Green
-                    late: [255, 251, 235],    // Light Yellow
-                    absent: [254, 242, 242],  // Light Red
-                    non_compliance: [255, 247, 237], // Light Orange
-                    on_leave: [239, 246, 255], // Light Blue
-                    holiday: [250, 245, 255],  // Light Purple
+                    present: [240, 253, 244],
+                    late: [255, 251, 235],
+                    absent: [254, 242, 242],
+                    non_compliance: [255, 247, 237],
+                    on_leave: [239, 246, 255],
+                    holiday: [250, 245, 255],
                 };
-
                 if (colors[rowStatus]) {
                     data.cell.styles.fillColor = colors[rowStatus];
                 }
@@ -466,7 +438,6 @@ const AnalyticsPage = () => {
     });
 
     addPageContent({ settings: { margin: { left: 14 } } });
-
     doc.save(`Attendance_Report_${employeeName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
@@ -523,16 +494,15 @@ const AnalyticsPage = () => {
   
   return (
     <>
-      <PageHeader title="Employee Analytics" description="Analyze performance and attendance across the entire organization." />
+      <PageHeader title="Employee Analytics" description="Analyze performance and attendance for team members." />
 
       <div className="flex flex-wrap items-center gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         <div className="w-full sm:w-auto sm:min-w-64">
-            <Select onValueChange={(val) => setSelectedUserId(val as any)} value={selectedUserId}>
+            <Select onValueChange={(val) => setSelectedUserId(val)} value={selectedUserId}>
                 <SelectTrigger>
                     <SelectValue placeholder={areUsersLoading ? "Loading users..." : "Select an employee"} />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="all">All Employees</SelectItem>
                     {users?.map(user => (
                         <SelectItem key={user.id} value={user.id}>{user.firstName} {user.lastName}</SelectItem>
                     ))}
@@ -624,19 +594,7 @@ const AnalyticsPage = () => {
         </div>
       ) : (
       <div className="grid gap-6">
-        {selectedUserId === 'all' ? (
-            <Card className="bg-primary/5 border-primary/20 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-                <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-                    <div className="p-3 bg-primary text-primary-foreground rounded-lg">
-                        <Users className="h-8 w-8" />
-                    </div>
-                    <div>
-                        <CardTitle className="text-2xl">Organization Overview</CardTitle>
-                        <CardDescription>Aggregated analytics for all active employees.</CardDescription>
-                    </div>
-                </CardHeader>
-            </Card>
-        ) : selectedUser && (
+        {selectedUser && (
           <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '200ms' }}>
             <CardHeader className="flex flex-col items-center text-center sm:flex-row sm:text-left gap-4 space-y-0 p-4 sm:p-6">
               <Avatar className="h-20 w-20">
@@ -744,7 +702,6 @@ const AnalyticsPage = () => {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            {selectedUserId === 'all' && <TableHead>Employee</TableHead>}
                                             <TableHead>Date</TableHead>
                                             <TableHead>Time (In/Out)</TableHead>
                                             <TableHead>Duration (Work/Break)</TableHead>
@@ -764,7 +721,6 @@ const AnalyticsPage = () => {
                                             const notes = (rec.checkInNotes ? `In: ${rec.checkInNotes}` : '') + 
                                                           (rec.checkOutNotes ? `\nOut: ${rec.checkOutNotes}` : '');
                                             
-                                            // Status based gradient logic
                                             const gradientClass = cn(
                                                 rec.status === 'present' && 'bg-gradient-to-r from-green-50 to-transparent dark:from-green-950/20',
                                                 rec.status === 'late' && 'bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-950/20',
@@ -776,7 +732,6 @@ const AnalyticsPage = () => {
 
                                             return (
                                             <TableRow key={`${rec.employeeId}-${rec.id}`} className={gradientClass}>
-                                                {selectedUserId === 'all' && <TableCell className="font-medium whitespace-nowrap">{rec.employeeName}</TableCell>}
                                                 <TableCell className="font-medium whitespace-nowrap">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
                                                 <TableCell className="whitespace-nowrap">
                                                     {rec.status === 'holiday' || rec.status === 'on_leave' ? (
