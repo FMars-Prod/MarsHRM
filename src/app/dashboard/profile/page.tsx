@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -54,7 +53,7 @@ type LocationChangeRequest = {
 };
 
 const emojiCategories = {
-    "People": ["🧑", "👨", "👩", "🧓", "👴", "👵", "👮", "👷", "💂", "🕵️", "🧑‍⚕️", "👨‍⚕️", "👩‍⚕️", "🧑‍🌾", "👨‍🌾", "👩‍🌾", "🧑‍🍳", "👨‍🍳", "👩‍🍳", "🧑‍🎓", "👨‍🎓", "👩‍🎓", "🧑‍🎤", "👨‍🎤", "👩‍🎤", "🧑‍🏫", "👨‍🏫", "👩‍🏫", "🧑‍🏭", "👨‍🏭", "👩‍🏭", "🧑‍💻", "👨‍💻", "👩‍💻", "🧑‍💼", "👨‍💼", "👩‍💼", "🧑‍🔧", "👨‍🔧", "👩‍🔧", "🧑‍🔬", "👨‍🔬", "👩‍🔬", "🧑‍🎨", "👨‍🎨", "👩‍🎨", "🧑‍🚒", "👨‍🚒", "👩‍🚒", "🧑‍✈️", "👨‍✈️", "👩‍✈️", "🧑‍🚀", "👨‍🚀", "👩‍🚀", "🧑‍⚖️", "👨‍⚖️", "👩‍⚖️", "🦸", "🦹", "🧙", "🧚", "🧛", "🧜", "🧝", "🧞", "🧟"],
+    "People": ["🧑", "👨", "👩", "🧓", "👴", "👵", "👮", "👷", "💂", "🏠", "🕵️", "🧑‍⚕️", "👨‍⚕️", "👩‍⚕️", "🧑‍🌾", "👨‍🌾", "👩‍🌾", "🧑‍🍳", "👨‍🍳", "👩‍🍳", "🧑‍🎓", "👨‍🎓", "👩‍🎓", "🧑‍🎤", "👨‍🎤", "👩‍🎤", "🧑‍🏫", "👨‍🏫", "👩‍🏫", "🧑‍🏭", "👨‍🏭", "👩‍🏭", "🧑‍💻", "👨‍💻", "👩‍💻", "🧑‍💼", "👨‍💼", "👩‍💼", "🧑‍🔧", "👨‍🔧", "👩‍🔧", "🧑‍🔬", "👨‍🔬", "👩‍🔬", "🧑‍🎨", "👨‍🎨", "👩‍🎨", "🧑‍🚒", "👨‍🚒", "👩‍🚒", "🧑‍✈️", "👨‍✈️", "👩‍✈️", "🧑‍🚀", "👨‍🚀", "👩‍🚀", "🧑‍⚖️", "👨‍⚖️", "👩‍⚖️", "🦸", "🦹", "🧙", "🧚", "🧛", "🧜", "🧝", "🧞", "🧟"],
     "Smileys": ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠"],
 };
 
@@ -268,8 +267,8 @@ export default function ProfilePage() {
                 description="View and manage your personal information."
             />
             <div className="grid gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-1 space-y-6">
-                    <Card>
+                <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                    <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                         <CardHeader className="items-center text-center">
                             <Avatar className={cn("h-24 w-24 relative group", employeeAvatar && "bg-transparent")}>
                                {employeeAvatar ? (
@@ -316,7 +315,7 @@ export default function ProfilePage() {
                         <CardContent>
                             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button className="w-full">
+                                    <Button className="w-full rounded-full">
                                         <Edit className="mr-2 h-4 w-4"/> Edit Profile
                                     </Button>
                                 </DialogTrigger>
@@ -405,8 +404,8 @@ export default function ProfilePage() {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="lg:col-span-2 space-y-6">
-                    <Card>
+                <div className="lg:col-span-2 space-y-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                         <CardHeader>
                             <CardTitle className="font-headline">Personal Information</CardTitle>
                             <CardDescription>Details about your employment.</CardDescription>
@@ -448,7 +447,7 @@ export default function ProfilePage() {
                             </div>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                         <CardHeader>
                             <CardTitle className="font-headline">Work From Home</CardTitle>
                             <CardDescription>Manage your home location for remote work clock-ins.</CardDescription>
@@ -462,7 +461,7 @@ export default function ProfilePage() {
                                     <p className="font-semibold text-muted-foreground">Not set</p>
                                 )}
                             </div>
-                            <Button onClick={handleLocationAction} disabled={hasPendingRequest || !(employee as any)?.isWfhAllowed}>
+                            <Button onClick={handleLocationAction} disabled={hasPendingRequest || !(employee as any)?.isWfhAllowed} className="rounded-full">
                                 <MapPin className="mr-2 h-4 w-4" />
                                 {(employee as any)?.homeLatitude ? 'Request Location Change' : 'Set Home Location'}
                             </Button>
@@ -482,7 +481,7 @@ export default function ProfilePage() {
             </div>
 
             <Dialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
-                <DialogContent className="sm:max-w-lg" onCloseAutoFocus={(e) => e.preventDefault()}>
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Set Home Location</DialogTitle>
                         <DialogDescription>
@@ -511,7 +510,7 @@ export default function ProfilePage() {
             </Dialog>
             
             <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
-                 <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
+                 <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] p-0">
                     <DialogHeader className="p-6 pb-4 border-b">
                         <DialogTitle>Step 1: Select New Location</DialogTitle>
                         <DialogDescription>
@@ -569,5 +568,3 @@ export default function ProfilePage() {
         </>
     )
 }
-
-    

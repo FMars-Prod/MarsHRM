@@ -525,7 +525,7 @@ const AnalyticsPage = () => {
     <>
       <PageHeader title="Employee Analytics" description="Analyze performance and attendance across the entire organization." />
 
-      <div className="flex flex-wrap items-center gap-4 mb-6">
+      <div className="flex flex-wrap items-center gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         <div className="w-full sm:w-auto sm:min-w-64">
             <Select onValueChange={(val) => setSelectedUserId(val as any)} value={selectedUserId}>
                 <SelectTrigger>
@@ -625,7 +625,7 @@ const AnalyticsPage = () => {
       ) : (
       <div className="grid gap-6">
         {selectedUserId === 'all' ? (
-            <Card className="bg-primary/5 border-primary/20">
+            <Card className="bg-primary/5 border-primary/20 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                 <CardHeader className="flex flex-row items-center gap-4 space-y-0">
                     <div className="p-3 bg-primary text-primary-foreground rounded-lg">
                         <Users className="h-8 w-8" />
@@ -637,7 +637,7 @@ const AnalyticsPage = () => {
                 </CardHeader>
             </Card>
         ) : selectedUser && (
-          <Card>
+          <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '200ms' }}>
             <CardHeader className="flex flex-col items-center text-center sm:flex-row sm:text-left gap-4 space-y-0 p-4 sm:p-6">
               <Avatar className="h-20 w-20">
                 <AvatarFallback>{selectedUser.firstName?.[0]}{selectedUser.lastName?.[0]}</AvatarFallback>
@@ -650,8 +650,8 @@ const AnalyticsPage = () => {
           </Card>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
-            <Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Work Hours</CardTitle>
                     <Clock className="h-4 w-4 text-muted-foreground" />
@@ -661,7 +661,7 @@ const AnalyticsPage = () => {
                     <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Break Time</CardTitle>
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -671,7 +671,7 @@ const AnalyticsPage = () => {
                      <p className="text-xs text-muted-foreground">{getFilterPeriodText()}</p>
                 </CardContent>
             </Card>
-            <Card className="border-orange-200 bg-orange-50/30">
+            <Card className="border-orange-200 bg-gradient-to-br from-orange-500/10 to-transparent border-none ring-1 ring-orange-200/50 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Non-Compliance</CardTitle>
                     <ShieldAlert className="h-4 w-4 text-orange-600" />
@@ -681,7 +681,7 @@ const AnalyticsPage = () => {
                     <p className="text-xs text-muted-foreground">Missing log-outs</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Holidays</CardTitle>
                     <Sun className="h-4 w-4 text-muted-foreground" />
@@ -691,7 +691,7 @@ const AnalyticsPage = () => {
                     <p className="text-xs text-muted-foreground">Sundays in period</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Leaves</CardTitle>
                     <CalendarOff className="h-4 w-4 text-muted-foreground" />
@@ -701,7 +701,7 @@ const AnalyticsPage = () => {
                     <p className="text-xs text-muted-foreground">Missed working days</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Late Days</CardTitle>
                     <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -713,9 +713,9 @@ const AnalyticsPage = () => {
             </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
             <div className="lg:col-span-3">
-                <Card>
+                <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                     <CardHeader className="flex flex-row items-start justify-between space-y-0">
                         <div>
                             <CardTitle>Attendance & Leave Log</CardTitle>
@@ -740,7 +740,7 @@ const AnalyticsPage = () => {
                     </CardHeader>
                     <CardContent>
                         <TooltipProvider>
-                            <div className="overflow-x-auto rounded-lg border">
+                            <div className="overflow-x-auto rounded-lg border bg-white/50 backdrop-blur-sm">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>

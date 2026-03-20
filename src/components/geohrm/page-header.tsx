@@ -16,7 +16,7 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6",
+        "flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 animate-fade-in-up",
         className
       )}
       {...props}
