@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Megaphone, FileText } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -59,24 +60,24 @@ export function AnnouncementsWidget() {
           <div className="space-y-4">
             {announcements.map((item) => (
               <div key={item.id} className="flex flex-col transition-all duration-300 hover:translate-x-1">
-                <span className="font-semibold">{item.title}</span>
-                <p className="text-sm text-muted-foreground line-clamp-2">{item.content}</p>
-                <span className="text-xs text-muted-foreground pt-1">{formatDate(item.publishDate)}</span>
+                <span className="font-semibold text-sm">{item.title}</span>
+                <p className="text-xs text-muted-foreground line-clamp-2">{item.content}</p>
+                <span className="text-[10px] text-muted-foreground pt-1">{formatDate(item.publishDate)}</span>
               </div>
             ))}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-8">
             <FileText className="size-8 mb-2 opacity-50" />
-            <p>No announcements yet.</p>
+            <p className="text-sm">No announcements yet.</p>
           </div>
         )}
       </CardContent>
-      <div className="p-6 pt-0">
-        <Button variant="outline" className="w-full bg-white/50" asChild>
+      <CardFooter>
+        <Button variant="outline" size="sm" className="w-full bg-white/50" asChild>
           <Link href="/dashboard/announcements">View All</Link>
         </Button>
-      </div>
+      </CardFooter>
     </Card>
   );
 }

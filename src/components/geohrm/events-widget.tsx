@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { PartyPopper, HelpCircle, Gift, Users, Award, Cake, CalendarClock } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -24,6 +25,7 @@ const iconComponents: Record<IconName, React.FC<React.SVGProps<SVGSVGElement>>> 
 };
 
 type EventItem = { 
+  id: string;
   name: string; 
   event: string;
   date: Timestamp;
@@ -73,12 +75,12 @@ export function EventsWidget() {
 
   const EventListItem = ({ item }: { item: EventItem }) => (
      <div key={item.id} className="flex items-center gap-4 group transition-all duration-300 hover:translate-x-1">
-        <div className="p-3 rounded-full transition-colors" style={{ backgroundColor: item.color + '1A' }}>
-          {renderIcon(item.icon, { className: "size-5", style: { color: item.color } })}
+        <div className="p-2.5 rounded-full transition-colors" style={{ backgroundColor: item.color + '1A' }}>
+          {renderIcon(item.icon, { className: "size-4", style: { color: item.color } })}
         </div>
         <div className="flex flex-col">
-          <span className="font-semibold">{item.name}</span>
-          <p className="text-sm text-muted-foreground">
+          <span className="font-semibold text-sm">{item.name}</span>
+          <p className="text-xs text-muted-foreground line-clamp-1">
             {item.event} on {formatDate(item.date)}
           </p>
         </div>
@@ -92,17 +94,17 @@ export function EventsWidget() {
           <PartyPopper className="size-5" />
           Company Events
         </CardTitle>
-        <CardDescription>Birthdays, anniversaries, and upcoming events.</CardDescription>
+        <CardDescription>Birthdays and anniversaries.</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 space-y-4">
          {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="flex items-center gap-4">
-                 <div className="h-12 w-12 rounded-full bg-muted animate-pulse" />
+                 <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
                  <div className="space-y-2">
-                    <div className="h-4 w-32 rounded-md bg-muted animate-pulse" />
-                    <div className="h-4 w-48 rounded-md bg-muted animate-pulse" />
+                    <div className="h-3 w-24 rounded-md bg-muted animate-pulse" />
+                    <div className="h-3 w-32 rounded-md bg-muted animate-pulse" />
                  </div>
               </div>
             ))}
@@ -111,12 +113,12 @@ export function EventsWidget() {
           <>
             {todaysEvents && todaysEvents.length > 0 ? (
               <div className="space-y-4">
-                <h4 className="font-semibold text-sm text-primary/80">Today's Events</h4>
+                <h4 className="font-semibold text-[10px] uppercase tracking-wider text-primary/80">Today's Events</h4>
                 {todaysEvents.map((item) => <EventListItem key={item.id} item={item} />)}
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-4 bg-white/30 rounded-lg">
-                <p className="text-sm">No events scheduled for today.</p>
+                <p className="text-xs">No events today.</p>
               </div>
             )}
             
@@ -124,7 +126,7 @@ export function EventsWidget() {
 
             {upcomingEvents && upcomingEvents.length > 0 && (
                  <div className="space-y-4">
-                    <h4 className="font-semibold text-sm flex items-center gap-2 text-muted-foreground"><CalendarClock className="size-4" /> Upcoming</h4>
+                    <h4 className="font-semibold text-[10px] uppercase tracking-wider flex items-center gap-2 text-muted-foreground"><CalendarClock className="size-3" /> Upcoming</h4>
                     {upcomingEvents.slice(0, 3).map((item) => <EventListItem key={item.id} item={item} />)}
                 </div>
             )}
@@ -132,17 +134,17 @@ export function EventsWidget() {
             {(!todaysEvents || todaysEvents.length === 0) && (!upcomingEvents || upcomingEvents.length === 0) && !isLoading && (
                  <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-8">
                     <PartyPopper className="size-8 mb-2 opacity-50" />
-                    <p>No events scheduled soon.</p>
+                    <p className="text-sm">No events scheduled soon.</p>
                 </div>
             )}
           </>
         )}
       </CardContent>
-      <div className="p-6 pt-0">
-        <Button variant="outline" className="w-full mt-4 bg-white/50" asChild>
+      <CardFooter>
+        <Button variant="outline" size="sm" className="w-full bg-white/50" asChild>
           <Link href="/dashboard/events">View All Events</Link>
         </Button>
-      </div>
+      </CardFooter>
     </Card>
   );
 }
