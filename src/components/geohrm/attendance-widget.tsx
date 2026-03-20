@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, RotateCcw, Home } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -37,13 +37,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, serverTimestamp, updateDoc, Timestamp } from "firebase/firestore";
+import { doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, parse, isSameDay, endOfDay } from "date-fns";
 import { Textarea } from "../ui/textarea";
-import { Switch } from "../ui/switch";
-
 
 type AttendanceStatus = "out" | "in" | "break";
 
@@ -190,7 +188,6 @@ export function AttendanceWidget() {
         title: "Automatically Clocked Out",
         description: "You were clocked out as the day has changed.",
       });
-      // Reset state for the new day
       setStatus("out");
       setHasClockedOutToday(false);
       setTimer(0);
@@ -352,7 +349,6 @@ export function AttendanceWidget() {
             const homeLon = (userData as any)?.homeLongitude;
             const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
             
-            // 1. Check against Office Location
             if (officeLocation) {
                 const officeDist = getDistanceInKm(userLocation, officeLocation);
                 if (officeDist <= maxDistanceKm) {
@@ -361,7 +357,6 @@ export function AttendanceWidget() {
                 }
             }
 
-            // 2. Not at the office, check WFH possibility
             if (isWfhAllowed) {
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
@@ -378,7 +373,6 @@ export function AttendanceWidget() {
                 }
             }
             
-            // 3. Out of all valid ranges
             const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
 
             let infoMsg = '';
@@ -434,7 +428,6 @@ export function AttendanceWidget() {
             const homeLon = (userData as any)?.homeLongitude;
             const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
             
-            // 1. Check Office
             if (officeLocation) {
                 const officeDist = getDistanceInKm(userLocation, officeLocation);
                 if (officeDist <= maxDistanceKm) {
@@ -443,7 +436,6 @@ export function AttendanceWidget() {
                 }
             }
             
-            // 2. Check Home
             if (isWfhAllowed) {
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
@@ -455,7 +447,6 @@ export function AttendanceWidget() {
                 }
             }
 
-            // 3. Out of Range
             const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
 
             let infoMsg = '';
@@ -504,7 +495,7 @@ export function AttendanceWidget() {
       const range = parseFloat(newMaxDistance);
       const lunchDuration = parseInt(newLunchDuration);
 
-      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
+      if (isNaN(lat) || isNaN(lon) || ianaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
           toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
@@ -519,10 +510,8 @@ export function AttendanceWidget() {
             lunchBreakStartTime: newLunchStart,
             lunchBreakDurationMinutes: lunchDuration
         }, { merge: true });
-        toast({ title: "Settings Update Initiated", description: "The office settings are being updated." });
+        toast({ title: "Settings Updated", description: "The office settings have been saved." });
         setIsSettingsDialogOpen(false);
-      } else {
-        toast({ variant: "destructive", title: "Update Failed", description: "Could not save the new settings." });
       }
   }
   
@@ -551,7 +540,7 @@ export function AttendanceWidget() {
         deleteDocumentNonBlocking(getTodaysAttendanceRef);
         toast({
             title: "Day Reset",
-            description: "Your attendance for today has been reset. You can now clock in again."
+            description: "Your attendance for today has been reset."
         });
     }
   };
@@ -625,7 +614,7 @@ export function AttendanceWidget() {
             )}
         </div>
         <CardDescription>
-          Your real-time attendance tracker. Your designated location is
+          Your real-time attendance tracker. Designated location:
           <span className="font-semibold text-foreground">
             {isWfhAllowed ? " Work From Home" : " Work From Office"}
           </span>.
@@ -645,9 +634,7 @@ export function AttendanceWidget() {
                 status === "in" && "text-green-600",
                 status === "break" && "text-yellow-600",
                 status === "out" && !hasClockedOutToday && "text-red-600",
-                status === "out" &&
-                  hasClockedOutToday &&
-                  "text-muted-foreground"
+                status === "out" && hasClockedOutToday && "text-muted-foreground"
               )}
             >
               {status === "in" && <Briefcase className="size-5" />}
@@ -656,10 +643,10 @@ export function AttendanceWidget() {
 
               {
                 hasClockedOutToday
-                  ? "You have clocked out for the day"
+                  ? "Clocked out for the day"
                   : status === 'break'
-                    ? (autoLunchTriggered ? "You are Clocked Out for Lunch" : "You are currently on a Break")
-                    : `You are currently Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
+                    ? (autoLunchTriggered ? "Clocked Out for Lunch" : "Currently on Break")
+                    : `Currently Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
               }
             </div>
             <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter drop-shadow-sm">
@@ -668,9 +655,7 @@ export function AttendanceWidget() {
             <div className="flex items-center gap-6">
               {status === "break" && (
                 <div className="flex flex-col items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Current Break
-                  </span>
+                  <span className="text-sm text-muted-foreground">Current Break</span>
                   <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
                     {formatTime(breakTimer)}
                   </div>
@@ -678,9 +663,7 @@ export function AttendanceWidget() {
               )}
               {totalBreakTime > 0 && (
                 <div className="flex flex-col items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Total Break
-                  </span>
+                  <span className="text-sm text-muted-foreground">Total Break</span>
                   <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
                     {formatTime(totalBreakTime)}
                   </div>
@@ -695,11 +678,9 @@ export function AttendanceWidget() {
             {currentUserLocation && (
               <div className="flex items-center text-xs text-muted-foreground gap-1">
                 <MapPin className="size-3" />
-                <span>{`Lat: ${currentUserLocation.latitude.toFixed(
-                  4
-                )}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
+                <span>{`Lat: ${currentUserLocation.latitude.toFixed(4)}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
                 {distance !== null && (
-                  <span>({distance.toFixed(2)} km from designated location)</span>
+                  <span>({distance.toFixed(2)} km from target)</span>
                 )}
               </div>
             )}
@@ -707,7 +688,7 @@ export function AttendanceWidget() {
         ) : (
              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <Building2 className="h-10 w-10" />
-                <p className="max-w-xs">Office location is not set. An administrator needs to configure it.</p>
+                <p className="max-w-xs">Office location not set. Contact an admin.</p>
             </div>
         )}
       </CardContent>
@@ -732,7 +713,7 @@ export function AttendanceWidget() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will delete today's attendance record and allow you to clock in again. This action cannot be undone.
+                            This will delete today's attendance record and allow you to clock in again.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -743,44 +724,32 @@ export function AttendanceWidget() {
             </AlertDialog>
         )}
         {status !== 'out' && (
-            <div className="grid grid-cols-2 gap-4 w-full justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-[400px] justify-center">
                 <Button
                     onClick={handleBreak}
                     variant={status === "break" ? "default" : "outline"}
                     className={cn(
-                        "rounded-full h-12 font-semibold shadow-md transition-all active:scale-95 px-8",
+                        "rounded-full h-12 flex-1 font-semibold shadow-md transition-all active:scale-95 px-8",
                         status !== "break" ? "bg-white/50 border-primary/20 text-primary hover:bg-primary/5" : "bg-primary text-white"
                     )}
                 >
-                    {status === 'break' && autoLunchTriggered
-                        ? <Clock className="mr-2 h-4 w-4" />
-                        : <Coffee className="mr-2 h-4 w-4" />
-                    }
-                    {status === 'break' 
-                        ? autoLunchTriggered ? 'Clock In' : 'End Break'
-                        : 'Start Break'
-                    }
+                    {status === 'break' && autoLunchTriggered ? <Clock className="mr-2 h-4 w-4" /> : <Coffee className="mr-2 h-4 w-4" />}
+                    {status === 'break' ? (autoLunchTriggered ? 'Clock In' : 'End Break') : 'Start Break'}
                 </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="rounded-full h-12 font-semibold shadow-md transition-all active:scale-95 px-8">
+                        <Button variant="destructive" className="rounded-full h-12 flex-1 font-semibold shadow-md transition-all active:scale-95 px-8">
                             Clock Out
                         </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>
-                                Are you sure you want to clock out?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action will end your current work session.
-                            </AlertDialogDescription>
+                            <AlertDialogTitle>Confirm Clock Out</AlertDialogTitle>
+                            <AlertDialogDescription>End your work session for today?</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleClockOut}>
-                                Confirm Clock Out
-                            </AlertDialogAction>
+                            <AlertDialogAction onClick={handleClockOut}>Confirm</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
@@ -792,25 +761,14 @@ export function AttendanceWidget() {
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Out of Range</DialogTitle>
-                <DialogDescription>
-                    {outOfRangeInfo} Please provide a reason to continue.
-                </DialogDescription>
+                <DialogDescription>{outOfRangeInfo}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
                 <Label htmlFor="reason">Reason</Label>
-                <Textarea 
-                    id="reason" 
-                    value={outOfRangeReason}
-                    onChange={(e) => setOutOfRangeReason(e.target.value)}
-                    placeholder="e.g., Working from a client's office" 
-                />
+                <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Working from a client's office" />
             </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => {
-                    setIsOutOfRangeReasonDialogOpen(false);
-                    setOutOfRangeReason("");
-                    setOutOfRangeAction(null);
-                }}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setIsOutOfRangeReasonDialogOpen(false); setOutOfRangeReason(""); }}>Cancel</Button>
                 <Button onClick={handleOutOfRangeSubmit}>Submit</Button>
             </DialogFooter>
         </DialogContent>
@@ -820,9 +778,7 @@ export function AttendanceWidget() {
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Set Home Location?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    You have not set a home location yet. Would you like to use your current location as your Work From Home address? This can be changed later in your profile.
-                </AlertDialogDescription>
+                <AlertDialogDescription>You haven't set a home location. Use current coordinates?</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>

@@ -3,11 +3,10 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { List, CalendarOff, ShieldCheck, MessageSquareWarning, ArrowRight, ShieldAlert } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, getDocs, collectionGroup } from 'firebase/firestore';
-import { subDays, startOfToday, endOfDay, format, startOfDay } from 'date-fns';
+import { subDays, endOfDay, format, startOfDay } from 'date-fns';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -53,7 +52,6 @@ export function ActionItemsWidget() {
     const userRole = (currentUserData as any)?.role;
     const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
-    // Fetch pending leave requests for managers
     const leaveRequestsQuery = useMemoFirebase(() => {
         if (!currentUser || !userRole || userRole === 'Member') return null;
         
@@ -68,7 +66,6 @@ export function ActionItemsWidget() {
     }, [firestore, currentUser, userRole]);
     const { data: pendingLeaves, isLoading: leavesLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
 
-    // Fetch unacknowledged policies
     const policiesQuery = useMemoFirebase(() => collection(firestore, 'policies'), [firestore]);
     const { data: allPolicies, isLoading: policiesLoading } = useCollection<Policy>(policiesQuery);
 
@@ -81,7 +78,6 @@ export function ActionItemsWidget() {
         return allPolicies.filter(p => !ackIds.has(p.id));
     }, [allPolicies, acknowledgedPolicies]);
 
-    // Fetch open issues reported by the user
     const issuesQuery = useMemoFirebase(() => {
         if (!currentUser) return null;
         return query(
@@ -92,7 +88,6 @@ export function ActionItemsWidget() {
     }, [firestore, currentUser]);
     const { data: openIssues, isLoading: issuesLoading } = useCollection<Issue>(issuesQuery);
 
-    // Logic to detect non-compliance (missing log-outs) from yesterday
     React.useEffect(() => {
         const checkCompliance = async () => {
             if (!isAdmin || !firestore) return;
@@ -111,7 +106,6 @@ export function ActionItemsWidget() {
                 const snap = await getDocs(q);
                 const issues: ActionItem[] = [];
                 
-                // Get user names for better alerts
                 const usersSnap = await getDocs(collection(firestore, 'users'));
                 const userMap = new Map();
                 usersSnap.docs.forEach(d => userMap.set(d.id, `${d.data().firstName} ${d.data().lastName}`));
@@ -154,7 +148,7 @@ export function ActionItemsWidget() {
                 id: `policy-${policy.id}`,
                 type: 'policy',
                 title: `New Policy: ${policy.title}`,
-                description: `Awaiting your acknowledgment`,
+                description: `Awaiting acknowledgment`,
                 href: '/dashboard/policies'
             });
         });
@@ -186,7 +180,7 @@ export function ActionItemsWidget() {
                     <List className="size-5" />
                     Action Items
                 </CardTitle>
-                <CardDescription>Tasks and notifications requiring your attention.</CardDescription>
+                <CardDescription>Notifications requiring attention.</CardDescription>
             </CardHeader>
             <CardContent>
                 {isLoading ? (
@@ -220,13 +214,8 @@ export function ActionItemsWidget() {
                     </div>
                 ) : (
                     <div className="text-center text-muted-foreground py-6">
-                        <p>No pending action items. Great job!</p>
+                        <p>No pending items.</p>
                     </div>
-                )}
-                 {actionItems.length > 5 && (
-                    <p className="text-xs text-center text-muted-foreground pt-4">
-                        + {actionItems.length - 5} more
-                    </p>
                 )}
             </CardContent>
         </Card>

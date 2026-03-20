@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isBefore } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Users, Share2, FileText, Sun, ShieldAlert } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Share2, FileText, Sun, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -78,7 +79,6 @@ const AnalyticsPage = () => {
   const [range, setRange] = React.useState<DateRange | undefined>();
   const [filterMode, setFilterMode] = React.useState<FilterMode>("day");
 
-  // Edit States
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingDate, setEditingDate] = React.useState<Date | null>(null);
   const [editingEmployeeId, setEditingEmployeeId] = React.useState<string | null>(null);
@@ -304,7 +304,6 @@ const AnalyticsPage = () => {
             const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status;
             const notes = `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"`;
 
-
             const row = [
                 `"${rec.employeeName}"`,
                 rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "PP")}"` : "N/A",
@@ -335,7 +334,6 @@ const AnalyticsPage = () => {
     } else if (filterMode === 'all') {
         datePart = 'all_time';
     }
-
 
     link.setAttribute('download', `AttendanceReport_${datePart}.csv`);
     document.body.appendChild(link);
@@ -479,7 +477,7 @@ const AnalyticsPage = () => {
       };
 
       setDocumentNonBlocking(attendanceRef, payload, { merge: true });
-      toast({ title: "Attendance Updated", description: `Record for ${editingEmployeeName} on ${format(editingDate, "PP")} saved.` });
+      toast({ title: "Attendance Updated", description: `Record for ${editingEmployeeName} saved.` });
       setIsEditDialogOpen(false);
   }
 
@@ -488,7 +486,7 @@ const AnalyticsPage = () => {
     const attendanceId = format(editingDate, 'yyyy-MM-dd');
     const attendanceRef = doc(firestore, `users/${editingEmployeeId}/attendances/${attendanceId}`);
     deleteDocumentNonBlocking(attendanceRef);
-    toast({ title: "Day Reset", description: `Attendance for ${editingEmployeeName} on ${format(editingDate, "PPP")} has been reset.` });
+    toast({ title: "Day Reset", description: `Attendance for ${editingEmployeeName} has been reset.` });
     setIsEditDialogOpen(false);
   }
   
@@ -511,8 +509,7 @@ const AnalyticsPage = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant={filterMode === 'day' && date && format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setFilterMode('day'); }}>Today</Button>
-          <Button variant={filterMode === 'day' && date && format(date, 'yyyy-MM-dd') === format(subDays(new Date(), 1), 'yyyy-MM-dd') ? 'default' : 'outline'} onClick={() => { setDate(subDays(new Date(), 1)); setFilterMode('day'); }}>Yesterday</Button>
-           <Button variant={filterMode === 'month' && month && format(month, 'yyyy-MM') === format(new Date(), 'yyyy-MM') ? 'default' : 'outline'} onClick={() => { setMonth(new Date()); setFilterMode('month'); }}>This Month</Button>
+          <Button variant={filterMode === 'month' && month && format(month, 'yyyy-MM') === format(new Date(), 'yyyy-MM') ? 'default' : 'outline'} onClick={() => { setMonth(new Date()); setFilterMode('month'); }}>This Month</Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button id="date" variant={"outline"} className={cn("w-full md:w-[200px] justify-start text-left font-normal", filterMode !== 'day' && "text-muted-foreground")}>
@@ -553,7 +550,7 @@ const AnalyticsPage = () => {
                 />
             </PopoverContent>
           </Popover>
-          <Button variant={filterMode === 'all' ? 'default' : 'outline'} onClick={() => setFilterMode('all')}>{filterMode === 'all' ? "Viewing Full History" : "View Full History"}</Button>
+          <Button variant={filterMode === 'all' ? 'default' : 'outline'} onClick={() => setFilterMode('all')}>{filterMode === 'all' ? "Full History" : "View Full History"}</Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
             <DropdownMenu>
@@ -679,22 +676,6 @@ const AnalyticsPage = () => {
                             <CardTitle>Attendance & Leave Log</CardTitle>
                             <CardDescription>{filterMode === 'all' ? "Full history." : `Activity for ${getFilterPeriodText()}.`}</CardDescription>
                         </div>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" disabled={isAttendanceLoading || !attendanceData || attendanceData.length === 0}>
-                                    <Download className="mr-2 h-4 w-4" />
-                                    Export Log
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={handleExport}>
-                                    CSV for Excel
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleExportPdf}>
-                                    PDF Document
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
                     </CardHeader>
                     <CardContent>
                         <TooltipProvider>
@@ -861,11 +842,11 @@ const AnalyticsPage = () => {
                   {(editableAttendance.status === 'present' || editableAttendance.status === 'late') && (
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="check-in">Login In Time</Label>
+                            <Label htmlFor="check-in">Check In Time</Label>
                             <Input id="check-in" type="time" value={editableAttendance.checkInTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInTime: e.target.value}))}/>
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="check-out">Log Out Time</Label>
+                            <Label htmlFor="check-out">Check Out Time</Label>
                             <Input id="check-out" type="time" value={editableAttendance.checkOutTime} onChange={(e) => setEditableAttendance(prev => ({...prev, checkOutTime: e.target.value}))}/>
                         </div>
                     </div>
@@ -875,8 +856,8 @@ const AnalyticsPage = () => {
                       <Input id="break" type="number" value={editableAttendance.totalBreakDuration} onChange={(e) => setEditableAttendance(prev => ({...prev, totalBreakDuration: e.target.value}))}/>
                   </div>
                   <div className="grid gap-2">
-                      <Label htmlFor="checkin-notes">Manually Adjustment Notes / Remarks</Label>
-                      <Textarea id="checkin-notes" placeholder="Reason for manual correction or performance remarks..." value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
+                      <Label htmlFor="checkin-notes">Adjustment Remarks</Label>
+                      <Textarea id="checkin-notes" placeholder="Reason for manual correction..." value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
                   </div>
               </div>
               <DialogFooter className="sm:justify-between">
@@ -891,7 +872,7 @@ const AnalyticsPage = () => {
                           <AlertDialogHeader>
                               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                  This will delete the attendance record for {editingEmployeeName} on {editingDate ? format(editingDate, 'PPP') : 'this day'}. This action cannot be undone.
+                                  This will delete the record for {editingDate ? format(editingDate, 'PPP') : 'this day'}.
                               </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

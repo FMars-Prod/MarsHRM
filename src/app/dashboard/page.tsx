@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
@@ -21,12 +22,12 @@ export default function DashboardPage() {
   const isAdminOrHR = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
   return (
-    <>
+    <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Welcome back, here's your overview for today."
-      >
-      </PageHeader>
+        description="Overview for today."
+        className="animate-fade-in-up"
+      />
       
       <DashboardReminder />
 
@@ -49,6 +50,6 @@ export default function DashboardPage() {
           <EventsWidget />
         </div>
       </div>
-    </>
+    </div>
   );
 }
