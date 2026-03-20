@@ -710,21 +710,21 @@ export function AttendanceWidget() {
             </div>
         )}
       </CardContent>
-      <CardFooter className="grid grid-cols-2 gap-4">
+      <CardFooter className="flex justify-center items-center py-6 px-6">
         {status === 'out' && !hasClockedOutToday && (
             <Button
                 onClick={handleClockIn}
-                className="w-full col-span-2 shadow-sm transition-transform active:scale-95"
+                className="w-full max-w-[240px] rounded-full h-14 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 bg-primary text-white"
                 disabled={!isWfhAllowed && !officeLocation}
             >
-                <Clock className="mr-2" /> Clock In
+                <Clock className="mr-2 h-5 w-5" /> Clock In
             </Button>
         )}
         {status === 'out' && hasClockedOutToday && (
             <AlertDialog>
                 <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="w-full col-span-2 bg-white/50">
-                        <RotateCcw className="mr-2" /> Reset Day
+                    <Button variant="outline" className="w-full max-w-[240px] rounded-full h-12 bg-white/50 shadow-sm border-primary/20 text-primary hover:bg-primary/5">
+                        <RotateCcw className="mr-2 h-4 w-4" /> Reset Day
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -742,15 +742,18 @@ export function AttendanceWidget() {
             </AlertDialog>
         )}
         {status !== 'out' && (
-            <>
+            <div className="grid grid-cols-2 gap-4 w-full">
                 <Button
                     onClick={handleBreak}
                     variant={status === "break" ? "default" : "outline"}
-                    className="w-full bg-white/50"
+                    className={cn(
+                        "rounded-full h-12 font-semibold shadow-md transition-all active:scale-95",
+                        status !== "break" ? "bg-white/50 border-primary/20 text-primary hover:bg-primary/5" : "bg-primary text-white"
+                    )}
                 >
                     {status === 'break' && autoLunchTriggered
-                        ? <Clock className="mr-2" />
-                        : <Coffee className="mr-2" />
+                        ? <Clock className="mr-2 h-4 w-4" />
+                        : <Coffee className="mr-2 h-4 w-4" />
                     }
                     {status === 'break' 
                         ? autoLunchTriggered ? 'Clock In' : 'End Break'
@@ -759,7 +762,7 @@ export function AttendanceWidget() {
                 </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="w-full shadow-sm transition-transform active:scale-95">
+                        <Button variant="destructive" className="rounded-full h-12 font-semibold shadow-md transition-all active:scale-95">
                             Clock Out
                         </Button>
                     </AlertDialogTrigger>
@@ -780,7 +783,7 @@ export function AttendanceWidget() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-            </>
+            </div>
         )}
       </CardFooter>
 
