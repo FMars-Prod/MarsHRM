@@ -556,7 +556,7 @@ export function AttendanceWidget() {
   };
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '100ms' }}>
       <CardHeader>
         <div className="flex items-start justify-between">
             <CardTitle className="font-headline flex items-center gap-2">
@@ -661,7 +661,7 @@ export function AttendanceWidget() {
                     : `You are currently Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
               }
             </div>
-            <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter">
+            <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter drop-shadow-sm">
               {formatTime(timer)}
             </div>
             <div className="flex items-center gap-6">
@@ -714,7 +714,7 @@ export function AttendanceWidget() {
         {status === 'out' && !hasClockedOutToday && (
             <Button
                 onClick={handleClockIn}
-                className="w-full col-span-2"
+                className="w-full col-span-2 shadow-sm transition-transform active:scale-95"
                 disabled={!isWfhAllowed && !officeLocation}
             >
                 <Clock className="mr-2" /> Clock In
@@ -723,7 +723,7 @@ export function AttendanceWidget() {
         {status === 'out' && hasClockedOutToday && (
             <AlertDialog>
                 <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="w-full col-span-2">
+                    <Button variant="outline" className="w-full col-span-2 bg-white/50">
                         <RotateCcw className="mr-2" /> Reset Day
                     </Button>
                 </AlertDialogTrigger>
@@ -746,7 +746,7 @@ export function AttendanceWidget() {
                 <Button
                     onClick={handleBreak}
                     variant={status === "break" ? "default" : "outline"}
-                    className="w-full"
+                    className="w-full bg-white/50"
                 >
                     {status === 'break' && autoLunchTriggered
                         ? <Clock className="mr-2" />
@@ -759,7 +759,7 @@ export function AttendanceWidget() {
                 </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="w-full">
+                        <Button variant="destructive" className="w-full shadow-sm transition-transform active:scale-95">
                             Clock Out
                         </Button>
                     </AlertDialogTrigger>

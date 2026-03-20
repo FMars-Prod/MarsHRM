@@ -108,7 +108,7 @@ export function WorkHoursSummaryWidget() {
     }, [attendanceData, viewMode, start, end]);
 
     return (
-        <Card>
+        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '300ms' }}>
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <CardTitle className="font-headline flex items-center gap-2">
@@ -116,7 +116,7 @@ export function WorkHoursSummaryWidget() {
                         My Activity
                     </CardTitle>
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'weekly' | 'monthly')}>
-                        <TabsList className="h-8">
+                        <TabsList className="h-8 bg-white/50">
                             <TabsTrigger value="weekly" className="h-6 px-2 text-xs">Weekly</TabsTrigger>
                             <TabsTrigger value="monthly" className="h-6 px-2 text-xs">Monthly</TabsTrigger>
                         </TabsList>
@@ -129,7 +129,7 @@ export function WorkHoursSummaryWidget() {
             <CardContent>
                 {isLoading ? (
                     <div className="h-[200px] flex items-center justify-center">
-                        <p className="text-muted-foreground">Loading chart data...</p>
+                        <p className="text-muted-foreground animate-pulse">Loading chart data...</p>
                     </div>
                 ) : (
                     <ChartContainer config={chartConfig} className="min-h-[200px] w-full">

@@ -15,6 +15,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
+import { cn } from '@/lib/utils';
 
 
 type UserData = {
@@ -362,13 +363,15 @@ export function DailyMonitorWidget() {
     pdfDoc.save(`daily_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
-  const UserListCard = ({ title, users, Icon, iconColor, onClick }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; onClick: () => void; }) => (
-    <Card className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={onClick}>
-      <CardHeader>
+  const UserListCard = ({ title, users, Icon, iconColor, onClick, gradient }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; onClick: () => void; gradient: string }) => (
+    <Card className={cn("hover:bg-muted/50 transition-all duration-300 cursor-pointer hover:shadow-md border-none ring-1 ring-border/50", gradient)} onClick={onClick}>
+      <CardHeader className="p-4">
         <CardTitle className="flex items-center gap-3">
-            <Icon className={`h-6 w-6 ${iconColor}`} />
-            <span>{title}</span>
-            <span className="ml-auto text-lg font-semibold">{users.length}</span>
+            <div className={cn("p-2 rounded-lg bg-white/50", iconColor)}>
+                <Icon className="h-5 w-5" />
+            </div>
+            <span className="text-sm font-medium">{title}</span>
+            <span className="ml-auto text-xl font-bold">{users.length}</span>
         </CardTitle>
       </CardHeader>
     </Card>
@@ -376,16 +379,16 @@ export function DailyMonitorWidget() {
 
   return (
     <Sheet onOpenChange={(isOpen) => !isOpen && setSheetContent(null)}>
-        <Card>
-            <CardHeader>
+        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
+            <CardHeader className="pb-4">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <CardTitle className="font-headline">Daily Team Monitor</CardTitle>
+                        <CardTitle className="font-headline text-xl">Daily Team Monitor</CardTitle>
                         <CardDescription>A real-time overview of your team's status for today, {format(new Date(), 'MMMM d')}.</CardDescription>
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" disabled={summary.isLoading}>
+                            <Button variant="outline" size="sm" disabled={summary.isLoading} className="bg-white/50">
                                 <Share2 className="mr-2 h-4 w-4" />
                                 Share / Export
                             </Button>
@@ -419,25 +422,60 @@ export function DailyMonitorWidget() {
             </CardHeader>
             <CardContent>
             {summary.isLoading ? (
-                <div className="flex h-48 items-center justify-center">
-                    <Building2 className="h-12 w-12 animate-pulse text-muted-foreground" />
+                <div className="flex h-32 items-center justify-center">
+                    <Building2 className="h-10 w-10 animate-pulse text-muted-foreground" />
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   <SheetTrigger asChild>
-                    <UserListCard title="Present" users={summary.present} Icon={UserCheck} iconColor="text-green-500" onClick={() => setSheetContent({title: "Present Today", users: summary.present})} />
+                    <UserListCard 
+                        title="Present" 
+                        users={summary.present} 
+                        Icon={UserCheck} 
+                        iconColor="text-green-600" 
+                        gradient="bg-gradient-to-br from-green-500/10 to-white/50"
+                        onClick={() => setSheetContent({title: "Present Today", users: summary.present})} 
+                    />
                   </SheetTrigger>
                   <SheetTrigger asChild>
-                    <UserListCard title="Late" users={summary.late} Icon={UserX} iconColor="text-yellow-500" onClick={() => setSheetContent({title: "Arrived Late", users: summary.late})} />
+                    <UserListCard 
+                        title="Late" 
+                        users={summary.late} 
+                        Icon={UserX} 
+                        iconColor="text-yellow-600" 
+                        gradient="bg-gradient-to-br from-yellow-500/10 to-white/50"
+                        onClick={() => setSheetContent({title: "Arrived Late", users: summary.late})} 
+                    />
                   </SheetTrigger>
                   <SheetTrigger asChild>
-                    <UserListCard title="Out of Range" users={summary.outOfRange} Icon={AlertTriangle} iconColor="text-orange-500" onClick={() => setSheetContent({title: "Out of Range", users: summary.outOfRange})} />
+                    <UserListCard 
+                        title="Out of Range" 
+                        users={summary.outOfRange} 
+                        Icon={AlertTriangle} 
+                        iconColor="text-orange-600" 
+                        gradient="bg-gradient-to-br from-orange-500/10 to-white/50"
+                        onClick={() => setSheetContent({title: "Out of Range", users: summary.outOfRange})} 
+                    />
                   </SheetTrigger>
                   <SheetTrigger asChild>
-                    <UserListCard title="Absent" users={summary.absent} Icon={UserRoundX} iconColor="text-red-500" onClick={() => setSheetContent({title: "Absent Today", users: summary.absent})} />
+                    <UserListCard 
+                        title="Absent" 
+                        users={summary.absent} 
+                        Icon={UserRoundX} 
+                        iconColor="text-red-600" 
+                        gradient="bg-gradient-to-br from-red-500/10 to-white/50"
+                        onClick={() => setSheetContent({title: "Absent Today", users: summary.absent})} 
+                    />
                   </SheetTrigger>
                    <SheetTrigger asChild>
-                    <UserListCard title="On Leave" users={summary.onLeave} Icon={User} iconColor="text-blue-500" onClick={() => setSheetContent({title: "On Leave", users: summary.onLeave})} />
+                    <UserListCard 
+                        title="On Leave" 
+                        users={summary.onLeave} 
+                        Icon={User} 
+                        iconColor="text-blue-600" 
+                        gradient="bg-gradient-to-br from-blue-500/10 to-white/50"
+                        onClick={() => setSheetContent({title: "On Leave", users: summary.onLeave})} 
+                    />
                    </SheetTrigger>
                 </div>
             )}
@@ -453,7 +491,7 @@ export function DailyMonitorWidget() {
                   <div className="py-4 px-6 space-y-3">
                      {sheetContent.users.length > 0 ? (
                         sheetContent.users.map(user => (
-                            <Link href={`/dashboard/users/${user.id}`} key={user.id} className="flex items-center gap-3 p-2 -m-2 rounded-lg hover:bg-muted transition-colors">
+                            <Link href={`/dashboard/users/${user.id}`} key={user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
                                 <Avatar className="h-9 w-9">
                                 {user.avatar && <span className="text-xl">{user.avatar}</span>}
                                 <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -73,8 +72,8 @@ export function EventsWidget() {
   const isLoading = todaysLoading || upcomingLoading;
 
   const EventListItem = ({ item }: { item: EventItem }) => (
-     <div key={item.id} className="flex items-center gap-4">
-        <div className="p-3 rounded-full" style={{ backgroundColor: item.color + '1A' }}>
+     <div key={item.id} className="flex items-center gap-4 group transition-all duration-300 hover:translate-x-1">
+        <div className="p-3 rounded-full transition-colors" style={{ backgroundColor: item.color + '1A' }}>
           {renderIcon(item.icon, { className: "size-5", style: { color: item.color } })}
         </div>
         <div className="flex flex-col">
@@ -87,7 +86,7 @@ export function EventsWidget() {
   );
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '500ms' }}>
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <PartyPopper className="size-5" />
@@ -112,27 +111,27 @@ export function EventsWidget() {
           <>
             {todaysEvents && todaysEvents.length > 0 ? (
               <div className="space-y-4">
-                <h4 className="font-semibold text-sm">Today's Events</h4>
+                <h4 className="font-semibold text-sm text-primary/80">Today's Events</h4>
                 {todaysEvents.map((item) => <EventListItem key={item.id} item={item} />)}
               </div>
             ) : (
-              <div className="text-center text-muted-foreground py-4">
-                <p>No events scheduled for today.</p>
+              <div className="text-center text-muted-foreground py-4 bg-white/30 rounded-lg">
+                <p className="text-sm">No events scheduled for today.</p>
               </div>
             )}
             
-            {(todaysEvents && todaysEvents.length > 0 && upcomingEvents && upcomingEvents.length > 0) && <Separator />}
+            {(todaysEvents && todaysEvents.length > 0 && upcomingEvents && upcomingEvents.length > 0) && <Separator className="bg-primary/10" />}
 
             {upcomingEvents && upcomingEvents.length > 0 && (
                  <div className="space-y-4">
-                    <h4 className="font-semibold text-sm flex items-center gap-2"><CalendarClock className="size-4" /> Upcoming</h4>
+                    <h4 className="font-semibold text-sm flex items-center gap-2 text-muted-foreground"><CalendarClock className="size-4" /> Upcoming</h4>
                     {upcomingEvents.slice(0, 3).map((item) => <EventListItem key={item.id} item={item} />)}
                 </div>
             )}
             
             {(!todaysEvents || todaysEvents.length === 0) && (!upcomingEvents || upcomingEvents.length === 0) && !isLoading && (
                  <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-8">
-                    <PartyPopper className="size-8 mb-2" />
+                    <PartyPopper className="size-8 mb-2 opacity-50" />
                     <p>No events scheduled soon.</p>
                 </div>
             )}
@@ -140,7 +139,7 @@ export function EventsWidget() {
         )}
       </CardContent>
       <div className="p-6 pt-0">
-        <Button variant="outline" className="w-full mt-4" asChild>
+        <Button variant="outline" className="w-full mt-4 bg-white/50" asChild>
           <Link href="/dashboard/events">View All Events</Link>
         </Button>
       </div>

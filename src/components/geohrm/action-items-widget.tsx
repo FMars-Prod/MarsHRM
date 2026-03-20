@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -48,7 +47,7 @@ export function ActionItemsWidget() {
     const firestore = useFirestore();
     const [complianceIssues, setComplianceIssues] = React.useState<ActionItem[]>([]);
 
-    const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
+    const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
     const { data: currentUserData } = useDoc(currentUserDocRef);
     const userRole = (currentUserData as any)?.role;
     const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
@@ -181,7 +180,7 @@ export function ActionItemsWidget() {
     };
 
     return (
-        <Card>
+        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '200ms' }}>
             <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
                     <List className="size-5" />
@@ -205,7 +204,7 @@ export function ActionItemsWidget() {
                 ) : actionItems.length > 0 ? (
                     <div className="space-y-3">
                         {actionItems.slice(0, 5).map(item => (
-                            <Link href={item.href} key={item.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 transition-colors group">
+                            <Link href={item.href} key={item.id} className="flex items-center justify-between p-2 rounded-md hover:bg-white/50 transition-all duration-300 group">
                                 <div className="flex items-center gap-3">
                                     <div className={cn("p-2 rounded-lg", item.type === 'compliance' ? 'bg-orange-100' : 'bg-muted')}>
                                         {iconMap[item.type]}
