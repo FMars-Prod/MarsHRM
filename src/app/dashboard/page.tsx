@@ -36,15 +36,24 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        {/* Attendance Widget takes up 2/3 of the space for more focus */}
+        <div className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <AttendanceWidget />
+        </div>
+        
+        {/* Events Widget stays sidebar on desktop */}
+        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <EventsWidget />
+        </div>
+
+        {/* Action items moved to a smaller sidebar-like column */}
+        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <ActionItemsWidget />
         </div>
-        <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+
+        {/* My Activity moved down and spans 2 columns */}
+        <div className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
           <WorkHoursSummaryWidget />
-        </div>
-        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-          <EventsWidget />
         </div>
       </div>
     </div>

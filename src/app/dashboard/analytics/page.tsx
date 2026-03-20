@@ -818,7 +818,7 @@ const AnalyticsPage = () => {
 
       {/* Manual Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent onCloseAutoFocus={(e) => e.preventDefault()}>
+          <DialogContent>
               <DialogHeader>
                   <DialogTitle>Edit Attendance: {editingEmployeeName}</DialogTitle>
                   <DialogDescription>
@@ -867,7 +867,7 @@ const AnalyticsPage = () => {
                               Reset Day
                           </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent onCloseAutoFocus={(e) => e.preventDefault()}>
+                      <AlertDialogContent>
                           <AlertDialogHeader>
                               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               <AlertDialogDescription>

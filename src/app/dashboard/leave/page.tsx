@@ -383,7 +383,7 @@ export default function LeavePage() {
                 New Request
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Leave Request</DialogTitle>
                 <DialogDescription>Submit your time off details.</DialogDescription>
@@ -483,7 +483,7 @@ export default function LeavePage() {
           </Table>
         </div>
         {selectedRequest && (
-          <SheetContent onCloseAutoFocus={(e) => e.preventDefault()}>
+          <SheetContent>
               <SheetHeader>
                   <SheetTitle>Request Details</SheetTitle>
               </SheetHeader>
