@@ -67,7 +67,7 @@ export function AnnouncementsWidget() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-2">
+          <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-6 bg-white/30 rounded-lg border border-dashed">
             <FileText className="size-5 mb-1 opacity-50" />
             <p className="text-xs">No announcements yet.</p>
           </div>
