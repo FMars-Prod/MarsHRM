@@ -133,7 +133,7 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
         </div>
         <div>
           <h4 className="font-semibold">Submitted</h4>
-          <p className="text-sm text-muted-foreground">Request submitted on {format(request.createdAt.toDate(), "PP")}.</p>
+          <p className="text-sm text-muted-foreground">Request submitted on {request.createdAt ? format(request.createdAt.toDate(), "PP") : '...'}.</p>
         </div>
       </div>
       
@@ -154,7 +154,7 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
         <div className="flex-1">
           <h4 className={cn("font-semibold", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
           <p className="text-sm text-muted-foreground">
-            {isApprovedByLead && `Approved by ${teamLeadName}.`}
+            {isApprovedByLead && (request.approvedByTeamLeadId ? `Approved by ${teamLeadName}.` : 'Skipped (No Team Lead).')}
             {isRejectedByLead && `Rejected by ${rejecterName}.`}
             {isPendingLead && 'Pending approval.'}
           </p>
@@ -260,6 +260,9 @@ export default function LeavePage() {
     return teamsLed.flatMap(team => team.memberIds);
   }, [userRole, teamsLed]);
 
+  const allTeamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
+  const { data: allTeams } = useCollection<Team>(allTeamsQuery);
+
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
     const baseQuery = collection(firestore, 'leave_requests');
@@ -355,6 +358,14 @@ export default function LeavePage() {
         return;
     }
 
+    const userTeam = allTeams?.find(t => t.id === (userData as any).teamId);
+    const hasTeamLead = !!userTeam?.teamLeadId;
+    const isUserTeamLead = userRole === 'Team Lead';
+    const isManagement = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+
+    // If no Team Lead exists for the employee, or the employee IS a Team Lead/Admin, go straight to HR Approval
+    const initialStatus: LeaveStatus = (isUserTeamLead || !hasTeamLead || isManagement) ? 'Pending HR Approval' : 'Pending';
+
     const newRequest: LeaveRequest = {
         employeeId: user.uid,
         employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
@@ -363,7 +374,7 @@ export default function LeavePage() {
         endDate: toDate,
         leaveType,
         reason,
-        status: 'Pending',
+        status: initialStatus,
         createdAt: serverTimestamp(),
     }
     
