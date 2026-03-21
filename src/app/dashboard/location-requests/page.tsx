@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 
 import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -52,9 +51,6 @@ export default function LocationRequestsPage() {
             const userSnap = await getDoc(userRef);
             if (!userSnap.exists()) {
                 toast({ variant: 'destructive', title: 'Approval Failed', description: `User ${request.employeeName} no longer exists.` });
-                // Optionally, also delete the stale request document
-                // const requestRef = doc(firestore, 'location_change_requests', request.id);
-                // await deleteDoc(requestRef);
                 return;
             }
 
@@ -98,14 +94,14 @@ export default function LocationRequestsPage() {
     };
 
     return (
-        <>
+        <div className="animate-fade-in-up">
             <PageHeader title="Location Change Requests" description="Review and approve employee requests to change their home location.">
                 <div className="flex gap-2">
                     <Button variant={filter === 'pending' ? 'default' : 'outline'} onClick={() => setFilter('pending')}>Pending</Button>
                     <Button variant={filter === 'processed' ? 'default' : 'outline'} onClick={() => setFilter('processed')}>Processed</Button>
                 </div>
             </PageHeader>
-            <div className="border rounded-lg overflow-x-auto">
+            <div className="border rounded-lg overflow-x-auto bg-gradient-to-br from-primary/5 to-transparent">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -171,6 +167,6 @@ export default function LocationRequestsPage() {
                     </TableBody>
                 </Table>
             </div>
-        </>
+        </div>
     );
 }
