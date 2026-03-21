@@ -69,7 +69,7 @@ export function ActionItemsWidget() {
     const { data: allPolicies, isLoading: policiesLoading } = useCollection<Policy>(policiesQuery);
 
     const acknowledgmentsQuery = useMemoFirebase(() => currentUser ? collection(firestore, `users/${currentUser.uid}/policy_acknowledgments`) : null, [currentUser, firestore]);
-    const { data: acknowledgedPolicies, isLoading: acksLoading } = useCollection<{id: string}>(acknowledgmentsQuery);
+    const { data: acknowledgedPolicies, isLoading: acksLoading } = useCollection<{id: string}>(acknowledgedPoliciesQuery);
 
     const unacknowledgedPolicies = React.useMemo(() => {
         if (!allPolicies || !acknowledgedPolicies) return [];
@@ -114,7 +114,7 @@ export function ActionItemsWidget() {
                     if (data.checkInTime && !data.checkOutTime) {
                         const name = userMap.get(data.employeeId) || 'Unknown User';
                         items.push({
-                            id: `compliance-${data.employeeId}-${format(yesterday, 'yyyy-MM-dd')}`,
+                            id: `compliance-${data.employeeId}-${doc.id}`,
                             type: 'compliance',
                             title: `Compliance Alert: ${name}`,
                             description: `Failed to clock out on ${format(yesterday, 'MMM d')}.`,
@@ -173,7 +173,7 @@ export function ActionItemsWidget() {
     };
 
     return (
-        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
+        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm h-full">
             <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
                     <List className="size-5" />

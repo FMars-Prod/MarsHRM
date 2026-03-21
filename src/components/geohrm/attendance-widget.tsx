@@ -39,7 +39,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format, parse, isSameDay, endOfDay } from "date-fns";
+import { format, parse, isSameDay, endOfDay, isAfter } from "date-fns";
 import { Textarea } from "../ui/textarea";
 
 type AttendanceStatus = "out" | "in" | "break";
@@ -303,10 +303,10 @@ export function AttendanceWidget() {
       const now = new Date();
       const clockInTime = serverTimestamp();
       
-      let attendanceStatus = 'present';
-      if (reason === 'Office' && officeLocation?.shiftStartTime) {
+      let attendanceStatus: 'present' | 'late' = 'present';
+      if (officeLocation?.shiftStartTime) {
           const shiftStart = parse(officeLocation.shiftStartTime, 'HH:mm', new Date());
-          if (now > shiftStart) {
+          if (isAfter(now, shiftStart)) {
               attendanceStatus = 'late';
           }
       }
@@ -332,7 +332,10 @@ export function AttendanceWidget() {
       setBreakTimer(0);
       setTotalBreakTime(0);
       setHasClockedOutToday(false);
-      toast({ title: "Clocked In", description: `Location recorded for ${reason || 'clock-in'}.` });
+      toast({ 
+        title: attendanceStatus === 'late' ? "Late Clock-In Recorded" : "Clocked In", 
+        description: `Location recorded for ${reason || 'clock-in'}. Status: ${attendanceStatus.toUpperCase()}` 
+      });
   }
 
   const handleClockIn = () => {
@@ -544,6 +547,12 @@ export function AttendanceWidget() {
     }
   };
 
+  const isLate = () => {
+    if (!lastClockInTime || !officeLocation?.shiftStartTime) return false;
+    const shiftStart = parse(officeLocation.shiftStartTime, 'HH:mm', lastClockInTime);
+    return isAfter(lastClockInTime, shiftStart);
+  };
+
   return (
     <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
       <CardHeader>
@@ -582,10 +591,10 @@ export function AttendanceWidget() {
                                </div>
                                <div className="grid grid-cols-2 gap-4">
                                  <div className="grid gap-2">
-                                      <Label htmlFor="shift-start">Shift Start Time</Label>
+                                      <Label htmlFor="shift-start">Shift Start Time (Late Trigger)</Label>
                                       <Input id="shift-start" type="time" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)} />
                                  </div>
-                                 <div className="grid grid-cols-2 gap-4">
+                                 <div className="grid gap-2">
                                       <Label htmlFor="shift-end">Shift End Time</Label>
                                       <Input id="shift-end" type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
                                  </div>
@@ -630,13 +639,13 @@ export function AttendanceWidget() {
             <div
               className={cn(
                 "flex items-center justify-center gap-2 font-semibold",
-                status === "in" && "text-green-600",
+                status === "in" && (isLate() ? "text-orange-600" : "text-green-600"),
                 status === "break" && "text-yellow-600",
                 status === "out" && !hasClockedOutToday && "text-red-600",
                 status === "out" && hasClockedOutToday && "text-muted-foreground"
               )}
             >
-              {status === "in" && <Briefcase className="size-5" />}
+              {status === "in" && (isLate() ? <Clock className="size-5" /> : <Briefcase className="size-5" />)}
               {status === "break" && <Coffee className="size-5" />}
               {status === "out" && <CheckCircle2 className="size-5" />}
 
@@ -645,7 +654,7 @@ export function AttendanceWidget() {
                   ? "Clocked out for today"
                   : status === 'break'
                     ? (autoLunchTriggered ? "Clocked Out for Lunch" : "Currently on Break")
-                    : `Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
+                    : isLate() ? "Clocked In (Late Login)" : `Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
               }
             </div>
             <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter drop-shadow-sm">

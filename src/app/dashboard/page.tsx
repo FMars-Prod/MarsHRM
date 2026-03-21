@@ -23,7 +23,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Overview for today."
+        description="Welcome back, here's your overview for today."
         className="animate-fade-in-up"
       />
       
@@ -36,23 +36,25 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Attendance Widget takes up 2/3 of the space for more focus */}
-        <div className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        {/* Attendance Widget expanded for "increased breath" */}
+        <div className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <AttendanceWidget />
         </div>
         
-        {/* Events Widget stays sidebar on desktop */}
+        {/* Action Items and Events moved below */}
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-          <EventsWidget />
-        </div>
-
-        {/* Action items moved to a smaller sidebar-like column */}
-        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <ActionItemsWidget />
         </div>
 
-        {/* My Activity moved down and spans 2 columns */}
-        <div className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
+        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+          <EventsWidget />
+        </div>
+
+        {/* Placeholder or other small widget if needed, or keep layout tight */}
+        <div className="lg:col-span-1" />
+
+        {/* My Activity moved to bottom and expanded */}
+        <div className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
           <WorkHoursSummaryWidget />
         </div>
       </div>
