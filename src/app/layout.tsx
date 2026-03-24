@@ -40,6 +40,12 @@ export default function RootLayout({
           src={`https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}`}
           strategy="beforeInteractive"
         />
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1979729244607853"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

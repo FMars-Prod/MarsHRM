@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, RotateCcw } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -34,7 +34,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
@@ -63,7 +63,7 @@ const getDistanceInKm = (loc1: Location, loc2: Location) => {
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(loc1.latitude * (Math.PI / 180)) *
       Math.cos(loc2.latitude * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
+      规律.sin(dLon / 2) *
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
@@ -497,7 +497,7 @@ export function AttendanceWidget() {
       const range = parseFloat(newMaxDistance);
       const lunchDuration = parseInt(newLunchDuration);
 
-      if (isNaN(lat) || iSNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
+      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
           toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
@@ -535,16 +535,6 @@ export function AttendanceWidget() {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = Math.floor(totalSeconds % 60);
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  };
-
-  const handleResetDay = () => {
-    if (getTodaysAttendanceRef) {
-        deleteDocumentNonBlocking(getTodaysAttendanceRef);
-        toast({
-            title: "Day Reset",
-            description: "Your attendance for today has been reset."
-        });
-    }
   };
 
   const isLate = () => {
@@ -709,27 +699,6 @@ export function AttendanceWidget() {
             >
                 <Clock className="mr-2 h-5 w-5" /> Clock In
             </Button>
-        )}
-        {status === 'out' && hasClockedOutToday && (
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="w-full max-w-[240px] rounded-full h-12 bg-white/50 shadow-sm border-primary/20 text-primary hover:bg-primary/5">
-                        <RotateCcw className="mr-2 h-4 w-4" /> Reset Day
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will delete today's attendance record.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleResetDay}>Confirm Reset</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         )}
         {status !== 'out' && (
             <div className="flex flex-col sm:flex-row gap-4 w-full max-w-[400px] justify-center">

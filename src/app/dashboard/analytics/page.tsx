@@ -480,15 +480,6 @@ const AnalyticsPage = () => {
       setIsEditDialogOpen(false);
   }
 
-  const handleResetDay = () => {
-    if (!editingEmployeeId || !editingDate) return;
-    const attendanceId = format(editingDate, 'yyyy-MM-dd');
-    const attendanceRef = doc(firestore, `users/${editingEmployeeId}/attendances/${attendanceId}`);
-    deleteDocumentNonBlocking(attendanceRef);
-    toast({ title: "Day Reset", description: `Attendance for ${editingEmployeeName} has been reset.` });
-    setIsEditDialogOpen(false);
-  }
-  
   return (
     <>
       <PageHeader title="Employee Analytics" description="Analyze performance and attendance for team members." className="animate-fade-in-up" />
@@ -859,28 +850,8 @@ const AnalyticsPage = () => {
                       <Textarea id="checkin-notes" placeholder="Reason for manual correction..." value={editableAttendance.checkInNotes} onChange={(e) => setEditableAttendance(prev => ({...prev, checkInNotes: e.target.value}))} />
                   </div>
               </div>
-              <DialogFooter className="sm:justify-between">
-                  <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                          <Button variant="destructive">
-                              <RotateCcw className="mr-2 h-4 w-4"/>
-                              Reset Day
-                          </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                          <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                  This will delete the record for {editingDate ? format(editingDate, 'PPP') : 'this day'}.
-                              </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleResetDay}>Confirm Reset</AlertDialogAction>
-                          </AlertDialogFooter>
-                      </AlertDialogContent>
-                  </AlertDialog>
-                  <div className="flex gap-2">
+              <DialogFooter>
+                  <div className="flex gap-2 ml-auto">
                     <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
                     <Button onClick={handleAttendanceUpdate}>Save Changes</Button>
                   </div>
