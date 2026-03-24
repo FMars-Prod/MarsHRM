@@ -497,7 +497,7 @@ export function AttendanceWidget() {
       const range = parseFloat(newMaxDistance);
       const lunchDuration = parseInt(newLunchDuration);
 
-      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
+      if (isNaN(lat) || iSNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
           toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
