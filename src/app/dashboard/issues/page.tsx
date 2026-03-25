@@ -1,4 +1,3 @@
-
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -23,11 +22,11 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+  SheetDescription
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -143,6 +142,7 @@ export default function IssuesPage() {
       <PageHeader
         title="Issue Reporter"
         description="Log non-emergency issues or view the status of existing ones."
+        className="animate-fade-in-up"
       >
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -180,7 +180,7 @@ export default function IssuesPage() {
         </Dialog>
       </PageHeader>
       <Sheet onOpenChange={(isOpen) => !isOpen && setSelectedIssue(null)}>
-        <div className="border rounded-lg overflow-x-auto">
+        <div className="border rounded-lg overflow-x-auto animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '100ms' }}>
           <Table>
             <TableHeader>
               <TableRow>
