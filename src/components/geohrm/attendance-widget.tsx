@@ -63,7 +63,7 @@ const getDistanceInKm = (loc1: Location, loc2: Location) => {
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(loc1.latitude * (Math.PI / 180)) *
       Math.cos(loc2.latitude * (Math.PI / 180)) *
-      规律.sin(dLon / 2) *
+      Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
@@ -497,7 +497,7 @@ export function AttendanceWidget() {
       const range = parseFloat(newMaxDistance);
       const lunchDuration = parseInt(newLunchDuration);
 
-      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
+      if (isNaN(lat) || iSNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
           toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
