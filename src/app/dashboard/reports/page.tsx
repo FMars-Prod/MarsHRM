@@ -9,13 +9,13 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper, Trash2 } from "lucide-react";
+import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc } from "@/firebase";
-import { collection, query, where, orderBy, doc } from "firebase/firestore";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, setDocumentNonBlocking } from "@/firebase";
+import { collection, query, where, orderBy, doc, Timestamp } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch } from "react-hook-form";
@@ -26,6 +26,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+// --- Types ---
+
+type ReportTemplatesConfig = {
+  businessKeywords: string[];
+  technicalKeywords: string[];
+  businessGuidelines: string;
+  technicalGuidelines: string;
+};
+
+const defaultTemplatesConfig: ReportTemplatesConfig = {
+  businessKeywords: ["business", "sales", "marketing", "executive", "admin"],
+  technicalKeywords: ["technical", "developer", "engineer", "designer", "it", "product"],
+  businessGuidelines: "Please focus on client interactions, pipeline growth, and strategic outreach results for today.",
+  technicalGuidelines: "Provide details on code modules worked on, specific technologies used, and any technical hurdles encountered."
+};
+
+// --- Schemas ---
 
 const businessReportSchema = z.object({
   currency: z.enum(["USD", "EUR", "GBP", "INR"]),
@@ -111,6 +129,8 @@ const motivationalQuotes = [
     "Well done is better than well said.",
     "The future depends on what you do today."
 ];
+
+// --- Components ---
 
 const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => (
   <div>
@@ -221,6 +241,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
   </Card>
 );
 
+// --- Page ---
 
 export default function ReportsPage() {
   const { user } = useUser();
@@ -231,6 +252,7 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedJobTitle, setSelectedJobTitle] = React.useState("All Job Titles");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+  const [isConfigDialogOpen, setIsConfigDialogOpen] = React.useState(false);
 
   const [bestCallAudioURL, setBestCallAudioURL] = React.useState<string | undefined>();
   const [worstCallAudioURL, setWorstCallAudioURL] = React.useState<string | undefined>();
@@ -239,9 +261,31 @@ export default function ReportsPage() {
   const { data: currentUserData } = useDoc<UserData>(userDocRef);
   const userRole = currentUserData?.role;
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+
+  const templatesDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
+  const { data: templatesData } = useDoc<ReportTemplatesConfig>(templatesDocRef);
   
-  const isBusinessUser = currentUserData?.jobTitle?.toLowerCase().includes('business') ?? false;
-  const isTechnicalUser = !isBusinessUser;
+  const templates = templatesData || defaultTemplatesConfig;
+
+  // Determine report type based on job title keywords
+  const getReportType = (jobTitle: string = ''): 'Business' | 'Technical' => {
+    const title = jobTitle.toLowerCase();
+    
+    // Check technical keywords first
+    if (templates.technicalKeywords.some(kw => title.includes(kw.toLowerCase()))) {
+        return 'Technical';
+    }
+    // Default to Business if keywords match, or if it's the catch-all
+    if (templates.businessKeywords.some(kw => title.includes(kw.toLowerCase()))) {
+        return 'Business';
+    }
+    // Fallback: Default to Business if job title is missing or doesn't match
+    return 'Business';
+  };
+
+  const currentReportType = getReportType(currentUserData?.jobTitle);
+  const isBusinessUser = currentReportType === 'Business';
+  const isTechnicalUser = currentReportType === 'Technical';
 
   const usersQuery = useMemoFirebase(() => {
     if (!isAdmin) return null;
@@ -412,6 +456,12 @@ export default function ReportsPage() {
     resetForm();
   };
 
+  const handleSaveConfig = (values: ReportTemplatesConfig) => {
+      setDocumentNonBlocking(templatesDocRef, values, { merge: true });
+      toast({ title: "Configuration Saved", description: "Report templates have been updated." });
+      setIsConfigDialogOpen(false);
+  };
+
   const jobTitles = React.useMemo(() => {
     if (!usersData) return [];
     const allJobTitles = usersData.map(u => u.jobTitle).filter(Boolean);
@@ -434,6 +484,15 @@ export default function ReportsPage() {
 
     return (
         <>
+            <Card className="bg-primary/5 border-primary/20">
+                <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+                    <Info className="h-4 w-4 text-primary" />
+                    <CardTitle className="text-sm font-medium">Guidelines</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{templates.businessGuidelines}</p>
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader><CardTitle>Outreach Analytics</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -573,49 +632,60 @@ export default function ReportsPage() {
   }
 
   const TechnicalFormFields = () => (
-    <Card>
-        <CardHeader><CardTitle>Technical Work Report</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={form.control} name="subject" render={({ field }) => (
-                <FormItem className="md:col-span-2"><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="technologyUsed" render={({ field }) => (
-                <FormItem className="md:col-span-2"><FormLabel>Technology / Tool Used / Learnt</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="taskDescription" render={({ field }) => (
-                <FormItem className="md:col-span-2"><FormLabel>Task Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="workDone" render={({ field }) => (
-                <FormItem className="md:col-span-2"><FormLabel>Code / Design / Testing Work Done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="moduleWorkedOn" render={({ field }) => (
-                <FormItem className="md:col-span-2"><FormLabel>Module / Feature Worked On</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="taskStatus" render={({ field }) => (
-                <FormItem>
-                <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                        <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="In Progress">In Progress</SelectItem>
-                    </SelectContent>
-                    </Select>
-                <FormMessage />
-                </FormItem>
-            )} />
-            <div/>
-            <FormField control={form.control} name="logInTime" render={({ field }) => (
-                <FormItem><FormLabel>Log in Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="logOutTime" render={({ field }) => (
-                <FormItem><FormLabel>Log out Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="otherWork" render={({ field }) => (
-                <FormItem className="md:col-span-2"><FormLabel>Other work done (Optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-        </CardContent>
-    </Card>
+    <div className="space-y-6">
+        <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+                <Info className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-medium">Guidelines</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{templates.technicalGuidelines}</p>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader><CardTitle>Technical Work Report</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="subject" render={({ field }) => (
+                    <FormItem className="md:col-span-2"><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="technologyUsed" render={({ field }) => (
+                    <FormItem className="md:col-span-2"><FormLabel>Technology / Tool Used / Learnt</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="taskDescription" render={({ field }) => (
+                    <FormItem className="md:col-span-2"><FormLabel>Task Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="workDone" render={({ field }) => (
+                    <FormItem className="md:col-span-2"><FormLabel>Code / Design / Testing Work Done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormMessage>
+                )} />
+                <FormField control={form.control} name="moduleWorkedOn" render={({ field }) => (
+                    <FormItem className="md:col-span-2"><FormLabel>Module / Feature Worked On</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="taskStatus" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            <SelectItem value="Completed">Completed</SelectItem>
+                            <SelectItem value="In Progress">In Progress</SelectItem>
+                        </SelectContent>
+                        </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                <div/>
+                <FormField control={form.control} name="logInTime" render={({ field }) => (
+                    <FormItem><FormLabel>Log in Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="logOutTime" render={({ field }) => (
+                    <FormItem><FormLabel>Log out Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="otherWork" render={({ field }) => (
+                    <FormItem className="md:col-span-2"><FormLabel>Other work done (Optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+            </CardContent>
+        </Card>
+    </div>
   );
 
   const AdminView = () => (
@@ -712,9 +782,17 @@ export default function ReportsPage() {
         title={isAdmin ? "Employee Reports" : "My Daily Reports"}
         description={isAdmin ? "Review and analyze daily reports." : "Submit and view your work reports."}
       >
-        {!isAdmin && (
-            <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
-        )}
+        <div className="flex gap-2">
+            {isAdmin && (
+                <Button variant="outline" onClick={() => setIsConfigDialogOpen(true)}>
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    Configure Templates
+                </Button>
+            )}
+            {!isAdmin && (
+                <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
+            )}
+        </div>
       </PageHeader>
       
       {isAdmin ? <AdminView /> : <EmployeeView />}
@@ -727,7 +805,7 @@ export default function ReportsPage() {
           <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
               <DialogHeader className="p-6 pb-4 border-b">
-              <DialogTitle className="font-headline text-xl">New Daily Report</DialogTitle>
+              <DialogTitle className="font-headline text-xl">New {currentReportType} Report</DialogTitle>
               <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
               </DialogHeader>
               <ScrollArea className="flex-1">
@@ -775,6 +853,21 @@ export default function ReportsPage() {
         </DialogContent>
       </Dialog>
       
+      {/* Template Configuration Dialog */}
+      <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
+          <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                  <DialogTitle>Configure Report Templates</DialogTitle>
+                  <DialogDescription>Map job titles to specific report types and customize guidelines.</DialogDescription>
+              </DialogHeader>
+              <TemplateConfigForm 
+                initialValues={templates} 
+                onSave={handleSaveConfig} 
+                onCancel={() => setIsConfigDialogOpen(false)} 
+              />
+          </DialogContent>
+      </Dialog>
+
       <Sheet open={!!selectedUser} onOpenChange={(isOpen) => !isOpen && setSelectedUser(null)}>
         <SheetContent className="sm:max-w-2xl w-full flex flex-col p-0">
           <SheetHeader className="p-6 pb-4 border-b">
@@ -813,4 +906,72 @@ export default function ReportsPage() {
       </Sheet>
     </>
   );
+}
+
+// --- Sub-Components ---
+
+function TemplateConfigForm({ 
+    initialValues, 
+    onSave, 
+    onCancel 
+}: { 
+    initialValues: ReportTemplatesConfig, 
+    onSave: (val: ReportTemplatesConfig) => void, 
+    onCancel: () => void 
+}) {
+    const [config, setConfig] = React.useState<ReportTemplatesConfig>(initialValues);
+
+    const handleListChange = (field: keyof ReportTemplatesConfig, value: string) => {
+        const keywords = value.split(',').map(k => k.trim()).filter(Boolean);
+        setConfig(prev => ({ ...prev, [field]: keywords }));
+    };
+
+    return (
+        <div className="space-y-6 py-4">
+            <div className="space-y-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Business Report Mapping</h4>
+                <div className="grid gap-2">
+                    <Label>Job Title Keywords (comma separated)</Label>
+                    <Input 
+                        value={config.businessKeywords.join(', ')} 
+                        onChange={(e) => handleListChange('businessKeywords', e.target.value)} 
+                        placeholder="e.g. business, sales, marketing"
+                    />
+                </div>
+                <div className="grid gap-2">
+                    <Label>Business Report Guidelines</Label>
+                    <Textarea 
+                        value={config.businessGuidelines} 
+                        onChange={(e) => setConfig(prev => ({ ...prev, businessGuidelines: e.target.value }))}
+                        className="h-24"
+                    />
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Technical Report Mapping</h4>
+                <div className="grid gap-2">
+                    <Label>Job Title Keywords (comma separated)</Label>
+                    <Input 
+                        value={config.technicalKeywords.join(', ')} 
+                        onChange={(e) => handleListChange('technicalKeywords', e.target.value)} 
+                        placeholder="e.g. technical, developer, engineer"
+                    />
+                </div>
+                <div className="grid gap-2">
+                    <Label>Technical Report Guidelines</Label>
+                    <Textarea 
+                        value={config.technicalGuidelines} 
+                        onChange={(e) => setConfig(prev => ({ ...prev, technicalGuidelines: e.target.value }))}
+                        className="h-24"
+                    />
+                </div>
+            </div>
+
+            <DialogFooter>
+                <Button variant="outline" onClick={onCancel}>Cancel</Button>
+                <Button onClick={() => onSave(config)}>Save Configuration</Button>
+            </DialogFooter>
+        </div>
+    );
 }
