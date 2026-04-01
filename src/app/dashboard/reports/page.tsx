@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye } from "lucide-react";
+import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBl
 import { collection, query, where, orderBy, doc, Timestamp } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -38,8 +38,8 @@ type ReportTemplatesConfig = {
 };
 
 const defaultTemplatesConfig: ReportTemplatesConfig = {
-  businessKeywords: ["business", "sales", "marketing", "executive", "admin"],
-  technicalKeywords: ["technical", "developer", "engineer", "designer", "it", "product"],
+  businessKeywords: ["business executive intern", "business", "sales", "marketing"],
+  technicalKeywords: ["technical support intern", "technical", "developer", "engineer"],
   businessGuidelines: "Please focus on client interactions, pipeline growth, and strategic outreach results for today.",
   technicalGuidelines: "Provide details on code modules worked on, specific technologies used, and any technical hurdles encountered."
 };
@@ -68,15 +68,20 @@ const businessReportSchema = z.object({
 });
 
 const technicalReportSchema = z.object({
-  subject: z.string().min(1, "Subject is required."),
-  technologyUsed: z.string().min(1, "This field is required."),
-  taskDescription: z.string().min(1, "This field is required."),
-  workDone: z.string().min(1, "This field is required."),
-  moduleWorkedOn: z.string().min(1, "This field is required."),
-  taskStatus: z.enum(["Completed", "In Progress"]),
+  tasksAssigned: z.string().min(1, "Required."),
+  module1Name: z.string().min(1, "Module name is required."),
+  module1Details: z.string().min(1, "Technical details required."),
+  module2Name: z.string().optional(),
+  module2Details: z.string().optional(),
+  additionalWork: z.string().optional(),
+  workInProgress: z.string().min(1, "Required."),
+  pendingTasks: z.string().min(1, "Required."),
+  whatILearned: z.string().min(1, "Required."),
+  challengesFaced: z.string().min(1, "Required."),
+  nextSteps: z.string().min(1, "Required."),
+  repoLinks: z.array(z.object({ value: z.string().url("Must be a valid URL").or(z.literal("")) })).optional(),
   logInTime: z.string().min(1, "Login time is required."),
   logOutTime: z.string().min(1, "Logout time is required."),
-  otherWork: z.string().optional(),
   declaration: z.literal<boolean>(true, {
     errorMap: () => ({ message: "You must acknowledge the declaration." }),
   }),
@@ -107,16 +112,21 @@ type Report = {
   meetingsBookedTomorrow?: string;
   criticalPathTomorrow?: string;
   interventionTrigger?: 'None' | 'Coaching' | 'Technical Support' | 'Client meeting';
-  // Technical
-  subject?: string;
-  technologyUsed?: string;
-  taskDescription?: string;
-  workDone?: string;
-  moduleWorkedOn?: string;
-  taskStatus?: 'Completed' | 'In Progress';
+  // Technical (New format)
+  tasksAssigned?: string;
+  module1Name?: string;
+  module1Details?: string;
+  module2Name?: string;
+  module2Details?: string;
+  additionalWork?: string;
+  workInProgress?: string;
+  pendingTasks?: string;
+  whatILearned?: string;
+  challengesFaced?: string;
+  nextSteps?: string;
+  repoLinks?: { value: string }[];
   logInTime?: string;
   logOutTime?: string;
-  otherWork?: string;
 };
 
 type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; department?: string; };
@@ -136,7 +146,7 @@ const motivationalQuotes = [
 const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => (
   <div>
     <p className="text-sm font-medium text-muted-foreground">{label}</p>
-    <p className="font-semibold whitespace-pre-wrap">{value ?? '-'}</p>
+    <div className="font-semibold whitespace-pre-wrap">{value ?? '-'}</div>
   </div>
 );
 
@@ -223,20 +233,67 @@ const OutreachReportDetails = ({ report }: { report: Report }) => {
 
 const TechnicalReportDetails = ({ report }: { report: Report }) => (
   <Card>
-    <CardContent className="space-y-4 pt-6">
-        <ReportDetailItem label="Subject" value={report.subject} />
-        <ReportDetailItem label="Technology / Tool Used" value={report.technologyUsed} />
-        <ReportDetailItem label="Task Description" value={report.taskDescription} />
-        <ReportDetailItem label="Code / Design / Testing Work Done" value={report.workDone} />
-        <ReportDetailItem label="Module / Feature Worked On" value={report.moduleWorkedOn} />
-        <ReportDetailItem label="Status" value={report.taskStatus} />
+    <CardContent className="space-y-6 pt-6">
+        <p className="text-sm italic">Dear Sir / Ma’am,</p>
+        <p className="font-semibold">Daily report summary:</p>
+        
         <div className="grid grid-cols-2 gap-4">
-            <ReportDetailItem label="Log in Time" value={report.logInTime} />
-            <ReportDetailItem label="Log out Time" value={report.logOutTime} />
+            <ReportDetailItem label="Login Time" value={report.logInTime} />
+            <ReportDetailItem label="Logout Time" value={report.logOutTime} />
         </div>
-        {report.otherWork && (
-            <ReportDetailItem label="Other Work / Pending" value={report.otherWork} />
+
+        <ReportDetailItem label="Tasks Assigned for the Day" value={report.tasksAssigned} />
+
+        <div className="space-y-4">
+            <p className="font-semibold">Tasks Completed Today (with clear and technical explanation):</p>
+            <div className="pl-4 space-y-4 border-l-2">
+                <div>
+                    <p className="text-xs text-muted-foreground uppercase font-bold">{report.module1Name || 'Module 1'}</p>
+                    <p className="text-sm whitespace-pre-wrap">{report.module1Details}</p>
+                </div>
+                {report.module2Name && (
+                    <div>
+                        <p className="text-xs text-muted-foreground uppercase font-bold">{report.module2Name || 'Module 2'}</p>
+                        <p className="text-sm whitespace-pre-wrap">{report.module2Details}</p>
+                    </div>
+                )}
+                {report.additionalWork && (
+                    <div>
+                        <p className="text-xs text-muted-foreground uppercase font-bold">Optional Additional Work</p>
+                        <p className="text-sm whitespace-pre-wrap">{report.additionalWork}</p>
+                    </div>
+                )}
+            </div>
+        </div>
+
+        {report.repoLinks && report.repoLinks.length > 0 && (
+            <ReportDetailItem 
+                label="GitHub / Repo Links" 
+                value={
+                    <div className="space-y-1 mt-1">
+                        {report.repoLinks.map((link, i) => (
+                            <a key={i} href={link.value} target="_blank" rel="noopener noreferrer" className="block text-primary underline text-sm truncate">
+                                {link.value}
+                            </a>
+                        ))}
+                    </div>
+                } 
+            />
         )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ReportDetailItem label="Work in Progress" value={report.workInProgress} />
+            <ReportDetailItem label="Pending / Yet-to-be-Completed Tasks" value={report.pendingTasks} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ReportDetailItem label="What I Learned Today" value={report.whatILearned} />
+            <ReportDetailItem label="Challenges Faced" value={report.challengesFaced} />
+        </div>
+
+        <ReportDetailItem label="Next Steps / Tasks Planned for Tomorrow" value={report.nextSteps} />
+
+        <p className="text-sm italic">Thank you.</p>
         <ReportDetailItem label="Signature" value={report.signature} />
     </CardContent>
   </Card>
@@ -332,19 +389,29 @@ export default function ReportsPage() {
         bestCallRecording: undefined,
         worstCallRecording: undefined,
       } : {
-        subject: "",
-        technologyUsed: "",
-        taskDescription: "",
-        workDone: "",
-        moduleWorkedOn: "",
-        taskStatus: "In Progress",
+        tasksAssigned: "",
+        module1Name: "",
+        module1Details: "",
+        module2Name: "",
+        module2Details: "",
+        additionalWork: "",
+        workInProgress: "",
+        pendingTasks: "",
+        whatILearned: "",
+        challengesFaced: "",
+        nextSteps: "",
+        repoLinks: [{ value: "" }],
         logInTime: "09:30",
         logOutTime: "18:30",
-        otherWork: "",
       })
     },
   });
   
+  const { fields, append, remove } = useFieldArray({
+    control: form.control as any,
+    name: "repoLinks"
+  });
+
   const resetForm = React.useCallback(() => {
       form.reset({
         signature: currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName}` : "",
@@ -365,15 +432,20 @@ export default function ReportsPage() {
             bestCallRecording: undefined,
             worstCallRecording: undefined,
         } : {
-            subject: "",
-            technologyUsed: "",
-            taskDescription: "",
-            workDone: "",
-            moduleWorkedOn: "",
-            taskStatus: "In Progress",
+            tasksAssigned: "",
+            module1Name: "",
+            module1Details: "",
+            module2Name: "",
+            module2Details: "",
+            additionalWork: "",
+            workInProgress: "",
+            pendingTasks: "",
+            whatILearned: "",
+            challengesFaced: "",
+            nextSteps: "",
+            repoLinks: [{ value: "" }],
             logInTime: "09:30",
             logOutTime: "18:30",
-            otherWork: "",
         })
       });
       setBestCallAudioURL(undefined);
@@ -484,7 +556,7 @@ export default function ReportsPage() {
     const conversionRate = (outreach > 0) ? ((potential / outreach) * 100) : 0;
 
     return (
-        <>
+        <div className="space-y-6">
             <Card className="bg-primary/5 border-primary/20">
                 <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
                     <Info className="h-4 w-4 text-primary" />
@@ -628,7 +700,7 @@ export default function ReportsPage() {
                     )} />
                 </CardContent>
             </Card>
-        </>
+        </div>
     );
   }
 
@@ -643,49 +715,120 @@ export default function ReportsPage() {
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">{templates.technicalGuidelines}</p>
             </CardContent>
         </Card>
+        
+        <p className="text-sm italic">Dear Sir / Ma’am,</p>
+        <p className="font-semibold">Daily report summary:</p>
+
         <Card>
-            <CardHeader><CardTitle>Technical Work Report</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="subject" render={({ field }) => (
-                    <FormItem className="md:col-span-2"><FormLabel>Subject</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="technologyUsed" render={({ field }) => (
-                    <FormItem className="md:col-span-2"><FormLabel>Technology / Tool Used / Learnt</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="taskDescription" render={({ field }) => (
-                    <FormItem className="md:col-span-2"><FormLabel>Task Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="workDone" render={({ field }) => (
-                    <FormItem className="md:col-span-2"><FormLabel>Code / Design / Testing Work Done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="moduleWorkedOn" render={({ field }) => (
-                    <FormItem className="md:col-span-2"><FormLabel>Module / Feature Worked On</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="taskStatus" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                            <SelectItem value="Completed">Completed</SelectItem>
-                            <SelectItem value="In Progress">In Progress</SelectItem>
-                        </SelectContent>
-                        </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <div/>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
                 <FormField control={form.control} name="logInTime" render={({ field }) => (
-                    <FormItem><FormLabel>Log in Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Login Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="logOutTime" render={({ field }) => (
-                    <FormItem><FormLabel>Log out Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="otherWork" render={({ field }) => (
-                    <FormItem className="md:col-span-2"><FormLabel>Other work done (Optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Logout Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
             </CardContent>
         </Card>
+
+        <Card>
+            <CardHeader><CardTitle>Assignments</CardTitle></CardHeader>
+            <CardContent>
+                <FormField control={form.control} name="tasksAssigned" render={({ field }) => (
+                    <FormItem><FormLabel>Tasks Assigned for the Day</FormLabel><FormControl><Textarea {...field} placeholder="[Task 1] [Task 2] [Task 3]" /></FormControl><FormMessage /></FormItem>
+                )} />
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader><CardTitle>Tasks Completed Today (Technical Explanation)</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="module1Name" render={({ field }) => (
+                        <FormItem><FormLabel>Module / Project Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="module1Details" render={({ field }) => (
+                        <FormItem className="md:col-span-2"><FormLabel>Work Done & Technical Details</FormLabel><FormControl><Textarea {...field} placeholder="Completed task explanation, feature implemented, bug fixed, technical details..." /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </div>
+                <Separator />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="module2Name" render={({ field }) => (
+                        <FormItem><FormLabel>Module / Feature (Optional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="module2Details" render={({ field }) => (
+                        <FormItem className="md:col-span-2"><FormLabel>Work Done (Optional)</FormLabel><FormControl><Textarea {...field} placeholder="Work done, improvements, fixes..." /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </div>
+                <Separator />
+                <FormField control={form.control} name="additionalWork" render={({ field }) => (
+                    <FormItem><FormLabel>Optional Additional Work</FormLabel><FormControl><Textarea {...field} placeholder="Any extra work done..." /></FormControl><FormMessage /></FormItem>
+                )} />
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader><CardTitle>Repository Links</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+                {fields.map((field, index) => (
+                    <div key={field.id} className="flex gap-2 items-start">
+                        <FormField
+                            control={form.control}
+                            name={`repoLinks.${index}.value` as any}
+                            render={({ field }) => (
+                                <FormItem className="flex-1">
+                                    <FormControl>
+                                        <Input {...field} placeholder="https://github.com/your-repo" />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="shrink-0">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ value: "" })}>
+                    <Plus className="h-4 w-4 mr-2" /> Add Repo Link
+                </Button>
+            </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+                <CardHeader><CardTitle>Progress Tracking</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <FormField control={form.control} name="workInProgress" render={({ field }) => (
+                        <FormItem><FormLabel>Work in Progress</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="pendingTasks" render={({ field }) => (
+                        <FormItem><FormLabel>Pending / Yet-to-be-Completed Tasks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle>Learning & Challenges</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <FormField control={form.control} name="whatILearned" render={({ field }) => (
+                        <FormItem><FormLabel>What I Learned Today</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="challengesFaced" render={({ field }) => (
+                        <FormItem><FormLabel>Challenges Faced</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </CardContent>
+            </Card>
+        </div>
+
+        <Card>
+            <CardHeader><CardTitle>Outlook</CardTitle></CardHeader>
+            <CardContent>
+                <FormField control={form.control} name="nextSteps" render={({ field }) => (
+                    <FormItem><FormLabel>Next Steps / Tasks Planned for Tomorrow</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+            </CardContent>
+        </Card>
+
+        <p className="text-sm italic">Thank you.</p>
     </div>
   );
 
@@ -753,7 +896,7 @@ export default function ReportsPage() {
             <AccordionItem value={report.id} key={report.id} className="border-none">
               <AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50 data-[state=open]:bg-muted/50 data-[state=open]:rounded-b-none">
                   <div className="flex-1 text-left">
-                      <p className="font-semibold">{report.reportType === 'Technical' ? report.subject : 'Business Report'}</p>
+                      <p className="font-semibold">{report.reportType === 'Technical' ? (report.module1Name || 'Technical Report') : 'Business Report'}</p>
                       <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
                   </div>
               </AccordionTrigger>
@@ -891,7 +1034,7 @@ export default function ReportsPage() {
                           <AccordionItem value={report.id} key={report.id} className="border-none">
                               <AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50 data-[state=open]:bg-muted/50 data-[state=open]:rounded-b-none">
                                   <div className="flex-1 text-left">
-                                      <p className="font-semibold">{report.reportType === 'Technical' ? report.subject : 'Business Report'}</p>
+                                      <p className="font-semibold">{report.reportType === 'Technical' ? (report.module1Name || 'Technical Report') : 'Business Report'}</p>
                                       <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
                                   </div>
                               </AccordionTrigger>
@@ -957,15 +1100,17 @@ function TemplateConfigForm({
         date: { toDate: () => new Date() },
         reportType: 'Technical',
         signature: 'John Tech | Lead Developer',
-        subject: "Dashboard Performance Optimization",
-        technologyUsed: "Next.js, Firebase Firestore, Tailwind CSS, Recharts",
-        taskDescription: "Investigated slow load times on the analytics dashboard. Identified redundant collection calls.",
-        workDone: "Implemented useMemoFirebase for query stabilization. Optimized SVG rendering in charts. Reduced initial JS bundle by 15%.",
-        moduleWorkedOn: "Analytics Dashboard / Firebase Hooks",
-        taskStatus: 'Completed',
+        tasksAssigned: "[Task 1] API Optimization [Task 2] Database Migration [Task 3] Documentation",
+        module1Name: "Dashboard Backend",
+        module1Details: "Optimized the main dashboard queries by implementing collectionGroup indexes. Reduced initial load time by 40%.",
+        workInProgress: "Migrating legacy user data to the new unified profile structure.",
+        pendingTasks: "Unit tests for the authentication workflow.",
+        whatILearned: "Deep dived into Firestore composite indexes and query performance profiling.",
+        challengesFaced: "Encountered a rate limit issue with the bulk creation script; solved by implementing batch delays.",
+        nextSteps: "Finalize migration script and start deployment testing.",
+        repoLinks: [{ value: "https://github.com/fortumars/hrm-core" }],
         logInTime: '09:15',
         logOutTime: '18:45',
-        otherWork: "Code review for Intern PR #42. Briefed HR on technical requirements for new hires."
     };
 
     return (
