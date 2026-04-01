@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 // --- Types ---
 
@@ -38,8 +39,8 @@ type ReportTemplatesConfig = {
 };
 
 const defaultTemplatesConfig: ReportTemplatesConfig = {
-  businessKeywords: ["business executive intern", "business", "sales", "marketing"],
-  technicalKeywords: ["technical support intern", "technical", "developer", "engineer"],
+  businessKeywords: ["BUSINESS EXECUTIVE INTERN", "business", "sales", "marketing"],
+  technicalKeywords: ["TECHNICAL SUPPORT INTERN", "technical", "developer", "engineer"],
   businessGuidelines: "Please focus on client interactions, pipeline growth, and strategic outreach results for today.",
   technicalGuidelines: "Provide details on code modules worked on, specific technologies used, and any technical hurdles encountered."
 };
@@ -112,7 +113,7 @@ type Report = {
   meetingsBookedTomorrow?: string;
   criticalPathTomorrow?: string;
   interventionTrigger?: 'None' | 'Coaching' | 'Technical Support' | 'Client meeting';
-  // Technical (New format)
+  // Technical
   tasksAssigned?: string;
   module1Name?: string;
   module1Details?: string;
@@ -152,7 +153,9 @@ const ReportDetailItem = ({ label, value }: { label: string, value: React.ReactN
 
 const OutreachReportDetails = ({ report }: { report: Report }) => {
     const currencySymbol = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
-    const conversionRate = (report.outreachTotal && report.outreachTotal > 0) ? ((report.potentialClients || 0) / report.outreachTotal) * 100 : 0;
+    const outreach = report.outreachTotal || 0;
+    const potential = report.potentialClients || 0;
+    const conversionRate = (outreach > 0) ? (potential / outreach) * 100 : 0;
     const isHighPerformer = conversionRate >= 15;
     const [randomQuote, setRandomQuote] = React.useState('');
 
@@ -327,18 +330,18 @@ export default function ReportsPage() {
 
   // Determine report type based on job title keywords
   const getReportType = React.useCallback((jobTitle: string = ''): 'Business' | 'Technical' => {
-    const title = jobTitle.toLowerCase();
+    const title = jobTitle.toUpperCase();
     
-    // Check technical keywords first
-    if (templates.technicalKeywords.some(kw => title.includes(kw.toLowerCase()))) {
+    if (title.includes("TECHNICAL SUPPORT INTERN")) return 'Technical';
+    if (title.includes("BUSINESS EXECUTIVE INTERN")) return 'Business';
+
+    if (templates.technicalKeywords.some(kw => title.includes(kw.toUpperCase()))) {
         return 'Technical';
     }
-    // Default to Business if keywords match, or if it's the catch-all
-    if (templates.businessKeywords.some(kw => title.includes(kw.toLowerCase()))) {
+    if (templates.businessKeywords.some(kw => title.includes(kw.toUpperCase()))) {
         return 'Business';
     }
-    // Fallback: Default to Business if job title is missing or doesn't match
-    return 'Business';
+    return 'Technical'; // Default
   }, [templates]);
 
   const currentReportType = React.useMemo(() => getReportType(currentUserData?.jobTitle), [getReportType, currentUserData?.jobTitle]);
@@ -479,12 +482,8 @@ export default function ReportsPage() {
   ) => {
     const file = event.target.files?.[0];
     if (file) {
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            toast({
-                variant: "destructive",
-                title: "File too large",
-                description: "Please upload an audio file smaller than 5MB.",
-            });
+        if (file.size > 5 * 1024 * 1024) {
+            toast({ variant: "destructive", title: "File too large", description: "Audio files must be under 5MB." });
             return;
         }
         const reader = new FileReader();
@@ -496,15 +495,6 @@ export default function ReportsPage() {
         reader.readAsDataURL(file);
     }
   };
-
-  const handleDeleteRecording = (
-      fieldName: 'bestCallRecording' | 'worstCallRecording',
-      setUrl: React.Dispatch<React.SetStateAction<string | undefined>>
-  ) => {
-    setUrl(undefined);
-    form.setValue(fieldName, undefined);
-  };
-
 
   const onSubmit = async (values: ReportFormValues) => {
     if (!user || !currentUserData) return;
@@ -521,25 +511,16 @@ export default function ReportsPage() {
     
     await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), reportPayload);
     
-    toast({
-        title: "Report Submitted",
-        description: "Your daily work report has been saved."
-    });
+    toast({ title: "Report Submitted" });
     setIsAddDialogOpen(false);
     resetForm();
   };
 
   const handleSaveConfig = (values: ReportTemplatesConfig) => {
       setDocumentNonBlocking(templatesDocRef, values, { merge: true });
-      toast({ title: "Configuration Saved", description: "Report templates have been updated." });
+      toast({ title: "Configuration Saved" });
       setIsConfigDialogOpen(false);
   };
-
-  const jobTitles = React.useMemo(() => {
-    if (!usersData) return [];
-    const allJobTitles = usersData.map(u => u.jobTitle).filter(Boolean);
-    return ["All Job Titles", ...Array.from(new Set(allJobTitles))];
-  }, [usersData]);
 
   const filteredUsers = usersData?.filter(u => {
     const nameMatch = `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase());
@@ -548,12 +529,9 @@ export default function ReportsPage() {
   });
 
   const BusinessFormFields = () => {
-    const { control } = form;
-    const [outreach, potential] = useWatch({
-        control,
-        name: ["outreachTotal", "potentialClients"]
-    });
-    const conversionRate = (outreach > 0) ? ((potential / outreach) * 100) : 0;
+    const outreach = useWatch({ control: form.control, name: "outreachTotal" }) as number || 0;
+    const potential = useWatch({ control: form.control, name: "potentialClients" }) as number || 0;
+    const conversionRate = (outreach > 0) ? (potential / outreach) * 100 : 0;
 
     return (
         <div className="space-y-6">
@@ -569,7 +547,7 @@ export default function ReportsPage() {
             <Card>
                 <CardHeader><CardTitle>Outreach Analytics</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <FormField control={control} name="currency" render={({ field }) => (
+                     <FormField control={form.control} name="currency" render={({ field }) => (
                         <FormItem><FormLabel>Currency</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
@@ -582,13 +560,13 @@ export default function ReportsPage() {
                           </Select>
                         <FormMessage /></FormItem>
                     )} />
-                    <FormField control={control} name="pipelineValue" render={({ field }) => (
+                    <FormField control={form.control} name="pipelineValue" render={({ field }) => (
                         <FormItem><FormLabel>Pipeline Business Value</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={control} name="outreachTotal" render={({ field }) => (
+                    <FormField control={form.control} name="outreachTotal" render={({ field }) => (
                         <FormItem><FormLabel>Outreach (Total)</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={control} name="potentialClients" render={({ field }) => (
+                    <FormField control={form.control} name="potentialClients" render={({ field }) => (
                         <FormItem><FormLabel>Potential Clients (Conversions)</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <div className="md:col-span-2">
@@ -605,33 +583,33 @@ export default function ReportsPage() {
             <Card>
                 <CardHeader><CardTitle>Daily Summary</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                    <FormField control={control} name="followUpsCompleted" render={({ field }) => (
-                        <FormItem><FormLabel>Follow-ups Completed</FormLabel><FormControl><Textarea {...field} placeholder="Details on existing client follow-ups..." /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="followUpsCompleted" render={({ field }) => (
+                        <FormItem><FormLabel>Follow-ups Completed</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={control} name="meetingsSecured" render={({ field }) => (
-                        <FormItem><FormLabel>Meetings/Demos Secured & Quotations</FormLabel><FormControl><Textarea {...field} placeholder="Client names and brief context..." /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="meetingsSecured" render={({ field }) => (
+                        <FormItem><FormLabel>Meetings/Demos Secured & Quotations</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={control} name="strategicLearning" render={({ field }) => (
-                        <FormItem><FormLabel>Strategic Learning</FormLabel><FormControl><Textarea {...field} placeholder="What did you learn today about the industry, product, or client behavior?" /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="strategicLearning" render={({ field }) => (
+                        <FormItem><FormLabel>Strategic Learning</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={control} name="clientWinHighlight" render={({ field }) => (
-                        <FormItem><FormLabel>Client Win/Highlight</FormLabel><FormControl><Textarea {...field} placeholder="A brief narrative of the best conversation of the day..." /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="clientWinHighlight" render={({ field }) => (
+                        <FormItem><FormLabel>Client Win/Highlight</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader><CardTitle>Planning & Outlook</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                     <FormField control={control} name="pendingDeliverables" render={({ field }) => (
+                     <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (
                         <FormItem><FormLabel>Pending Deliverables / Pipeline Impact</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={control} name="meetingsBookedTomorrow" render={({ field }) => (
-                        <FormItem><FormLabel>Meetings/Demos Booked for Tomorrow</FormLabel><FormControl><Textarea {...field} placeholder="Confirmed calendar invites sent..." /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (
+                        <FormItem><FormLabel>Meetings/Demos Booked for Tomorrow</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={control} name="criticalPathTomorrow" render={({ field }) => (
-                        <FormItem><FormLabel>T+1 Critical Path</FormLabel><FormControl><Textarea {...field} placeholder="Tomorrow's plan and the #1 most important task..." /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (
+                        <FormItem><FormLabel>T+1 Critical Path</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={control} name="interventionTrigger" render={({ field }) => (
+                    <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Intervention Trigger</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
@@ -649,60 +627,23 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
              <Card>
-                <CardHeader>
-                    <CardTitle>Best Call Record</CardTitle>
-                    <CardDescription>Upload the best call recording of the day (max 5MB).</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle>Audio Records</CardTitle><CardDescription>Upload call recordings (max 5MB).</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
-                    {!bestCallAudioURL && (
-                        <div className="grid w-full max-w-sm items-center gap-1.5">
-                            <Label htmlFor="best-call-upload">Upload Audio</Label>
-                            <Input id="best-call-upload" type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'bestCallRecording', setBestCallAudioURL)} />
-                        </div>
-                    )}
-                    {bestCallAudioURL && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <audio src={bestCallAudioURL} controls className="w-full" />
-                            <Button type="button" onClick={() => handleDeleteRecording('bestCallRecording', setBestCallAudioURL)} variant="outline" size="sm" className="w-full">
-                                <Trash2 className="mr-2" />
-                                Remove Recording
-                            </Button>
+                            <Label>Best Call Record</Label>
+                            {bestCallAudioURL ? <audio src={bestCallAudioURL} controls className="w-full" /> : <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'bestCallRecording', setBestCallAudioURL)} />}
                         </div>
-                    )}
-                    <FormField control={control} name="bestCallRecording" render={({ field }) => (
-                        <FormItem className="hidden"><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Worst Call Record</CardTitle>
-                    <CardDescription>Upload the call recording that needs improvement (max 5MB).</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {!worstCallAudioURL && (
-                        <div className="grid w-full max-w-sm items-center gap-1.5">
-                            <Label htmlFor="worst-call-upload">Upload Audio</Label>
-                            <Input id="worst-call-upload" type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'worstCallRecording', setWorstCallAudioURL)} />
-                        </div>
-                    )}
-                    {worstCallAudioURL && (
                         <div className="space-y-2">
-                            <audio src={worstCallAudioURL} controls className="w-full" />
-                            <Button type="button" onClick={() => handleDeleteRecording('worstCallRecording', setWorstCallAudioURL)} variant="outline" size="sm" className="w-full">
-                                <Trash2 className="mr-2" />
-                                Remove Recording
-                            </Button>
+                            <Label>Worst Call Record</Label>
+                            {worstCallAudioURL ? <audio src={worstCallAudioURL} controls className="w-full" /> : <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'worstCallRecording', setWorstCallAudioURL)} />}
                         </div>
-                    )}
-                    <FormField control={control} name="worstCallRecording" render={({ field }) => (
-                        <FormItem className="hidden"><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
+                    </div>
                 </CardContent>
             </Card>
         </div>
     );
-  }
+  };
 
   const TechnicalFormFields = () => (
     <div className="space-y-6">
@@ -747,7 +688,7 @@ export default function ReportsPage() {
                         <FormItem><FormLabel>Module / Project Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="module1Details" render={({ field }) => (
-                        <FormItem className="md:col-span-2"><FormLabel>Work Done & Technical Details</FormLabel><FormControl><Textarea {...field} placeholder="Completed task explanation, feature implemented, bug fixed, technical details..." /></FormControl><FormMessage /></FormItem>
+                        <FormItem className="md:col-span-2"><FormLabel>Work Done & Technical Details</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
                 <Separator />
@@ -756,12 +697,12 @@ export default function ReportsPage() {
                         <FormItem><FormLabel>Module / Feature (Optional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="module2Details" render={({ field }) => (
-                        <FormItem className="md:col-span-2"><FormLabel>Work Done (Optional)</FormLabel><FormControl><Textarea {...field} placeholder="Work done, improvements, fixes..." /></FormControl><FormMessage /></FormItem>
+                        <FormItem className="md:col-span-2"><FormLabel>Work Done (Optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
                 <Separator />
                 <FormField control={form.control} name="additionalWork" render={({ field }) => (
-                    <FormItem><FormLabel>Optional Additional Work</FormLabel><FormControl><Textarea {...field} placeholder="Any extra work done..." /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Optional Additional Work</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
             </CardContent>
         </Card>
@@ -832,94 +773,6 @@ export default function ReportsPage() {
     </div>
   );
 
-  const AdminView = () => (
-    <>
-      <div className="flex flex-col sm:flex-row gap-4 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search for an employee..." 
-            className="pl-8" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Select value={selectedJobTitle} onValueChange={setSelectedJobTitle}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filter by job title" />
-            </SelectTrigger>
-            <SelectContent>
-                {jobTitles.map(title => (
-                    <SelectItem key={title} value={title}>{title}</SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
-      </div>
-      <div className="border rounded-lg overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Job Title</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {areUsersLoading ? (
-              <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading users...</TableCell></TableRow>
-            ) : filteredUsers?.map(u => (
-              <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(u)}>
-                <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
-                <TableCell>{u.jobTitle}</TableCell>
-                <TableCell>{u.department}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="outline" size="sm">
-                    View Reports
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </>
-  );
-
-  const EmployeeView = () => (
-    <div className="space-y-2">
-      {areReportsLoading ? (
-          <p className="text-center py-10 text-muted-foreground">Loading reports...</p>
-      ) : reports && reports.length > 0 ? (
-        <Accordion type="single" collapsible className="w-full space-y-2">
-          {reports.map(report => (
-            <AccordionItem value={report.id} key={report.id} className="border-none">
-              <AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50 data-[state=open]:bg-muted/50 data-[state=open]:rounded-b-none">
-                  <div className="flex-1 text-left">
-                      <p className="font-semibold">{report.reportType === 'Technical' ? (report.module1Name || 'Technical Report') : 'Business Report'}</p>
-                      <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
-                  </div>
-              </AccordionTrigger>
-              <AccordionContent className="p-4 border border-t-0 rounded-b-md">
-                {report.reportType === 'Business'
-                    ? <OutreachReportDetails report={report} />
-                    : <TechnicalReportDetails report={report} />
-                }
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      ) : (
-          <Card>
-              <CardContent className="h-48 flex flex-col items-center justify-center text-center text-muted-foreground">
-                  <p className="mb-4">No reports submitted yet. Time to file one!</p>
-                  <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
-              </CardContent>
-          </Card>
-      )}
-    </div>
-  );
-
   return (
     <>
       <PageHeader
@@ -939,116 +792,120 @@ export default function ReportsPage() {
         </div>
       </PageHeader>
       
-      {isAdmin ? <AdminView /> : <EmployeeView />}
+      {isAdmin ? (
+        <>
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search employee..." className="pl-8" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            </div>
+          </div>
+          <div className="border rounded-lg overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow><TableHead>Name</TableHead><TableHead>Job Title</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+              </TableHeader>
+              <TableBody>
+                {areUsersLoading ? (
+                  <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading...</TableCell></TableRow>
+                ) : filteredUsers?.map(u => (
+                  <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(u)}>
+                    <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
+                    <TableCell>{u.jobTitle}</TableCell>
+                    <TableCell className="text-right"><Button variant="outline" size="sm">View Reports</Button></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      ) : (
+        <div className="space-y-2">
+          {areReportsLoading ? (
+              <p className="text-center py-10 text-muted-foreground">Loading reports...</p>
+          ) : reports && reports.length > 0 ? (
+            <Accordion type="single" collapsible className="w-full space-y-2">
+              {reports.map(report => (
+                <AccordionItem value={report.id} key={report.id} className="border-none">
+                  <AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50">
+                      <div className="flex-1 text-left">
+                          <p className="font-semibold">{report.reportType === 'Technical' ? (report.module1Name || 'Technical Report') : 'Business Report'}</p>
+                          <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
+                      </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="p-4 border border-t-0 rounded-b-md">
+                    {report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+              <Card><CardContent className="h-48 flex flex-col items-center justify-center text-muted-foreground">
+                  <p className="mb-4">No reports submitted yet.</p>
+                  <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
+              </CardContent></Card>
+          )}
+        </div>
+      )}
       
-      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          if (!open) resetForm();
-          setIsAddDialogOpen(open);
-      }}>
-        <DialogContent className="max-w-4xl w-full h-[90vh] max-h-[90vh] flex flex-col p-0">
-          <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsAddDialogOpen(open); }}>
+        <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
+          <Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
               <DialogHeader className="p-6 pb-4 border-b">
-              <DialogTitle className="font-headline text-xl">New {currentReportType} Report</DialogTitle>
-              <DialogDescription>Fill in the details of your work for today, {format(new Date(), "PPP")}.</DialogDescription>
+              <DialogTitle>New {currentReportType} Report</DialogTitle>
+              <DialogDescription>{format(new Date(), "PPP")}</DialogDescription>
               </DialogHeader>
-              <ScrollArea className="flex-1">
-                <div className="p-6 space-y-6">
+              <ScrollArea className="flex-1"><div className="p-6 space-y-6">
                     {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
-                    <FormField
-                        control={form.control}
-                        name="declaration"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                            <FormControl>
-                                <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                                <FormLabel>Declaration</FormLabel>
-                                <FormDescription>
-                                I hereby declare that the information provided in this report is true and accurate to the best of my knowledge.
-                                </FormDescription>
-                                <FormMessage />
-                            </div>
-                            </FormItem>
-                        )}
-                    />
-                </div>
-              </ScrollArea>
-              <DialogFooter className="p-4 border-t bg-background/95 backdrop-blur-sm flex flex-col sm:flex-row sm:justify-between items-center gap-4">
+                    <FormField control={form.control} name="declaration" render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            <div className="space-y-1 leading-none"><FormLabel>Declaration</FormLabel><FormDescription>Information is accurate to the best of my knowledge.</FormDescription></div>
+                        </FormItem>
+                    )} />
+                </div></ScrollArea>
+              <DialogFooter className="p-4 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
                 <FormField control={form.control} name="signature" render={({ field }) => (
-                  <FormItem className="text-xs text-muted-foreground text-center sm:text-left">
-                      <FormControl><Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto" /></FormControl>
-                      <FormMessage />
-                  </FormItem>
+                  <FormItem className="text-xs text-muted-foreground"><FormControl><Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto" /></FormControl></FormItem>
                 )} />
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>
-                      {form.formState.isSubmitting ? 'Submitting...' : 'Submit Report'}
-                  </Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>Submit Report</Button>
                 </div>
               </DialogFooter>
-          </form>
-          </Form>
+          </form></Form>
         </DialogContent>
       </Dialog>
       
-      {/* Template Configuration Dialog */}
       <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
           <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
-              <DialogHeader className="p-6 pb-2">
-                  <DialogTitle>Configure Report Templates</DialogTitle>
-                  <DialogDescription>Map job titles to specific report types and customize guidelines.</DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="flex-1">
-                <div className="px-6 pb-6">
-                  <TemplateConfigForm 
-                    initialValues={templates} 
-                    onSave={handleSaveConfig} 
-                    onCancel={() => setIsConfigDialogOpen(false)} 
-                  />
-                </div>
+              <DialogHeader className="p-6 pb-2"><DialogTitle>Configure Report Templates</DialogTitle></DialogHeader>
+              <ScrollArea className="flex-1 px-6 pb-6">
+                  <TemplateConfigForm initialValues={templates} onSave={handleSaveConfig} onCancel={() => setIsConfigDialogOpen(false)} />
               </ScrollArea>
           </DialogContent>
       </Dialog>
 
       <Sheet open={!!selectedUser} onOpenChange={(isOpen) => !isOpen && setSelectedUser(null)}>
         <SheetContent className="sm:max-w-2xl w-full flex flex-col p-0">
-          <SheetHeader className="p-6 pb-4 border-b">
-            <SheetTitle>
-              {selectedUser ? `${selectedUser.firstName}'s Reports` : "Reports"}
-            </SheetTitle>
-            <SheetDescription>
-              {selectedUser ? `Daily reports submitted by ${selectedUser.firstName}.` : ""}
-            </SheetDescription>
+          <SheetHeader className="p-6 border-b">
+            <SheetTitle>{selectedUser?.firstName}'s Reports</SheetTitle>
           </SheetHeader>
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-2">
-              {areReportsLoading ? <p className="text-center py-6">Loading...</p> : reports && reports.length > 0 ? (
+          <ScrollArea className="flex-1 p-6">
+              {reports && reports.length > 0 ? (
                   <Accordion type="single" collapsible className="w-full">
                       {reports.map(report => (
                           <AccordionItem value={report.id} key={report.id} className="border-none">
-                              <AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50 data-[state=open]:bg-muted/50 data-[state=open]:rounded-b-none">
-                                  <div className="flex-1 text-left">
-                                      <p className="font-semibold">{report.reportType === 'Technical' ? (report.module1Name || 'Technical Report') : 'Business Report'}</p>
-                                      <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
-                                  </div>
+                              <AccordionTrigger className="border rounded-md px-4 mb-2">
+                                  <div className="flex-1 text-left"><p className="font-semibold">{report.reportType}</p><p className="text-xs text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p></div>
                               </AccordionTrigger>
                               <AccordionContent className="p-4 border border-t-0 rounded-b-md">
-                                {report.reportType === 'Business'
-                                    ? <OutreachReportDetails report={report} />
-                                    : <TechnicalReportDetails report={report} />
-                                }
+                                {report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
                               </AccordionContent>
                           </AccordionItem>
                       ))}
                   </Accordion>
-              ) : <p className="text-center text-muted-foreground py-6">No reports found for this user.</p>}
-            </div>
+              ) : <p className="text-center text-muted-foreground">No reports found.</p>}
           </ScrollArea>
         </SheetContent>
       </Sheet>
@@ -1056,61 +913,10 @@ export default function ReportsPage() {
   );
 }
 
-// --- Sub-Components ---
-
-function TemplateConfigForm({ 
-    initialValues, 
-    onSave, 
-    onCancel 
-}: { 
-    initialValues: ReportTemplatesConfig, 
-    onSave: (val: ReportTemplatesConfig) => void, 
-    onCancel: () => void 
-}) {
+function TemplateConfigForm({ initialValues, onSave, onCancel }: { initialValues: ReportTemplatesConfig, onSave: (val: ReportTemplatesConfig) => void, onCancel: () => void }) {
     const [config, setConfig] = React.useState<ReportTemplatesConfig>(initialValues);
-
     const handleListChange = (field: keyof ReportTemplatesConfig, value: string) => {
-        const keywords = value.split(',').map(k => k.trim()).filter(Boolean);
-        setConfig(prev => ({ ...prev, [field]: keywords }));
-    };
-
-    const businessMock: Report = {
-        id: 'mock-1',
-        employeeId: 'mock-emp',
-        date: { toDate: () => new Date() },
-        reportType: 'Business',
-        signature: 'Jane Business | Senior Executive',
-        currency: 'USD',
-        outreachTotal: 45,
-        potentialClients: 12,
-        pipelineValue: 12500,
-        followUpsCompleted: "Called 15 clients from the existing database. 5 expressed strong interest in renewal.",
-        meetingsSecured: "Secured a meeting with ABC Corp VP for next Tuesday. Provided quotation for 50 licenses.",
-        strategicLearning: "Clients are prioritizing budget-friendly options this quarter. Need to emphasize our basic tier more effectively.",
-        clientWinHighlight: "Managed to flip a skeptical lead into a potential advocate after a detailed product walkthrough.",
-        pendingDeliverables: "Email proposal to XYZ Ltd. Update CRM with today's calls.",
-        meetingsBookedTomorrow: "Follow-up with GreenTech at 10 AM. Demo for BlueSky at 2 PM.",
-        criticalPathTomorrow: "Prepare final contract for Smith & Co. (Priority #1)",
-        interventionTrigger: 'None'
-    };
-
-    const technicalMock: Report = {
-        id: 'mock-2',
-        employeeId: 'mock-emp',
-        date: { toDate: () => new Date() },
-        reportType: 'Technical',
-        signature: 'John Tech | Lead Developer',
-        tasksAssigned: "[Task 1] API Optimization [Task 2] Database Migration [Task 3] Documentation",
-        module1Name: "Dashboard Backend",
-        module1Details: "Optimized the main dashboard queries by implementing collectionGroup indexes. Reduced initial load time by 40%.",
-        workInProgress: "Migrating legacy user data to the new unified profile structure.",
-        pendingTasks: "Unit tests for the authentication workflow.",
-        whatILearned: "Deep dived into Firestore composite indexes and query performance profiling.",
-        challengesFaced: "Encountered a rate limit issue with the bulk creation script; solved by implementing batch delays.",
-        nextSteps: "Finalize migration script and start deployment testing.",
-        repoLinks: [{ value: "https://github.com/fortumars/hrm-core" }],
-        logInTime: '09:15',
-        logOutTime: '18:45',
+        setConfig(prev => ({ ...prev, [field]: value.split(',').map(k => k.trim()).filter(Boolean) }));
     };
 
     return (
@@ -1118,91 +924,26 @@ function TemplateConfigForm({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-6">
                     <div className="space-y-4">
-                        <h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Business Report Mapping</h4>
-                        <div className="grid gap-2">
-                            <Label>Job Title Keywords (comma separated)</Label>
-                            <Input 
-                                value={config.businessKeywords.join(', ')} 
-                                onChange={(e) => handleListChange('businessKeywords', e.target.value)} 
-                                placeholder="e.g. business, sales, marketing"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label>Business Report Guidelines</Label>
-                            <Textarea 
-                                value={config.businessGuidelines} 
-                                onChange={(e) => setConfig(prev => ({ ...prev, businessGuidelines: e.target.value }))}
-                                className="h-24"
-                            />
-                        </div>
+                        <h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Business Mapping</h4>
+                        <div className="grid gap-2"><Label>Job Title Keywords</Label><Input value={config.businessKeywords.join(', ')} onChange={(e) => handleListChange('businessKeywords', e.target.value)} /></div>
+                        <div className="grid gap-2"><Label>Business Guidelines</Label><Textarea value={config.businessGuidelines} onChange={(e) => setConfig(prev => ({ ...prev, businessGuidelines: e.target.value }))} className="h-24" /></div>
                     </div>
-
                     <div className="space-y-4">
-                        <h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Technical Report Mapping</h4>
-                        <div className="grid gap-2">
-                            <Label>Job Title Keywords (comma separated)</Label>
-                            <Input 
-                                value={config.technicalKeywords.join(', ')} 
-                                onChange={(e) => handleListChange('technicalKeywords', e.target.value)} 
-                                placeholder="e.g. technical, developer, engineer"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label>Technical Report Guidelines</Label>
-                            <Textarea 
-                                value={config.technicalGuidelines} 
-                                onChange={(e) => setConfig(prev => ({ ...prev, technicalGuidelines: e.target.value }))}
-                                className="h-24"
-                            />
-                        </div>
+                        <h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Technical Mapping</h4>
+                        <div className="grid gap-2"><Label>Job Title Keywords</Label><Input value={config.technicalKeywords.join(', ')} onChange={(e) => handleListChange('technicalKeywords', e.target.value)} /></div>
+                        <div className="grid gap-2"><Label>Technical Guidelines</Label><Textarea value={config.technicalGuidelines} onChange={(e) => setConfig(prev => ({ ...prev, technicalGuidelines: e.target.value }))} className="h-24" /></div>
                     </div>
                 </div>
-
                 <div className="space-y-4">
-                    <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                        <Eye className="h-4 w-4" /> Preview (Live)
-                    </h4>
-                    <Tabs defaultValue="business" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="business">Business Preview</TabsTrigger>
-                            <TabsTrigger value="technical">Technical Preview</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="business" className="mt-4 space-y-4">
-                            <Card className="bg-primary/5 border-primary/20">
-                                <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
-                                    <Info className="h-4 w-4 text-primary" />
-                                    <CardTitle className="text-xs font-medium">Guidelines Displayed to User</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{config.businessGuidelines}</p>
-                                </CardContent>
-                            </Card>
-                            <div className="opacity-60 grayscale pointer-events-none scale-[0.98] origin-top">
-                                <OutreachReportDetails report={businessMock} />
-                            </div>
-                        </TabsContent>
-                        <TabsContent value="technical" className="mt-4 space-y-4">
-                            <Card className="bg-primary/5 border-primary/20">
-                                <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
-                                    <Info className="h-4 w-4 text-primary" />
-                                    <CardTitle className="text-xs font-medium">Guidelines Displayed to User</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{config.technicalGuidelines}</p>
-                                </CardContent>
-                            </Card>
-                            <div className="opacity-60 grayscale pointer-events-none scale-[0.98] origin-top">
-                                <TechnicalReportDetails report={technicalMock} />
-                            </div>
-                        </TabsContent>
+                    <h4 className="text-sm font-semibold flex items-center gap-2"><Eye className="h-4 w-4" /> Live Preview</h4>
+                    <Tabs defaultValue="technical" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="business">Business</TabsTrigger><TabsTrigger value="technical">Technical</TabsTrigger></TabsList>
+                        <TabsContent value="business" className="opacity-60 scale-95 origin-top"><OutreachReportDetails report={{ reportType: 'Business', date: { toDate: () => new Date() }, signature: 'Preview Sign' } as any} /></TabsContent>
+                        <TabsContent value="technical" className="opacity-60 scale-95 origin-top"><TechnicalReportDetails report={{ reportType: 'Technical', date: { toDate: () => new Date() }, signature: 'Preview Sign' } as any} /></TabsContent>
                     </Tabs>
                 </div>
             </div>
-
-            <div className="sticky bottom-0 bg-background pt-4 border-t flex justify-end gap-2">
-                <Button variant="outline" onClick={onCancel}>Cancel</Button>
-                <Button onClick={() => onSave(config)}>Save Configuration</Button>
-            </div>
+            <div className="sticky bottom-0 bg-background pt-4 border-t flex justify-end gap-2"><Button variant="outline" onClick={onCancel}>Cancel</Button><Button onClick={() => onSave(config)}>Save Configuration</Button></div>
         </div>
     );
 }
