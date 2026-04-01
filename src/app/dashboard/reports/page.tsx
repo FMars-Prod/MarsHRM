@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock } from "lucide-react";
+import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock, FileText, Mail, Download, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -29,6 +29,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import jsPDF from "jspdf";
+import autoTable from 'jspdf-autotable';
 
 // --- Types ---
 
@@ -66,7 +68,7 @@ const businessReportSchema = z.object({
   declaration: z.literal<boolean>(true, {
     errorMap: () => ({ message: "You must acknowledge the declaration." }),
   }),
-  signature: z.string(),
+  signature: z.string().min(1, "Signature is required."),
 });
 
 const technicalReportSchema = z.object({
@@ -86,15 +88,13 @@ const technicalReportSchema = z.object({
   declaration: z.literal<boolean>(true, {
     errorMap: () => ({ message: "You must acknowledge the declaration." }),
   }),
-  signature: z.string(),
+  signature: z.string().min(1, "Signature is required."),
 });
-
-const formSchema = z.union([businessReportSchema, technicalReportSchema]);
-type ReportFormValues = z.infer<typeof formSchema>;
 
 type Report = { 
   id: string; 
   employeeId: string;
+  employeeName?: string;
   date: any; 
   reportType: 'Business' | 'Technical';
   signature: string;
@@ -245,7 +245,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
   <Card>
     <CardContent className="space-y-6 pt-6">
         <div className="space-y-1">
-            <p className="text-sm italic">Dear Sir / Ma’am,</p>
+            <p className="text-sm italic text-muted-foreground">Dear Sir / Ma’am,</p>
             <p className="font-semibold text-lg">Daily report summary:</p>
         </div>
         
@@ -274,10 +274,10 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
             </div>
         </div>
 
-        {report.repoLinks && report.repoLinks.length > 0 && (
+        {report.repoLinks && report.repoLinks.length > 0 && report.repoLinks.some(l => l.value) && (
             <ReportDetailItem label="GitHub / Repo Links">
                 <div className="flex flex-col gap-1 mt-1">
-                    {report.repoLinks.map((link, i) => (
+                    {report.repoLinks.map((link, i) => link.value && (
                         <a key={i} href={link.value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm truncate flex items-center gap-1">
                             <FastForward className="size-3" /> {link.value}
                         </a>
@@ -298,8 +298,10 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
 
         <ReportDetailItem label="Next Steps / Tasks Planned for Tomorrow"><ChipDisplay items={report.nextSteps} /></ReportDetailItem>
 
-        <p className="text-sm italic pt-4 border-t">Thank you.</p>
-        <ReportDetailItem label="Signature" value={report.signature} />
+        <div className="pt-4 border-t space-y-4">
+            <p className="text-sm italic">Thank you.</p>
+            <ReportDetailItem label="Signature" value={report.signature} />
+        </div>
     </CardContent>
   </Card>
 );
@@ -373,7 +375,7 @@ export default function ReportsPage() {
   const { data: attendanceData } = useCollection(attendanceQuery);
   const todaysAttendance = attendanceData?.[0];
 
-  const form = useForm<ReportFormValues>({
+  const form = useForm<z.infer<typeof technicalReportSchema> | z.infer<typeof businessReportSchema>>({
     resolver: zodResolver(isBusinessUser ? businessReportSchema : technicalReportSchema),
     defaultValues: {
       signature: currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName}` : "",
@@ -391,8 +393,6 @@ export default function ReportsPage() {
         meetingsBookedTomorrow: "",
         criticalPathTomorrow: "",
         interventionTrigger: "None",
-        bestCallRecording: undefined,
-        worstCallRecording: undefined,
       } : {
         tasksAssigned: [{ value: "" }],
         completedTasks: [{ moduleName: "", workDone: "" }],
@@ -425,8 +425,6 @@ export default function ReportsPage() {
             meetingsBookedTomorrow: "",
             criticalPathTomorrow: "",
             interventionTrigger: "None",
-            bestCallRecording: undefined,
-            worstCallRecording: undefined,
         } : {
             tasksAssigned: [{ value: "" }],
             completedTasks: [{ moduleName: "", workDone: "" }],
@@ -479,13 +477,13 @@ export default function ReportsPage() {
         reader.onload = (e) => {
             const dataUrl = e.target?.result as string;
             setUrl(dataUrl);
-            form.setValue(fieldName, dataUrl);
+            form.setValue(fieldName as any, dataUrl);
         };
         reader.readAsDataURL(file);
     }
   };
 
-  const onSubmit = async (values: ReportFormValues) => {
+  const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
     
     const signatureWithTimestamp = `${values.signature} | ${currentUserData.jobTitle} | ${format(new Date(), 'PPpp')}`;
@@ -493,6 +491,7 @@ export default function ReportsPage() {
     const reportPayload = {
       ...values,
       employeeId: user.uid,
+      employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
       date: new Date(),
       reportType: isBusinessUser ? 'Business' : 'Technical',
       signature: signatureWithTimestamp,
@@ -509,8 +508,8 @@ export default function ReportsPage() {
     console.error("Form Validation Errors:", errors);
     toast({
         variant: "destructive",
-        title: "Submission Error",
-        description: "Please fill out all required fields and the declaration.",
+        title: "Submission Blocked",
+        description: "Please fill out all required fields and sign the declaration.",
     });
   };
 
@@ -520,6 +519,181 @@ export default function ReportsPage() {
       setIsConfigDialogOpen(false);
   };
 
+  const handleExportPdf = (report: Report) => {
+    const doc = new jsPDF();
+    const reportDate = format(report.date.toDate(), 'PPP');
+    const employeeName = report.employeeName || report.signature.split(' | ')[0];
+
+    const addHeader = () => {
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(39, 55, 70);
+        doc.text("FortuMars AI Technologies & Business Solutions.", doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Daily Work Report - ${reportDate}`, doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' });
+        doc.setDrawColor(200);
+        doc.line(14, 32, doc.internal.pageSize.getWidth() - 14, 32);
+    };
+
+    addHeader();
+
+    let y = 45;
+
+    if (report.reportType === 'Technical') {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'italic');
+        doc.text("Dear Sir / Ma’am,", 14, y);
+        y += 8;
+        doc.setFont('helvetica', 'bold');
+        doc.text("Daily report summary:", 14, y);
+        y += 12;
+
+        const summaryData = [
+            ["Login Time", report.logInTime || "-"],
+            ["Logout Time", report.logOutTime || "-"],
+        ];
+
+        autoTable(doc, {
+            startY: y,
+            head: [["Metric", "Value"]],
+            body: summaryData,
+            theme: 'striped',
+            headStyles: { fillColor: [39, 55, 70] },
+            margin: { left: 14, right: 14 }
+        });
+
+        y = (doc as any).lastAutoTable.finalY + 10;
+
+        doc.setFont('helvetica', 'bold');
+        doc.text("Tasks Assigned for the Day:", 14, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+        report.tasksAssigned?.forEach(t => {
+            const lines = doc.splitTextToSize(`• ${t.value}`, 180);
+            doc.text(lines, 14, y);
+            y += lines.length * 6;
+        });
+
+        y += 4;
+        doc.setFont('helvetica', 'bold');
+        doc.text("Tasks Completed Today (Technical Explanation):", 14, y);
+        y += 8;
+        report.completedTasks?.forEach((task, i) => {
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${i + 1}. ${task.moduleName}`, 14, y);
+            y += 6;
+            doc.setFont('helvetica', 'normal');
+            const lines = doc.splitTextToSize(task.workDone, 170);
+            doc.text(lines, 20, y);
+            y += lines.length * 6 + 4;
+        });
+
+        const chipSections = [
+            { label: "Work in Progress", items: report.workInProgress },
+            { label: "Pending Tasks", items: report.pendingTasks },
+            { label: "What I Learned Today", items: report.whatILearned },
+            { label: "Challenges Faced", items: report.challengesFaced },
+            { label: "Next Steps", items: report.nextSteps },
+        ];
+
+        chipSections.forEach(section => {
+            if (y > 250) { doc.addPage(); addHeader(); y = 45; }
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${section.label}:`, 14, y);
+            y += 6;
+            doc.setFont('helvetica', 'normal');
+            const itemsText = section.items?.map(i => i.value).join(', ') || "None";
+            const lines = doc.splitTextToSize(itemsText, 180);
+            doc.text(lines, 14, y);
+            y += lines.length * 6 + 4;
+        });
+
+        y += 10;
+        doc.setFont('helvetica', 'italic');
+        doc.text("Thank you.", 14, y);
+        y += 8;
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Signature: ${report.signature}`, 14, y);
+
+    } else {
+        // Business Report PDF
+        const outreachStats = [
+            ["Total Outreach", report.outreachTotal?.toString() || "0"],
+            ["Potential Clients", report.potentialClients?.toString() || "0"],
+            ["Pipeline Value", `${report.currency} ${report.pipelineValue?.toLocaleString() || "0"}`],
+            ["Intervention", report.interventionTrigger || "None"],
+        ];
+
+        autoTable(doc, {
+            startY: y,
+            head: [["Metric", "Value"]],
+            body: outreachStats,
+            theme: 'grid',
+            headStyles: { fillColor: [39, 55, 70] },
+        });
+
+        y = (doc as any).lastAutoTable.finalY + 15;
+
+        const summarySections = [
+            { label: "Follow-ups Completed", value: report.followUpsCompleted },
+            { label: "Meetings/Demos Secured", value: report.meetingsSecured },
+            { label: "Strategic Learning", value: report.strategicLearning },
+            { label: "Client Win/Highlight", value: report.clientWinHighlight },
+            { label: "Pending Deliverables", value: report.pendingDeliverables },
+            { label: "Critical Path Tomorrow", value: report.criticalPathTomorrow },
+        ];
+
+        summarySections.forEach(sec => {
+            if (y > 250) { doc.addPage(); addHeader(); y = 45; }
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${sec.label}:`, 14, y);
+            y += 6;
+            doc.setFont('helvetica', 'normal');
+            const lines = doc.splitTextToSize(sec.value || "-", 180);
+            doc.text(lines, 14, y);
+            y += lines.length * 6 + 6;
+        });
+
+        y += 10;
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Signature: ${report.signature}`, 14, y);
+    }
+
+    doc.save(`Report_${employeeName.replace(/\s+/g, '_')}_${format(report.date.toDate(), 'yyyy-MM-dd')}.pdf`);
+    toast({ title: "PDF Downloaded" });
+  };
+
+  const handleShareEmail = (report: Report) => {
+    const reportDate = format(report.date.toDate(), 'PPP');
+    const employeeName = report.employeeName || report.signature.split(' | ')[0];
+    
+    let body = `Dear Sir / Ma’am,\n\nDaily report summary for ${reportDate}:\n\n`;
+    
+    if (report.reportType === 'Technical') {
+        body += `Login Time: ${report.logInTime}\n`;
+        body += `Logout Time: ${report.logOutTime}\n\n`;
+        body += `Tasks Assigned:\n${report.tasksAssigned?.map(t => `- ${t.value}`).join('\n')}\n\n`;
+        body += `Tasks Completed:\n`;
+        report.completedTasks?.forEach((t, i) => {
+            body += `${i+1}. ${t.moduleName}: ${t.workDone}\n`;
+        });
+        body += `\nWhat I Learned: ${report.whatILearned?.map(i => i.value).join(', ')}\n`;
+        body += `Challenges: ${report.challengesFaced?.map(i => i.value).join(', ')}\n`;
+        body += `Next Steps: ${report.nextSteps?.map(i => i.value).join(', ')}\n`;
+    } else {
+        body += `Total Outreach: ${report.outreachTotal}\n`;
+        body += `Pipeline Value: ${report.currency} ${report.pipelineValue}\n\n`;
+        body += `Highlights:\n${report.clientWinHighlight}\n\n`;
+        body += `Learning:\n${report.strategicLearning}\n`;
+    }
+    
+    body += `\nThank you.\n\nSignature: ${report.signature}`;
+
+    const mailto = `mailto:?subject=Daily Work Report - ${employeeName} - ${reportDate}&body=${encodeURIComponent(body)}`;
+    window.open(mailto, '_blank');
+  };
+
   const filteredUsers = usersData?.filter(u => {
     const nameMatch = `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase());
     const jobTitleMatch = selectedJobTitle === 'All Job Titles' || u.jobTitle === selectedJobTitle;
@@ -527,8 +701,8 @@ export default function ReportsPage() {
   });
 
   const BusinessFormFields = () => {
-    const outreach = useWatch({ control: form.control, name: "outreachTotal" }) as number || 0;
-    const potential = useWatch({ control: form.control, name: "potentialClients" }) as number || 0;
+    const outreach = useWatch({ control: form.control, name: "outreachTotal" as any }) as number || 0;
+    const potential = useWatch({ control: form.control, name: "potentialClients" as any }) as number || 0;
     const conversionRate = (outreach > 0) ? (potential / outreach) * 100 : 0;
 
     return (
@@ -717,7 +891,7 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
             
-            <p className="text-sm italic">Dear Sir / Ma’am,</p>
+            <p className="text-sm italic text-muted-foreground">Dear Sir / Ma’am,</p>
             <p className="font-semibold text-lg">Daily report summary:</p>
 
             <Card>
@@ -819,7 +993,9 @@ export default function ReportsPage() {
 
             <ChipInputSection name="nextSteps" label="Next Steps / Tasks Planned for Tomorrow" icon={FastForward} placeholder="Goal for tomorrow..." />
 
-            <p className="text-sm italic pt-4 border-t">Thank you.</p>
+            <div className="pt-4 border-t space-y-4">
+                <p className="text-sm italic">Thank you.</p>
+            </div>
         </div>
     );
   };
@@ -884,7 +1060,17 @@ export default function ReportsPage() {
                           <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
                       </div>
                   </AccordionTrigger>
-                  <AccordionContent className="p-4 border border-t-0 rounded-b-md">
+                  <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4">
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleExportPdf(report)}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Save as PDF
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleShareEmail(report)}>
+                            <Mail className="h-4 w-4 mr-2" />
+                            Share via Email
+                        </Button>
+                    </div>
                     {report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
                   </AccordionContent>
                 </AccordionItem>
@@ -910,6 +1096,14 @@ export default function ReportsPage() {
               <ScrollArea className="flex-1">
                 <div className="p-6 space-y-6">
                     {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
+                    <FormField control={form.control} name="signature" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Signature</FormLabel>
+                            <FormControl><Input {...field} placeholder="Your Full Name" /></FormControl>
+                            <FormDescription>This will be saved with a timestamp.</FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
                     <FormField control={form.control} name="declaration" render={({ field }) => (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
@@ -918,10 +1112,7 @@ export default function ReportsPage() {
                     )} />
                 </div>
               </ScrollArea>
-              <DialogFooter className="p-4 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-xs text-muted-foreground font-mono">
-                  {form.getValues('signature')}
-                </div>
+              <DialogFooter className="p-4 border-t flex flex-col sm:flex-row justify-end items-center gap-4">
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
                   <Button type="submit" disabled={form.formState.isSubmitting}>Submit Report</Button>
@@ -954,7 +1145,17 @@ export default function ReportsPage() {
                               <AccordionTrigger className="border rounded-md px-4 mb-2">
                                   <div className="flex-1 text-left"><p className="font-semibold">{report.reportType}</p><p className="text-xs text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p></div>
                               </AccordionTrigger>
-                              <AccordionContent className="p-4 border border-t-0 rounded-b-md">
+                              <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4">
+                                <div className="flex justify-end gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => handleExportPdf(report)}>
+                                        <Download className="h-4 w-4 mr-2" />
+                                        Save as PDF
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleShareEmail(report)}>
+                                        <Mail className="h-4 w-4 mr-2" />
+                                        Share via Email
+                                    </Button>
+                                </div>
                                 {report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
                               </AccordionContent>
                           </AccordionItem>
