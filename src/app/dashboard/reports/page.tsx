@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info } from "lucide-react";
+import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // --- Types ---
 
@@ -855,16 +856,20 @@ export default function ReportsPage() {
       
       {/* Template Configuration Dialog */}
       <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
-          <DialogContent className="max-w-2xl">
-              <DialogHeader>
+          <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
+              <DialogHeader className="p-6 pb-2">
                   <DialogTitle>Configure Report Templates</DialogTitle>
                   <DialogDescription>Map job titles to specific report types and customize guidelines.</DialogDescription>
               </DialogHeader>
-              <TemplateConfigForm 
-                initialValues={templates} 
-                onSave={handleSaveConfig} 
-                onCancel={() => setIsConfigDialogOpen(false)} 
-              />
+              <ScrollArea className="flex-1">
+                <div className="px-6 pb-6">
+                  <TemplateConfigForm 
+                    initialValues={templates} 
+                    onSave={handleSaveConfig} 
+                    onCancel={() => setIsConfigDialogOpen(false)} 
+                  />
+                </div>
+              </ScrollArea>
           </DialogContent>
       </Dialog>
 
@@ -926,52 +931,133 @@ function TemplateConfigForm({
         setConfig(prev => ({ ...prev, [field]: keywords }));
     };
 
+    const businessMock: Report = {
+        id: 'mock-1',
+        employeeId: 'mock-emp',
+        date: { toDate: () => new Date() },
+        reportType: 'Business',
+        signature: 'Jane Business | Senior Executive',
+        currency: 'USD',
+        outreachTotal: 45,
+        potentialClients: 12,
+        pipelineValue: 12500,
+        followUpsCompleted: "Called 15 clients from the existing database. 5 expressed strong interest in renewal.",
+        meetingsSecured: "Secured a meeting with ABC Corp VP for next Tuesday. Provided quotation for 50 licenses.",
+        strategicLearning: "Clients are prioritizing budget-friendly options this quarter. Need to emphasize our basic tier more effectively.",
+        clientWinHighlight: "Managed to flip a skeptical lead into a potential advocate after a detailed product walkthrough.",
+        pendingDeliverables: "Email proposal to XYZ Ltd. Update CRM with today's calls.",
+        meetingsBookedTomorrow: "Follow-up with GreenTech at 10 AM. Demo for BlueSky at 2 PM.",
+        criticalPathTomorrow: "Prepare final contract for Smith & Co. (Priority #1)",
+        interventionTrigger: 'None'
+    };
+
+    const technicalMock: Report = {
+        id: 'mock-2',
+        employeeId: 'mock-emp',
+        date: { toDate: () => new Date() },
+        reportType: 'Technical',
+        signature: 'John Tech | Lead Developer',
+        subject: "Dashboard Performance Optimization",
+        technologyUsed: "Next.js, Firebase Firestore, Tailwind CSS, Recharts",
+        taskDescription: "Investigated slow load times on the analytics dashboard. Identified redundant collection calls.",
+        workDone: "Implemented useMemoFirebase for query stabilization. Optimized SVG rendering in charts. Reduced initial JS bundle by 15%.",
+        moduleWorkedOn: "Analytics Dashboard / Firebase Hooks",
+        taskStatus: 'Completed',
+        logInTime: '09:15',
+        logOutTime: '18:45',
+        otherWork: "Code review for Intern PR #42. Briefed HR on technical requirements for new hires."
+    };
+
     return (
-        <div className="space-y-6 py-4">
-            <div className="space-y-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Business Report Mapping</h4>
-                <div className="grid gap-2">
-                    <Label>Job Title Keywords (comma separated)</Label>
-                    <Input 
-                        value={config.businessKeywords.join(', ')} 
-                        onChange={(e) => handleListChange('businessKeywords', e.target.value)} 
-                        placeholder="e.g. business, sales, marketing"
-                    />
+        <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Business Report Mapping</h4>
+                        <div className="grid gap-2">
+                            <Label>Job Title Keywords (comma separated)</Label>
+                            <Input 
+                                value={config.businessKeywords.join(', ')} 
+                                onChange={(e) => handleListChange('businessKeywords', e.target.value)} 
+                                placeholder="e.g. business, sales, marketing"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Business Report Guidelines</Label>
+                            <Textarea 
+                                value={config.businessGuidelines} 
+                                onChange={(e) => setConfig(prev => ({ ...prev, businessGuidelines: e.target.value }))}
+                                className="h-24"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Technical Report Mapping</h4>
+                        <div className="grid gap-2">
+                            <Label>Job Title Keywords (comma separated)</Label>
+                            <Input 
+                                value={config.technicalKeywords.join(', ')} 
+                                onChange={(e) => handleListChange('technicalKeywords', e.target.value)} 
+                                placeholder="e.g. technical, developer, engineer"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Technical Report Guidelines</Label>
+                            <Textarea 
+                                value={config.technicalGuidelines} 
+                                onChange={(e) => setConfig(prev => ({ ...prev, technicalGuidelines: e.target.value }))}
+                                className="h-24"
+                            />
+                        </div>
+                    </div>
                 </div>
-                <div className="grid gap-2">
-                    <Label>Business Report Guidelines</Label>
-                    <Textarea 
-                        value={config.businessGuidelines} 
-                        onChange={(e) => setConfig(prev => ({ ...prev, businessGuidelines: e.target.value }))}
-                        className="h-24"
-                    />
+
+                <div className="space-y-4">
+                    <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <Eye className="h-4 w-4" /> Preview (Live)
+                    </h4>
+                    <Tabs defaultValue="business" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="business">Business Preview</TabsTrigger>
+                            <TabsTrigger value="technical">Technical Preview</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="business" className="mt-4 space-y-4">
+                            <Card className="bg-primary/5 border-primary/20">
+                                <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+                                    <Info className="h-4 w-4 text-primary" />
+                                    <CardTitle className="text-xs font-medium">Guidelines Displayed to User</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{config.businessGuidelines}</p>
+                                </CardContent>
+                            </Card>
+                            <div className="opacity-60 grayscale pointer-events-none scale-[0.98] origin-top">
+                                <OutreachReportDetails report={businessMock} />
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="technical" className="mt-4 space-y-4">
+                            <Card className="bg-primary/5 border-primary/20">
+                                <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+                                    <Info className="h-4 w-4 text-primary" />
+                                    <CardTitle className="text-xs font-medium">Guidelines Displayed to User</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{config.technicalGuidelines}</p>
+                                </CardContent>
+                            </Card>
+                            <div className="opacity-60 grayscale pointer-events-none scale-[0.98] origin-top">
+                                <TechnicalReportDetails report={technicalMock} />
+                            </div>
+                        </TabsContent>
+                    </Tabs>
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Technical Report Mapping</h4>
-                <div className="grid gap-2">
-                    <Label>Job Title Keywords (comma separated)</Label>
-                    <Input 
-                        value={config.technicalKeywords.join(', ')} 
-                        onChange={(e) => handleListChange('technicalKeywords', e.target.value)} 
-                        placeholder="e.g. technical, developer, engineer"
-                    />
-                </div>
-                <div className="grid gap-2">
-                    <Label>Technical Report Guidelines</Label>
-                    <Textarea 
-                        value={config.technicalGuidelines} 
-                        onChange={(e) => setConfig(prev => ({ ...prev, technicalGuidelines: e.target.value }))}
-                        className="h-24"
-                    />
-                </div>
-            </div>
-
-            <DialogFooter>
+            <div className="sticky bottom-0 bg-background pt-4 border-t flex justify-end gap-2">
                 <Button variant="outline" onClick={onCancel}>Cancel</Button>
                 <Button onClick={() => onSave(config)}>Save Configuration</Button>
-            </DialogFooter>
+            </div>
         </div>
     );
 }
