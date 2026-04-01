@@ -279,7 +279,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
                 <div className="flex flex-col gap-1 mt-1">
                     {report.repoLinks.map((link, i) => (
                         <a key={i} href={link.value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm truncate flex items-center gap-1">
-                            <fast-forward className="size-3" /> {link.value}
+                            <FastForward className="size-3" /> {link.value}
                         </a>
                     ))}
                 </div>
@@ -505,6 +505,15 @@ export default function ReportsPage() {
     resetForm();
   };
 
+  const onInvalid = (errors: any) => {
+    console.error("Form Validation Errors:", errors);
+    toast({
+        variant: "destructive",
+        title: "Submission Error",
+        description: "Please fill out all required fields and the declaration.",
+    });
+  };
+
   const handleSaveConfig = (values: ReportTemplatesConfig) => {
       setDocumentNonBlocking(templatesDocRef, values, { merge: true });
       toast({ title: "Configuration Saved" });
@@ -560,9 +569,9 @@ export default function ReportsPage() {
                     )} />
                     <div className="md:col-span-2">
                         <Label>Conversion Rate</Label>
-                        <Card className={cn("mt-2", conversionRate < 15 && conversionRate > 0 && "bg-gradient-to-r from-red-50 to-orange-50 border-red-200")}>
+                        <Card className={cn("mt-2", outreach > 0 && conversionRate < 15 && "bg-gradient-to-r from-red-50 to-orange-50 border-red-200")}>
                             <CardContent className="p-4">
-                                <p className={cn("text-2xl font-bold", conversionRate < 15 && conversionRate > 0 && "text-red-600")}>{conversionRate.toFixed(2)}%</p>
+                                <p className={cn("text-2xl font-bold", outreach > 0 && conversionRate < 15 && "text-red-600")}>{conversionRate.toFixed(2)}%</p>
                                 <p className="text-sm text-muted-foreground">({potential} conversions / {outreach} outreach)</p>
                             </CardContent>
                         </Card>
@@ -777,7 +786,7 @@ export default function ReportsPage() {
             </div>
 
             <Card>
-                <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><fast-forward className="size-4 text-primary" /> Repository Links</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><FastForward className="size-4 text-primary" /> Repository Links</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                     {repoFields.map((field, index) => (
                         <div key={field.id} className="flex gap-2">
@@ -829,7 +838,7 @@ export default function ReportsPage() {
                 </Button>
             )}
             {!isAdmin && (
-                <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
+                <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
             )}
         </div>
       </PageHeader>
@@ -892,12 +901,14 @@ export default function ReportsPage() {
       
       <Dialog open={isAddDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsAddDialogOpen(open); }}>
         <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
-          <Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
               <DialogHeader className="p-6 pb-4 border-b">
-              <DialogTitle>New {currentReportType} Report</DialogTitle>
-              <DialogDescription>{format(new Date(), "PPP")}</DialogDescription>
+                <DialogTitle>New {currentReportType} Report</DialogTitle>
+                <DialogDescription>{format(new Date(), "PPP")}</DialogDescription>
               </DialogHeader>
-              <ScrollArea className="flex-1"><div className="p-6 space-y-6">
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-6">
                     {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
                     <FormField control={form.control} name="declaration" render={({ field }) => (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
@@ -905,17 +916,19 @@ export default function ReportsPage() {
                             <div className="space-y-1 leading-none"><FormLabel>Declaration</FormLabel><FormDescription>Information is accurate to the best of my knowledge.</FormDescription></div>
                         </FormItem>
                     )} />
-                </div></ScrollArea>
+                </div>
+              </ScrollArea>
               <DialogFooter className="p-4 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
-                <FormField control={form.control} name="signature" render={({ field }) => (
-                  <FormItem className="text-xs text-muted-foreground"><FormControl><Input {...field} readOnly disabled className="bg-transparent border-none p-0 h-auto" /></FormControl></FormItem>
-                )} />
+                <div className="text-xs text-muted-foreground font-mono">
+                  {form.getValues('signature')}
+                </div>
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isValid}>Submit Report</Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting}>Submit Report</Button>
                 </div>
               </DialogFooter>
-          </form></Form>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
       
@@ -998,7 +1011,10 @@ function TemplateConfigForm({ initialValues, onSave, onCancel }: { initialValues
                     </Tabs>
                 </div>
             </div>
-            <div className="sticky bottom-0 bg-background pt-4 border-t flex justify-end gap-2"><Button variant="outline" onClick={onCancel}>Cancel</Button><Button onClick={() => onSave(config)}>Save Configuration</Button></div>
+            <div className="sticky bottom-0 bg-background pt-4 border-t flex justify-end gap-2">
+              <Button variant="outline" onClick={onCancel} type="button">Cancel</Button>
+              <Button onClick={() => onSave(config)} type="button">Save Configuration</Button>
+            </div>
         </div>
     );
 }
