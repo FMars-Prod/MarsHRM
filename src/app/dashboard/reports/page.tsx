@@ -268,7 +268,7 @@ export default function ReportsPage() {
   const templates = templatesData || defaultTemplatesConfig;
 
   // Determine report type based on job title keywords
-  const getReportType = (jobTitle: string = ''): 'Business' | 'Technical' => {
+  const getReportType = React.useCallback((jobTitle: string = ''): 'Business' | 'Technical' => {
     const title = jobTitle.toLowerCase();
     
     // Check technical keywords first
@@ -281,9 +281,9 @@ export default function ReportsPage() {
     }
     // Fallback: Default to Business if job title is missing or doesn't match
     return 'Business';
-  };
+  }, [templates]);
 
-  const currentReportType = getReportType(currentUserData?.jobTitle);
+  const currentReportType = React.useMemo(() => getReportType(currentUserData?.jobTitle), [getReportType, currentUserData?.jobTitle]);
   const isBusinessUser = currentReportType === 'Business';
   const isTechnicalUser = currentReportType === 'Technical';
 
@@ -655,7 +655,7 @@ export default function ReportsPage() {
                     <FormItem className="md:col-span-2"><FormLabel>Task Description</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="workDone" render={({ field }) => (
-                    <FormItem className="md:col-span-2"><FormLabel>Code / Design / Testing Work Done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormMessage>
+                    <FormItem className="md:col-span-2"><FormLabel>Code / Design / Testing Work Done</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="moduleWorkedOn" render={({ field }) => (
                     <FormItem className="md:col-span-2"><FormLabel>Module / Feature Worked On</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
