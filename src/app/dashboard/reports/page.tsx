@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -20,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -148,7 +149,7 @@ const ReportDetailItem = ({ label, value, children }: { label: string, value?: R
 );
 
 const ChipDisplay = ({ items }: { items?: { value: string }[] }) => {
-    if (!items || items.length === 0) return <span className="text-muted-foreground italic">NIL</span>;
+    if (!items || items.length === 0) return <span className="text-muted-foreground font-semibold">NIL</span>;
     return (
         <div className="flex flex-wrap gap-2 mt-1">
             {items.map((item, i) => (
@@ -261,7 +262,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
                         <li key={i}>{t.value}</li>
                     ))}
                 </ul>
-            ) : <span className="text-muted-foreground italic">NIL</span>}
+            ) : <span className="text-muted-foreground font-semibold">NIL</span>}
         </ReportDetailItem>
 
         <div className="space-y-4">
@@ -272,11 +273,11 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
                         <p className="font-bold text-sm">{i + 1}. {task.moduleName}</p>
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.workDone || 'NIL'}</p>
                     </div>
-                )) : <span className="text-muted-foreground italic">NIL</span>}
+                )) : <span className="text-muted-foreground font-semibold">NIL</span>}
             </div>
         </div>
 
-        {report.repoLinks && report.repoLinks.length > 0 && report.repoLinks.some(l => l.value) && (
+        {report.repoLinks && report.repoLinks.length > 0 && report.repoLinks.some(l => l.value) ? (
             <ReportDetailItem label="GitHub / Repo Links">
                 <div className="flex flex-col gap-1 mt-1">
                     {report.repoLinks.map((link, i) => link.value && (
@@ -286,7 +287,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
                     ))}
                 </div>
             </ReportDetailItem>
-        )}
+        ) : <ReportDetailItem label="GitHub / Repo Links" value="NIL" />}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ReportDetailItem label="Work in Progress"><ChipDisplay items={report.workInProgress} /></ReportDetailItem>
@@ -433,13 +434,19 @@ export default function ReportsPage() {
 
   const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const file = event.target.files?.[0];
-    if (file && user) {
+    if (file && user && currentUserData) {
         if (file.size > 5 * 1024 * 1024) {
             toast({ variant: "destructive", title: "File too large", description: "Audio files must be under 5MB." });
             return;
         }
         
-        const storageRef = ref(storage, `audio_reports/${user.uid}/${Date.now()}-${file.name}`);
+        // Dynamic file name: Name_Date_Field_Timestamp
+        const userName = `${currentUserData.firstName}_${currentUserData.lastName}`.replace(/\s+/g, '_');
+        const dateStr = format(new Date(), 'yyyy-MM-dd');
+        const fileExt = file.name.split('.').pop();
+        const customFileName = `${userName}_${dateStr}_${fieldName}_${Date.now()}.${fileExt}`;
+        
+        const storageRef = ref(storage, `audio_reports/${user.uid}/${customFileName}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
         uploadTask.on('state_changed', 
@@ -454,7 +461,7 @@ export default function ReportsPage() {
             async () => {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                 form.setValue(fieldName as any, downloadURL);
-                toast({ title: "Audio Attached", description: "The recording has been uploaded successfully." });
+                toast({ title: "Audio Attached", description: `File saved as ${customFileName}` });
             }
         );
     }
@@ -498,6 +505,7 @@ export default function ReportsPage() {
     const doc = new jsPDF();
     const reportDate = format(report.date.toDate(), 'PPP');
     const employeeName = report.employeeName || report.signature.split(' | ')[0];
+    
     const addHeader = () => {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -509,8 +517,10 @@ export default function ReportsPage() {
         doc.setDrawColor(200);
         doc.line(14, 32, doc.internal.pageSize.getWidth() - 14, 32);
     };
+
     addHeader();
     let y = 45;
+
     if (report.reportType === 'Technical') {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
@@ -519,13 +529,23 @@ export default function ReportsPage() {
         doc.setFont('helvetica', 'bold');
         doc.text("Daily report summary:", 14, y);
         y += 12;
+
         const summaryData = [["Login Time", report.logInTime || "NIL"], ["Logout Time", report.logOutTime || "NIL"]];
-        autoTable(doc, { startY: y, head: [["Metric", "Value"]], body: summaryData, theme: 'striped', headStyles: { fillColor: [39, 55, 70] }, margin: { left: 14, right: 14 } });
+        autoTable(doc, { 
+            startY: y, 
+            head: [["Metric", "Value"]], 
+            body: summaryData, 
+            theme: 'striped', 
+            headStyles: { fillColor: [39, 55, 70] }, 
+            margin: { left: 14, right: 14 } 
+        });
+        
         y = (doc as any).lastAutoTable.finalY + 10;
         doc.setFont('helvetica', 'bold');
         doc.text("Tasks Assigned for the Day:", 14, y);
         y += 6;
         doc.setFont('helvetica', 'normal');
+        
         if (report.tasksAssigned && report.tasksAssigned.length > 0) {
             report.tasksAssigned?.forEach(t => {
                 const lines = doc.splitTextToSize(`• ${t.value || 'NIL'}`, 180);
@@ -533,12 +553,15 @@ export default function ReportsPage() {
                 y += lines.length * 6;
             });
         } else { doc.text("• NIL", 14, y); y += 6; }
+
         y += 4;
         doc.setFont('helvetica', 'bold');
         doc.text("Tasks Completed Today (Technical Explanation):", 14, y);
         y += 8;
+
         if (report.completedTasks && report.completedTasks.length > 0) {
             report.completedTasks?.forEach((task, i) => {
+                if (y > 260) { doc.addPage(); addHeader(); y = 45; }
                 doc.setFont('helvetica', 'bold');
                 doc.text(`${i + 1}. ${task.moduleName || 'NIL'}`, 14, y);
                 y += 6;
@@ -548,7 +571,15 @@ export default function ReportsPage() {
                 y += lines.length * 6 + 4;
             });
         } else { doc.setFont('helvetica', 'normal'); doc.text("NIL", 14, y); y += 6; }
-        const chipSections = [{ label: "Work in Progress", items: report.workInProgress }, { label: "Pending Tasks", items: report.pendingTasks }, { label: "What I Learned Today", items: report.whatILearned }, { label: "Challenges Faced", items: report.challengesFaced }, { label: "Next Steps", items: report.nextSteps }];
+
+        const chipSections = [
+            { label: "Work in Progress", items: report.workInProgress },
+            { label: "Pending Tasks", items: report.pendingTasks },
+            { label: "What I Learned Today", items: report.whatILearned },
+            { label: "Challenges Faced", items: report.challengesFaced },
+            { label: "Next Steps", items: report.nextSteps }
+        ];
+
         chipSections.forEach(section => {
             if (y > 250) { doc.addPage(); addHeader(); y = 45; }
             doc.setFont('helvetica', 'bold');
@@ -560,6 +591,7 @@ export default function ReportsPage() {
             doc.text(lines, 14, y);
             y += lines.length * 6 + 4;
         });
+
         y += 10;
         doc.setFont('helvetica', 'italic');
         doc.text("Thank you.", 14, y);
@@ -567,10 +599,30 @@ export default function ReportsPage() {
         doc.setFont('helvetica', 'bold');
         doc.text(`Signature: ${report.signature}`, 14, y);
     } else {
-        const outreachStats = [["Total Outreach", report.outreachTotal?.toString() || "0"], ["Potential Clients", report.potentialClients?.toString() || "0"], ["Pipeline Value", `${report.currency} ${report.pipelineValue?.toLocaleString() || "0"}`], ["Intervention", report.interventionTrigger || "None"]];
-        autoTable(doc, { startY: y, head: [["Metric", "Value"]], body: outreachStats, theme: 'grid', headStyles: { fillColor: [39, 55, 70] } });
+        const outreachStats = [
+            ["Total Outreach", report.outreachTotal?.toString() || "0"],
+            ["Potential Clients", report.potentialClients?.toString() || "0"],
+            ["Pipeline Value", `${report.currency} ${report.pipelineValue?.toLocaleString() || "0"}`],
+            ["Intervention", report.interventionTrigger || "None"]
+        ];
+        autoTable(doc, { 
+            startY: y, 
+            head: [["Metric", "Value"]], 
+            body: outreachStats, 
+            theme: 'grid', 
+            headStyles: { fillColor: [39, 55, 70] } 
+        });
         y = (doc as any).lastAutoTable.finalY + 15;
-        const summarySections = [{ label: "Follow-ups Completed", value: report.followUpsCompleted }, { label: "Meetings/Demos Secured", value: report.meetingsSecured }, { label: "Strategic Learning", value: report.strategicLearning }, { label: "Client Win/Highlight", value: report.clientWinHighlight }, { label: "Pending Deliverables", value: report.pendingDeliverables }, { label: "Critical Path Tomorrow", value: report.criticalPathTomorrow }];
+
+        const summarySections = [
+            { label: "Follow-ups Completed", value: report.followUpsCompleted },
+            { label: "Meetings/Demos Secured", value: report.meetingsSecured },
+            { label: "Strategic Learning", value: report.strategicLearning },
+            { label: "Client Win/Highlight", value: report.clientWinHighlight },
+            { label: "Pending Deliverables", value: report.pendingDeliverables },
+            { label: "Critical Path Tomorrow", value: report.criticalPathTomorrow }
+        ];
+
         summarySections.forEach(sec => {
             if (y > 250) { doc.addPage(); addHeader(); y = 45; }
             doc.setFont('helvetica', 'bold');
@@ -581,10 +633,12 @@ export default function ReportsPage() {
             doc.text(lines, 14, y);
             y += lines.length * 6 + 6;
         });
+
         y += 10;
         doc.setFont('helvetica', 'bold');
         doc.text(`Signature: ${report.signature}`, 14, y);
     }
+
     doc.save(`Report_${employeeName.replace(/\s+/g, '_')}_${format(report.date.toDate(), 'yyyy-MM-dd')}.pdf`);
     toast({ title: "PDF Downloaded" });
   };
@@ -593,10 +647,14 @@ export default function ReportsPage() {
     const reportDate = format(report.date.toDate(), 'PPP');
     const employeeName = report.employeeName || report.signature.split(' | ')[0];
     let body = `Dear Sir / Ma’am,\n\nDaily report summary for ${reportDate}:\n\n`;
+    
     if (report.reportType === 'Technical') {
         body += `Login Time: ${report.logInTime || 'NIL'}\nLogout Time: ${report.logOutTime || 'NIL'}\n\nTasks Assigned:\n${report.tasksAssigned?.map(t => `- ${t.value || 'NIL'}`).join('\n') || '- NIL'}\n\nTasks Completed:\n`;
-        if (report.completedTasks && report.completedTasks.length > 0) report.completedTasks?.forEach((t, i) => { body += `${i+1}. ${t.moduleName || 'NIL'}: ${t.workDone || 'NIL'}\n`; });
-        else body += `- NIL\n`;
+        if (report.completedTasks && report.completedTasks.length > 0) {
+            report.completedTasks?.forEach((t, i) => { body += `${i+1}. ${t.moduleName || 'NIL'}: ${t.workDone || 'NIL'}\n`; });
+        } else {
+            body += `- NIL\n`;
+        }
         body += `\nWhat I Learned: ${report.whatILearned?.map(i => i.value).join(', ') || 'NIL'}\nChallenges: ${report.challengesFaced?.map(i => i.value).join(', ') || 'NIL'}\nNext Steps: ${report.nextSteps?.map(i => i.value).join(', ') || 'NIL'}\n`;
     } else {
         body += `Total Outreach: ${report.outreachTotal}\nPipeline Value: ${report.currency} ${report.pipelineValue}\n\nHighlights:\n${report.clientWinHighlight || 'NIL'}\n\nLearning:\n${report.strategicLearning || 'NIL'}\n`;
@@ -615,7 +673,6 @@ export default function ReportsPage() {
     const outreach = useWatch({ control: form.control, name: "outreachTotal" }) as number || 0;
     const potential = useWatch({ control: form.control, name: "potentialClients" }) as number || 0;
     const conversionRate = (outreach > 0) ? (potential / outreach) * 100 : 0;
-    const progress = uploadProgress['bestCallRecording'] || uploadProgress['worstCallRecording'] || 0;
 
     return (
         <div className="space-y-6">
@@ -715,6 +772,7 @@ export default function ReportsPage() {
     const { fields: taskFields, append: appendTask, remove: removeTask } = useFieldArray({ control: form.control, name: "tasksAssigned" });
     const { fields: completedTaskFields, append: appendCompleted, remove: removeCompleted } = useFieldArray({ control: form.control, name: "completedTasks" });
     const { fields: repoFields, append: appendRepo, remove: removeRepo } = useFieldArray({ control: form.control, name: "repoLinks" });
+
     const ChipInputSection = ({ name, label, icon: Icon, placeholder }: { name: string, label: string, icon: any, placeholder: string }) => {
         const { fields, append, remove } = useFieldArray({ control: form.control, name });
         const [tempValue, setTempValue] = React.useState("");
@@ -723,11 +781,12 @@ export default function ReportsPage() {
             <Card><CardHeader className="py-3"><CardTitle className="text-sm font-bold flex items-center gap-2"><Icon className="size-4 text-primary" />{label}</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                     <div className="flex gap-2"><Input value={tempValue} onChange={(e) => setTempValue(e.target.value)} placeholder={placeholder} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())}/><Button type="button" size="icon" onClick={handleAdd}><Plus className="size-4" /></Button></div>
-                    <div className="flex flex-wrap gap-2 min-h-[2rem]">{fields.map((field, index) => (<Badge key={field.id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 group"><span className="text-xs">{(field as any).value}</span><button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive opacity-50 group-hover:opacity-100"><X className="size-3" /></button></Badge>))}{fields.length === 0 && <span className="text-xs text-muted-foreground italic">NIL</span>}</div>
+                    <div className="flex flex-wrap gap-2 min-h-[2rem]">{fields.map((field, index) => (<Badge key={field.id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 group"><span className="text-xs">{(field as any).value}</span><button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive opacity-50 group-hover:opacity-100"><X className="size-3" /></button></Badge>))}{fields.length === 0 && <span className="text-xs text-muted-foreground font-semibold italic">NIL</span>}</div>
                 </CardContent>
             </Card>
         );
     };
+
     return (
         <div className="space-y-6">
             <Card className="bg-primary/5 border-primary/20"><CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2"><Info className="h-4 w-4 text-primary" /><CardTitle className="text-sm font-medium">Guidelines</CardTitle></CardHeader>
@@ -771,7 +830,7 @@ export default function ReportsPage() {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0"><Form {...form}><form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0"><DialogHeader className="p-6 pb-4 border-b"><DialogTitle>New {currentReportType} Report</DialogTitle><DialogDescription>{format(new Date(), "PPP")}</DialogDescription></DialogHeader><ScrollArea className="flex-1"><div className="p-6 space-y-6">{isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}<FormField control={form.control} name="signature" render={({ field }) => (<FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed" placeholder="Your Full Name" /></FormControl><FormDescription>Your name is automatically used as a signature.</FormDescription><FormMessage /></FormItem>)} /><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><div className="space-y-1 leading-none"><FormLabel>Declaration</FormLabel><FormDescription>Information is accurate to the best of my knowledge.</FormDescription></div></FormItem>)} /></div></ScrollArea><div className="p-4 border-t space-y-4">{submitProgress > 0 && (<div className="space-y-2"><div className="flex justify-between text-xs font-medium"><span>Submitting Report...</span><span>{submitProgress}%</span></div><Progress value={submitProgress} className="h-2" /></div>)}<DialogFooter className="flex flex-col sm:flex-row justify-end items-center gap-4"><div className="flex gap-2 w-full sm:w-auto"><Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={form.formState.isSubmitting} className="flex-1 sm:flex-none">Cancel</Button><Button type="submit" disabled={form.formState.isSubmitting} className="flex-1 sm:flex-none min-w-[140px]">{form.formState.isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>) : "Submit Report"}</Button></div></DialogFooter></div></form></Form></DialogContent>
       </Dialog>
-      <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}><DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0"><DialogHeader className="p-6 pb-2"><DialogTitle>Configure Report Templates</DialogTitle></DialogHeader><ScrollArea className="flex-1 px-6 pb-6"><TemplateConfigForm initialValues={templates} onSave={handleSaveConfig} onCancel={() => setIsConfigDialogOpen(false)} /></ScrollArea></DialogContent></Dialog>
+      <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}><DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0"><DialogHeader className="p-6 pb-2"><DialogTitle>Configure Report Templates</DialogTitle></DialogHeader><ScrollArea className="flex-1 px-6 pb-6"><TemplateConfigForm initialValues={templates} onSave={handleSaveConfig} onCancel={() => setIsConfigDialogOpen(false)} /></ScrollArea></DialogContent>
       <Sheet open={!!selectedUser} onOpenChange={(isOpen) => !isOpen && setSelectedUser(null)}><SheetContent className="sm:max-w-2xl w-full flex flex-col p-0"><SheetHeader className="p-6 border-b"><SheetTitle>{selectedUser?.firstName}'s Reports</SheetTitle></SheetHeader><ScrollArea className="flex-1 p-6">{reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full">{reports.map(report => (
                           <AccordionItem value={report.id} key={report.id} className="border-none"><AccordionTrigger className="border rounded-md px-4 mb-2"><div className="flex-1 text-left"><p className="font-semibold">{report.reportType}</p><p className="text-xs text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p></div></AccordionTrigger>
                               <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4"><div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => handleExportPdf(report)}><Download className="h-4 w-4 mr-2" />Save as PDF</Button><Button variant="outline" size="sm" onClick={() => handleShareEmail(report)}><Mail className="h-4 w-4 mr-2" />Share via Email</Button></div>{report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}</AccordionContent>
