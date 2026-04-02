@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { format } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, setDocumentNonBlocking, useFirebase } from "@/firebase";
 import { collection, query, where, orderBy, doc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -321,10 +321,7 @@ export default function ReportsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isConfigDialogOpen, setIsConfigDialogOpen] = React.useState(false);
   const [submitProgress, setSubmitProgress] = React.useState(0);
-  const [isUploadingAudio, setIsUploadingAudio] = React.useState(false);
-
-  const [bestCallAudioURL, setBestCallAudioURL] = React.useState<string | undefined>();
-  const [worstCallAudioURL, setWorstCallAudioURL] = React.useState<string | undefined>();
+  const [uploadProgress, setUploadProgress] = React.useState<{ [key: string]: number }>({});
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<UserData>(userDocRef);
@@ -336,38 +333,23 @@ export default function ReportsPage() {
   
   const templates = templatesData || defaultTemplatesConfig;
 
-  // Determine report type based on job title keywords
   const getReportType = React.useCallback((jobTitle: string = ''): 'Business' | 'Technical' => {
     const title = jobTitle.toUpperCase();
-    
-    // Strict specific routing
     if (title.includes("TECHNICAL SUPPORT INTERN")) return 'Technical';
     if (title.includes("BUSINESS EXECUTIVE INTERN")) return 'Business';
-
-    if (templates.technicalKeywords.some(kw => title.includes(kw.toUpperCase()))) {
-        return 'Technical';
-    }
-    if (templates.businessKeywords.some(kw => title.includes(kw.toUpperCase()))) {
-        return 'Business';
-    }
-    return 'Technical'; // Default
+    if (templates.technicalKeywords.some(kw => title.includes(kw.toUpperCase()))) return 'Technical';
+    if (templates.businessKeywords.some(kw => title.includes(kw.toUpperCase()))) return 'Business';
+    return 'Technical';
   }, [templates]);
 
   const currentReportType = React.useMemo(() => getReportType(currentUserData?.jobTitle), [getReportType, currentUserData?.jobTitle]);
   const isBusinessUser = currentReportType === 'Business';
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!isAdmin) return null;
-    return query(collection(firestore, "users"));
-  }, [firestore, isAdmin]);
+  const usersQuery = useMemoFirebase(() => isAdmin ? query(collection(firestore, "users")) : null, [firestore, isAdmin]);
   const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(usersQuery);
 
   const reportUserId = isAdmin ? selectedUser?.id : user?.uid;
-  
-  const reportsQuery = useMemoFirebase(() => {
-    if (!reportUserId) return null;
-    return query(collection(firestore, `users/${reportUserId}/reports`), orderBy('date', 'desc'));
-  }, [firestore, reportUserId]);
+  const reportsQuery = useMemoFirebase(() => reportUserId ? query(collection(firestore, `users/${reportUserId}/reports`), orderBy('date', 'desc')) : null, [firestore, reportUserId]);
   const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
   
   const attendanceQuery = useMemoFirebase(() => {
@@ -375,7 +357,6 @@ export default function ReportsPage() {
       const todayId = format(new Date(), 'yyyy-MM-dd');
       return query(collection(firestore, `users/${user.uid}/attendances`), where('id', '==', todayId));
   }, [user, firestore]);
-
   const { data: attendanceData } = useCollection(attendanceQuery);
   const todaysAttendance = attendanceData?.[0];
 
@@ -442,71 +423,58 @@ export default function ReportsPage() {
             logOutTime: todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'HH:mm') : format(new Date(), 'HH:mm'),
         })
       });
-      setBestCallAudioURL(undefined);
-      setWorstCallAudioURL(undefined);
+      setUploadProgress({});
       setSubmitProgress(0);
   }, [form, currentUserData, isBusinessUser, todaysAttendance]);
 
   React.useEffect(() => {
-    if (isAddDialogOpen) {
-      resetForm();
-    }
+    if (isAddDialogOpen) resetForm();
   }, [isAddDialogOpen, resetForm]);
 
-  const handleAudioUpload = async (
-      event: React.ChangeEvent<HTMLInputElement>,
-      fieldName: 'bestCallRecording' | 'worstCallRecording',
-      setUrl: React.Dispatch<React.SetStateAction<string | undefined>>
-  ) => {
+  const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const file = event.target.files?.[0];
     if (file && user) {
-        // Enforce 5MB limit
         if (file.size > 5 * 1024 * 1024) {
-            toast({ 
-                variant: "destructive", 
-                title: "File too large", 
-                description: "Audio files must be under 5MB." 
-            });
+            toast({ variant: "destructive", title: "File too large", description: "Audio files must be under 5MB." });
             return;
         }
         
-        setIsUploadingAudio(true);
-        try {
-            const storageRef = ref(storage, `audio_reports/${user.uid}/${Date.now()}-${file.name}`);
-            const snapshot = await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            
-            setUrl(downloadURL);
-            form.setValue(fieldName as any, downloadURL);
-            toast({ title: "Audio Uploaded", description: "The recording has been attached." });
-        } catch (error: any) {
-            console.error("Upload error:", error);
-            toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload audio. Check your connection." });
-        } finally {
-            setIsUploadingAudio(false);
-        }
+        const storageRef = ref(storage, `audio_reports/${user.uid}/${Date.now()}-${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed', 
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({ ...prev, [fieldName]: progress }));
+            }, 
+            (error) => {
+                console.error("Upload error:", error);
+                toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload audio." });
+            }, 
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                form.setValue(fieldName as any, downloadURL);
+                toast({ title: "Audio Attached", description: "The recording has been uploaded successfully." });
+            }
+        );
     }
   };
 
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
-    
     setSubmitProgress(10);
     const signatureWithTimestamp = `${values.signature} | ${currentUserData.jobTitle} | ${format(new Date(), 'PPpp')}`;
-    
     setSubmitProgress(40);
     const reportPayload = {
       ...values,
       employeeId: user.uid,
       employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
       date: new Date(),
-      reportType: isBusinessUser ? 'Business' : 'Technical',
+      reportType: currentReportType,
       signature: signatureWithTimestamp,
     }
-    
     setSubmitProgress(70);
     await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), reportPayload);
-    
     setSubmitProgress(100);
     setTimeout(() => {
         toast({ title: "Report Submitted" });
@@ -517,11 +485,7 @@ export default function ReportsPage() {
 
   const onInvalid = (errors: any) => {
     console.error("Form Validation Errors:", errors);
-    toast({
-        variant: "destructive",
-        title: "Submission Blocked",
-        description: "Please fill out all required fields and sign the declaration.",
-    });
+    toast({ variant: "destructive", title: "Submission Blocked", description: "Please complete all required fields and the declaration." });
   };
 
   const handleSaveConfig = (values: ReportTemplatesConfig) => {
@@ -534,7 +498,6 @@ export default function ReportsPage() {
     const doc = new jsPDF();
     const reportDate = format(report.date.toDate(), 'PPP');
     const employeeName = report.employeeName || report.signature.split(' | ')[0];
-
     const addHeader = () => {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -546,11 +509,8 @@ export default function ReportsPage() {
         doc.setDrawColor(200);
         doc.line(14, 32, doc.internal.pageSize.getWidth() - 14, 32);
     };
-
     addHeader();
-
     let y = 45;
-
     if (report.reportType === 'Technical') {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
@@ -559,23 +519,9 @@ export default function ReportsPage() {
         doc.setFont('helvetica', 'bold');
         doc.text("Daily report summary:", 14, y);
         y += 12;
-
-        const summaryData = [
-            ["Login Time", report.logInTime || "NIL"],
-            ["Logout Time", report.logOutTime || "NIL"],
-        ];
-
-        autoTable(doc, {
-            startY: y,
-            head: [["Metric", "Value"]],
-            body: summaryData,
-            theme: 'striped',
-            headStyles: { fillColor: [39, 55, 70] },
-            margin: { left: 14, right: 14 }
-        });
-
+        const summaryData = [["Login Time", report.logInTime || "NIL"], ["Logout Time", report.logOutTime || "NIL"]];
+        autoTable(doc, { startY: y, head: [["Metric", "Value"]], body: summaryData, theme: 'striped', headStyles: { fillColor: [39, 55, 70] }, margin: { left: 14, right: 14 } });
         y = (doc as any).lastAutoTable.finalY + 10;
-
         doc.setFont('helvetica', 'bold');
         doc.text("Tasks Assigned for the Day:", 14, y);
         y += 6;
@@ -586,11 +532,7 @@ export default function ReportsPage() {
                 doc.text(lines, 14, y);
                 y += lines.length * 6;
             });
-        } else {
-            doc.text("• NIL", 14, y);
-            y += 6;
-        }
-
+        } else { doc.text("• NIL", 14, y); y += 6; }
         y += 4;
         doc.setFont('helvetica', 'bold');
         doc.text("Tasks Completed Today (Technical Explanation):", 14, y);
@@ -605,20 +547,8 @@ export default function ReportsPage() {
                 doc.text(lines, 20, y);
                 y += lines.length * 6 + 4;
             });
-        } else {
-            doc.setFont('helvetica', 'normal');
-            doc.text("NIL", 14, y);
-            y += 6;
-        }
-
-        const chipSections = [
-            { label: "Work in Progress", items: report.workInProgress },
-            { label: "Pending Tasks", items: report.pendingTasks },
-            { label: "What I Learned Today", items: report.whatILearned },
-            { label: "Challenges Faced", items: report.challengesFaced },
-            { label: "Next Steps", items: report.nextSteps },
-        ];
-
+        } else { doc.setFont('helvetica', 'normal'); doc.text("NIL", 14, y); y += 6; }
+        const chipSections = [{ label: "Work in Progress", items: report.workInProgress }, { label: "Pending Tasks", items: report.pendingTasks }, { label: "What I Learned Today", items: report.whatILearned }, { label: "Challenges Faced", items: report.challengesFaced }, { label: "Next Steps", items: report.nextSteps }];
         chipSections.forEach(section => {
             if (y > 250) { doc.addPage(); addHeader(); y = 45; }
             doc.setFont('helvetica', 'bold');
@@ -630,42 +560,17 @@ export default function ReportsPage() {
             doc.text(lines, 14, y);
             y += lines.length * 6 + 4;
         });
-
         y += 10;
         doc.setFont('helvetica', 'italic');
         doc.text("Thank you.", 14, y);
         y += 8;
         doc.setFont('helvetica', 'bold');
         doc.text(`Signature: ${report.signature}`, 14, y);
-
     } else {
-        // Business Report PDF
-        const outreachStats = [
-            ["Total Outreach", report.outreachTotal?.toString() || "0"],
-            ["Potential Clients", report.potentialClients?.toString() || "0"],
-            ["Pipeline Value", `${report.currency} ${report.pipelineValue?.toLocaleString() || "0"}`],
-            ["Intervention", report.interventionTrigger || "None"],
-        ];
-
-        autoTable(doc, {
-            startY: y,
-            head: [["Metric", "Value"]],
-            body: outreachStats,
-            theme: 'grid',
-            headStyles: { fillColor: [39, 55, 70] },
-        });
-
+        const outreachStats = [["Total Outreach", report.outreachTotal?.toString() || "0"], ["Potential Clients", report.potentialClients?.toString() || "0"], ["Pipeline Value", `${report.currency} ${report.pipelineValue?.toLocaleString() || "0"}`], ["Intervention", report.interventionTrigger || "None"]];
+        autoTable(doc, { startY: y, head: [["Metric", "Value"]], body: outreachStats, theme: 'grid', headStyles: { fillColor: [39, 55, 70] } });
         y = (doc as any).lastAutoTable.finalY + 15;
-
-        const summarySections = [
-            { label: "Follow-ups Completed", value: report.followUpsCompleted },
-            { label: "Meetings/Demos Secured", value: report.meetingsSecured },
-            { label: "Strategic Learning", value: report.strategicLearning },
-            { label: "Client Win/Highlight", value: report.clientWinHighlight },
-            { label: "Pending Deliverables", value: report.pendingDeliverables },
-            { label: "Critical Path Tomorrow", value: report.criticalPathTomorrow },
-        ];
-
+        const summarySections = [{ label: "Follow-ups Completed", value: report.followUpsCompleted }, { label: "Meetings/Demos Secured", value: report.meetingsSecured }, { label: "Strategic Learning", value: report.strategicLearning }, { label: "Client Win/Highlight", value: report.clientWinHighlight }, { label: "Pending Deliverables", value: report.pendingDeliverables }, { label: "Critical Path Tomorrow", value: report.criticalPathTomorrow }];
         summarySections.forEach(sec => {
             if (y > 250) { doc.addPage(); addHeader(); y = 45; }
             doc.setFont('helvetica', 'bold');
@@ -676,12 +581,10 @@ export default function ReportsPage() {
             doc.text(lines, 14, y);
             y += lines.length * 6 + 6;
         });
-
         y += 10;
         doc.setFont('helvetica', 'bold');
         doc.text(`Signature: ${report.signature}`, 14, y);
     }
-
     doc.save(`Report_${employeeName.replace(/\s+/g, '_')}_${format(report.date.toDate(), 'yyyy-MM-dd')}.pdf`);
     toast({ title: "PDF Downloaded" });
   };
@@ -689,35 +592,17 @@ export default function ReportsPage() {
   const handleShareEmail = (report: Report) => {
     const reportDate = format(report.date.toDate(), 'PPP');
     const employeeName = report.employeeName || report.signature.split(' | ')[0];
-    
     let body = `Dear Sir / Ma’am,\n\nDaily report summary for ${reportDate}:\n\n`;
-    
     if (report.reportType === 'Technical') {
-        body += `Login Time: ${report.logInTime || 'NIL'}\n`;
-        body += `Logout Time: ${report.logOutTime || 'NIL'}\n\n`;
-        body += `Tasks Assigned:\n${report.tasksAssigned && report.tasksAssigned.length > 0 ? report.tasksAssigned?.map(t => `- ${t.value || 'NIL'}`).join('\n') : '- NIL'}\n\n`;
-        body += `Tasks Completed:\n`;
-        if (report.completedTasks && report.completedTasks.length > 0) {
-            report.completedTasks?.forEach((t, i) => {
-                body += `${i+1}. ${t.moduleName || 'NIL'}: ${t.workDone || 'NIL'}\n`;
-            });
-        } else {
-            body += `- NIL\n`;
-        }
-        body += `\nWhat I Learned: ${report.whatILearned && report.whatILearned.length > 0 ? report.whatILearned?.map(i => i.value).join(', ') : 'NIL'}\n`;
-        body += `Challenges: ${report.challengesFaced && report.challengesFaced.length > 0 ? report.challengesFaced?.map(i => i.value).join(', ') : 'NIL'}\n`;
-        body += `Next Steps: ${report.nextSteps && report.nextSteps.length > 0 ? report.nextSteps?.map(i => i.value).join(', ') : 'NIL'}\n`;
+        body += `Login Time: ${report.logInTime || 'NIL'}\nLogout Time: ${report.logOutTime || 'NIL'}\n\nTasks Assigned:\n${report.tasksAssigned?.map(t => `- ${t.value || 'NIL'}`).join('\n') || '- NIL'}\n\nTasks Completed:\n`;
+        if (report.completedTasks && report.completedTasks.length > 0) report.completedTasks?.forEach((t, i) => { body += `${i+1}. ${t.moduleName || 'NIL'}: ${t.workDone || 'NIL'}\n`; });
+        else body += `- NIL\n`;
+        body += `\nWhat I Learned: ${report.whatILearned?.map(i => i.value).join(', ') || 'NIL'}\nChallenges: ${report.challengesFaced?.map(i => i.value).join(', ') || 'NIL'}\nNext Steps: ${report.nextSteps?.map(i => i.value).join(', ') || 'NIL'}\n`;
     } else {
-        body += `Total Outreach: ${report.outreachTotal}\n`;
-        body += `Pipeline Value: ${report.currency} ${report.pipelineValue}\n\n`;
-        body += `Highlights:\n${report.clientWinHighlight || 'NIL'}\n\n`;
-        body += `Learning:\n${report.strategicLearning || 'NIL'}\n`;
+        body += `Total Outreach: ${report.outreachTotal}\nPipeline Value: ${report.currency} ${report.pipelineValue}\n\nHighlights:\n${report.clientWinHighlight || 'NIL'}\n\nLearning:\n${report.strategicLearning || 'NIL'}\n`;
     }
-    
     body += `\nThank you.\n\nSignature: ${report.signature}`;
-
-    const mailto = `mailto:?subject=Daily Work Report - ${employeeName} - ${reportDate}&body=${encodeURIComponent(body)}`;
-    window.open(mailto, '_blank');
+    window.open(`mailto:?subject=Daily Work Report - ${employeeName} - ${reportDate}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
   const filteredUsers = usersData?.filter(u => {
@@ -730,6 +615,7 @@ export default function ReportsPage() {
     const outreach = useWatch({ control: form.control, name: "outreachTotal" }) as number || 0;
     const potential = useWatch({ control: form.control, name: "potentialClients" }) as number || 0;
     const conversionRate = (outreach > 0) ? (potential / outreach) * 100 : 0;
+    const progress = uploadProgress['bestCallRecording'] || uploadProgress['worstCallRecording'] || 0;
 
     return (
         <div className="space-y-6">
@@ -738,9 +624,7 @@ export default function ReportsPage() {
                     <Info className="h-4 w-4 text-primary" />
                     <CardTitle className="text-sm font-medium">Guidelines</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{templates.businessGuidelines}</p>
-                </CardContent>
+                <CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{templates.businessGuidelines}</p></CardContent>
             </Card>
             <Card>
                 <CardHeader><CardTitle>Outreach Analytics</CardTitle></CardHeader>
@@ -749,12 +633,7 @@ export default function ReportsPage() {
                         <FormItem><FormLabel>Currency</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="USD">USD ($)</SelectItem>
-                                <SelectItem value="EUR">EUR (€)</SelectItem>
-                                <SelectItem value="GBP">GBP (£)</SelectItem>
-                                <SelectItem value="INR">INR (₹)</SelectItem>
-                            </SelectContent>
+                            <SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="INR">INR (₹)</SelectItem></SelectContent>
                           </Select>
                         <FormMessage /></FormItem>
                     )} />
@@ -781,44 +660,21 @@ export default function ReportsPage() {
             <Card>
                 <CardHeader><CardTitle>Daily Summary</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                    <FormField control={form.control} name="followUpsCompleted" render={({ field }) => (
-                        <FormItem><FormLabel>Follow-ups Completed</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="meetingsSecured" render={({ field }) => (
-                        <FormItem><FormLabel>Meetings/Demos Secured & Quotations</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="strategicLearning" render={({ field }) => (
-                        <FormItem><FormLabel>Strategic Learning</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="clientWinHighlight" render={({ field }) => (
-                        <FormItem><FormLabel>Client Win/Highlight</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
+                    <FormField control={form.control} name="followUpsCompleted" render={({ field }) => (<FormItem><FormLabel>Follow-ups Completed</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="meetingsSecured" render={({ field }) => (<FormItem><FormLabel>Meetings/Demos Secured & Quotations</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="strategicLearning" render={({ field }) => (<FormItem><FormLabel>Strategic Learning</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel>Client Win/Highlight</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader><CardTitle>Planning & Outlook</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                     <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (
-                        <FormItem><FormLabel>Pending Deliverables / Pipeline Impact</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (
-                        <FormItem><FormLabel>Meetings/Demos Booked for Tomorrow</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (
-                        <FormItem><FormLabel>T+1 Critical Path</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
+                     <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel>Pending Deliverables / Pipeline Impact</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel>Meetings/Demos Booked for Tomorrow</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel>T+1 Critical Path</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Intervention Trigger</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    <SelectItem value="None">None</SelectItem>
-                                    <SelectItem value="Coaching">Coaching</SelectItem>
-                                    <SelectItem value="Technical Support">Technical Support</SelectItem>
-                                    <SelectItem value="Client meeting">Client meeting</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <FormItem><FormLabel>Intervention Trigger</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="None">None</SelectItem><SelectItem value="Coaching">Coaching</SelectItem><SelectItem value="Technical Support">Technical Support</SelectItem><SelectItem value="Client meeting">Client meeting</SelectItem></SelectContent></Select>
                             <FormMessage />
                         </FormItem>
                     )} />
@@ -830,11 +686,23 @@ export default function ReportsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Best Call Record</Label>
-                            {isUploadingAudio ? <div className="flex items-center gap-2 text-xs"><Loader2 className="animate-spin h-3 w-3" /> Uploading...</div> : bestCallAudioURL ? <audio src={bestCallAudioURL} controls className="w-full" /> : <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'bestCallRecording', setBestCallAudioURL)} />}
+                            {uploadProgress['bestCallRecording'] !== undefined && uploadProgress['bestCallRecording'] < 100 ? (
+                                <div className="space-y-1"><div className="flex items-center gap-2 text-xs text-primary font-medium"><Loader2 className="animate-spin h-3 w-3" /> Uploading... {Math.round(uploadProgress['bestCallRecording'])}%</div><Progress value={uploadProgress['bestCallRecording']} className="h-1" /></div>
+                            ) : form.getValues('bestCallRecording') ? (
+                                <audio src={form.getValues('bestCallRecording')} controls className="w-full" />
+                            ) : (
+                                <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'bestCallRecording')} />
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label>Worst Call Record</Label>
-                            {isUploadingAudio ? <div className="flex items-center gap-2 text-xs"><Loader2 className="animate-spin h-3 w-3" /> Uploading...</div> : worstCallAudioURL ? <audio src={worstCallAudioURL} controls className="w-full" /> : <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'worstCallRecording', setWorstCallAudioURL)} />}
+                            {uploadProgress['worstCallRecording'] !== undefined && uploadProgress['worstCallRecording'] < 100 ? (
+                                <div className="space-y-1"><div className="flex items-center gap-2 text-xs text-primary font-medium"><Loader2 className="animate-spin h-3 w-3" /> Uploading... {Math.round(uploadProgress['worstCallRecording'])}%</div><Progress value={uploadProgress['worstCallRecording']} className="h-1" /></div>
+                            ) : form.getValues('worstCallRecording') ? (
+                                <audio src={form.getValues('worstCallRecording')} controls className="w-full" />
+                            ) : (
+                                <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'worstCallRecording')} />
+                            )}
                         </div>
                     </div>
                 </CardContent>
@@ -844,419 +712,81 @@ export default function ReportsPage() {
   };
 
   const TechnicalFormFields = () => {
-    const { fields: taskFields, append: appendTask, remove: removeTask } = useFieldArray({
-        control: form.control,
-        name: "tasksAssigned"
-    });
-
-    const { fields: completedTaskFields, append: appendCompleted, remove: removeCompleted } = useFieldArray({
-        control: form.control,
-        name: "completedTasks"
-    });
-
-    const { fields: repoFields, append: appendRepo, remove: removeRepo } = useFieldArray({
-        control: form.control,
-        name: "repoLinks"
-    });
-
-    // Helper for chip-style inputs
+    const { fields: taskFields, append: appendTask, remove: removeTask } = useFieldArray({ control: form.control, name: "tasksAssigned" });
+    const { fields: completedTaskFields, append: appendCompleted, remove: removeCompleted } = useFieldArray({ control: form.control, name: "completedTasks" });
+    const { fields: repoFields, append: appendRepo, remove: removeRepo } = useFieldArray({ control: form.control, name: "repoLinks" });
     const ChipInputSection = ({ name, label, icon: Icon, placeholder }: { name: string, label: string, icon: any, placeholder: string }) => {
         const { fields, append, remove } = useFieldArray({ control: form.control, name });
         const [tempValue, setTempValue] = React.useState("");
-
-        const handleAdd = () => {
-            if (tempValue.trim()) {
-                append({ value: tempValue.trim() });
-                setTempValue("");
-            }
-        };
-
+        const handleAdd = () => { if (tempValue.trim()) { append({ value: tempValue.trim() }); setTempValue(""); } };
         return (
-            <Card>
-                <CardHeader className="py-3">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                        <Icon className="size-4 text-primary" />
-                        {label}
-                    </CardTitle>
-                </CardHeader>
+            <Card><CardHeader className="py-3"><CardTitle className="text-sm font-bold flex items-center gap-2"><Icon className="size-4 text-primary" />{label}</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                    <div className="flex gap-2">
-                        <Input 
-                            value={tempValue} 
-                            onChange={(e) => setTempValue(e.target.value)} 
-                            placeholder={placeholder} 
-                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())}
-                        />
-                        <Button type="button" size="icon" onClick={handleAdd}><Plus className="size-4" /></Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 min-h-[2rem]">
-                        {fields.map((field, index) => (
-                            <Badge key={field.id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 group">
-                                <span className="text-xs">{(field as any).value}</span>
-                                <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive opacity-50 group-hover:opacity-100">
-                                    <X className="size-3" />
-                                </button>
-                            </Badge>
-                        ))}
-                        {fields.length === 0 && <span className="text-xs text-muted-foreground italic">NIL</span>}
-                    </div>
+                    <div className="flex gap-2"><Input value={tempValue} onChange={(e) => setTempValue(e.target.value)} placeholder={placeholder} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())}/><Button type="button" size="icon" onClick={handleAdd}><Plus className="size-4" /></Button></div>
+                    <div className="flex flex-wrap gap-2 min-h-[2rem]">{fields.map((field, index) => (<Badge key={field.id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 group"><span className="text-xs">{(field as any).value}</span><button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive opacity-50 group-hover:opacity-100"><X className="size-3" /></button></Badge>))}{fields.length === 0 && <span className="text-xs text-muted-foreground italic">NIL</span>}</div>
                 </CardContent>
             </Card>
         );
     };
-
     return (
         <div className="space-y-6">
-            <Card className="bg-primary/5 border-primary/20">
-                <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
-                    <Info className="h-4 w-4 text-primary" />
-                    <CardTitle className="text-sm font-medium">Guidelines</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{templates.technicalGuidelines}</p>
-                </CardContent>
+            <Card className="bg-primary/5 border-primary/20"><CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2"><Info className="h-4 w-4 text-primary" /><CardTitle className="text-sm font-medium">Guidelines</CardTitle></CardHeader>
+                <CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{templates.technicalGuidelines}</p></CardContent>
             </Card>
-            
-            <p className="text-sm italic text-muted-foreground">Dear Sir / Ma’am,</p>
-            <p className="font-semibold text-lg">Daily report summary:</p>
-
-            <Card>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
-                    <FormField control={form.control} name="logInTime" render={({ field }) => (
-                        <FormItem><FormLabel>Login Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="logOutTime" render={({ field }) => (
-                        <FormItem><FormLabel>Logout Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </CardContent>
+            <p className="text-sm italic text-muted-foreground">Dear Sir / Ma’am,</p><p className="font-semibold text-lg">Daily report summary:</p>
+            <Card><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6"><FormField control={form.control} name="logInTime" render={({ field }) => (<FormItem><FormLabel>Login Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)} /><FormField control={form.control} name="logOutTime" render={({ field }) => (<FormItem><FormLabel>Logout Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)} /></CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><ListTodo className="size-4 text-primary" /> Tasks Assigned for the Day</CardTitle></CardHeader>
+                <CardContent className="space-y-3">{taskFields.map((field, index) => (<div key={field.id} className="flex gap-2"><FormField control={form.control} name={`tasksAssigned.${index}.value` as any} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input {...field} placeholder={`Task ${index + 1}`} /></FormControl><FormMessage /></FormItem>)} /><Button type="button" variant="ghost" size="icon" onClick={() => removeTask(index)} disabled={taskFields.length <= 1}><Trash2 className="size-4" /></Button></div>))}<Button type="button" variant="outline" size="sm" onClick={() => appendTask({ value: "" })} className="w-full"><Plus className="size-4 mr-2" /> Add Task</Button></CardContent>
             </Card>
-
-            <Card>
-                <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><ListTodo className="size-4 text-primary" /> Tasks Assigned for the Day</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                    {taskFields.map((field, index) => (
-                        <div key={field.id} className="flex gap-2">
-                            <FormField
-                                control={form.control}
-                                name={`tasksAssigned.${index}.value` as any}
-                                render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormControl><Input {...field} placeholder={`Task ${index + 1}`} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeTask(index)} disabled={taskFields.length <= 1}><Trash2 className="size-4" /></Button>
-                        </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => appendTask({ value: "" })} className="w-full"><Plus className="size-4 mr-2" /> Add Task</Button>
-                </CardContent>
-            </Card>
-
-            <div className="space-y-4">
-                <p className="font-bold text-sm text-primary uppercase tracking-widest flex items-center gap-2">
-                    <Brain className="size-4" /> Tasks Completed Today (Clear & Technical Explanation):
-                </p>
-                <div className="space-y-4">
-                    {completedTaskFields.map((field, index) => (
-                        <Card key={field.id} className="relative group">
-                            <CardContent className="pt-6 space-y-4">
-                                <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeCompleted(index)} disabled={completedTaskFields.length <= 1}><X className="size-4" /></Button>
-                                <div className="grid grid-cols-1 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name={`completedTasks.${index}.moduleName` as any}
-                                        render={({ field }) => (
-                                            <FormItem><FormLabel>Module / Project Name</FormLabel><FormControl><Input {...field} placeholder="e.g., Auth System" /></FormControl><FormMessage /></FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name={`completedTasks.${index}.workDone` as any}
-                                        render={({ field }) => (
-                                            <FormItem><FormLabel>Work Done & Technical Details</FormLabel><FormControl><Textarea {...field} placeholder="Explain implementation details, bug fixes, or performance improvements..." /></FormControl><FormMessage /></FormItem>
-                                        )}
-                                    />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                    <Button type="button" variant="outline" onClick={() => appendCompleted({ moduleName: "", workDone: "" })} className="w-full border-dashed"><Plus className="size-4 mr-2" /> Add Another Completed Task Block</Button>
-                </div>
+            <div className="space-y-4"><p className="font-bold text-sm text-primary uppercase tracking-widest flex items-center gap-2"><Brain className="size-4" /> Tasks Completed Today (Clear & Technical Explanation):</p>
+                <div className="space-y-4">{completedTaskFields.map((field, index) => (<Card key={field.id} className="relative group"><CardContent className="pt-6 space-y-4"><Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeCompleted(index)} disabled={completedTaskFields.length <= 1}><X className="size-4" /></Button><div className="grid grid-cols-1 gap-4"><FormField control={form.control} name={`completedTasks.${index}.moduleName` as any} render={({ field }) => (<FormItem><FormLabel>Module / Project Name</FormLabel><FormControl><Input {...field} placeholder="e.g., Auth System" /></FormControl><FormMessage /></FormItem>)}/><FormField control={form.control} name={`completedTasks.${index}.workDone` as any} render={({ field }) => (<FormItem><FormLabel>Work Done & Technical Details</FormLabel><FormControl><Textarea {...field} placeholder="Explain implementation details, bug fixes, or performance improvements..." /></FormControl><FormMessage /></FormItem>)}/></div></CardContent></Card>))}<Button type="button" variant="outline" onClick={() => appendCompleted({ moduleName: "", workDone: "" })} className="w-full border-dashed"><Plus className="size-4 mr-2" /> Add Another Completed Task Block</Button></div>
             </div>
-
-            <Card>
-                <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><LinkIcon className="size-4 text-primary" /> Repository / GitHub Links</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                    {repoFields.map((field, index) => (
-                        <div key={field.id} className="flex gap-2">
-                            <FormField
-                                control={form.control}
-                                name={`repoLinks.${index}.value` as any}
-                                render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormControl><Input {...field} placeholder="https://github.com/org/repo" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeRepo(index)}><Trash2 className="size-4" /></Button>
-                        </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => appendRepo({ value: "" })} className="w-full"><Plus className="size-4 mr-2" /> Add Repo Link</Button>
-                </CardContent>
+            <Card><CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><LinkIcon className="size-4 text-primary" /> Repository / GitHub Links</CardTitle></CardHeader>
+                <CardContent className="space-y-3">{repoFields.map((field, index) => (<div key={field.id} className="flex gap-2"><FormField control={form.control} name={`repoLinks.${index}.value` as any} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input {...field} placeholder="https://github.com/org/repo" /></FormControl><FormMessage /></FormItem>)}/><Button type="button" variant="ghost" size="icon" onClick={() => removeRepo(index)}><Trash2 className="size-4" /></Button></div>))}<Button type="button" variant="outline" size="sm" onClick={() => appendRepo({ value: "" })} className="w-full"><Plus className="size-4 mr-2" /> Add Repo Link</Button></CardContent>
             </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ChipInputSection name="workInProgress" label="Work in Progress" icon={Clock} placeholder="Ongoing task..." />
-                <ChipInputSection name="pendingTasks" label="Pending / Yet-to-be-Completed" icon={FastForward} placeholder="Blocked or future task..." />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ChipInputSection name="whatILearned" label="What I Learned Today" icon={Brain} placeholder="Concept, tool, or fix..." />
-                <ChipInputSection name="challengesFaced" label="Challenges Faced" icon={AlertTriangle} placeholder="Bugs, blockers, or hurdles..." />
-            </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><ChipInputSection name="workInProgress" label="Work in Progress" icon={Clock} placeholder="Ongoing task..." /><ChipInputSection name="pendingTasks" label="Pending / Yet-to-be-Completed" icon={FastForward} placeholder="Blocked or future task..." /></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><ChipInputSection name="whatILearned" label="What I Learned Today" icon={Brain} placeholder="Concept, tool, or fix..." /><ChipInputSection name="challengesFaced" label="Challenges Faced" icon={AlertTriangle} placeholder="Bugs, blockers, or hurdles..." /></div>
             <ChipInputSection name="nextSteps" label="Next Steps / Tasks Planned for Tomorrow" icon={FastForward} placeholder="Goal for tomorrow..." />
-
-            <div className="pt-4 border-t space-y-4">
-                <p className="text-sm italic">Thank you.</p>
-            </div>
+            <div className="pt-4 border-t space-y-4"><p className="text-sm italic">Thank you.</p></div>
         </div>
     );
   };
 
   return (
     <>
-      <PageHeader
-        title={isAdmin ? "Employee Reports" : "My Daily Reports"}
-        description={isAdmin ? "Review and analyze daily reports." : "Submit and view your work reports."}
-      >
-        <div className="flex gap-2">
-            {isAdmin && (
-                <Button variant="outline" onClick={() => setIsConfigDialogOpen(true)}>
-                    <Settings2 className="mr-2 h-4 w-4" />
-                    Configure Templates
-                </Button>
-            )}
-            {!isAdmin && (
-                <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
-            )}
-        </div>
+      <PageHeader title={isAdmin ? "Employee Reports" : "My Daily Reports"} description={isAdmin ? "Review and analyze daily reports." : "Submit and view your work reports."}>
+        <div className="flex gap-2">{isAdmin && (<Button variant="outline" onClick={() => setIsConfigDialogOpen(true)}><Settings2 className="mr-2 h-4 w-4" />Configure Templates</Button>)}{!isAdmin && (<Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>)}</div>
       </PageHeader>
-      
       {isAdmin ? (
-        <>
-          <div className="flex flex-col sm:flex-row gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search employee..." className="pl-8" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            </div>
-          </div>
-          <div className="border rounded-lg overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow><TableHead>Name</TableHead><TableHead>Job Title</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
-              </TableHeader>
-              <TableBody>
-                {areUsersLoading ? (
-                  <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading...</TableCell></TableRow>
-                ) : filteredUsers?.map(u => (
-                  <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(u)}>
-                    <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
-                    <TableCell>{u.jobTitle}</TableCell>
-                    <TableCell className="text-right"><Button variant="outline" size="sm">View Reports</Button></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </>
+        <><div className="flex flex-col sm:flex-row gap-4 mb-4"><div className="relative flex-1"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Search employee..." className="pl-8" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div></div>
+          <div className="border rounded-lg overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Job Title</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{areUsersLoading ? (<TableRow><TableCell colSpan={3} className="h-24 text-center">Loading...</TableCell></TableRow>) : filteredUsers?.map(u => (<TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(u)}><TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell><TableCell>{u.jobTitle}</TableCell><TableCell className="text-right"><Button variant="outline" size="sm">View Reports</Button></TableCell></TableRow>))}</TableBody></Table></div></>
       ) : (
-        <div className="space-y-2">
-          {areReportsLoading ? (
-              <p className="text-center py-10 text-muted-foreground">Loading reports...</p>
-          ) : reports && reports.length > 0 ? (
-            <Accordion type="single" collapsible className="w-full space-y-2">
-              {reports.map(report => (
-                <AccordionItem value={report.id} key={report.id} className="border-none">
-                  <AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50">
-                      <div className="flex-1 text-left">
-                          <p className="font-semibold">{report.reportType === 'Technical' ? (report.completedTasks?.[0]?.moduleName || 'Technical Report') : 'Business Report'}</p>
-                          <p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p>
-                      </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4">
-                    <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleExportPdf(report)}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Save as PDF
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleShareEmail(report)}>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Share via Email
-                        </Button>
-                    </div>
-                    {report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
-                  </AccordionContent>
+        <div className="space-y-2">{areReportsLoading ? (<p className="text-center py-10 text-muted-foreground">Loading reports...</p>) : reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full space-y-2">{reports.map(report => (
+                <AccordionItem value={report.id} key={report.id} className="border-none"><AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50"><div className="flex-1 text-left"><p className="font-semibold">{report.reportType === 'Technical' ? (report.completedTasks?.[0]?.moduleName || 'Technical Report') : 'Business Report'}</p><p className="text-sm text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p></div></AccordionTrigger>
+                  <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4"><div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => handleExportPdf(report)}><Download className="h-4 w-4 mr-2" />Save as PDF</Button><Button variant="outline" size="sm" onClick={() => handleShareEmail(report)}><Mail className="h-4 w-4 mr-2" />Share via Email</Button></div>{report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}</AccordionContent>
                 </AccordionItem>
-              ))}
-            </Accordion>
-          ) : (
-              <Card><CardContent className="h-48 flex flex-col items-center justify-center text-muted-foreground">
-                  <p className="mb-4">No reports submitted yet.</p>
-                  <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
-              </CardContent></Card>
-          )}
+              ))}</Accordion>) : (<Card><CardContent className="h-48 flex flex-col items-center justify-center text-muted-foreground"><p className="mb-4">No reports submitted yet.</p><Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button></CardContent></Card>)}
         </div>
       )}
-      
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
-              <DialogHeader className="p-6 pb-4 border-b">
-                <DialogTitle>New {currentReportType} Report</DialogTitle>
-                <DialogDescription>{format(new Date(), "PPP")}</DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="flex-1">
-                <div className="p-6 space-y-6">
-                    {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
-                    <FormField control={form.control} name="signature" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Signature</FormLabel>
-                            <FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed" placeholder="Your Full Name" /></FormControl>
-                            <FormDescription>Your name is automatically used as a signature.</FormDescription>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="declaration" render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            <div className="space-y-1 leading-none"><FormLabel>Declaration</FormLabel><FormDescription>Information is accurate to the best of my knowledge.</FormDescription></div>
-                        </FormItem>
-                    )} />
-                </div>
-              </ScrollArea>
-              <div className="p-4 border-t space-y-4">
-                {submitProgress > 0 && (
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-xs font-medium">
-                            <span>Submitting Report...</span>
-                            <span>{submitProgress}%</span>
-                        </div>
-                        <Progress value={submitProgress} className="h-2" />
-                    </div>
-                )}
-                <DialogFooter className="flex flex-col sm:flex-row justify-end items-center gap-4">
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={form.formState.isSubmitting || isUploadingAudio} className="flex-1 sm:flex-none">Cancel</Button>
-                        <Button type="submit" disabled={form.formState.isSubmitting || isUploadingAudio} className="flex-1 sm:flex-none min-w-[140px]">
-                            {form.formState.isSubmitting ? (
-                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
-                            ) : "Submit Report"}
-                        </Button>
-                    </div>
-                </DialogFooter>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
+        <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0"><Form {...form}><form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0"><DialogHeader className="p-6 pb-4 border-b"><DialogTitle>New {currentReportType} Report</DialogTitle><DialogDescription>{format(new Date(), "PPP")}</DialogDescription></DialogHeader><ScrollArea className="flex-1"><div className="p-6 space-y-6">{isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}<FormField control={form.control} name="signature" render={({ field }) => (<FormItem><FormLabel>Signature</FormLabel><FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed" placeholder="Your Full Name" /></FormControl><FormDescription>Your name is automatically used as a signature.</FormDescription><FormMessage /></FormItem>)} /><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><div className="space-y-1 leading-none"><FormLabel>Declaration</FormLabel><FormDescription>Information is accurate to the best of my knowledge.</FormDescription></div></FormItem>)} /></div></ScrollArea><div className="p-4 border-t space-y-4">{submitProgress > 0 && (<div className="space-y-2"><div className="flex justify-between text-xs font-medium"><span>Submitting Report...</span><span>{submitProgress}%</span></div><Progress value={submitProgress} className="h-2" /></div>)}<DialogFooter className="flex flex-col sm:flex-row justify-end items-center gap-4"><div className="flex gap-2 w-full sm:w-auto"><Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={form.formState.isSubmitting} className="flex-1 sm:flex-none">Cancel</Button><Button type="submit" disabled={form.formState.isSubmitting} className="flex-1 sm:flex-none min-w-[140px]">{form.formState.isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>) : "Submit Report"}</Button></div></DialogFooter></div></form></Form></DialogContent>
       </Dialog>
-      
-      <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
-          <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
-              <DialogHeader className="p-6 pb-2"><DialogTitle>Configure Report Templates</DialogTitle></DialogHeader>
-              <ScrollArea className="flex-1 px-6 pb-6">
-                  <TemplateConfigForm initialValues={templates} onSave={handleSaveConfig} onCancel={() => setIsConfigDialogOpen(false)} />
-              </ScrollArea>
-          </DialogContent>
-      </Dialog>
-
-      <Sheet open={!!selectedUser} onOpenChange={(isOpen) => !isOpen && setSelectedUser(null)}>
-        <SheetContent className="sm:max-w-2xl w-full flex flex-col p-0">
-          <SheetHeader className="p-6 border-b">
-            <SheetTitle>{selectedUser?.firstName}'s Reports</SheetTitle>
-          </SheetHeader>
-          <ScrollArea className="flex-1 p-6">
-              {reports && reports.length > 0 ? (
-                  <Accordion type="single" collapsible className="w-full">
-                      {reports.map(report => (
-                          <AccordionItem value={report.id} key={report.id} className="border-none">
-                              <AccordionTrigger className="border rounded-md px-4 mb-2">
-                                  <div className="flex-1 text-left"><p className="font-semibold">{report.reportType}</p><p className="text-xs text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p></div>
-                              </AccordionTrigger>
-                              <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4">
-                                <div className="flex justify-end gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => handleExportPdf(report)}>
-                                        <Download className="h-4 w-4 mr-2" />
-                                        Save as PDF
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => handleShareEmail(report)}>
-                                        <Mail className="h-4 w-4 mr-2" />
-                                        Share via Email
-                                    </Button>
-                                </div>
-                                {report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
-                              </AccordionContent>
+      <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}><DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0"><DialogHeader className="p-6 pb-2"><DialogTitle>Configure Report Templates</DialogTitle></DialogHeader><ScrollArea className="flex-1 px-6 pb-6"><TemplateConfigForm initialValues={templates} onSave={handleSaveConfig} onCancel={() => setIsConfigDialogOpen(false)} /></ScrollArea></DialogContent></Dialog>
+      <Sheet open={!!selectedUser} onOpenChange={(isOpen) => !isOpen && setSelectedUser(null)}><SheetContent className="sm:max-w-2xl w-full flex flex-col p-0"><SheetHeader className="p-6 border-b"><SheetTitle>{selectedUser?.firstName}'s Reports</SheetTitle></SheetHeader><ScrollArea className="flex-1 p-6">{reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full">{reports.map(report => (
+                          <AccordionItem value={report.id} key={report.id} className="border-none"><AccordionTrigger className="border rounded-md px-4 mb-2"><div className="flex-1 text-left"><p className="font-semibold">{report.reportType}</p><p className="text-xs text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p></div></AccordionTrigger>
+                              <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4"><div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => handleExportPdf(report)}><Download className="h-4 w-4 mr-2" />Save as PDF</Button><Button variant="outline" size="sm" onClick={() => handleShareEmail(report)}><Mail className="h-4 w-4 mr-2" />Share via Email</Button></div>{report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}</AccordionContent>
                           </AccordionItem>
-                      ))}
-                  </Accordion>
-              ) : <p className="text-center text-muted-foreground">No reports found.</p>}
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
+                      ))}</Accordion>) : <p className="text-center text-muted-foreground">No reports found.</p>}</ScrollArea></SheetContent></Sheet>
     </>
   );
 }
 
 function TemplateConfigForm({ initialValues, onSave, onCancel }: { initialValues: ReportTemplatesConfig, onSave: (val: ReportTemplatesConfig) => void, onCancel: () => void }) {
     const [config, setConfig] = React.useState<ReportTemplatesConfig>(initialValues);
-    const handleListChange = (field: keyof ReportTemplatesConfig, value: string) => {
-        setConfig(prev => ({ ...prev, [field]: value.split(',').map(k => k.trim()).filter(Boolean) }));
-    };
-
+    const handleListChange = (field: keyof ReportTemplatesConfig, value: string) => { setConfig(prev => ({ ...prev, [field]: value.split(',').map(k => k.trim()).filter(Boolean) })); };
     return (
-        <div className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                    <div className="space-y-4">
-                        <h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Business Mapping</h4>
-                        <div className="grid gap-2"><Label>Job Title Keywords</Label><Input value={config.businessKeywords.join(', ')} onChange={(e) => handleListChange('businessKeywords', e.target.value)} /></div>
-                        <div className="grid gap-2"><Label>Business Guidelines</Label><Textarea value={config.businessGuidelines} onChange={(e) => setConfig(prev => ({ ...prev, businessGuidelines: e.target.value }))} className="h-24" /></div>
-                    </div>
-                    <div className="space-y-4">
-                        <h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Technical Mapping</h4>
-                        <div className="grid gap-2"><Label>Job Title Keywords</Label><Input value={config.technicalKeywords.join(', ')} onChange={(e) => handleListChange('technicalKeywords', e.target.value)} /></div>
-                        <div className="grid gap-2"><Label>Technical Guidelines</Label><Textarea value={config.technicalGuidelines} onChange={(e) => setConfig(prev => ({ ...prev, technicalGuidelines: e.target.value }))} className="h-24" /></div>
-                    </div>
-                </div>
-                <div className="space-y-4">
-                    <h4 className="text-sm font-semibold flex items-center gap-2"><Eye className="h-4 w-4" /> Live Preview</h4>
-                    <Tabs defaultValue="technical" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="business">Business</TabsTrigger><TabsTrigger value="technical">Technical</TabsTrigger></TabsList>
-                        <TabsContent value="business" className="opacity-60 scale-95 origin-top"><OutreachReportDetails report={{ reportType: 'Business', date: { toDate: () => new Date() }, signature: 'Preview Sign' } as any} /></TabsContent>
-                        <TabsContent value="technical" className="opacity-60 scale-95 origin-top">
-                            <TechnicalReportDetails report={{ 
-                                reportType: 'Technical', 
-                                date: { toDate: () => new Date() }, 
-                                signature: 'Preview Sign',
-                                logInTime: '09:00',
-                                logOutTime: '18:00',
-                                tasksAssigned: [{ value: 'Design Dashboard' }, { value: 'Fix Login Bug' }],
-                                completedTasks: [{ moduleName: 'Auth', workDone: 'Implemented JWT flow' }],
-                                repoLinks: [{ value: 'https://github.com/preview' }],
-                                workInProgress: [{ value: 'UI Polishing' }],
-                                whatILearned: [{ value: 'Tailwind Grid' }]
-                            } as any} />
-                        </TabsContent>
-                    </Tabs>
-                </div>
-            </div>
-            <div className="sticky bottom-0 bg-background pt-4 border-t flex justify-end gap-2">
-              <Button variant="outline" onClick={onCancel} type="button">Cancel</Button>
-              <Button onClick={() => onSave(config)} type="button">Save Configuration</Button>
-            </div>
-        </div>
+        <div className="space-y-8"><div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><div className="space-y-6"><div className="space-y-4"><h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Business Mapping</h4><div className="grid gap-2"><Label>Job Title Keywords</Label><Input value={config.businessKeywords.join(', ')} onChange={(e) => handleListChange('businessKeywords', e.target.value)} /></div><div className="grid gap-2"><Label>Business Guidelines</Label><Textarea value={config.businessGuidelines} onChange={(e) => setConfig(prev => ({ ...prev, businessGuidelines: e.target.value }))} className="h-24" /></div></div>
+                    <div className="space-y-4"><h4 className="text-sm font-semibold uppercase tracking-wider text-primary">Technical Mapping</h4><div className="grid gap-2"><Label>Job Title Keywords</Label><Input value={config.technicalKeywords.join(', ')} onChange={(e) => handleListChange('technicalKeywords', e.target.value)} /></div><div className="grid gap-2"><Label>Technical Guidelines</Label><Textarea value={config.technicalGuidelines} onChange={(e) => setConfig(prev => ({ ...prev, technicalGuidelines: e.target.value }))} className="h-24" /></div></div>
+                </div><div className="space-y-4"><h4 className="text-sm font-semibold flex items-center gap-2"><Eye className="h-4 w-4" /> Live Preview</h4><Tabs defaultValue="technical" className="w-full"><TabsList className="grid w-full grid-cols-2"><TabsTrigger value="business">Business</TabsTrigger><TabsTrigger value="technical">Technical</TabsTrigger></TabsList><TabsContent value="business" className="opacity-60 scale-95 origin-top"><OutreachReportDetails report={{ reportType: 'Business', date: { toDate: () => new Date() }, signature: 'Preview Sign' } as any} /></TabsContent><TabsContent value="technical" className="opacity-60 scale-95 origin-top"><TechnicalReportDetails report={{ reportType: 'Technical', date: { toDate: () => new Date() }, signature: 'Preview Sign', logInTime: '09:00', logOutTime: '18:00', tasksAssigned: [{ value: 'Design Dashboard' }, { value: 'Fix Login Bug' }], completedTasks: [{ moduleName: 'Auth', workDone: 'Implemented JWT flow' }], repoLinks: [{ value: 'https://github.com/preview' }], workInProgress: [{ value: 'UI Polishing' }], whatILearned: [{ value: 'Tailwind Grid' }] } as any} /></TabsContent></Tabs></div></div><div className="sticky bottom-0 bg-background pt-4 border-t flex justify-end gap-2"><Button variant="outline" onClick={onCancel} type="button">Cancel</Button><Button onClick={() => onSave(config)} type="button">Save Configuration</Button></div></div>
     );
 }
