@@ -459,8 +459,13 @@ export default function ReportsPage() {
   ) => {
     const file = event.target.files?.[0];
     if (file) {
-        if (file.size > 5 * 1024 * 1024) {
-            toast({ variant: "destructive", title: "File too large", description: "Audio files must be under 5MB." });
+        // Enforce Firestore 1MB document limit by limiting audio to 800KB
+        if (file.size > 0.8 * 1024 * 1024) {
+            toast({ 
+                variant: "destructive", 
+                title: "File too large", 
+                description: "Audio files must be under 800KB to fit in the report due to database limits." 
+            });
             return;
         }
         const reader = new FileReader();
@@ -810,7 +815,7 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
              <Card>
-                <CardHeader><CardTitle>Audio Records</CardTitle><CardDescription>Upload call recordings (max 5MB).</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Audio Records</CardTitle><CardDescription>Upload call recordings (max 800KB).</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -1110,8 +1115,8 @@ export default function ReportsPage() {
                     <FormField control={form.control} name="signature" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Signature</FormLabel>
-                            <FormControl><Input {...field} placeholder="Your Full Name" /></FormControl>
-                            <FormDescription>This will be saved with a timestamp.</FormDescription>
+                            <FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed" placeholder="Your Full Name" /></FormControl>
+                            <FormDescription>Your name is automatically used as a signature.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )} />
