@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock, FileText, Mail, Download, Github, Link as LinkIcon } from "lucide-react";
+import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock, FileText, Mail, Download, Github, Link as LinkIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -28,6 +28,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 
@@ -319,6 +320,7 @@ export default function ReportsPage() {
   const [selectedJobTitle, setSelectedJobTitle] = React.useState("All Job Titles");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isConfigDialogOpen, setIsConfigDialogOpen] = React.useState(false);
+  const [submitProgress, setSubmitProgress] = React.useState(0);
 
   const [bestCallAudioURL, setBestCallAudioURL] = React.useState<string | undefined>();
   const [worstCallAudioURL, setWorstCallAudioURL] = React.useState<string | undefined>();
@@ -441,6 +443,7 @@ export default function ReportsPage() {
       });
       setBestCallAudioURL(undefined);
       setWorstCallAudioURL(undefined);
+      setSubmitProgress(0);
   }, [form, currentUserData, isBusinessUser, todaysAttendance]);
 
   React.useEffect(() => {
@@ -473,8 +476,10 @@ export default function ReportsPage() {
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
     
+    setSubmitProgress(10);
     const signatureWithTimestamp = `${values.signature} | ${currentUserData.jobTitle} | ${format(new Date(), 'PPpp')}`;
     
+    setSubmitProgress(40);
     const reportPayload = {
       ...values,
       employeeId: user.uid,
@@ -484,11 +489,15 @@ export default function ReportsPage() {
       signature: signatureWithTimestamp,
     }
     
+    setSubmitProgress(70);
     await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), reportPayload);
     
-    toast({ title: "Report Submitted" });
-    setIsAddDialogOpen(false);
-    resetForm();
+    setSubmitProgress(100);
+    setTimeout(() => {
+        toast({ title: "Report Submitted" });
+        setIsAddDialogOpen(false);
+        resetForm();
+    }, 500);
   };
 
   const onInvalid = (errors: any) => {
@@ -1114,12 +1123,27 @@ export default function ReportsPage() {
                     )} />
                 </div>
               </ScrollArea>
-              <DialogFooter className="p-4 border-t flex flex-col sm:flex-row justify-end items-center gap-4">
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting}>Submit Report</Button>
-                </div>
-              </DialogFooter>
+              <div className="p-4 border-t space-y-4">
+                {submitProgress > 0 && (
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-xs font-medium">
+                            <span>Submitting Report...</span>
+                            <span>{submitProgress}%</span>
+                        </div>
+                        <Progress value={submitProgress} className="h-2" />
+                    </div>
+                )}
+                <DialogFooter className="flex flex-col sm:flex-row justify-end items-center gap-4">
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={form.formState.isSubmitting} className="flex-1 sm:flex-none">Cancel</Button>
+                        <Button type="submit" disabled={form.formState.isSubmitting} className="flex-1 sm:flex-none min-w-[140px]">
+                            {form.formState.isSubmitting ? (
+                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
+                            ) : "Submit Report"}
+                        </Button>
+                    </div>
+                </DialogFooter>
+              </div>
             </form>
           </Form>
         </DialogContent>
