@@ -5,18 +5,17 @@ import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock, FileText, Mail, Download, Share2, Github, Link as LinkIcon } from "lucide-react";
+import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock, FileText, Mail, Download, Github, Link as LinkIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, setDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, orderBy, doc, Timestamp } from "firebase/firestore";
-import type { WithId } from "@/firebase/firestore/use-collection";
+import { collection, query, where, orderBy, doc } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -353,7 +352,6 @@ export default function ReportsPage() {
 
   const currentReportType = React.useMemo(() => getReportType(currentUserData?.jobTitle), [getReportType, currentUserData?.jobTitle]);
   const isBusinessUser = currentReportType === 'Business';
-  const isTechnicalUser = currentReportType === 'Technical';
 
   const usersQuery = useMemoFirebase(() => {
     if (!isAdmin) return null;
@@ -1158,7 +1156,8 @@ export default function ReportsPage() {
                                     <Button variant="outline" size="sm" onClick={() => handleShareEmail(report)}>
                                         <Mail className="h-4 w-4 mr-2" />
                                         Share via Email
-                                    </div>
+                                    </Button>
+                                </div>
                                 {report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
                               </AccordionContent>
                           </AccordionItem>
