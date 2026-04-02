@@ -113,7 +113,7 @@ type Report = {
   meetingsBookedTomorrow?: string;
   criticalPathTomorrow?: string;
   interventionTrigger?: 'None' | 'Coaching' | 'Technical Support' | 'Client meeting';
-  // Technical (Enhanced)
+  // Technical
   logInTime?: string;
   logOutTime?: string;
   tasksAssigned?: { value: string }[];
@@ -143,12 +143,12 @@ const motivationalQuotes = [
 const ReportDetailItem = ({ label, value, children }: { label: string, value?: React.ReactNode, children?: React.ReactNode }) => (
   <div className="space-y-1">
     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
-    <div className="font-semibold whitespace-pre-wrap text-sm">{value ?? children ?? '-'}</div>
+    <div className="font-semibold whitespace-pre-wrap text-sm">{value ?? children ?? 'NIL'}</div>
   </div>
 );
 
 const ChipDisplay = ({ items }: { items?: { value: string }[] }) => {
-    if (!items || items.length === 0) return <span>-</span>;
+    if (!items || items.length === 0) return <span className="text-muted-foreground italic">NIL</span>;
     return (
         <div className="flex flex-wrap gap-2 mt-1">
             {items.map((item, i) => (
@@ -255,22 +255,24 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
         </div>
 
         <ReportDetailItem label="Tasks Assigned for the Day">
-            <ul className="list-disc pl-5 space-y-1 mt-1">
-                {report.tasksAssigned?.map((t, i) => (
-                    <li key={i}>{t.value}</li>
-                ))}
-            </ul>
+            {report.tasksAssigned && report.tasksAssigned.length > 0 ? (
+                <ul className="list-disc pl-5 space-y-1 mt-1">
+                    {report.tasksAssigned?.map((t, i) => (
+                        <li key={i}>{t.value}</li>
+                    ))}
+                </ul>
+            ) : <span className="text-muted-foreground italic">NIL</span>}
         </ReportDetailItem>
 
         <div className="space-y-4">
             <p className="font-bold text-sm text-primary uppercase tracking-widest">Tasks Completed Today (Technical Explanation):</p>
             <div className="space-y-4">
-                {report.completedTasks?.map((task, i) => (
+                {report.completedTasks && report.completedTasks.length > 0 ? report.completedTasks.map((task, i) => (
                     <div key={i} className="pl-4 border-l-4 border-primary/20 space-y-1 py-1">
                         <p className="font-bold text-sm">{i + 1}. {task.moduleName}</p>
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.workDone}</p>
                     </div>
-                ))}
+                )) : <span className="text-muted-foreground italic">NIL</span>}
             </div>
         </div>
 
@@ -336,6 +338,7 @@ export default function ReportsPage() {
   const getReportType = React.useCallback((jobTitle: string = ''): 'Business' | 'Technical' => {
     const title = jobTitle.toUpperCase();
     
+    // Strict specific routing
     if (title.includes("TECHNICAL SUPPORT INTERN")) return 'Technical';
     if (title.includes("BUSINESS EXECUTIVE INTERN")) return 'Business';
 
@@ -550,8 +553,8 @@ export default function ReportsPage() {
         y += 12;
 
         const summaryData = [
-            ["Login Time", report.logInTime || "-"],
-            ["Logout Time", report.logOutTime || "-"],
+            ["Login Time", report.logInTime || "NIL"],
+            ["Logout Time", report.logOutTime || "NIL"],
         ];
 
         autoTable(doc, {
@@ -569,25 +572,36 @@ export default function ReportsPage() {
         doc.text("Tasks Assigned for the Day:", 14, y);
         y += 6;
         doc.setFont('helvetica', 'normal');
-        report.tasksAssigned?.forEach(t => {
-            const lines = doc.splitTextToSize(`• ${t.value}`, 180);
-            doc.text(lines, 14, y);
-            y += lines.length * 6;
-        });
+        if (report.tasksAssigned && report.tasksAssigned.length > 0) {
+            report.tasksAssigned?.forEach(t => {
+                const lines = doc.splitTextToSize(`• ${t.value}`, 180);
+                doc.text(lines, 14, y);
+                y += lines.length * 6;
+            });
+        } else {
+            doc.text("• NIL", 14, y);
+            y += 6;
+        }
 
         y += 4;
         doc.setFont('helvetica', 'bold');
         doc.text("Tasks Completed Today (Technical Explanation):", 14, y);
         y += 8;
-        report.completedTasks?.forEach((task, i) => {
-            doc.setFont('helvetica', 'bold');
-            doc.text(`${i + 1}. ${task.moduleName}`, 14, y);
-            y += 6;
+        if (report.completedTasks && report.completedTasks.length > 0) {
+            report.completedTasks?.forEach((task, i) => {
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${i + 1}. ${task.moduleName}`, 14, y);
+                y += 6;
+                doc.setFont('helvetica', 'normal');
+                const lines = doc.splitTextToSize(task.workDone, 170);
+                doc.text(lines, 20, y);
+                y += lines.length * 6 + 4;
+            });
+        } else {
             doc.setFont('helvetica', 'normal');
-            const lines = doc.splitTextToSize(task.workDone, 170);
-            doc.text(lines, 20, y);
-            y += lines.length * 6 + 4;
-        });
+            doc.text("NIL", 14, y);
+            y += 6;
+        }
 
         const chipSections = [
             { label: "Work in Progress", items: report.workInProgress },
@@ -603,7 +617,7 @@ export default function ReportsPage() {
             doc.text(`${section.label}:`, 14, y);
             y += 6;
             doc.setFont('helvetica', 'normal');
-            const itemsText = section.items?.map(i => i.value).join(', ') || "None";
+            const itemsText = section.items?.map(i => i.value).join(', ') || "NIL";
             const lines = doc.splitTextToSize(itemsText, 180);
             doc.text(lines, 14, y);
             y += lines.length * 6 + 4;
@@ -650,7 +664,7 @@ export default function ReportsPage() {
             doc.text(`${sec.label}:`, 14, y);
             y += 6;
             doc.setFont('helvetica', 'normal');
-            const lines = doc.splitTextToSize(sec.value || "-", 180);
+            const lines = doc.splitTextToSize(sec.value || "NIL", 180);
             doc.text(lines, 14, y);
             y += lines.length * 6 + 6;
         });
@@ -671,21 +685,25 @@ export default function ReportsPage() {
     let body = `Dear Sir / Ma’am,\n\nDaily report summary for ${reportDate}:\n\n`;
     
     if (report.reportType === 'Technical') {
-        body += `Login Time: ${report.logInTime}\n`;
-        body += `Logout Time: ${report.logOutTime}\n\n`;
-        body += `Tasks Assigned:\n${report.tasksAssigned?.map(t => `- ${t.value}`).join('\n')}\n\n`;
+        body += `Login Time: ${report.logInTime || 'NIL'}\n`;
+        body += `Logout Time: ${report.logOutTime || 'NIL'}\n\n`;
+        body += `Tasks Assigned:\n${report.tasksAssigned && report.tasksAssigned.length > 0 ? report.tasksAssigned?.map(t => `- ${t.value}`).join('\n') : '- NIL'}\n\n`;
         body += `Tasks Completed:\n`;
-        report.completedTasks?.forEach((t, i) => {
-            body += `${i+1}. ${t.moduleName}: ${t.workDone}\n`;
-        });
-        body += `\nWhat I Learned: ${report.whatILearned?.map(i => i.value).join(', ')}\n`;
-        body += `Challenges: ${report.challengesFaced?.map(i => i.value).join(', ')}\n`;
-        body += `Next Steps: ${report.nextSteps?.map(i => i.value).join(', ')}\n`;
+        if (report.completedTasks && report.completedTasks.length > 0) {
+            report.completedTasks?.forEach((t, i) => {
+                body += `${i+1}. ${t.moduleName}: ${t.workDone}\n`;
+            });
+        } else {
+            body += `- NIL\n`;
+        }
+        body += `\nWhat I Learned: ${report.whatILearned && report.whatILearned.length > 0 ? report.whatILearned?.map(i => i.value).join(', ') : 'NIL'}\n`;
+        body += `Challenges: ${report.challengesFaced && report.challengesFaced.length > 0 ? report.challengesFaced?.map(i => i.value).join(', ') : 'NIL'}\n`;
+        body += `Next Steps: ${report.nextSteps && report.nextSteps.length > 0 ? report.nextSteps?.map(i => i.value).join(', ') : 'NIL'}\n`;
     } else {
         body += `Total Outreach: ${report.outreachTotal}\n`;
         body += `Pipeline Value: ${report.currency} ${report.pipelineValue}\n\n`;
-        body += `Highlights:\n${report.clientWinHighlight}\n\n`;
-        body += `Learning:\n${report.strategicLearning}\n`;
+        body += `Highlights:\n${report.clientWinHighlight || 'NIL'}\n\n`;
+        body += `Learning:\n${report.strategicLearning || 'NIL'}\n`;
     }
     
     body += `\nThank you.\n\nSignature: ${report.signature}`;
@@ -872,7 +890,7 @@ export default function ReportsPage() {
                                 </button>
                             </Badge>
                         ))}
-                        {fields.length === 0 && <span className="text-xs text-muted-foreground italic">No items added yet.</span>}
+                        {fields.length === 0 && <span className="text-xs text-muted-foreground italic">NIL</span>}
                     </div>
                 </CardContent>
             </Card>

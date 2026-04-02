@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -8,7 +9,7 @@ import { useAuth, useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
-import { Edit, Smile, MapPin } from "lucide-react";
+import { Edit, Smile, MapPin, Home } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { mapsApiKey } from "@/firebase/config";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { InteractiveMap } from "@/components/geohrm/interactive-map";
+import { Badge } from "@/components/ui/badge";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -259,6 +261,7 @@ export default function ProfilePage() {
     }
 
     const employeeAvatar = (employee as any)?.avatar;
+    const isWfh = (employee as any)?.isWfhAllowed;
 
     return (
         <>
@@ -268,8 +271,8 @@ export default function ProfilePage() {
             />
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-                    <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                        <CardHeader className="items-center text-center">
+                    <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                        <CardHeader className="items-center text-center relative">
                             <Avatar className={cn("h-24 w-24 relative group", employeeAvatar && "bg-transparent")}>
                                {employeeAvatar ? (
                                    <span className="text-6xl">{employeeAvatar}</span>
@@ -309,8 +312,16 @@ export default function ProfilePage() {
                                     </DialogContent>
                                </Dialog>
                             </Avatar>
-                             <CardTitle className="font-headline text-2xl mt-4">{(employee as any).firstName} {(employee as any).lastName}</CardTitle>
-                             <CardDescription>{(employee as any).jobTitle}</CardDescription>
+                             <div className="mt-4 space-y-2">
+                                <CardTitle className="font-headline text-2xl">{(employee as any).firstName} {(employee as any).lastName}</CardTitle>
+                                <CardDescription>{(employee as any).jobTitle}</CardDescription>
+                                {isWfh && (
+                                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none font-semibold px-3 py-1 gap-1">
+                                        <Home className="h-3 w-3" />
+                                        Work From Home
+                                    </Badge>
+                                )}
+                             </div>
                         </CardHeader>
                         <CardContent>
                             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
