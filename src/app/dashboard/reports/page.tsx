@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -14,8 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, setDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, setDocumentNonBlocking, useFirebase } from "@/firebase";
 import { collection, query, where, orderBy, doc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -311,7 +311,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
 // --- Page ---
 
 export default function ReportsPage() {
-  const { user } = useUser();
+  const { user, storage } = useFirebase();
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -321,6 +321,7 @@ export default function ReportsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isConfigDialogOpen, setIsConfigDialogOpen] = React.useState(false);
   const [submitProgress, setSubmitProgress] = React.useState(0);
+  const [isUploadingAudio, setIsUploadingAudio] = React.useState(false);
 
   const [bestCallAudioURL, setBestCallAudioURL] = React.useState<string | undefined>();
   const [worstCallAudioURL, setWorstCallAudioURL] = React.useState<string | undefined>();
@@ -452,29 +453,38 @@ export default function ReportsPage() {
     }
   }, [isAddDialogOpen, resetForm]);
 
-  const handleAudioUpload = (
+  const handleAudioUpload = async (
       event: React.ChangeEvent<HTMLInputElement>,
       fieldName: 'bestCallRecording' | 'worstCallRecording',
       setUrl: React.Dispatch<React.SetStateAction<string | undefined>>
   ) => {
     const file = event.target.files?.[0];
-    if (file) {
-        // Enforce Firestore 1MB document limit by limiting audio to 800KB
-        if (file.size > 0.8 * 1024 * 1024) {
+    if (file && user) {
+        // Enforce 5MB limit
+        if (file.size > 5 * 1024 * 1024) {
             toast({ 
                 variant: "destructive", 
                 title: "File too large", 
-                description: "Audio files must be under 800KB to fit in the report due to database limits." 
+                description: "Audio files must be under 5MB." 
             });
             return;
         }
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const dataUrl = e.target?.result as string;
-            setUrl(dataUrl);
-            form.setValue(fieldName as any, dataUrl);
-        };
-        reader.readAsDataURL(file);
+        
+        setIsUploadingAudio(true);
+        try {
+            const storageRef = ref(storage, `audio_reports/${user.uid}/${Date.now()}-${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            
+            setUrl(downloadURL);
+            form.setValue(fieldName as any, downloadURL);
+            toast({ title: "Audio Uploaded", description: "The recording has been attached." });
+        } catch (error: any) {
+            console.error("Upload error:", error);
+            toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload audio. Check your connection." });
+        } finally {
+            setIsUploadingAudio(false);
+        }
     }
   };
 
@@ -815,16 +825,16 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
              <Card>
-                <CardHeader><CardTitle>Audio Records</CardTitle><CardDescription>Upload call recordings (max 800KB).</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Audio Records</CardTitle><CardDescription>Upload call recordings (up to 5MB).</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Best Call Record</Label>
-                            {bestCallAudioURL ? <audio src={bestCallAudioURL} controls className="w-full" /> : <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'bestCallRecording', setBestCallAudioURL)} />}
+                            {isUploadingAudio ? <div className="flex items-center gap-2 text-xs"><Loader2 className="animate-spin h-3 w-3" /> Uploading...</div> : bestCallAudioURL ? <audio src={bestCallAudioURL} controls className="w-full" /> : <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'bestCallRecording', setBestCallAudioURL)} />}
                         </div>
                         <div className="space-y-2">
                             <Label>Worst Call Record</Label>
-                            {worstCallAudioURL ? <audio src={worstCallAudioURL} controls className="w-full" /> : <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'worstCallRecording', setWorstCallAudioURL)} />}
+                            {isUploadingAudio ? <div className="flex items-center gap-2 text-xs"><Loader2 className="animate-spin h-3 w-3" /> Uploading...</div> : worstCallAudioURL ? <audio src={worstCallAudioURL} controls className="w-full" /> : <Input type="file" accept="audio/*" onChange={(e) => handleAudioUpload(e, 'worstCallRecording', setWorstCallAudioURL)} />}
                         </div>
                     </div>
                 </CardContent>
@@ -1140,8 +1150,8 @@ export default function ReportsPage() {
                 )}
                 <DialogFooter className="flex flex-col sm:flex-row justify-end items-center gap-4">
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={form.formState.isSubmitting} className="flex-1 sm:flex-none">Cancel</Button>
-                        <Button type="submit" disabled={form.formState.isSubmitting} className="flex-1 sm:flex-none min-w-[140px]">
+                        <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={form.formState.isSubmitting || isUploadingAudio} className="flex-1 sm:flex-none">Cancel</Button>
+                        <Button type="submit" disabled={form.formState.isSubmitting || isUploadingAudio} className="flex-1 sm:flex-none min-w-[140px]">
                             {form.formState.isSubmitting ? (
                                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
                             ) : "Submit Report"}
