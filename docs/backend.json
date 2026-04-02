@@ -306,32 +306,42 @@
       "properties": {
         "id": { "type": "string" },
         "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
         "reportType": { "type": "string", "enum": ["Business", "Technical"] },
         "signature": { "type": "string" },
         "currency": { "type": "string", "enum": ["USD", "EUR", "GBP", "INR"] },
+        "outreachColdCalls": { "type": "number" },
+        "outreachLinkedIn": { "type": "number" },
+        "outreachEmails": { "type": "number" },
         "outreachTotal": { "type": "number" },
+        "newLeadsGenerated": { "type": "number" },
         "potentialClients": { "type": "number" },
         "followUpsCompleted": { "type": "string" },
-        "meetingsSecured": { "type": "string" },
+        "netRevenueCollected": { "type": "number" },
+        "committedNetRevenue": { "type": "number" },
         "pipelineValue": { "type": "number" },
-        "strategicLearning": { "type": "string" },
+        "revenueVariance": { "type": "number" },
+        "meetingsSecured": { "type": "array", "items": { "type": "object", "properties": { "clientName": { "type": "string" }, "quotationValue": { "type": "number" }, "context": { "type": "string" } } } },
         "clientWinHighlight": { "type": "string" },
-        "pendingDeliverables": { "type": "string" },
-        "meetingsBookedTomorrow": { "type": "string" },
+        "strategicLearning": { "type": "string" },
+        "meetingsBookedTomorrow": { "type": "number" },
         "criticalPathTomorrow": { "type": "string" },
+        "pendingDeliverables": { "type": "string" },
         "interventionTrigger": { "type": "string", "enum": ["None", "Coaching", "Technical Support", "Client meeting"] },
-        "bestCallRecording": { "type": "string", "description": "A base64 encoded data URI of the best call recording for the report." },
-        "worstCallRecording": { "type": "string", "description": "A base64 encoded data URI of the worst call recording for the report." },
-        "subject": { "type": "string" },
-        "technologyUsed": { "type": "string" },
-        "taskDescription": { "type": "string" },
-        "workDone": { "type": "string" },
-        "moduleWorkedOn": { "type": "string" },
-        "taskStatus": { "type": "string", "enum": ["Completed", "In Progress"] },
+        "interventionReason": { "type": "string" },
+        "bestCallRecording": { "type": "string" },
+        "worstCallRecording": { "type": "string" },
         "logInTime": { "type": "string", "format": "time" },
         "logOutTime": { "type": "string", "format": "time" },
-        "otherWork": { "type": "string" }
+        "tasksAssigned": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
+        "completedTasks": { "type": "array", "items": { "type": "object", "properties": { "moduleName": { "type": "string" }, "workDone": { "type": "string" } } } },
+        "repoLinks": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
+        "workInProgress": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
+        "pendingTasks": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
+        "whatILearned": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
+        "challengesFaced": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
+        "nextSteps": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } }
       },
       "required": ["id", "employeeId", "date", "reportType", "signature"]
     },
@@ -988,7 +998,6 @@
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to support the GeoHRM application's requirements, focusing on security, scalability, and ease of debugging.  Authorization Independence is achieved by denormalizing relevant authorization data (roles) into documents where needed, avoiding costly and insecure `get()` calls in security rules. Segregation of data based on access levels (e.g., private user data vs. public announcements) simplifies security rules and improves query performance.  Access Modeling is consistently applied, leveraging path-based ownership for user-specific data (attendance, leave requests) and membership maps for collaborative or role-based access.  This structure ensures clear authorization intent and facilitates secure list operations (QAPs).  \n\nSpecifically:\n\n*   `/users/{userId}`: Stores user profiles. The `User.role` field determines the user's global role (Member, Team Lead, HR Manager, CEO/Admin).  This role is used for authorization across the application.\n*   `/teams/{teamId}`: Stores team information including name, lead, and members.\n*   `/users/{userId}/attendances/{attendanceId}`: Stores attendance records for each user. This path ensures that only the user (or an admin) can access their own attendance records. The 'employeeId' field within each attendance document is redundant, but essential to maintain Authorization Independence in security rules. Without it we need to fetch the parent document to check the user ID.\n*   `/users/{userId}/leave_requests/{leaveRequestId}`: Stores leave requests for each user. The path-based ownership ensures that only the user (or an authorized admin) can access these requests. The status field allows tracking the request's progress through the approval workflow (Member -> Team Lead -> HR).\n*   `/announcements/{announcementId}`: Stores company-wide announcements. These are accessible to all employees. HR/Admin roles will have write access. No employee ID is necessary, as it's a global resource.\n*   `/events/{eventId}`: Stores company-wide events like birthdays. Publicly readable, but only writable by admins.\n*   `/policies/{policyId}`: Stores company policies, accessible to all employees. HR/Admin roles will have write access.\n*   `/users/{userId}/policy_acknowledgments/{acknowledgmentId}`: Tracks which policies have been acknowledged by each employee.\n*   `/issue_reports/{issueReportId}`: Stores issue reports submitted by employees. The `employeeId` field links the report to the user. Admin/HR can access and update all reports.\n*   `/roles_team_lead/{userId}`, `/roles_hr_agent/{userId}`, `/roles_admin/{userId}`, `/roles_ceo/{userId}`: These collections are used for role-based authorization using Existence over Content. If a document exists for a user ID in one of these collections, the user has the corresponding role.  This is more secure and efficient than storing roles in a central user document and requiring `get()` calls.\n*   `/audit_logs/{auditLogId}`: Logs all user actions for auditing purposes. Access to this collection is restricted to admin roles.\n*   `/settings/{settingId}`: Stores global application settings. For instance, a document with ID 'location' will hold the office coordinates for geofencing. This centralizes configuration and allows admins to manage it."
+    ]
   }
 }
