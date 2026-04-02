@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle } from 'lucide-react';
+import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -23,6 +24,7 @@ type UserData = {
   firstName: string;
   lastName: string;
   jobTitle: string;
+  phoneNumber?: string;
   avatar?: string;
   role?: string;
 };
@@ -60,7 +62,7 @@ export function DailyMonitorWidget() {
     isLoading: true,
   });
   const [attendanceRecords, setAttendanceRecords] = React.useState<Map<string, AttendanceRecord>>(new Map());
-  const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[] } | null>(null);
+  const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[], nudgeType?: 'missing_login' | 'missing_logout' } | null>(null);
 
   const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
   const { data: currentUserData } = useDoc(currentUserDocRef);
@@ -84,7 +86,6 @@ export function DailyMonitorWidget() {
         const selectedDayStart = startOfDay(now);
         const selectedDayEnd = endOfDay(now);
 
-        // 1. Fetch today's attendance records using a collectionGroup query
         const attendanceQuery = query(
           collectionGroup(firestore, 'attendances'),
           where('checkInTime', '>=', selectedDayStart),
@@ -98,7 +99,6 @@ export function DailyMonitorWidget() {
         });
         setAttendanceRecords(attendanceMap);
 
-        // 2. Fetch approved leaves that cover today
         const leavesQuery = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
         const leavesSnapshot = await getDocs(leavesQuery);
         const allApprovedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveRequest);
@@ -167,11 +167,7 @@ export function DailyMonitorWidget() {
   const handleExport = () => {
     const { present, late, absent, onLeave, outOfRange, isLoading } = summary;
     if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length && !outOfRange.length)) {
-      toast({
-        variant: "destructive",
-        title: "No data to export",
-        description: "There is no status information for today.",
-      });
+      toast({ variant: "destructive", title: "No data to export" });
       return;
     }
 
@@ -238,12 +234,11 @@ export function DailyMonitorWidget() {
   
   const handleShare = (platform: 'email' | 'whatsapp' | 'teams') => {
     if (summary.isLoading) {
-      toast({ variant: 'destructive', title: 'Data not ready', description: 'Please wait for the summary to load.' });
+      toast({ variant: 'destructive', title: 'Data not ready' });
       return;
     }
 
-    const now = new Date();
-    const reportDate = format(now, 'PPP');
+    const reportDate = format(new Date(), 'PPP');
     const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
 
     let reportText = `FortuMars - Daily Attendance Summary\n`;
@@ -275,10 +270,9 @@ export function DailyMonitorWidget() {
 
     let url = '';
     if (platform === 'email') {
-      url = `mailto:?subject=Daily Attendance Summary - ${reportDate}&body=${encodedText}`;
+      url = `mailto:?subject=Daily Attendance Summary&body=${encodedText}`;
     } else if (platform === 'whatsapp') {
-      const whatsAppNumber = '+916381808782';
-      url = `https://wa.me/${whatsAppNumber}?text=${encodedText}`;
+      url = `https://wa.me/?text=${encodedText}`;
     } else if (platform === 'teams') {
       url = `https://teams.microsoft.com/l/chat/0/0?users=&message=${encodedText}`;
     }
@@ -286,9 +280,24 @@ export function DailyMonitorWidget() {
     window.open(url, '_blank');
   };
 
+  const handleNudgeWhatsApp = (user: UserData, nudgeType?: 'missing_login' | 'missing_logout') => {
+      if (!user.phoneNumber) {
+          toast({ variant: 'destructive', title: 'No phone number', description: 'Please add a phone number in User Management.' });
+          return;
+      }
+      
+      const message = nudgeType === 'missing_login' 
+        ? `Hello ${user.firstName}, you haven't clocked in today. Please log in to MarsHRM now.`
+        : `Hello ${user.firstName}, please don't forget to update your work report and clock out.`;
+      
+      const cleanNumber = user.phoneNumber.replace(/\D/g, '');
+      const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+  };
+
   const handleExportPdf = () => {
     if (summary.isLoading) {
-      toast({ variant: 'destructive', title: 'Data not ready', description: 'Please wait for the summary to load.' });
+      toast({ variant: 'destructive', title: 'Data not ready' });
       return;
     }
     
@@ -464,7 +473,7 @@ export function DailyMonitorWidget() {
                         Icon={UserRoundX} 
                         iconColor="text-red-600" 
                         gradient="bg-gradient-to-br from-red-500/10 to-white/50"
-                        onClick={() => setSheetContent({title: "Absent Today", users: summary.absent})} 
+                        onClick={() => setSheetContent({title: "Absent Today", users: summary.absent, nudgeType: 'missing_login'})} 
                     />
                   </SheetTrigger>
                    <SheetTrigger asChild>
@@ -491,16 +500,29 @@ export function DailyMonitorWidget() {
                   <div className="py-4 px-6 space-y-3">
                      {sheetContent.users.length > 0 ? (
                         sheetContent.users.map(user => (
-                            <Link href={`/dashboard/users/${user.id}`} key={user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                                <Avatar className="h-9 w-9">
-                                {user.avatar && <span className="text-xl">{user.avatar}</span>}
-                                <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>
-                                <p className="text-xs text-muted-foreground">{user.jobTitle}</p>
-                                </div>
-                            </Link>
+                            <div key={user.id} className="flex items-center justify-between group p-2 rounded-lg hover:bg-muted transition-colors">
+                                <Link href={`/dashboard/users/${user.id}`} className="flex items-center gap-3 flex-1">
+                                    <Avatar className="h-9 w-9">
+                                    {user.avatar && <span className="text-xl">{user.avatar}</span>}
+                                    <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                    <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>
+                                    <p className="text-xs text-muted-foreground">{user.jobTitle}</p>
+                                    </div>
+                                </Link>
+                                {sheetContent.nudgeType && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        onClick={() => handleNudgeWhatsApp(user, sheetContent.nudgeType)}
+                                        title="Nudge via WhatsApp"
+                                    >
+                                        <Phone className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
                         ))
                     ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">No employees in this category.</p>

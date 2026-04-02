@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -59,6 +58,7 @@ const userSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
+  phoneNumber: z.string().optional(),
   jobTitle: z.string().min(1, "Job title is required"),
   department: z.string().min(1, "Department is required"),
   role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/Admin']),
@@ -111,6 +111,7 @@ export default function UsersPage() {
       firstName: "",
       lastName: "",
       email: "",
+      phoneNumber: "",
       jobTitle: "",
       department: "",
       role: "Member",
@@ -130,6 +131,7 @@ export default function UsersPage() {
       firstName: "",
       lastName: "",
       email: "",
+      phoneNumber: "",
       jobTitle: "",
       department: "",
       role: "Member",
@@ -148,6 +150,7 @@ export default function UsersPage() {
       firstName: userToEdit.firstName || "",
       lastName: userToEdit.lastName || "",
       email: userToEdit.email || "",
+      phoneNumber: userToEdit.phoneNumber || "",
       jobTitle: userToEdit.jobTitle || "",
       department: userToEdit.department || "",
       role: userToEdit.role || "Member",
@@ -180,12 +183,10 @@ export default function UsersPage() {
         return;
     }
 
-    // Note: This does not delete the Firebase Auth user. That would require a backend function.
     const batch = writeBatch(firestore);
     const userDocRef = doc(firestore, 'users', userToDelete.id);
     batch.delete(userDocRef);
     
-    // Delete from all potential role collections
     batch.delete(doc(firestore, 'roles_ceo', userToDelete.id));
     batch.delete(doc(firestore, 'roles_admin', userToDelete.id));
     batch.delete(doc(firestore, 'roles_hr_agent', userToDelete.id));
@@ -203,9 +204,8 @@ export default function UsersPage() {
     
     try {
         if (editingUser) {
-            // Update user logic
             if (!canModify(editingUser.role) || !canModify(values.role)) {
-                 toast({ variant: "destructive", title: "Permission Denied", description: "You cannot modify this user's role." });
+                 toast({ variant: "destructive", title: "Permission Denied" });
                  return;
             }
             
@@ -213,7 +213,6 @@ export default function UsersPage() {
             const userDocRef = doc(firestore, 'users', editingUser.id);
             const { password, confirmPassword, email, ...updateData } = values;
 
-            // Clean undefined values from the object before sending to Firestore
             Object.keys(updateData).forEach(key => {
                 const k = key as keyof typeof updateData;
                 if (updateData[k] === undefined) {
@@ -223,15 +222,12 @@ export default function UsersPage() {
 
             batch.update(userDocRef, updateData);
 
-            // Handle role change
             if (editingUser.role !== values.role) {
-                // Delete old role docs
                 batch.delete(doc(firestore, 'roles_ceo', editingUser.id));
                 batch.delete(doc(firestore, 'roles_admin', editingUser.id));
                 batch.delete(doc(firestore, 'roles_hr_agent', editingUser.id));
                 batch.delete(doc(firestore, 'roles_team_lead', editingUser.id));
                 
-                // Add new role docs
                 if (values.role === 'CEO/Admin') {
                     batch.set(doc(firestore, 'roles_ceo', editingUser.id), { employeeId: editingUser.id });
                     batch.set(doc(firestore, 'roles_admin', editingUser.id), { employeeId: editingUser.id });
@@ -243,16 +239,14 @@ export default function UsersPage() {
             }
             
             await batch.commit();
-            toast({ title: "User Updated", description: "User details have been saved." });
+            toast({ title: "User Updated" });
 
         } else {
-            // Create user logic
             if (!values.password) {
               form.setError("password", { type: "manual", message: "Password is required for new users." });
               return;
             }
             
-            // Create Firebase Auth user
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const newUserId = userCredential.user.uid;
 
@@ -268,7 +262,6 @@ export default function UsersPage() {
               isWfhAllowed: values.isWfhAllowed || false,
             };
 
-            // Clean undefined values from the object before sending to Firestore
             Object.keys(newUserPayload).forEach(key => {
                 if (newUserPayload[key] === undefined) {
                     delete newUserPayload[key];
@@ -288,8 +281,7 @@ export default function UsersPage() {
             }
 
             await batch.commit();
-
-            toast({ title: "User Created", description: "The new user has been added." });
+            toast({ title: "User Created" });
         }
         resetDialog();
     } catch (error: any) {
@@ -297,21 +289,6 @@ export default function UsersPage() {
     }
   };
   
-    const handleBulkWfhUpdate = async (enable: boolean) => {
-        if (selectedUserIds.length === 0) return;
-        const batch = writeBatch(firestore);
-        selectedUserIds.forEach(userId => {
-            const userRef = doc(firestore, 'users', userId);
-            batch.update(userRef, { isWfhAllowed: enable });
-        });
-        await batch.commit();
-        toast({
-            title: "Bulk Update Successful",
-            description: `${selectedUserIds.length} users have been updated.`
-        });
-        setSelectedUserIds([]);
-    };
-
   const canModify = (targetRole: Role) => {
       if (currentUserRole === 'CEO/Admin') return true;
       if (currentUserRole === 'HR Manager' && targetRole !== 'CEO/Admin') return true;
@@ -327,25 +304,6 @@ export default function UsersPage() {
         description="View, add, and manage all users in the system."
       >
         <div className="flex gap-2">
-            {selectedUserIds.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    Bulk Actions ({selectedUserIds.length})
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Apply to selected users</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => handleBulkWfhUpdate(true)}>
-                    Enable Work From Home
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkWfhUpdate(false)}>
-                    Disable Work From Home
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
           <Dialog open={isDialogOpen} onOpenChange={(open) => !open && resetDialog()}>
             <DialogTrigger asChild>
               <Button onClick={() => setIsDialogOpen(true)} disabled={!canAddUser}>
@@ -385,6 +343,16 @@ export default function UsersPage() {
                                   className={editingUser ? "cursor-not-allowed bg-muted/50" : ""}
                               />
                           </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )} />
+                  <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Phone Number (WhatsApp Nudge)</FormLabel>
+                          <FormControl>
+                              <Input {...field} placeholder="+916381808782" />
+                          </FormControl>
+                          <FormDescription>Include country code without spaces.</FormDescription>
                           <FormMessage />
                       </FormItem>
                   )} />
@@ -451,41 +419,6 @@ export default function UsersPage() {
                           </FormItem>
                       )}
                   />
-                  {(currentUserRole === 'CEO/Admin' || currentUserRole === 'HR Manager') && (
-                    <>
-                        <Separator className="my-4"/>
-                        <div className="space-y-4">
-                            <h4 className="font-semibold text-foreground">Work From Home Settings</h4>
-                             <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                                    <div className="space-y-0.5">
-                                        <FormLabel>Allow Work From Home</FormLabel>
-                                        <FormDescription>
-                                            Let this user clock in from home.
-                                        </FormDescription>
-                                    </div>
-                                    <FormControl>
-                                        <Switch
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                            )} />
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={form.control} name="homeLatitude" render={({ field }) => (
-                                    <FormItem><FormLabel>Home Latitude</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name="homeLongitude" render={({ field }) => (
-                                    <FormItem><FormLabel>Home Longitude</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                            </div>
-                             <FormField control={form.control} name="homeLocationRangeKm" render={({ field }) => (
-                                <FormItem><FormLabel>Home Clock-in Range (km)</FormLabel><FormControl><Input type="number" min="0" step="0.1" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                        </div>
-                    </>
-                  )}
                   <DialogFooter className="pt-4">
                     <DialogClose asChild><Button type="button" variant="outline" onClick={resetDialog}>Cancel</Button></DialogClose>
                     <Button type="submit" disabled={form.formState.isSubmitting}>
@@ -510,19 +443,6 @@ export default function UsersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={selectedUserIds.length > 0 && users ? selectedUserIds.length === users.length : false}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedUserIds(users?.map(u => u.id) || []);
-                    } else {
-                      setSelectedUserIds([]);
-                    }
-                  }}
-                  aria-label="Select all rows"
-                />
-              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Job Title</TableHead>
               <TableHead>Role</TableHead>
@@ -531,22 +451,9 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center h-24">Loading users...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center h-24">Loading users...</TableCell></TableRow>
             ) : users?.map((user) => (
-              <TableRow key={user.id} data-state={selectedUserIds.includes(user.id) && "selected"}>
-                <TableCell>
-                  <Checkbox
-                    checked={selectedUserIds.includes(user.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedUserIds(prev => [...prev, user.id]);
-                      } else {
-                        setSelectedUserIds(prev => prev.filter(id => id !== user.id));
-                      }
-                    }}
-                    aria-label={`Select row for ${user.firstName}`}
-                  />
-                </TableCell>
+              <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                 <TableCell>{user.jobTitle}</TableCell>
                 <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>

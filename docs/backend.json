@@ -24,6 +24,10 @@
           "description": "Email address of the employee.",
           "format": "email"
         },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Contact phone number for WhatsApp nudges."
+        },
         "jobTitle": {
           "type": "string",
           "description": "The employee's job title."

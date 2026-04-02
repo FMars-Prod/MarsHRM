@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
-import { User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download, AlertTriangle, Share2, FileText, Mail, MessageSquare, Users } from 'lucide-react';
+import { User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download, AlertTriangle, Share2, FileText, Mail, MessageSquare, Users, Phone } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ type UserData = {
   firstName: string;
   lastName: string;
   jobTitle: string;
+  phoneNumber?: string;
   avatar?: string;
   role?: string;
 };
@@ -158,13 +160,6 @@ const MonitorPage = () => {
         });
       } catch (error: any) {
         console.error("Monitor error:", error);
-        if (error.code === 'failed-precondition') {
-          toast({
-            variant: "destructive",
-            title: "Index Required",
-            description: "Please click the link in the console/error to create the required Firestore index.",
-          });
-        }
         setSummary(prev => ({ ...prev, isLoading: false }));
       }
     };
@@ -182,11 +177,7 @@ const MonitorPage = () => {
   const handleExport = () => {
     const { present, late, absent, onLeave, outOfRange, isLoading } = summary;
     if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length && !outOfRange.length)) {
-      toast({
-        variant: "destructive",
-        title: "No data to export",
-        description: "There is no status information for the selected date.",
-      });
+      toast({ variant: "destructive", title: "No data to export" });
       return;
     }
 
@@ -253,7 +244,7 @@ const MonitorPage = () => {
   
   const handleShare = (platform: 'email' | 'whatsapp' | 'teams') => {
     if (summary.isLoading) {
-      toast({ variant: 'destructive', title: 'Data not ready', description: 'Please wait for the summary to load.' });
+      toast({ variant: 'destructive', title: 'Data not ready' });
       return;
     }
 
@@ -291,8 +282,7 @@ const MonitorPage = () => {
     if (platform === 'email') {
       url = `mailto:?subject=Daily Attendance Summary - ${reportDate}&body=${encodedText}`;
     } else if (platform === 'whatsapp') {
-      const whatsAppNumber = '+916381808782';
-      url = `https://wa.me/${whatsAppNumber}?text=${encodedText}`;
+      url = `https://wa.me/?text=${encodedText}`;
     } else if (platform === 'teams') {
       url = `https://teams.microsoft.com/l/chat/0/0?users=&message=${encodedText}`;
     }
@@ -300,9 +290,24 @@ const MonitorPage = () => {
     window.open(url, '_blank');
   };
 
+  const handleNudgeWhatsApp = (user: UserData, type: 'missing_login' | 'missing_logout') => {
+      if (!user.phoneNumber) {
+          toast({ variant: 'destructive', title: 'No phone number', description: 'Please add a phone number in the Manage Users section.' });
+          return;
+      }
+      
+      const message = type === 'missing_login' 
+        ? `Hello ${user.firstName}, you haven't clocked in today. Please log in to MarsHRM immediately.`
+        : `Hello ${user.firstName}, you missed your clock-out yesterday. Please update your attendance.`;
+      
+      const cleanNumber = user.phoneNumber.replace(/\D/g, '');
+      const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+  };
+
   const handleExportPdf = () => {
     if (summary.isLoading) {
-      toast({ variant: 'destructive', title: 'Data not ready', description: 'Please wait for the summary to load.' });
+      toast({ variant: 'destructive', title: 'Data not ready' });
       return;
     }
     
@@ -376,7 +381,7 @@ const MonitorPage = () => {
     pdfDoc.save(`daily_report_${format(date, 'yyyy-MM-dd')}.pdf`);
   };
 
-  const UserListCard = ({ title, users, Icon, iconColor }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; }) => (
+  const UserListCard = ({ title, users, Icon, iconColor, nudgeType }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; nudgeType?: 'missing_login' | 'missing_logout' }) => (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
@@ -389,16 +394,29 @@ const MonitorPage = () => {
         {users.length > 0 ? (
           <div className="space-y-3">
             {users.map(user => (
-              <Link href={`/dashboard/analytics?userId=${user.id}`} key={user.id} className="flex items-center gap-3 p-2 -m-2 rounded-lg hover:bg-muted transition-colors">
-                <Avatar className="h-9 w-9">
-                  {user.avatar && <span className="text-xl">{user.avatar}</span>}
-                  <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>
-                  <p className="text-xs text-muted-foreground">{user.jobTitle}</p>
-                </div>
-              </Link>
+              <div key={user.id} className="flex items-center justify-between group p-2 -m-2 rounded-lg hover:bg-muted transition-colors">
+                <Link href={`/dashboard/analytics?userId=${user.id}`} className="flex items-center gap-3 flex-1">
+                    <Avatar className="h-9 w-9">
+                    {user.avatar && <span className="text-xl">{user.avatar}</span>}
+                    <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                    <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>
+                    <p className="text-xs text-muted-foreground">{user.jobTitle}</p>
+                    </div>
+                </Link>
+                {nudgeType && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => handleNudgeWhatsApp(user, nudgeType)}
+                        title="Nudge via WhatsApp"
+                    >
+                        <Phone className="h-4 w-4" />
+                    </Button>
+                )}
+              </div>
             ))}
           </div>
         ) : (
@@ -490,7 +508,7 @@ const MonitorPage = () => {
           <UserListCard title="Present" users={summary.present} Icon={UserCheck} iconColor="text-green-500" />
           <UserListCard title="Late" users={summary.late} Icon={UserX} iconColor="text-yellow-500" />
           <UserListCard title="Out of Range" users={summary.outOfRange} Icon={AlertTriangle} iconColor="text-orange-500" />
-          <UserListCard title="Absent" users={summary.absent} Icon={UserRoundX} iconColor="text-red-500" />
+          <UserListCard title="Absent" users={summary.absent} Icon={UserRoundX} iconColor="text-red-500" nudgeType="missing_login" />
           <UserListCard title="On Leave" users={summary.onLeave} Icon={User} iconColor="text-blue-500" />
         </div>
       )}
