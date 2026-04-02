@@ -109,6 +109,7 @@ type Report = {
   id: string; 
   employeeId: string;
   employeeName?: string;
+  employeeDepartment?: string;
   date: any; 
   reportType: 'Business' | 'Technical';
   signature: string;
@@ -261,7 +262,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                     <div className="flex items-center gap-2 font-bold"><span className="text-xl">🖋️</span> Signature Section</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2">
                         <p><span className="text-muted-foreground">Intern Name:</span> <span className="font-bold">{report.employeeName}</span></p>
-                        <p><span className="text-muted-foreground">Department:</span> <span className="font-bold">Sales-BD</span></p>
+                        <p><span className="text-muted-foreground">Department:</span> <span className="font-bold">{report.employeeDepartment || 'Sales-BD'}</span></p>
                         <p><span className="text-muted-foreground">E-Signature:</span> <span className="text-green-600 font-bold">✅ Verified</span></p>
                         <p><span className="text-muted-foreground">Timestamp:</span> <span className="font-mono">{report.signature.split(' | ')[2] || 'NIL'}</span></p>
                     </div>
@@ -502,6 +503,7 @@ export default function ReportsPage() {
       outreachTotal: isBusinessUser ? outreachTotal : undefined,
       employeeId: user.uid,
       employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
+      employeeDepartment: currentUserData.department || (isBusinessUser ? 'Sales-BD' : 'Engineering'),
       date: new Date(),
       reportType: currentReportType,
     }
@@ -585,7 +587,15 @@ export default function ReportsPage() {
                     <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel>T+1 Critical Path (#1 Goal)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel>Pending Deliverables</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="interventionTrigger" render={({ field }) => (<FormItem><FormLabel>Intervention Trigger</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="None">None</SelectItem><SelectItem value="Coaching">Coaching</SelectItem><SelectItem value="Technical Support">Technical Support</SelectItem><SelectItem value="Client meeting">Client meeting</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                    {intervention !== 'None' && (<FormField control={form.control} name="interventionReason" render={({ field }) => (<FormItem><FormLabel>Reason for Trigger</FormLabel><FormControl><Textarea {...field} /></FormItem>)} />)}
+                    {intervention !== 'None' && (
+                        <FormField control={form.control} name="interventionReason" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Reason for Trigger</FormLabel>
+                                <FormControl><Textarea {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
                 </CardContent>
             </Card>
         </div>
