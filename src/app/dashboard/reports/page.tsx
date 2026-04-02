@@ -197,7 +197,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                             <Badge variant={conversionRate >= 15 ? 'default' : 'outline'} className="text-lg font-bold">{conversionRate.toFixed(2)}%</Badge>
                         </div>
                     </div>
-                    <ReportDetailItem label="Follow-ups Completed" value={report.followUpsCompleted} />
+                    <ReportDetailItem label="Follow-ups Completed" value={report.followUpsCompleted || 'NIL'} />
                 </CardContent>
             </Card>
 
@@ -213,10 +213,10 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <TableRow><TableCell>NET Revenue Collected Today</TableCell><TableCell className="font-bold">{sym}{report.netRevenueCollected?.toLocaleString()}</TableCell></TableRow>
-                                <TableRow><TableCell>Committed NET Revenue</TableCell><TableCell className="font-bold">{sym}{report.committedNetRevenue?.toLocaleString()}</TableCell></TableRow>
-                                <TableRow><TableCell>Pipeline Business Value</TableCell><TableCell className="font-bold">{sym}{report.pipelineValue?.toLocaleString()}</TableCell></TableRow>
-                                <TableRow className="bg-muted/30"><TableCell>Revenue Variance</TableCell><TableCell className="font-bold text-red-600">{sym}{report.revenueVariance?.toLocaleString()}</TableCell></TableRow>
+                                <TableRow><TableCell>NET Revenue Collected Today</TableCell><TableCell className="font-bold">{sym}{report.netRevenueCollected?.toLocaleString() ?? '0'}</TableCell></TableRow>
+                                <TableRow><TableCell>Committed NET Revenue</TableCell><TableCell className="font-bold">{sym}{report.committedNetRevenue?.toLocaleString() ?? '0'}</TableCell></TableRow>
+                                <TableRow><TableCell>Pipeline Business Value</TableCell><TableCell className="font-bold">{sym}{report.pipelineValue?.toLocaleString() ?? '0'}</TableCell></TableRow>
+                                <TableRow className="bg-muted/30"><TableCell>Revenue Variance</TableCell><TableCell className="font-bold text-red-600">{sym}{report.revenueVariance?.toLocaleString() ?? '0'}</TableCell></TableRow>
                             </TableBody>
                         </Table>
                     </div>
@@ -234,11 +234,11 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                                     <p className="font-bold">{m.clientName} - {sym}{m.quotationValue?.toLocaleString()}</p>
                                     <p className="text-muted-foreground">{m.context}</p>
                                 </div>
-                            )) : <span className="text-muted-foreground italic">NIL</span>}
+                            )) : <span className="text-muted-foreground italic font-semibold">NIL</span>}
                         </div>
                     </div>
-                    <ReportDetailItem label="Client Win/Highlight" value={report.clientWinHighlight} />
-                    <ReportDetailItem label="Strategic Learning" value={report.strategicLearning} />
+                    <ReportDetailItem label="Client Win/Highlight" value={report.clientWinHighlight || 'NIL'} />
+                    <ReportDetailItem label="Strategic Learning" value={report.strategicLearning || 'NIL'} />
                 </CardContent>
             </Card>
 
@@ -246,13 +246,13 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                 <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><CalendarClock className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                        <ReportDetailItem label="Meetings Booked Tomorrow" value={report.meetingsBookedTomorrow} />
-                        <ReportDetailItem label="Intervention Trigger" value={report.interventionTrigger} />
+                        <ReportDetailItem label="Meetings Booked Tomorrow" value={report.meetingsBookedTomorrow ?? '0'} />
+                        <ReportDetailItem label="Intervention Trigger" value={report.interventionTrigger || 'None'} />
                     </div>
-                    <ReportDetailItem label="T+1 Critical Path" value={report.criticalPathTomorrow} />
-                    <ReportDetailItem label="Pending Deliverables" value={report.pendingDeliverables} />
+                    <ReportDetailItem label="T+1 Critical Path" value={report.criticalPathTomorrow || 'NIL'} />
+                    <ReportDetailItem label="Pending Deliverables" value={report.pendingDeliverables || 'NIL'} />
                     {report.interventionTrigger !== 'None' && (
-                        <ReportDetailItem label="Reason for Trigger" value={report.interventionReason} />
+                        <ReportDetailItem label="Reason for Trigger" value={report.interventionReason || 'NIL'} />
                     )}
                 </CardContent>
             </Card>
@@ -281,8 +281,8 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
         </div>
         
         <div className="grid grid-cols-2 gap-4">
-            <ReportDetailItem label="Login Time" value={report.logInTime} />
-            <ReportDetailItem label="Logout Time" value={report.logOutTime} />
+            <ReportDetailItem label="Login Time" value={report.logInTime || 'N/A'} />
+            <ReportDetailItem label="Logout Time" value={report.logOutTime || 'N/A'} />
         </div>
 
         <ReportDetailItem label="Tasks Assigned for the Day">
@@ -300,7 +300,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
             <div className="space-y-4">
                 {report.completedTasks && report.completedTasks.length > 0 ? report.completedTasks.map((task, i) => (
                     <div key={i} className="pl-4 border-l-4 border-primary/20 space-y-1 py-1">
-                        <p className="font-bold text-sm">{i + 1}. {task.moduleName}</p>
+                        <p className="font-bold text-sm">{i + 1}. {task.moduleName || 'NIL'}</p>
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.workDone || 'NIL'}</p>
                     </div>
                 )) : <span className="text-muted-foreground font-semibold">NIL</span>}
@@ -323,7 +323,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
 
         <div className="pt-4 border-t space-y-4">
             <p className="text-sm italic">Thank you.</p>
-            <ReportDetailItem label="Signature" value={report.signature} />
+            <ReportDetailItem label="Signature" value={report.signature || 'NIL'} />
         </div>
     </CardContent>
   </Card>
@@ -497,7 +497,12 @@ export default function ReportsPage() {
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
     setSubmitProgress(10);
-    const outreachTotal = (values.outreachColdCalls || 0) + (values.outreachLinkedIn || 0) + (values.outreachEmails || 0);
+    
+    const cold = Number(values.outreachColdCalls || 0);
+    const linkedin = Number(values.outreachLinkedIn || 0);
+    const emails = Number(values.outreachEmails || 0);
+    const outreachTotal = cold + linkedin + emails;
+
     const reportPayload = {
       ...values,
       outreachTotal: isBusinessUser ? outreachTotal : undefined,
@@ -525,10 +530,10 @@ export default function ReportsPage() {
 
   const BusinessFormFields = () => {
     const { fields: engagementFields, append: appendEngagement, remove: removeEngagement } = useFieldArray({ control: form.control, name: "meetingsSecured" });
-    const cold = useWatch({ control: form.control, name: "outreachColdCalls" }) || 0;
-    const linkedin = useWatch({ control: form.control, name: "outreachLinkedIn" }) || 0;
-    const emails = useWatch({ control: form.control, name: "outreachEmails" }) || 0;
-    const leads = useWatch({ control: form.control, name: "newLeadsGenerated" }) || 0;
+    const cold = Number(useWatch({ control: form.control, name: "outreachColdCalls" }) || 0);
+    const linkedin = Number(useWatch({ control: form.control, name: "outreachLinkedIn" }) || 0);
+    const emails = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
+    const leads = Number(useWatch({ control: form.control, name: "newLeadsGenerated" }) || 0);
     const totalOutreach = cold + linkedin + emails;
     const conversionRate = (totalOutreach > 0) ? (leads / totalOutreach) * 100 : 0;
     const intervention = useWatch({ control: form.control, name: "interventionTrigger" });
@@ -605,6 +610,7 @@ export default function ReportsPage() {
   const TechnicalFormFields = () => {
     const { fields: taskFields, append: appendTask, remove: removeTask } = useFieldArray({ control: form.control, name: "tasksAssigned" });
     const { fields: completedTaskFields, append: appendCompleted, remove: removeCompleted } = useFieldArray({ control: form.control, name: "completedTasks" });
+    
     const ChipInputSection = ({ name, label, icon: Icon, placeholder }: { name: string, label: string, icon: any, placeholder: string }) => {
         const { fields, append, remove } = useFieldArray({ control: form.control, name });
         const [tempValue, setTempValue] = React.useState("");
@@ -618,6 +624,7 @@ export default function ReportsPage() {
             </Card>
         );
     };
+
     return (
         <div className="space-y-6">
             <Card className="bg-primary/5 border-primary/20"><CardHeader className="flex flex-row items-center gap-2 pb-2"><Info className="h-4 w-4 text-primary" /><CardTitle className="text-sm font-medium">Guidelines</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{templates.technicalGuidelines}</p></CardContent></Card>
