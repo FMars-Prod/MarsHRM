@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock, FileText, Mail, Download, Share2 } from "lucide-react";
+import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock, FileText, Mail, Download, Share2, Github, Link as LinkIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -79,12 +79,12 @@ const technicalReportSchema = z.object({
     moduleName: z.string().min(1, "Module name is required."), 
     workDone: z.string().min(1, "Work done description required.") 
   })).min(1, "At least one completed task is required."),
+  repoLinks: z.array(z.object({ value: z.string().url("Must be a valid URL").or(z.literal("")) })),
   workInProgress: z.array(z.object({ value: z.string().min(1, "Required") })),
   pendingTasks: z.array(z.object({ value: z.string().min(1, "Required") })),
   whatILearned: z.array(z.object({ value: z.string().min(1, "Required") })),
   challengesFaced: z.array(z.object({ value: z.string().min(1, "Required") })),
   nextSteps: z.array(z.object({ value: z.string().min(1, "Required") })),
-  repoLinks: z.array(z.object({ value: z.string().url("Must be a valid URL").or(z.literal("")) })),
   declaration: z.literal<boolean>(true, {
     errorMap: () => ({ message: "You must acknowledge the declaration." }),
   }),
@@ -118,12 +118,12 @@ type Report = {
   logOutTime?: string;
   tasksAssigned?: { value: string }[];
   completedTasks?: { moduleName: string, workDone: string }[];
+  repoLinks?: { value: string }[];
   workInProgress?: { value: string }[];
   pendingTasks?: { value: string }[];
   whatILearned?: { value: string }[];
   challengesFaced?: { value: string }[];
   nextSteps?: { value: string }[];
-  repoLinks?: { value: string }[];
 };
 
 type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; department?: string; };
@@ -243,7 +243,7 @@ const OutreachReportDetails = ({ report }: { report: Report }) => {
 
 const TechnicalReportDetails = ({ report }: { report: Report }) => (
   <Card>
-    <CardContent className="space-y-6 pt-6">
+    <CardContent className="space-y-6 pt-6 text-sm">
         <div className="space-y-1">
             <p className="text-sm italic text-muted-foreground">Dear Sir / Ma’am,</p>
             <p className="font-semibold text-lg">Daily report summary:</p>
@@ -270,7 +270,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
                 {report.completedTasks && report.completedTasks.length > 0 ? report.completedTasks.map((task, i) => (
                     <div key={i} className="pl-4 border-l-4 border-primary/20 space-y-1 py-1">
                         <p className="font-bold text-sm">{i + 1}. {task.moduleName}</p>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.workDone}</p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.workDone || 'NIL'}</p>
                     </div>
                 )) : <span className="text-muted-foreground italic">NIL</span>}
             </div>
@@ -281,7 +281,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
                 <div className="flex flex-col gap-1 mt-1">
                     {report.repoLinks.map((link, i) => link.value && (
                         <a key={i} href={link.value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm truncate flex items-center gap-1">
-                            <FastForward className="size-3" /> {link.value}
+                            <Github className="size-3" /> {link.value}
                         </a>
                     ))}
                 </div>
@@ -378,10 +378,10 @@ export default function ReportsPage() {
   const { data: attendanceData } = useCollection(attendanceQuery);
   const todaysAttendance = attendanceData?.[0];
 
-  const form = useForm<z.infer<typeof technicalReportSchema> | z.infer<typeof businessReportSchema>>({
+  const form = useForm<any>({
     resolver: zodResolver(isBusinessUser ? businessReportSchema : technicalReportSchema),
     defaultValues: {
-      signature: currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName}` : "",
+      signature: "",
       declaration: false,
       ...(isBusinessUser ? {
         currency: "USD",
@@ -399,12 +399,12 @@ export default function ReportsPage() {
       } : {
         tasksAssigned: [{ value: "" }],
         completedTasks: [{ moduleName: "", workDone: "" }],
+        repoLinks: [{ value: "" }],
         workInProgress: [],
         pendingTasks: [],
         whatILearned: [],
         challengesFaced: [],
         nextSteps: [],
-        repoLinks: [],
         logInTime: "09:30",
         logOutTime: "18:30",
       })
@@ -431,39 +431,25 @@ export default function ReportsPage() {
         } : {
             tasksAssigned: [{ value: "" }],
             completedTasks: [{ moduleName: "", workDone: "" }],
+            repoLinks: [{ value: "" }],
             workInProgress: [],
             pendingTasks: [],
             whatILearned: [],
             challengesFaced: [],
             nextSteps: [],
-            repoLinks: [],
-            logInTime: "09:30",
-            logOutTime: "18:30",
+            logInTime: todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'HH:mm') : "09:30",
+            logOutTime: todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'HH:mm') : format(new Date(), 'HH:mm'),
         })
       });
       setBestCallAudioURL(undefined);
       setWorstCallAudioURL(undefined);
-  }, [form, currentUserData, isBusinessUser]);
+  }, [form, currentUserData, isBusinessUser, todaysAttendance]);
 
   React.useEffect(() => {
     if (isAddDialogOpen) {
-      if (isTechnicalUser) {
-        if (todaysAttendance?.checkInTime) {
-          form.setValue('logInTime', format(todaysAttendance.checkInTime.toDate(), 'HH:mm'));
-        }
-        
-        if (todaysAttendance?.checkOutTime) {
-          form.setValue('logOutTime', format(todaysAttendance.checkOutTime.toDate(), 'HH:mm'));
-        } else {
-          form.setValue('logOutTime', format(new Date(), 'HH:mm'));
-        }
-      }
-      
-      if (currentUserData) {
-          form.setValue('signature', `${currentUserData.firstName} ${currentUserData.lastName}`)
-      }
+      resetForm();
     }
-  }, [isAddDialogOpen, todaysAttendance, isTechnicalUser, form, currentUserData]);
+  }, [isAddDialogOpen, resetForm]);
 
   const handleAudioUpload = (
       event: React.ChangeEvent<HTMLInputElement>,
@@ -574,7 +560,7 @@ export default function ReportsPage() {
         doc.setFont('helvetica', 'normal');
         if (report.tasksAssigned && report.tasksAssigned.length > 0) {
             report.tasksAssigned?.forEach(t => {
-                const lines = doc.splitTextToSize(`• ${t.value}`, 180);
+                const lines = doc.splitTextToSize(`• ${t.value || 'NIL'}`, 180);
                 doc.text(lines, 14, y);
                 y += lines.length * 6;
             });
@@ -590,10 +576,10 @@ export default function ReportsPage() {
         if (report.completedTasks && report.completedTasks.length > 0) {
             report.completedTasks?.forEach((task, i) => {
                 doc.setFont('helvetica', 'bold');
-                doc.text(`${i + 1}. ${task.moduleName}`, 14, y);
+                doc.text(`${i + 1}. ${task.moduleName || 'NIL'}`, 14, y);
                 y += 6;
                 doc.setFont('helvetica', 'normal');
-                const lines = doc.splitTextToSize(task.workDone, 170);
+                const lines = doc.splitTextToSize(task.workDone || 'NIL', 170);
                 doc.text(lines, 20, y);
                 y += lines.length * 6 + 4;
             });
@@ -687,11 +673,11 @@ export default function ReportsPage() {
     if (report.reportType === 'Technical') {
         body += `Login Time: ${report.logInTime || 'NIL'}\n`;
         body += `Logout Time: ${report.logOutTime || 'NIL'}\n\n`;
-        body += `Tasks Assigned:\n${report.tasksAssigned && report.tasksAssigned.length > 0 ? report.tasksAssigned?.map(t => `- ${t.value}`).join('\n') : '- NIL'}\n\n`;
+        body += `Tasks Assigned:\n${report.tasksAssigned && report.tasksAssigned.length > 0 ? report.tasksAssigned?.map(t => `- ${t.value || 'NIL'}`).join('\n') : '- NIL'}\n\n`;
         body += `Tasks Completed:\n`;
         if (report.completedTasks && report.completedTasks.length > 0) {
             report.completedTasks?.forEach((t, i) => {
-                body += `${i+1}. ${t.moduleName}: ${t.workDone}\n`;
+                body += `${i+1}. ${t.moduleName || 'NIL'}: ${t.workDone || 'NIL'}\n`;
             });
         } else {
             body += `- NIL\n`;
@@ -719,8 +705,8 @@ export default function ReportsPage() {
   });
 
   const BusinessFormFields = () => {
-    const outreach = useWatch({ control: form.control, name: "outreachTotal" as any }) as number || 0;
-    const potential = useWatch({ control: form.control, name: "potentialClients" as any }) as number || 0;
+    const outreach = useWatch({ control: form.control, name: "outreachTotal" }) as number || 0;
+    const potential = useWatch({ control: form.control, name: "potentialClients" }) as number || 0;
     const conversionRate = (outreach > 0) ? (potential / outreach) * 100 : 0;
 
     return (
@@ -837,23 +823,23 @@ export default function ReportsPage() {
 
   const TechnicalFormFields = () => {
     const { fields: taskFields, append: appendTask, remove: removeTask } = useFieldArray({
-        control: form.control as any,
+        control: form.control,
         name: "tasksAssigned"
     });
 
     const { fields: completedTaskFields, append: appendCompleted, remove: removeCompleted } = useFieldArray({
-        control: form.control as any,
+        control: form.control,
         name: "completedTasks"
     });
 
     const { fields: repoFields, append: appendRepo, remove: removeRepo } = useFieldArray({
-        control: form.control as any,
+        control: form.control,
         name: "repoLinks"
     });
 
     // Helper for chip-style inputs
     const ChipInputSection = ({ name, label, icon: Icon, placeholder }: { name: string, label: string, icon: any, placeholder: string }) => {
-        const { fields, append, remove } = useFieldArray({ control: form.control as any, name });
+        const { fields, append, remove } = useFieldArray({ control: form.control, name });
         const [tempValue, setTempValue] = React.useState("");
 
         const handleAdd = () => {
@@ -978,7 +964,7 @@ export default function ReportsPage() {
             </div>
 
             <Card>
-                <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><FastForward className="size-4 text-primary" /> Repository Links</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><LinkIcon className="size-4 text-primary" /> Repository / GitHub Links</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                     {repoFields.map((field, index) => (
                         <div key={field.id} className="flex gap-2">
@@ -1032,7 +1018,7 @@ export default function ReportsPage() {
                 </Button>
             )}
             {!isAdmin && (
-                <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
+                <Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>
             )}
         </div>
       </PageHeader>
@@ -1103,7 +1089,7 @@ export default function ReportsPage() {
         </div>
       )}
       
-      <Dialog open={isAddDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsAddDialogOpen(open); }}>
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
@@ -1172,8 +1158,7 @@ export default function ReportsPage() {
                                     <Button variant="outline" size="sm" onClick={() => handleShareEmail(report)}>
                                         <Mail className="h-4 w-4 mr-2" />
                                         Share via Email
-                                    </Button>
-                                </div>
+                                    </div>
                                 {report.reportType === 'Business' ? <OutreachReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
                               </AccordionContent>
                           </AccordionItem>
