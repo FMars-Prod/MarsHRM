@@ -105,18 +105,15 @@ export default function TeamsPage() {
         const allMemberIdsForTeam = Array.from(new Set([teamLeadId, ...selectedMemberIds]));
 
         if (editingTeam) {
-            // Logic for updating an existing team
             const teamRef = doc(firestore, 'teams', editingTeam.id);
             batch.update(teamRef, { name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
             
-            // Unassign old members no longer in the team
             const oldMemberIds = editingTeam.memberIds || [];
             oldMemberIds.filter(id => !allMemberIdsForTeam.includes(id)).forEach(id => {
                 const userRef = doc(firestore, 'users', id);
                 batch.update(userRef, { teamId: null });
             });
             
-            // Assign new members to the team
             allMemberIdsForTeam.forEach(memberId => {
                 const userRef = doc(firestore, 'users', memberId);
                 batch.update(userRef, { teamId: editingTeam.id });
@@ -124,7 +121,6 @@ export default function TeamsPage() {
             toast({ title: 'Team Updated' });
 
         } else {
-            // Logic for creating a new team
             const newTeamRef = doc(collection(firestore, 'teams'));
             batch.set(newTeamRef, { id: newTeamRef.id, name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
 
@@ -157,29 +153,13 @@ export default function TeamsPage() {
         setEditingTeam(team);
         setTeamName(team.name);
         setTeamLeadId(team.teamLeadId);
-        // Exclude the team lead from the list of selectable members initially
         setSelectedMemberIds(team.memberIds.filter(id => id !== team.teamLeadId));
         setIsDialogOpen(true);
     };
 
-    // Users available for the team leader dropdown
-    const potentialLeads = users?.filter(u => {
-        if (u.role !== 'Team Lead') return false;
-        // If editing a team, the current leader of that team is a potential lead.
-        if (editingTeam && u.id === editingTeam.teamLeadId) return true;
-        // Otherwise, only leads not assigned to any other team are potential leads.
-        return !teams?.some(team => team.teamLeadId === u.id);
-    });
-
-    // Users available for the members checkbox list
-    const availableMembers = users?.filter(u => {
-        // Only allow 'Member' roles to be added to a team
-        if (u.role !== 'Member') return false;
-        // If editing a team, members of that team are available.
-        if (editingTeam && editingTeam.memberIds.includes(u.id)) return true;
-        // Otherwise, only members not assigned to any team are available.
-        return !u.teamId;
-    });
+    // User requested: "team leader can be anyone also team member can be anyone"
+    const potentialLeads = users;
+    const availableMembers = users;
 
     return (
         <>
