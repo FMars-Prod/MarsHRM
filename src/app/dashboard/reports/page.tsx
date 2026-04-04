@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, PartyPopper, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock, FileText, Mail, Download, Github, Link as LinkIcon, Loader2, TrendingUp, DollarSign, Target, CalendarClock } from "lucide-react";
+import { PlusCircle, Search, Trash2, Settings2, Info, Eye, Plus, X, ListTodo, Brain, AlertTriangle, FastForward, Clock, FileText, Mail, Download, Github, Link as LinkIcon, Loader2, TrendingUp, DollarSign, Target, CalendarClock, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -30,8 +30,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import jsPDF from "jspdf";
-import autoTable from 'jspdf-autotable';
 
 // --- Types ---
 
@@ -161,7 +159,7 @@ const ReportDetailItem = ({ label, value, children }: { label: string, value?: R
 );
 
 const ChipDisplay = ({ items }: { items?: { value: string }[] }) => {
-    if (!items || items.length === 0) return <span className="text-muted-foreground font-semibold">NIL</span>;
+    if (!items || !Array.isArray(items) || items.length === 0) return <span className="text-muted-foreground font-semibold">NIL</span>;
     return (
         <div className="flex flex-wrap gap-2 mt-1">
             {items.map((item, i) => (
@@ -174,8 +172,8 @@ const ChipDisplay = ({ items }: { items?: { value: string }[] }) => {
 const BusinessReportDetails = ({ report }: { report: Report }) => {
     const currencySymbol: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
     const sym = currencySymbol[report.currency || 'USD'];
-    const outreach = report.outreachTotal || 0;
-    const leads = report.newLeadsGenerated || 0;
+    const outreach = Number(report.outreachTotal || 0);
+    const leads = Number(report.newLeadsGenerated || 0);
     const conversionRate = (outreach > 0) ? (leads / outreach) * 100 : 0;
     
     return (
@@ -185,13 +183,13 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <ReportDetailItem label="Total Outreach" value={outreach} />
-                        <ReportDetailItem label="Cold Calls" value={report.outreachColdCalls} />
-                        <ReportDetailItem label="LinkedIn" value={report.outreachLinkedIn} />
-                        <ReportDetailItem label="Emails" value={report.outreachEmails} />
+                        <ReportDetailItem label="Cold Calls" value={report.outreachColdCalls ?? '0'} />
+                        <ReportDetailItem label="LinkedIn" value={report.outreachLinkedIn ?? '0'} />
+                        <ReportDetailItem label="Emails" value={report.outreachEmails ?? '0'} />
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <ReportDetailItem label="New Leads Generated" value={report.newLeadsGenerated} />
-                        <ReportDetailItem label="Active Potential Clients" value={report.potentialClients} />
+                        <ReportDetailItem label="New Leads Generated" value={report.newLeadsGenerated ?? '0'} />
+                        <ReportDetailItem label="Active Potential Clients" value={report.potentialClients ?? '0'} />
                         <div className="space-y-1">
                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Conversion Rate</p>
                             <Badge variant={conversionRate >= 15 ? 'default' : 'outline'} className="text-lg font-bold">{conversionRate.toFixed(2)}%</Badge>
@@ -229,10 +227,10 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                     <div className="space-y-2">
                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Meetings/Demos & Quotations</p>
                         <div className="space-y-2">
-                            {report.meetingsSecured && report.meetingsSecured.length > 0 ? report.meetingsSecured.map((m, i) => (
+                            {Array.isArray(report.meetingsSecured) && report.meetingsSecured.length > 0 ? report.meetingsSecured.map((m, i) => (
                                 <div key={i} className="p-3 bg-muted/30 rounded-md border text-sm">
-                                    <p className="font-bold">{m.clientName} - {sym}{m.quotationValue?.toLocaleString()}</p>
-                                    <p className="text-muted-foreground">{m.context}</p>
+                                    <p className="font-bold">{m.clientName || 'Unknown'} - {sym}{m.quotationValue?.toLocaleString() ?? '0'}</p>
+                                    <p className="text-muted-foreground">{m.context || 'No context'}</p>
                                 </div>
                             )) : <span className="text-muted-foreground italic font-semibold">NIL</span>}
                         </div>
@@ -264,7 +262,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                         <p><span className="text-muted-foreground">Intern Name:</span> <span className="font-bold">{report.employeeName}</span></p>
                         <p><span className="text-muted-foreground">Department:</span> <span className="font-bold">{report.employeeDepartment || 'Sales-BD'}</span></p>
                         <p><span className="text-muted-foreground">E-Signature:</span> <span className="text-green-600 font-bold">✅ Verified</span></p>
-                        <p><span className="text-muted-foreground">Timestamp:</span> <span className="font-mono">{report.signature.split(' | ')[2] || 'NIL'}</span></p>
+                        <p><span className="text-muted-foreground">Timestamp:</span> <span className="font-mono">{report.signature?.split(' | ')[2] || 'NIL'}</span></p>
                     </div>
                 </CardContent>
             </Card>
@@ -286,10 +284,10 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
         </div>
 
         <ReportDetailItem label="Tasks Assigned for the Day">
-            {report.tasksAssigned && report.tasksAssigned.length > 0 ? (
+            {Array.isArray(report.tasksAssigned) && report.tasksAssigned.length > 0 ? (
                 <ul className="list-disc pl-5 space-y-1 mt-1">
-                    {report.tasksAssigned?.map((t, i) => (
-                        <li key={i}>{t.value}</li>
+                    {report.tasksAssigned.map((t, i) => (
+                        <li key={i}>{t.value || 'Task'}</li>
                     ))}
                 </ul>
             ) : <span className="text-muted-foreground font-semibold">NIL</span>}
@@ -298,7 +296,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
         <div className="space-y-4">
             <p className="font-bold text-sm text-primary uppercase tracking-widest">Tasks Completed Today (Clear & Technical Explanation):</p>
             <div className="space-y-4">
-                {report.completedTasks && report.completedTasks.length > 0 ? report.completedTasks.map((task, i) => (
+                {Array.isArray(report.completedTasks) && report.completedTasks.length > 0 ? report.completedTasks.map((task, i) => (
                     <div key={i} className="pl-4 border-l-4 border-primary/20 space-y-1 py-1">
                         <p className="font-bold text-sm">{i + 1}. {task.moduleName || 'NIL'}</p>
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.workDone || 'NIL'}</p>
@@ -340,7 +338,6 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedJobTitle, setSelectedJobTitle] = React.useState("All Job Titles");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
-  const [isConfigDialogOpen, setIsConfigDialogOpen] = React.useState(false);
   const [submitProgress, setSubmitProgress] = React.useState(0);
   const [uploadProgress, setUploadProgress] = React.useState<{ [key: string]: number }>({});
 
@@ -498,6 +495,7 @@ export default function ReportsPage() {
     if (!user || !currentUserData) return;
     setSubmitProgress(10);
     
+    // Strict numeric conversion to avoid string concatenation
     const cold = Number(values.outreachColdCalls || 0);
     const linkedin = Number(values.outreachLinkedIn || 0);
     const emails = Number(values.outreachEmails || 0);
@@ -520,6 +518,15 @@ export default function ReportsPage() {
         setIsAddDialogOpen(false);
         resetForm();
     }, 500);
+  };
+
+  const onInvalid = (errors: any) => {
+    console.error("Form Validation Errors:", errors);
+    toast({
+        variant: "destructive",
+        title: "Submission Blocked",
+        description: "Please check for missing required fields (Signature, Declaration, etc.)"
+    });
   };
 
   const filteredUsers = usersData?.filter(u => {
@@ -634,7 +641,18 @@ export default function ReportsPage() {
                 <CardContent className="space-y-3">{taskFields.map((field, index) => (<div key={field.id} className="flex gap-2"><FormField control={form.control} name={`tasksAssigned.${index}.value` as any} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input {...field} placeholder={`Task ${index + 1}`} /></FormControl><FormMessage /></FormItem>)} /><Button type="button" variant="ghost" size="icon" onClick={() => removeTask(index)} disabled={taskFields.length <= 1}><Trash2 className="size-4" /></Button></div>))}<Button type="button" variant="outline" size="sm" onClick={() => appendTask({ value: "" })} className="w-full"><Plus className="size-4 mr-2" /> Add Task</Button></CardContent>
             </Card>
             <div className="space-y-4"><p className="font-bold text-sm text-primary uppercase tracking-widest flex items-center gap-2"><Brain className="size-4" /> Tasks Completed Today (Clear & Technical Explanation):</p>
-                <div className="space-y-4">{completedTaskFields.map((field, index) => (<Card key={field.id} className="relative group bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50"><CardContent className="pt-6 space-y-4"><Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100" onClick={() => removeCompleted(index)} disabled={completedTaskFields.length <= 1}><X className="size-4" /></Button><div className="grid grid-cols-1 gap-4"><FormField control={form.control} name={`completedTasks.${index}.moduleName` as any} render={({ field }) => (<FormItem><FormLabel>Module / Project Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/><FormField control={form.control} name={`completedTasks.${index}.workDone` as any} render={({ field }) => (<FormItem><FormLabel>Work Done & Technical Details</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)}/></div></CardContent></Card>))}<Button type="button" variant="outline" onClick={() => appendCompleted({ moduleName: "", workDone: "" })} className="w-full border-dashed"><Plus className="size-4 mr-2" /> Add Completed Task Block</Button></div>
+                <div className="space-y-4">{completedTaskFields.map((field, index) => (
+                    <Card key={field.id} className="relative group bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50">
+                        <CardContent className="pt-6 space-y-4">
+                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100" onClick={() => removeCompleted(index)} disabled={completedTaskFields.length <= 1}><X className="size-4" /></Button>
+                            <div className="grid grid-cols-1 gap-4">
+                                <FormField control={form.control} name={`completedTasks.${index}.moduleName` as any} render={({ field }) => (<FormItem><FormLabel>Module / Project Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name={`completedTasks.${index}.workDone` as any} render={({ field }) => (<FormItem><FormLabel>Work Done & Technical Details</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+                <Button type="button" variant="outline" onClick={() => appendCompleted({ moduleName: "", workDone: "" })} className="w-full border-dashed"><Plus className="size-4 mr-2" /> Add Completed Task Block</Button></div>
             </div>
             <ChipInputSection name="repoLinks" label="GitHub / Repo Links" icon={LinkIcon} placeholder="https://..." />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><ChipInputSection name="workInProgress" label="Work in Progress" icon={Clock} placeholder="Ongoing..." /><ChipInputSection name="pendingTasks" label="Pending / Yet-to-be-Completed" icon={FastForward} placeholder="Pending..." /></div>
@@ -648,7 +666,7 @@ export default function ReportsPage() {
   return (
     <>
       <PageHeader title={isAdmin ? "Employee Reports" : "My Daily Reports"} description={isAdmin ? "Review and analyze daily reports." : "Submit and view your work reports."}>
-        <div className="flex gap-2">{isAdmin && (<Button variant="outline" onClick={() => setIsConfigDialogOpen(true)}><Settings2 className="mr-2 h-4 w-4" />Configure Mappings</Button>)}{!isAdmin && (<Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>)}</div>
+        {!isAdmin && (<Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>)}
       </PageHeader>
       
       {isAdmin ? (
@@ -670,14 +688,69 @@ export default function ReportsPage() {
       )}
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0"><Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0"><DialogHeader className="p-6 pb-4 border-b"><DialogTitle>New {currentReportType} Report</DialogTitle><DialogDescription>{format(new Date(), "PPP")}</DialogDescription></DialogHeader><ScrollArea className="flex-1"><div className="p-6 space-y-6">{isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}<FormField control={form.control} name="signature" render={({ field }) => (<FormItem><FormLabel>Verified E-Signature</FormLabel><FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed font-mono text-xs" /></FormControl><FormDescription>Automatically locked to your profile identity.</FormDescription></FormItem>)} /><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><div className="space-y-1 leading-none"><FormLabel>Declaration</FormLabel><FormDescription>I confirm this information is accurate and verified.</FormDescription></div></FormItem>)} /></div></ScrollArea><div className="p-4 border-t space-y-4">{submitProgress > 0 && (<div className="space-y-2"><div className="flex justify-between text-xs font-medium"><span>Submitting...</span><span>{submitProgress}%</span></div><Progress value={submitProgress} className="h-2" /></div>)}<DialogFooter className="flex gap-2 justify-end"><Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={form.formState.isSubmitting}>Cancel</Button><Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Submitting..." : "Submit Report"}</Button></DialogFooter></div></form></Form></DialogContent>
+        <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
+                    <DialogHeader className="p-6 pb-4 border-b">
+                        <DialogTitle>New {currentReportType} Report</DialogTitle>
+                        <DialogDescription>{format(new Date(), "PPP")}</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="flex-1">
+                        <div className="p-6 space-y-6">
+                            {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
+                            <FormField control={form.control} name="signature" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Verified E-Signature</FormLabel>
+                                    <FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed font-mono text-xs" /></FormControl>
+                                    <FormDescription>Automatically locked to your profile identity.</FormDescription>
+                                </FormItem>
+                            )} />
+                            <FormField control={form.control} name="declaration" render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                    <div className="space-y-1 leading-none"><FormLabel>Declaration</FormLabel><FormDescription>I confirm this information is accurate and verified.</FormDescription></div>
+                                </FormItem>
+                            )} />
+                        </div>
+                    </ScrollArea>
+                    <div className="p-4 border-t space-y-4">
+                        {submitProgress > 0 && (
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-medium"><span>Submitting...</span><span>{submitProgress}%</span></div>
+                                <Progress value={submitProgress} className="h-2" />
+                            </div>
+                        )}
+                        <DialogFooter className="flex gap-2 justify-end">
+                            <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={form.formState.isSubmitting}>Cancel</Button>
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? "Submitting..." : "Submit Report"}
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                </form>
+            </Form>
+        </DialogContent>
       </Dialog>
 
-      <Sheet open={!!selectedUser} onOpenChange={(isOpen) => !isOpen && setSelectedUser(null)}><SheetContent className="sm:max-w-3xl w-full flex flex-col p-0"><SheetHeader className="p-6 border-b"><SheetTitle>{selectedUser?.firstName}'s Daily Activity</SheetTitle></SheetHeader><ScrollArea className="flex-1 p-6">{reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full">{reports.map(report => (
-                          <AccordionItem value={report.id} key={report.id} className="border-none"><AccordionTrigger className="border rounded-md px-4 mb-2"><div className="flex-1 text-left"><p className="font-semibold">{report.reportType}</p><p className="text-xs text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p></div></AccordionTrigger>
-                              <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4">{report.reportType === 'Business' ? <BusinessReportDetails report={report} /> : <TechnicalReportDetails report={report} />}</AccordionContent>
+      <Sheet open={!!selectedUser} onOpenChange={(isOpen) => !isOpen && setSelectedUser(null)}>
+        <SheetContent className="sm:max-w-3xl w-full flex flex-col p-0">
+            <SheetHeader className="p-6 border-b"><SheetTitle>{selectedUser?.firstName}'s Daily Activity</SheetTitle></SheetHeader>
+            <ScrollArea className="flex-1 p-6">
+                {reports && reports.length > 0 ? (
+                    <Accordion type="single" collapsible className="w-full">
+                        {reports.map(report => (
+                          <AccordionItem value={report.id} key={report.id} className="border-none">
+                              <AccordionTrigger className="border rounded-md px-4 mb-2"><div className="flex-1 text-left"><p className="font-semibold">{report.reportType}</p><p className="text-xs text-muted-foreground">{format(report.date.toDate(), "PPpp")}</p></div></AccordionTrigger>
+                              <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4">
+                                  {report.reportType === 'Business' ? <BusinessReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
+                              </AccordionContent>
                           </AccordionItem>
-                      ))}</Accordion>) : <p className="text-center text-muted-foreground">No reports found.</p>}</ScrollArea></SheetContent></Sheet>
+                      ))}
+                    </Accordion>
+                ) : <p className="text-center text-muted-foreground">No reports found.</p>}
+            </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
