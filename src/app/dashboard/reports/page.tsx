@@ -9,25 +9,25 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, DollarSign, Target, CalendarClock, Brain, ListTodo, Link as LinkIcon, X, Plus, Clock, FileText } from "lucide-react";
+import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, DollarSign, Target, CalendarClock, Brain, ListTodo, Link as LinkIcon, X, Plus, Clock, FileText, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, useFirebase } from "@/firebase";
 import { collection, query, where, orderBy, doc } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // --- Types ---
 
@@ -380,8 +380,32 @@ export default function ReportsPage() {
 
   React.useEffect(() => { if (isAddDialogOpen) resetForm(); }, [isAddDialogOpen, resetForm]);
 
+  // Constraints: Before 6 PM and once per day
+  const submissionConstraints = React.useMemo(() => {
+    const now = new Date();
+    const isDeadlinePassed = now.getHours() >= 18;
+    const hasSubmittedToday = reports?.some(r => isSameDay(r.date.toDate(), now)) || false;
+    
+    return {
+        isDeadlinePassed,
+        hasSubmittedToday,
+        canSubmit: !isDeadlinePassed && !hasSubmittedToday
+    };
+  }, [reports]);
+
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
+    
+    if (submissionConstraints.isDeadlinePassed) {
+        toast({ variant: 'destructive', title: 'Deadline Passed', description: 'Reports must be submitted before 6:00 PM.' });
+        return;
+    }
+    
+    if (submissionConstraints.hasSubmittedToday) {
+        toast({ variant: 'destructive', title: 'Already Submitted', description: 'You can only submit one report per day.' });
+        return;
+    }
+
     setSubmitProgress(10);
     const cold = Number(values.outreachColdCalls || 0);
     const linkedin = Number(values.outreachLinkedIn || 0);
@@ -469,7 +493,7 @@ export default function ReportsPage() {
                     <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel>Meetings Booked Tomorrow</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel>Critical Path (Next Day)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel>Pending Deliverables</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="interventionTrigger" render={({ field }) => (<FormItem><FormLabel>Intervention Trigger</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="None">None</SelectItem><SelectItem value="Coaching">Coaching</SelectItem><SelectItem value="Technical Support">Technical Support</SelectItem><SelectItem value="Client meeting">Client meeting</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="interventionTrigger" render={({ field }) => (<FormItem><FormLabel>Intervention Trigger</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="None">None</SelectItem><SelectItem value="Coaching">Coaching</SelectItem><SelectItem value="Technical Support">Technical Support</SelectItem><SelectItem value="Client meeting">Client meeting</SelectItem></Select><FormMessage /></FormItem>)} />
                     {intervention !== 'None' && (<FormField control={form.control} name="interventionReason" render={({ field }) => (<FormItem><FormLabel>Reason for Trigger</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />)}
                 </CardContent>
             </Card>
@@ -529,9 +553,36 @@ export default function ReportsPage() {
   return (
     <>
       <PageHeader title={isAdmin ? "Employee Reports" : "My Daily Reports"} description={isAdmin ? "Review daily reports." : "Submit your work report."}>
-        {!isAdmin && (<Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button>)}
+        {!isAdmin && (
+            <Button 
+                onClick={() => setIsAddDialogOpen(true)} 
+                disabled={!submissionConstraints.canSubmit}
+                className={cn(!submissionConstraints.canSubmit && "bg-muted text-muted-foreground")}
+            >
+                <PlusCircle className="mr-2 h-4 w-4"/> 
+                {submissionConstraints.hasSubmittedToday 
+                    ? "Report Already Submitted" 
+                    : submissionConstraints.isDeadlinePassed 
+                        ? "Deadline Passed (6 PM)" 
+                        : "Add Today's Report"
+                }
+            </Button>
+        )}
       </PageHeader>
       
+      {!isAdmin && !submissionConstraints.canSubmit && (
+          <Alert variant="destructive" className="mb-6 animate-fade-in-up border-orange-500 bg-orange-50 text-orange-900">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              <AlertTitle>Submission Restriction</AlertTitle>
+              <AlertDescription>
+                  {submissionConstraints.hasSubmittedToday 
+                    ? "You have already submitted a report for today. You can view it in the list below." 
+                    : "The 6:00 PM deadline has passed. Late submissions are blocked by system policy."
+                  }
+              </AlertDescription>
+          </Alert>
+      )}
+
       {isAdmin ? (
         <><div className="flex flex-col sm:flex-row gap-4 mb-4"><div className="relative flex-1"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Search employee..." className="pl-8" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div></div>
           <div className="border rounded-lg overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Job Title</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{areUsersLoading ? (<TableRow><TableCell colSpan={3} className="h-24 text-center">Loading...</TableCell></TableRow>) : filteredUsers?.map(u => (<TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(u)}><TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell><TableCell>{u.jobTitle}</TableCell><TableCell className="text-right"><Button variant="outline" size="sm">View Reports</Button></TableCell></TableRow>))}</TableBody></Table></div></>
@@ -546,7 +597,17 @@ export default function ReportsPage() {
                     {report.reportType === 'Business' ? <BusinessReportDetails report={report} /> : <TechnicalReportDetails report={report} />}
                   </AccordionContent>
                 </AccordionItem>
-              ))}</Accordion>) : (<Card><CardContent className="h-48 flex flex-col items-center justify-center text-muted-foreground"><p className="mb-4">No reports yet.</p><Button onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Today's Report</Button></CardContent></Card>)}
+              ))}</Accordion>) : (
+                <Card>
+                    <CardContent className="h-48 flex flex-col items-center justify-center text-muted-foreground">
+                        <p className="mb-4">No reports yet.</p>
+                        <Button onClick={() => setIsAddDialogOpen(true)} disabled={!submissionConstraints.canSubmit}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> 
+                            {submissionConstraints.canSubmit ? "Add Today's Report" : "Submission Blocked"}
+                        </Button>
+                    </CardContent>
+                </Card>
+              )}
         </div>
       )}
 
