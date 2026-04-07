@@ -15,8 +15,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay, isAfter, setHours, setMinutes } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, useFirebase, useStorage } from "@/firebase";
-import { collection, query, where, orderBy, doc } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { collection, query, where, orderBy, doc, deleteDoc } from "firebase/firestore";
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,8 +29,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import jsPDF from "jspdf";
-import autoTable from 'jspdf-autotable';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // --- Types ---
 
@@ -395,6 +404,30 @@ export default function ReportsPage() {
     });
   };
 
+  const handleDeleteReport = async (report: Report) => {
+    if (!isAdmin || !reportUserId) return;
+    
+    try {
+      // 1. Delete from Firestore
+      const reportRef = doc(firestore, `users/${reportUserId}/reports`, report.id);
+      await deleteDoc(reportRef);
+
+      // 2. Clean up storage if files exist
+      if (report.bestCallRecording) {
+        try {
+          const fileRef = ref(storage, report.bestCallRecording);
+          await deleteObject(fileRef);
+        } catch (err) {
+          console.warn("Could not delete audio file from storage", err);
+        }
+      }
+      
+      toast({ title: "Report Deleted", description: "The record and its audio files have been removed." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    }
+  };
+
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
     setSubmitProgress(10);
@@ -433,21 +466,21 @@ export default function ReportsPage() {
                     <FormField control={form.control} name="outreachColdCalls" render={({ field }) => (<FormItem><FormLabel>Cold Calls</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
                     <FormField control={form.control} name="outreachLinkedIn" render={({ field }) => (<FormItem><FormLabel>LinkedIn</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
                     <FormField control={form.control} name="outreachEmails" render={({ field }) => (<FormItem><FormLabel>Emails</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
-                    <div className="md:col-span-3 p-3 bg-muted/30 rounded-md border text-sm font-bold">Total Outreach: {total}</div>
-                    <FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (<FormItem><FormLabel>New Leads</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel>Potential Clients</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                    <div className="md:col-span-3 p-3 bg-muted/30 rounded-md border text-sm font-bold">Total Outreach Volume: {total}</div>
+                    <FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (<FormItem><FormLabel>New Leads Generated</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel>Active Potential Clients</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
                     <div className="md:col-span-1 flex flex-col justify-end"><Label className="mb-2">Conversion Rate</Label><Badge className="text-lg py-1">{rate.toFixed(2)}%</Badge></div>
-                    <div className="md:col-span-3"><FormField control={form.control} name="followUpsCompleted" render={({ field }) => (<FormItem><FormLabel>Follow-ups</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} /></div>
+                    <div className="md:col-span-3"><FormField control={form.control} name="followUpsCompleted" render={({ field }) => (<FormItem><FormLabel>Follow-ups Completed</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} /></div>
                 </CardContent>
             </Card>
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><DollarSign className="size-4" /> 2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="currency" render={({ field }) => (<FormItem><FormLabel>Currency</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="EUR">EUR</SelectItem><SelectItem value="GBP">GBP</SelectItem><SelectItem value="INR">INR</SelectItem></SelectContent></Select></FormItem>)} />
-                    <FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel>NET Collected</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="committedNetRevenue" render={({ field }) => (<FormItem><FormLabel>Committed Revenue</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel>Pipeline Value</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel>Variance</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel>NET Revenue Collected Today</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="committedNetRevenue" render={({ field }) => (<FormItem><FormLabel>Committed NET Revenue</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel>Pipeline Business Value</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel>Revenue Variance</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
                 </CardContent>
             </Card>
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
@@ -460,11 +493,11 @@ export default function ReportsPage() {
                                 <FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel>Client Name</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
                                 <FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem><FormLabel>Quotation Value</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
                             </div>
-                            <FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel>Context</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel>Brief Context</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
                         </div>
                     ))}
                     <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => appendMeeting({ clientName: "", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> Add Engagement</Button>
-                    <FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel>Client Win</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel>Client Win/Highlight</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
                     <FormField control={form.control} name="strategicLearning" render={({ field }) => (<FormItem><FormLabel>Strategic Learning</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
                     <div className="space-y-2 border-t pt-4">
                         <Label className="text-xs text-muted-foreground">Audio Recording (Max 5MB)</Label>
@@ -485,8 +518,8 @@ export default function ReportsPage() {
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><CalendarClock className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                    <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel>Meetings Tomorrow</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel>Critical Path</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel>Meetings Booked for Tomorrow</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel>T+1 Critical Path</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
                     <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel>Pending Deliverables</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
                     <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
                         <FormItem><FormLabel>Intervention Trigger</FormLabel>
@@ -496,7 +529,7 @@ export default function ReportsPage() {
                             </Select>
                         </FormItem>
                     )} />
-                    {intervention !== 'None' && <FormField control={form.control} name="interventionReason" render={({ field }) => (<FormItem><FormLabel>Reason</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />}
+                    {intervention !== 'None' && <FormField control={form.control} name="interventionReason" render={({ field }) => (<FormItem><FormLabel>Reason for Trigger</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />}
                 </CardContent>
             </Card>
         </div>
@@ -574,7 +607,29 @@ export default function ReportsPage() {
         <div className="space-y-2">{areReportsLoading ? (<p className="text-center py-10 text-muted-foreground">Loading...</p>) : reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full space-y-2">{reports.map(r => (
                 <AccordionItem value={r.id} key={r.id} className="border-none"><AccordionTrigger className="border rounded-md px-4 hover:no-underline hover:bg-muted/50 shadow-sm"><div className="flex-1 text-left"><p className="font-semibold text-primary">{r.reportType} Report</p><p className="text-xs text-muted-foreground">{format(r.date.toDate(), "PPpp")}</p></div></AccordionTrigger>
                   <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4">
-                    <div className="flex justify-end gap-2 mb-4"><Button variant="outline" size="sm" onClick={() => toast({ title: "PDF Ready" })}><Download className="h-4 w-4 mr-2" />PDF</Button><Button variant="outline" size="sm" onClick={() => toast({ title: "Email Shared" })}><Mail className="h-4 w-4 mr-2" />Email</Button></div>
+                    <div className="flex justify-end gap-2 mb-4">
+                        <Button variant="outline" size="sm" onClick={() => toast({ title: "PDF Ready" })}><Download className="h-4 w-4 mr-2" />PDF</Button>
+                        <Button variant="outline" size="sm" onClick={() => toast({ title: "Email Shared" })}><Mail className="h-4 w-4 mr-2" />Email</Button>
+                        {isAdmin && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete this report?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will permanently remove the report and its audio files to save storage space.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteReport(r)}>Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </div>
                     {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}
                   </AccordionContent>
                 </AccordionItem>
@@ -607,8 +662,33 @@ export default function ReportsPage() {
             <SheetHeader className="p-6 border-b"><SheetTitle>{selectedUser?.firstName}'s Reports</SheetTitle></SheetHeader>
             <ScrollArea className="flex-1 p-6">{reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full space-y-2">{reports.map(r => (
                 <AccordionItem value={r.id} key={r.id} className="border-none">
-                    <AccordionTrigger className="border rounded-md px-4 mb-2 shadow-sm"><div className="flex-1 text-left"><p className="font-semibold text-primary">{r.reportType}</p><p className="text-xs text-muted-foreground">{format(r.date.toDate(), "PPpp")}</p></div></AccordionTrigger>
-                    <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4">{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent>
+                    <AccordionTrigger className="border rounded-md px-4 mb-2 shadow-sm"><div className="flex-1 text-left"><p className="font-semibold text-primary">{r.reportType} Report</p><p className="text-xs text-muted-foreground">{format(r.date.toDate(), "PPpp")}</p></div></AccordionTrigger>
+                    <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-4">
+                        <div className="flex justify-end gap-2 mb-4">
+                            <Button variant="outline" size="sm" onClick={() => toast({ title: "PDF Ready" })}><Download className="h-4 w-4 mr-2" />PDF</Button>
+                            <Button variant="outline" size="sm" onClick={() => toast({ title: "Email Shared" })}><Mail className="h-4 w-4 mr-2" />Email</Button>
+                            {isAdmin && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4 mr-2" />Delete</Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete this report?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently remove the report and its audio files to save storage space.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteReport(r)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
+                        </div>
+                        {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}
+                    </AccordionContent>
                 </AccordionItem>))}</Accordion>) : <p className="text-center py-10 text-muted-foreground">No reports found.</p>}</ScrollArea>
         </SheetContent>
       </Sheet>
