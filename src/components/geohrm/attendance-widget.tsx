@@ -223,7 +223,6 @@ export function AttendanceWidget() {
 
   const handleBreak = () => {
     if (status === "break") {
-        // Ending Break / Lunch In
         if (!user) return;
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -241,7 +240,6 @@ export function AttendanceWidget() {
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     } else {
-      // Starting Break / Lunch Out
       if (!user) return;
       navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -256,7 +254,6 @@ export function AttendanceWidget() {
               toast({ title: "Break Started", description: "Your current location has been recorded." });
           },
           () => {
-              // Fallback if location fails during start break
               setStatus("break");
               toast({ variant: "destructive", title: "Location Warning", description: "Break started but location couldn't be captured." });
           }
@@ -505,7 +502,7 @@ export function AttendanceWidget() {
       const range = parseFloat(newMaxDistance);
       const lunchDuration = parseInt(newLunchDuration);
 
-      if (isNaN(lat) || isNaN(lon) || iisNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
+      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
           toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
