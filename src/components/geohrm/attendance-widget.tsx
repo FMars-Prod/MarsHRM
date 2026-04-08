@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2 } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -40,7 +40,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format, parse, isSameDay, endOfDay, isAfter } from "date-fns";
+import { format, parse, isSameDay, endOfDay, isAfter, addMinutes } from "date-fns";
 import { Textarea } from "../ui/textarea";
 
 type AttendanceStatus = "out" | "in" | "break";
@@ -125,9 +125,9 @@ export function AttendanceWidget() {
         setNewLatitude(officeLocation.latitude?.toString() || "");
         setNewLongitude(officeLocation.longitude?.toString() || "");
         setNewMaxDistance((officeLocation.maxDistanceKm || 2).toString());
-        setNewShiftStart(officeLocation.shiftStartTime || "09:00");
-        setNewShiftEnd(officeLocation.shiftEndTime || "17:00");
-        setNewLunchStart(officeLocation.lunchBreakStartTime || "13:00");
+        setNewShiftStart(officeLocation.shiftStartTime || "09:30");
+        setNewShiftEnd(officeLocation.shiftEndTime || "18:30");
+        setNewLunchStart(officeLocation.lunchBreakStartTime || "13:30");
         setNewLunchDuration((officeLocation.lunchBreakDurationMinutes || 60).toString());
     }
   }, [officeLocation])
@@ -548,6 +548,28 @@ export function AttendanceWidget() {
     return isAfter(lastClockInTime, shiftStart);
   };
 
+  // Milestone Calculations
+  const milestones = (() => {
+    if (!officeLocation) return null;
+    const now = new Date();
+    
+    const parseTime = (timeStr: string) => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const d = new Date(now);
+        d.setHours(hours, minutes, 0, 0);
+        return d;
+    };
+
+    const lOut = officeLocation.lunchBreakStartTime ? parseTime(officeLocation.lunchBreakStartTime) : null;
+    let lIn = null;
+    if (lOut && officeLocation.lunchBreakDurationMinutes) {
+        lIn = addMinutes(lOut, officeLocation.lunchBreakDurationMinutes);
+    }
+    const logout = officeLocation.shiftEndTime ? parseTime(officeLocation.shiftEndTime) : null;
+
+    return { lOut, lIn, logout };
+  })();
+
   return (
     <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
       <CardHeader>
@@ -623,7 +645,7 @@ export function AttendanceWidget() {
           </span>.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow flex flex-col items-center justify-center gap-4 text-center">
+      <CardContent className="flex-grow flex flex-col items-center justify-center gap-6 text-center">
         {isLocationLoading && !isWfhAllowed ? (
              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <Building2 className="h-10 w-10 animate-pulse" />
@@ -655,6 +677,31 @@ export function AttendanceWidget() {
             <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter drop-shadow-sm">
               {formatTime(timer)}
             </div>
+            
+            {/* Upcoming Milestones Notification */}
+            {milestones && !hasClockedOutToday && (
+                <div className="w-full max-w-md bg-white/40 backdrop-blur-sm rounded-xl p-4 border border-primary/10 shadow-inner grid grid-cols-3 gap-2">
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                            <Utensils className="size-3 text-yellow-600" /> L-Out
+                        </span>
+                        <span className="text-sm font-semibold">{milestones.lOut ? format(milestones.lOut, 'p') : '--:--'}</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 border-x border-primary/5">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                            <Clock className="size-3 text-blue-600" /> L-In
+                        </span>
+                        <span className="text-sm font-semibold">{milestones.lIn ? format(milestones.lIn, 'p') : '--:--'}</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                            <LogOut className="size-3 text-red-600" /> Logout
+                        </span>
+                        <span className="text-sm font-semibold">{milestones.logout ? format(milestones.logout, 'p') : '--:--'}</span>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center gap-6">
               {status === "break" && (
                 <div className="flex flex-col items-center">
