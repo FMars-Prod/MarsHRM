@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isBefore } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Share2, FileText, Sun, ShieldAlert } from 'lucide-react';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Share2, FileText, Sun, ShieldAlert, LogOut, LogIn } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -51,6 +51,8 @@ type AttendanceRecord = {
   checkOutNotes?: string;
   locationCheckInLatitude?: number;
   locationCheckInLongitude?: number;
+  locationCheckOutLatitude?: number;
+  locationCheckOutLongitude?: number;
   isOutOfRange?: boolean;
 };
 
@@ -287,7 +289,7 @@ const AnalyticsPage = () => {
         toast({ variant: 'destructive', title: 'No data to export' });
         return;
     }
-    const headers = ['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Location', 'Notes'];
+    const headers = ['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'In Location', 'Out Location', 'Notes'];
     const csvRows = [
         headers.join(','),
         ...mergedData.map(rec => {
@@ -299,7 +301,8 @@ const AnalyticsPage = () => {
             const isPresent = rec.status === 'present' || rec.status === 'late';
             const timeInOut = isPresent && rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"` : "N/A";
             const durationWorkBreak = !isPresent ? "N/A" : `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
-            const location = rec.locationCheckInLatitude && rec.locationCheckInLongitude ? `"${rec.locationCheckInLatitude}, ${rec.locationCheckInLongitude}"` : "N/A";
+            const inLocation = rec.locationCheckInLatitude && rec.locationCheckInLongitude ? `"${rec.locationCheckInLatitude}, ${rec.locationCheckInLongitude}"` : "N/A";
+            const outLocation = rec.locationCheckOutLatitude && rec.locationCheckOutLongitude ? `"${rec.locationCheckOutLatitude}, ${rec.locationCheckOutLongitude}"` : "N/A";
             const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status;
             const notes = `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"`;
 
@@ -309,7 +312,8 @@ const AnalyticsPage = () => {
                 timeInOut,
                 durationWorkBreak,
                 `"${statusStr}"`,
-                location,
+                inLocation,
+                outLocation,
                 notes,
             ];
             return row.join(',');
@@ -379,7 +383,7 @@ const AnalyticsPage = () => {
     doc.text(`Missed (Leave): ${stats.totalLeaves}`, 14, 73);
     doc.text(`Holidays (Sundays): ${stats.totalHolidays}`, 70, 73);
 
-    const headers = [['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Notes']];
+    const headers = [['Employee', 'Date', 'Time (In/Out)', 'Status', 'In Loc', 'Out Loc', 'Notes']];
     const body = mergedData.map(rec => {
         let workDuration = 0;
         const isPresent = rec.status === 'present' || rec.status === 'late';
@@ -391,13 +395,16 @@ const AnalyticsPage = () => {
         const timeOut = (rec.checkOutTime && isPresent) ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
         const statusStr = rec.isOutOfRange ? `${rec.status} (Out of Range)` : rec.status.replace('_', ' ');
         const notes = ((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim();
+        const inLoc = (rec.locationCheckInLatitude && rec.locationCheckInLongitude) ? 'YES' : 'NIL';
+        const outLoc = (rec.locationCheckOutLatitude && rec.locationCheckOutLongitude) ? 'YES' : 'NIL';
 
         return [
             rec.employeeName || 'N/A',
             rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A',
             `${timeIn} / ${timeOut}`,
-            !isPresent ? 'N/A' : `${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}`,
             statusStr,
+            inLoc,
+            outLoc,
             notes,
             rec.status
         ];
@@ -411,12 +418,12 @@ const AnalyticsPage = () => {
         headStyles: { fillColor: [39, 55, 70] },
         styles: { fontSize: 8 },
         columnStyles: {
-            5: { cellWidth: 40 }
+            6: { cellWidth: 35 }
         },
-        columns: [0, 1, 2, 3, 4, 5],
+        columns: [0, 1, 2, 3, 4, 5, 6],
         didParseCell: (data) => {
             if (data.section === 'body') {
-                const rowStatus = data.row.raw[6];
+                const rowStatus = data.row.raw[7];
                 const colors: Record<string, [number, number, number]> = {
                     present: [240, 253, 244],
                     late: [255, 251, 235],
@@ -677,7 +684,8 @@ const AnalyticsPage = () => {
                                             <TableHead>Time (In/Out)</TableHead>
                                             <TableHead>Duration (Work/Break)</TableHead>
                                             <TableHead>Status</TableHead>
-                                            <TableHead>Location</TableHead>
+                                            <TableHead className="text-center">In Loc</TableHead>
+                                            <TableHead className="text-center">Out Loc</TableHead>
                                             <TableHead>Notes</TableHead>
                                             {isAdmin && ENABLE_MANUAL_EDIT && <TableHead className="text-right">Actions</TableHead>}
                                         </TableRow>
@@ -752,16 +760,32 @@ const AnalyticsPage = () => {
                                                         )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="text-center">
                                                   {rec.locationCheckInLatitude && rec.locationCheckInLongitude ? (
                                                     <Tooltip>
                                                       <TooltipTrigger asChild>
                                                         <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" rel="noopener noreferrer">
-                                                            <MapPin className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
+                                                            <MapPin className="h-5 w-5 text-green-600 hover:text-green-700 transition-colors mx-auto" />
                                                         </Link>
                                                       </TooltipTrigger>
                                                       <TooltipContent>
-                                                        <p>View on Google Maps</p>
+                                                        <p>View Clock-In Location</p>
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  ) : (
+                                                    <span className="text-muted-foreground/50">-</span>
+                                                  )}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                  {rec.locationCheckOutLatitude && rec.locationCheckOutLongitude ? (
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckOutLatitude},${rec.locationCheckOutLongitude}`} target="_blank" rel="noopener noreferrer">
+                                                            <MapPin className="h-5 w-5 text-red-600 hover:text-red-700 transition-colors mx-auto" />
+                                                        </Link>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>
+                                                        <p>View Clock-Out Location</p>
                                                       </TooltipContent>
                                                     </Tooltip>
                                                   ) : (
