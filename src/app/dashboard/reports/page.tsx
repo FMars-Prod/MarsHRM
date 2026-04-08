@@ -114,6 +114,7 @@ const businessReportSchema = z.object({
   interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]),
   interventionReason: z.string().optional(),
   bestCallRecording: z.string().optional(),
+  worstCallRecording: z.string().optional(),
   declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Required" }) }),
   signature: z.string().min(1, "Signature is required."),
 });
@@ -223,11 +224,22 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                     </div>
                     <ReportDetailItem label="Client Win/Highlight" value={report.clientWinHighlight || "NIL"} />
                     <ReportDetailItem label="Strategic Learning" value={report.strategicLearning || "NIL"} />
-                    {report.bestCallRecording && (
-                        <ReportDetailItem label="Audio Submission">
-                            <audio controls className="w-full h-8 mt-1"><source src={report.bestCallRecording} /></audio>
-                        </ReportDetailItem>
-                    )}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t pt-4">
+                        {report.bestCallRecording && (
+                            <ReportDetailItem label="Best Call Recording">
+                                <audio controls className="w-full h-8 mt-1"><source src={report.bestCallRecording} /></audio>
+                            </ReportDetailItem>
+                        )}
+                        {report.worstCallRecording && (
+                            <ReportDetailItem label="Worst Call Recording">
+                                <audio controls className="w-full h-8 mt-1"><source src={report.worstCallRecording} /></audio>
+                            </ReportDetailItem>
+                        )}
+                        {!report.bestCallRecording && !report.worstCallRecording && (
+                            <ReportDetailItem label="Audio Submissions" value="NIL" />
+                        )}
+                    </div>
                 </CardContent>
             </Card>
 
@@ -253,7 +265,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                         <p><span className="text-muted-foreground">Intern Name:</span> <span className="font-bold">{report.employeeName || "NIL"}</span></p>
                         <p><span className="text-muted-foreground">Department:</span> <span className="font-bold">{report.employeeDepartment || "NIL"}</span></p>
                         <p><span className="text-muted-foreground">E-Signature:</span> <span className="text-green-600 font-bold">✅ Verified</span></p>
-                        <p><span className="text-muted-foreground">Timestamp:</span> <span className="font-mono">{report.signature?.split(' | ')[2] || "NIL"}</span></p>
+                        <p><span className="text-muted-foreground">Timestamp:</span> <span className="font-mono">{report.signature?.split(' | ').pop() || "NIL"}</span></p>
                     </div>
                 </CardContent>
             </Card>
@@ -359,7 +371,7 @@ export default function ReportsPage() {
 
   const resetForm = React.useCallback(() => {
       const now = new Date();
-      const timestampStr = format(now, 'dd/MM/yyyy | HH:mm:ss') + ' IST';
+      const timestampStr = format(now, 'MMM d, yyyy, p');
       form.reset({
         signature: currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${currentUserData.jobTitle} | ${timestampStr}` : "",
         declaration: false,
@@ -367,7 +379,7 @@ export default function ReportsPage() {
             currency: "USD", outreachColdCalls: 0, outreachLinkedIn: 0, outreachEmails: 0, newLeadsGenerated: 0, potentialClients: 0, followUpsCompleted: "",
             netRevenueCollected: 0, committedNetRevenue: 0, pipelineValue: 0, revenueVariance: 0, meetingsSecured: [{ clientName: "", quotationValue: 0, context: "" }],
             clientWinHighlight: "", strategicLearning: "", meetingsBookedTomorrow: 0, criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None", interventionReason: "",
-            bestCallRecording: ""
+            bestCallRecording: "", worstCallRecording: ""
         } : {
             tasksAssigned: [{ value: "" }], completedTasks: [{ moduleName: "", workDone: "" }], repoLinks: [{ value: "" }],
             workInProgress: [], pendingTasks: [], whatILearned: [], challengesFaced: [], nextSteps: [],
@@ -392,7 +404,7 @@ export default function ReportsPage() {
     if (!user || !currentUserData) return;
     const dateStr = format(new Date(), 'yyyy-MM-dd');
     const fileName = `${currentUserData.firstName}_${currentUserData.lastName}_${dateStr}_${fieldName}_${Date.now()}`;
-    const storageRef = ref(storage, `reports/${user.uid}/${fileName}`);
+    const storageRef = ref(storage, `audio_reports/${user.uid}/${fileName}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     return new Promise<string>((resolve, reject) => {
@@ -413,14 +425,18 @@ export default function ReportsPage() {
       await deleteDoc(reportRef);
 
       // 2. Clean up storage if files exist
-      if (report.bestCallRecording) {
-        try {
-          const fileRef = ref(storage, report.bestCallRecording);
-          await deleteObject(fileRef);
-        } catch (err) {
-          console.warn("Could not delete audio file from storage", err);
-        }
+      const cleanupFile = async (url?: string) => {
+          if (!url) return;
+          try {
+              const fileRef = ref(storage, url);
+              await deleteObject(fileRef);
+          } catch (err) {
+              console.warn("Could not delete file from storage", err);
+          }
       }
+      
+      await cleanupFile(report.bestCallRecording);
+      await cleanupFile(report.worstCallRecording);
       
       toast({ title: "Report Deleted", description: "The record and its audio files have been removed." });
     } catch (error: any) {
@@ -499,18 +515,35 @@ export default function ReportsPage() {
                     <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => appendMeeting({ clientName: "", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> Add Engagement</Button>
                     <FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel>Client Win/Highlight</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
                     <FormField control={form.control} name="strategicLearning" render={({ field }) => (<FormItem><FormLabel>Strategic Learning</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>)} />
-                    <div className="space-y-2 border-t pt-4">
-                        <Label className="text-xs text-muted-foreground">Audio Recording (Max 5MB)</Label>
-                        <div className="flex items-center gap-2">
-                            <Input type="file" accept="audio/*" onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (file && file.size <= 5 * 1024 * 1024) {
-                                    const url = await handleAudioUpload(file, 'bestCallRecording');
-                                    form.setValue('bestCallRecording', url);
-                                } else if (file) toast({ variant: 'destructive', title: 'File too large' });
-                            }} />
-                            {audioUploadProgress['bestCallRecording'] < 100 && <div className="text-xs animate-pulse">Uploading... {Math.round(audioUploadProgress['bestCallRecording'])}%</div>}
-                            {form.getValues('bestCallRecording') && <CheckCircle2 className="size-5 text-green-600" />}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-primary">Best Call Recording (Max 5MB)</Label>
+                            <div className="flex items-center gap-2">
+                                <Input type="file" accept="audio/*" onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file && file.size <= 5 * 1024 * 1024) {
+                                        const url = await handleAudioUpload(file, 'bestCallRecording');
+                                        form.setValue('bestCallRecording', url);
+                                    } else if (file) toast({ variant: 'destructive', title: 'File too large' });
+                                }} />
+                                {audioUploadProgress['bestCallRecording'] < 100 && <div className="text-xs animate-pulse">{Math.round(audioUploadProgress['bestCallRecording'])}%</div>}
+                                {form.getValues('bestCallRecording') && <CheckCircle2 className="size-5 text-green-600" />}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-destructive">Worst Call Recording (Max 5MB)</Label>
+                            <div className="flex items-center gap-2">
+                                <Input type="file" accept="audio/*" onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file && file.size <= 5 * 1024 * 1024) {
+                                        const url = await handleAudioUpload(file, 'worstCallRecording');
+                                        form.setValue('worstCallRecording', url);
+                                    } else if (file) toast({ variant: 'destructive', title: 'File too large' });
+                                }} />
+                                {audioUploadProgress['worstCallRecording'] < 100 && <div className="text-xs animate-pulse">{Math.round(audioUploadProgress['worstCallRecording'])}%</div>}
+                                {form.getValues('worstCallRecording') && <CheckCircle2 className="size-5 text-green-600" />}
+                            </div>
                         </div>
                     </div>
                 </CardContent>
