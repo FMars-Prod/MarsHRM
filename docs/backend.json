@@ -143,22 +143,14 @@
           "enum": ["present", "late", "absent", "on_leave"],
           "description": "The status of the attendance for the day."
         },
-        "locationCheckInLatitude": {
-          "type": "number",
-          "description": "Latitude of the location where the employee checked in."
-        },
-        "locationCheckInLongitude": {
-          "type": "number",
-          "description": "Longitude of the location where the employee checked in."
-        },
-        "locationCheckOutLatitude": {
-          "type": "number",
-          "description": "Latitude of the location where the employee checked out."
-        },
-        "locationCheckOutLongitude": {
-          "type": "number",
-          "description": "Longitude of the location where the employee checked out."
-        },
+        "locationCheckInLatitude": { "type": "number" },
+        "locationCheckInLongitude": { "type": "number" },
+        "locationCheckOutLatitude": { "type": "number" },
+        "locationCheckOutLongitude": { "type": "number" },
+        "locationLunchOutLatitude": { "type": "number", "description": "Location when starting break/lunch." },
+        "locationLunchOutLongitude": { "type": "number", "description": "Location when starting break/lunch." },
+        "locationLunchInLatitude": { "type": "number", "description": "Location when returning from break/lunch." },
+        "locationLunchInLongitude": { "type": "number", "description": "Location when returning from break/lunch." },
         "checkInNotes": {
             "type": "string",
             "description": "Notes or reason provided by the employee for clocking in, especially if out of range."
@@ -307,7 +299,7 @@
         "id": { "type": "string" },
         "employeeId": { "type": "string" },
         "employeeName": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
+        "date": { "type": "string", format: "date-time" },
         "reportType": { "type": "string", "enum": ["Business", "Technical"] },
         "signature": { "type": "string" },
         "currency": { "type": "string", "enum": ["USD", "EUR", "GBP", "INR"] },

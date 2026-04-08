@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -201,6 +202,8 @@ export function AttendanceWidget() {
       if (getTodaysAttendanceRef) {
           const payload: any = {
               totalBreakDuration: updatedBreakTime,
+              locationLunchInLatitude: userLocation.latitude,
+              locationLunchInLongitude: userLocation.longitude,
           };
           if (reason) {
               const newNote = `Post-Lunch Clock-In (${format(new Date(), 'p')}): ${reason}`;
@@ -220,39 +223,44 @@ export function AttendanceWidget() {
 
   const handleBreak = () => {
     if (status === "break") {
-        if (autoLunchTriggered) {
-            if (!officeLocation || !user) {
-                toast({ variant: "destructive", title: "Cannot Clock In", description: "Office location not set." });
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-                  const dist = getDistanceInKm(userLocation, officeLocation);
-                  
-                  if (dist > maxDistanceKm) {
-                      setOutOfRangeAction(() => () => proceedWithLunchClockIn(userLocation, dist, outOfRangeReason));
-                      setIsOutOfRangeReasonDialogOpen(true);
-                  } else {
-                      proceedWithLunchClockIn(userLocation, dist);
-                  }
-                },
-                () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        } else {
-            const updatedBreakTime = totalBreakTime + breakTimer;
-            setTotalBreakTime(updatedBreakTime);
-            if (getTodaysAttendanceRef) {
-                updateDocumentNonBlocking(getTodaysAttendanceRef, {
-                    totalBreakDuration: updatedBreakTime
-                });
-            }
-            setBreakTimer(0);
-            setStatus("in");
-        }
+        // Ending Break / Lunch In
+        if (!user) return;
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+              const dist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : 0;
+              
+              if (officeLocation && dist > maxDistanceKm) {
+                  setOutOfRangeAction(() => () => proceedWithLunchClockIn(userLocation, dist, outOfRangeReason));
+                  setIsOutOfRangeReasonDialogOpen(true);
+              } else {
+                  proceedWithLunchClockIn(userLocation, dist);
+              }
+            },
+            () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
     } else {
-      setStatus("break");
+      // Starting Break / Lunch Out
+      if (!user) return;
+      navigator.geolocation.getCurrentPosition(
+          (position) => {
+              const userLocation = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+              if (getTodaysAttendanceRef) {
+                  updateDocumentNonBlocking(getTodaysAttendanceRef, {
+                      locationLunchOutLatitude: userLocation.latitude,
+                      locationLunchOutLongitude: userLocation.longitude,
+                  });
+              }
+              setStatus("break");
+              toast({ title: "Break Started", description: "Your current location has been recorded." });
+          },
+          () => {
+              // Fallback if location fails during start break
+              setStatus("break");
+              toast({ variant: "destructive", title: "Location Warning", description: "Break started but location couldn't be captured." });
+          }
+      );
     }
   };
 
@@ -497,7 +505,7 @@ export function AttendanceWidget() {
       const range = parseFloat(newMaxDistance);
       const lunchDuration = parseInt(newLunchDuration);
 
-      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
+      if (isNaN(lat) || isNaN(lon) || iisNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
           toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
