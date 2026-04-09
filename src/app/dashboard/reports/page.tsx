@@ -570,7 +570,7 @@ export default function ReportsPage() {
                         <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Active Potential Clients</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
                         <FormField control={form.control} name="followUpCount" render={({ field }) => (
                             <FormItem><FormLabel className="text-xs uppercase font-bold">Number of Follow-ups</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value.toString()}>
+                                <Select onValueChange={field.onChange} value={field.value?.toString() || "0"}>
                                     <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
                                     <SelectContent>
                                         {Array.from({ length: 21 }).map((_, i) => (<SelectItem key={i} value={i.toString()}>{i}</SelectItem>))}
@@ -600,7 +600,7 @@ export default function ReportsPage() {
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="currency" render={({ field }) => (
                         <FormItem><FormLabel className="text-xs uppercase font-bold">Default Report Currency</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value || "USD"}>
                                 <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="INR">INR (₹)</SelectItem></SelectContent>
                             </Select>
@@ -635,7 +635,7 @@ export default function ReportsPage() {
                                     <div className="grid grid-cols-3 gap-2">
                                         <FormField control={form.control} name={`meetingsSecured.${index}.currency`} render={({ field }) => (
                                             <FormItem className="col-span-1"><FormLabel className="text-[10px] uppercase font-bold">Cur</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                <Select onValueChange={field.onChange} value={field.value || "USD"}>
                                                     <FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl>
                                                     <SelectContent><SelectItem value="USD">$</SelectItem><SelectItem value="EUR">€</SelectItem><SelectItem value="GBP">£</SelectItem><SelectItem value="INR">₹</SelectItem></SelectContent>
                                                 </Select>
@@ -686,7 +686,7 @@ export default function ReportsPage() {
                     <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pending Deliverables / Follow-ups</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} />
                     <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
                         <FormItem><FormLabel className="text-xs uppercase font-bold text-primary">Intervention Trigger Required?</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value || "None"}>
                                 <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="None">None (Standard)</SelectItem>
