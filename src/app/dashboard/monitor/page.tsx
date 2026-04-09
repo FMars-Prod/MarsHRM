@@ -24,8 +24,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 
@@ -58,6 +58,32 @@ type LeaveRequest = {
   startDate: Timestamp;
   endDate: Timestamp;
 };
+
+const chartConfig = {
+  value: {
+    label: "Count",
+  },
+  Present: {
+    label: "Present",
+    color: "hsl(var(--chart-5))",
+  },
+  Late: {
+    label: "Late",
+    color: "hsl(var(--chart-3))",
+  },
+  Absent: {
+    label: "Absent",
+    color: "hsl(var(--destructive))",
+  },
+  "On Leave": {
+    label: "On Leave",
+    color: "hsl(var(--chart-1))",
+  },
+  "Out of Range": {
+    label: "Out of Range",
+    color: "hsl(var(--chart-2))",
+  },
+} satisfies ChartConfig;
 
 const MonitorPage = () => {
   const firestore = useFirestore();
@@ -347,7 +373,7 @@ const MonitorPage = () => {
                     <CardDescription>Visual breakdown of current attendance.</CardDescription>
                 </CardHeader>
                 <CardContent className="h-[350px]">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px]">
                         <PieChart>
                             <Pie
                                 data={chartData}
@@ -357,15 +383,16 @@ const MonitorPage = () => {
                                 outerRadius={100}
                                 paddingAngle={5}
                                 dataKey="value"
+                                nameKey="name"
                             >
                                 {chartData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />
                                 ))}
                             </Pie>
-                            <RechartsTooltip content={<ChartTooltipContent hideLabel />} />
+                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
                             <Legend verticalAlign="bottom" height={36}/>
                         </PieChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                 </CardContent>
             </Card>
             
