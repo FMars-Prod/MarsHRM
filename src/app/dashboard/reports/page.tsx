@@ -82,9 +82,12 @@ const ChipDisplay = ({ items }: { items?: { value: string }[] }) => {
 };
 
 const BusinessReportDetails = ({ report }: { report: any }) => {
-    const outreach = Number(report.outreachTotal || 0);
+    const cold = Number(report.outreachColdCalls || 0);
+    const linkedin = Number(report.outreachLinkedIn || 0);
+    const email = Number(report.outreachEmails || 0);
+    const totalOutreach = cold + linkedin + email;
     const leads = Number(report.newLeadsGenerated || 0);
-    const conversionRate = (outreach > 0) ? (leads / outreach) * 100 : 0;
+    const conversionRate = (totalOutreach > 0) ? Math.max(0, (leads / totalOutreach) * 100) : 0;
     const rateColor = conversionRate < 5 ? 'text-red-600' : conversionRate < 15 ? 'text-orange-600' : 'text-green-600';
     const mainSym = getCurrencySymbol(report.currency || 'USD');
 
@@ -94,16 +97,16 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-3" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-white/50 rounded-xl border border-border/50 shadow-inner">
-                        <ReportDetailItem label="Total Outreach" value={outreach} />
+                        <ReportDetailItem label="Total Outreach" value={totalOutreach} />
                         <ReportDetailItem label="Potential Clients" value={report.potentialClients} />
                         <ReportDetailItem label="Pipeline Value" value={`${mainSym}${report.pipelineValue?.toLocaleString() ?? 0}`} />
                         <ReportDetailItem label="Intervention" value={report.interventionTrigger || "None"} />
                     </div>
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
-                        <ReportDetailItem label="Cold Calls" value={report.outreachColdCalls ?? 0} />
-                        <ReportDetailItem label="LinkedIn" value={report.outreachLinkedIn ?? 0} />
-                        <ReportDetailItem label="Emails" value={report.outreachEmails ?? 0} />
+                        <ReportDetailItem label="Cold Calls" value={cold} />
+                        <ReportDetailItem label="LinkedIn" value={linkedin} />
+                        <ReportDetailItem label="Emails" value={email} />
                         <ReportDetailItem label="New Leads" value={leads} />
                     </div>
 
@@ -326,14 +329,14 @@ const TechnicalReportDetails = ({ report }: { report: any }) => (
 // --- Schemas ---
 
 const businessReportSchema = z.object({
-  currency: z.enum(["USD", "EUR", "GBP", "INR"]),
+  currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("USD"),
   outreachColdCalls: z.coerce.number().min(0).default(0),
   outreachLinkedIn: z.coerce.number().min(0).default(0),
   outreachEmails: z.coerce.number().min(0).default(0),
   newLeadsGenerated: z.coerce.number().min(0).default(0),
   potentialClients: z.coerce.number().min(0).default(0),
   followUpCount: z.coerce.number().min(0).default(0),
-  followUpClients: z.array(z.string().min(0)).optional(),
+  followUpClients: z.array(z.string().min(0)).optional().default([]),
   quotationsReleased: z.coerce.number().min(0).default(0),
   netRevenueCollected: z.coerce.number().min(0).default(0),
   committedNetRevenue: z.coerce.number().min(0).default(0),
@@ -350,11 +353,11 @@ const businessReportSchema = z.object({
   meetingsBookedTomorrow: z.coerce.number().min(0).default(0),
   criticalPathTomorrow: z.string().optional().default(""),
   pendingDeliverables: z.string().optional().default(""),
-  interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]),
+  interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]).default("None"),
   interventionReason: z.string().optional().default(""),
   bestCallRecording: z.string().optional().default(""),
   worstCallRecording: z.string().optional().default(""),
-  declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Required" }) }),
+  declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Certification required." }) }),
   signature: z.string().min(1, "Signature is required."),
 });
 
@@ -372,7 +375,7 @@ const technicalReportSchema = z.object({
   whatILearned: z.array(z.object({ value: z.string() })).optional().default([]),
   challengesFaced: z.array(z.object({ value: z.string() })).optional().default([]),
   nextSteps: z.array(z.object({ value: z.string() })).optional().default([]),
-  declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Required" }) }),
+  declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Certification required." }) }),
   signature: z.string().min(1, "Signature is required."),
 });
 
@@ -454,10 +457,25 @@ export default function ReportsPage() {
 
   const submissionConstraints = React.useMemo(() => {
     const now = new Date();
-    // Deadline temporarily removed as requested
-    const isDeadlinePassed = false;
+    
+    // 6:30 PM IST deadline enforcement
+    const istTimeStr = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(now);
+    
+    const [istHour, istMinute] = istTimeStr.split(':').map(Number);
+    const isDeadlinePassed = (istHour > 18) || (istHour === 18 && istMinute >= 30);
+    
     const hasSubmittedToday = reports?.some(r => isSameDay(r.date.toDate(), now)) || false;
-    return { isDeadlinePassed, hasSubmittedToday, canSubmit: !hasSubmittedToday };
+    
+    return { 
+        isDeadlinePassed, 
+        hasSubmittedToday, 
+        canSubmit: !hasSubmittedToday && !isDeadlinePassed 
+    };
   }, [reports]);
 
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
@@ -540,7 +558,7 @@ export default function ReportsPage() {
     const total = cold + linkedin + email;
     const leads = Number(useWatch({ control: form.control, name: "newLeadsGenerated" }) || 0);
     
-    const rate = (total > 0 && leads >= 0) ? (leads / total) * 100 : 0;
+    const rate = (total > 0 && leads >= 0) ? Math.max(0, (leads / total) * 100) : 0;
     const rateColor = rate < 5 ? 'text-red-600' : rate < 15 ? 'text-orange-600' : 'text-green-600';
 
     return (
@@ -790,12 +808,29 @@ export default function ReportsPage() {
     <>
       <PageHeader title={isAdmin ? "Organization Reports" : "My Daily Submissions"} description={isAdmin ? "Review submissions from Interns and Employees." : "Standardized professional reporting."}>
         {!isAdmin && (
-            <Button onClick={() => setIsAddDialogOpen(true)} disabled={!submissionConstraints.canSubmit} className={cn("rounded-full h-11 px-6 shadow-lg transition-all active:scale-95", !submissionConstraints.canSubmit ? "bg-muted text-muted-foreground border-none cursor-not-allowed opacity-50" : "bg-primary hover:bg-primary/90")}>
+            <Button 
+                onClick={() => setIsAddDialogOpen(true)} 
+                disabled={!submissionConstraints.canSubmit} 
+                className={cn(
+                    "rounded-full h-11 px-6 shadow-lg transition-all active:scale-95", 
+                    !submissionConstraints.canSubmit ? "bg-muted text-muted-foreground border-none cursor-not-allowed opacity-50" : "bg-primary hover:bg-primary/90"
+                )}
+            >
                 <PlusCircle className="mr-2 h-4 w-4"/> 
                 {submissionConstraints.hasSubmittedToday ? "Submission Complete" : "Add Daily Report"}
             </Button>
         )}
       </PageHeader>
+      
+      {!isAdmin && submissionConstraints.isDeadlinePassed && !submissionConstraints.hasSubmittedToday && (
+        <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Report Restriction Policy</AlertTitle>
+            <AlertDescription>
+                The 6:30 PM IST submission deadline has passed. You can no longer submit a report for today.
+            </AlertDescription>
+        </Alert>
+      )}
       
       {isAdmin ? (
         <>
