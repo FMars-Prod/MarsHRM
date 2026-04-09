@@ -56,6 +56,11 @@ const formatIST = (date: Date) => {
     }).format(date).replace(',', ' |') + " IST";
 };
 
+const getCurrencySymbol = (code: string) => {
+    const symbols: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
+    return symbols[code] || '$';
+};
+
 const ReportDetailItem = ({ label, value, children, className }: { label: string, value?: React.ReactNode, children?: React.ReactNode, className?: string }) => (
   <div className={cn("space-y-1.5", className)}>
     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">{label}</p>
@@ -77,13 +82,11 @@ const ChipDisplay = ({ items }: { items?: { value: string }[] }) => {
 };
 
 const BusinessReportDetails = ({ report }: { report: any }) => {
-    const currencySymbol: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
-    const sym = currencySymbol[report.currency || 'USD'];
     const outreach = Number(report.outreachTotal || 0);
     const leads = Number(report.newLeadsGenerated || 0);
     const conversionRate = (outreach > 0) ? (leads / outreach) * 100 : 0;
-    
     const rateColor = conversionRate < 5 ? 'text-red-600' : conversionRate < 15 ? 'text-orange-600' : 'text-green-600';
+    const mainSym = getCurrencySymbol(report.currency || 'USD');
 
     return (
         <div className="space-y-6">
@@ -93,7 +96,7 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-white/50 rounded-xl border border-border/50 shadow-inner">
                         <ReportDetailItem label="Total Outreach" value={outreach} />
                         <ReportDetailItem label="Potential Clients" value={report.potentialClients} />
-                        <ReportDetailItem label="Pipeline Value" value={`${sym}${report.pipelineValue?.toLocaleString() ?? 0}`} />
+                        <ReportDetailItem label="Pipeline Value" value={`${mainSym}${report.pipelineValue?.toLocaleString() ?? 0}`} />
                         <ReportDetailItem label="Intervention" value={report.interventionTrigger || "None"} />
                     </div>
                     
@@ -134,13 +137,13 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                             <TableHeader className="bg-muted/30">
                                 <TableRow className="hover:bg-transparent border-none">
                                     <TableHead className="h-8 text-[10px] uppercase font-bold">Financial Category</TableHead>
-                                    <TableHead className="h-8 text-[10px] uppercase font-bold text-right">Amount ({sym})</TableHead>
+                                    <TableHead className="h-8 text-[10px] uppercase font-bold text-right">Amount ({mainSym})</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">NET Revenue Collected</TableCell><TableCell className="py-2 text-sm font-bold text-right">{sym}{report.netRevenueCollected?.toLocaleString() ?? 0}</TableCell></TableRow>
-                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">Committed NET Revenue</TableCell><TableCell className="py-2 text-sm font-bold text-right">{sym}{report.committedNetRevenue?.toLocaleString() ?? 0}</TableCell></TableRow>
-                                <TableRow className="border-none bg-red-50/30"><TableCell className="py-2 text-sm font-semibold">Revenue Variance</TableCell><TableCell className="py-2 text-sm font-bold text-right text-red-600">-{sym}{report.revenueVariance?.toLocaleString() ?? 0}</TableCell></TableRow>
+                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">NET Revenue Collected</TableCell><TableCell className="py-2 text-sm font-bold text-right">{mainSym}{report.netRevenueCollected?.toLocaleString() ?? 0}</TableCell></TableRow>
+                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">Committed NET Revenue</TableCell><TableCell className="py-2 text-sm font-bold text-right">{mainSym}{report.committedNetRevenue?.toLocaleString() ?? 0}</TableCell></TableRow>
+                                <TableRow className="border-none bg-red-50/30"><TableCell className="py-2 text-sm font-semibold">Revenue Variance</TableCell><TableCell className="py-2 text-sm font-bold text-right text-red-600">-{mainSym}{report.revenueVariance?.toLocaleString() ?? 0}</TableCell></TableRow>
                             </TableBody>
                         </Table>
                     </div>
@@ -163,7 +166,7 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                                     <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
                                     <p className="font-bold flex items-center justify-between">
                                         <span>Serial No. {i + 1}: {m.clientName}</span> 
-                                        <span className="text-primary">{sym}{m.quotationValue?.toLocaleString() ?? 0}</span>
+                                        <span className="text-primary">{getCurrencySymbol(m.currency || report.currency || 'USD')}{m.quotationValue?.toLocaleString() ?? 0}</span>
                                     </p>
                                     <p className="text-muted-foreground text-xs mt-1 leading-relaxed">{m.context || "NIL"}</p>
                                 </div>
@@ -338,6 +341,7 @@ const businessReportSchema = z.object({
   revenueVariance: z.coerce.number().default(0),
   meetingsSecured: z.array(z.object({ 
     clientName: z.string().optional(), 
+    currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("USD"),
     quotationValue: z.coerce.number().min(0).default(0),
     context: z.string().optional()
   })),
@@ -431,7 +435,7 @@ export default function ReportsPage() {
         declaration: false,
         ...(isBusinessUser ? {
             currency: "USD", outreachColdCalls: 0, outreachLinkedIn: 0, outreachEmails: 0, newLeadsGenerated: 0, potentialClients: 0, followUpCount: 0, followUpClients: [],
-            quotationsReleased: 0, netRevenueCollected: 0, committedNetRevenue: 0, pipelineValue: 0, revenueVariance: 0, meetingsSecured: [{ clientName: "", quotationValue: 0, context: "" }],
+            quotationsReleased: 0, netRevenueCollected: 0, committedNetRevenue: 0, pipelineValue: 0, revenueVariance: 0, meetingsSecured: [{ clientName: "", currency: "USD", quotationValue: 0, context: "" }],
             clientWinHighlight: "", strategicLearning: "", meetingsBookedTomorrow: 0, criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None", interventionReason: "",
             bestCallRecording: "", worstCallRecording: ""
         } : {
@@ -524,8 +528,9 @@ export default function ReportsPage() {
     const email = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
     const total = cold + linkedin + email;
     const leads = Number(useWatch({ control: form.control, name: "newLeadsGenerated" }) || 0);
-    const rate = total > 0 ? (leads / total) * 100 : 0;
     
+    // Formula: (New Leads / Total Outreach) * 100. Don't allow negative.
+    const rate = (total > 0 && leads >= 0) ? (leads / total) * 100 : 0;
     const rateColor = rate < 5 ? 'text-red-600' : rate < 15 ? 'text-orange-600' : 'text-green-600';
 
     return (
@@ -584,7 +589,7 @@ export default function ReportsPage() {
                 <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="currency" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs uppercase font-bold">Base Currency</FormLabel>
+                        <FormItem><FormLabel className="text-xs uppercase font-bold">Default Report Currency</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="INR">INR (₹)</SelectItem></SelectContent>
@@ -604,7 +609,7 @@ export default function ReportsPage() {
                     <div className="p-4 bg-muted/10 rounded-2xl border border-dashed mb-4">
                         <FormField control={form.control} name="quotationsReleased" render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs uppercase font-bold text-primary">No. of Quotation Released Today</FormLabel>
+                                <FormLabel className="text-xs uppercase font-bold text-primary">No. of Quotations Released Today</FormLabel>
                                 <FormControl><Input type="number" {...field} className="rounded-full font-bold" /></FormControl>
                             </FormItem>
                         )} />
@@ -617,12 +622,22 @@ export default function ReportsPage() {
                                 <Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)} disabled={meetings.length <= 1}><X className="size-4" /></Button>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial No. {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                                    <FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <FormField control={form.control} name={`meetingsSecured.${index}.currency`} render={({ field }) => (
+                                            <FormItem className="col-span-1"><FormLabel className="text-[10px] uppercase font-bold">Cur</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl>
+                                                    <SelectContent><SelectItem value="USD">$</SelectItem><SelectItem value="EUR">€</SelectItem><SelectItem value="GBP">£</SelectItem><SelectItem value="INR">₹</SelectItem></SelectContent>
+                                                </Select>
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem className="col-span-2"><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                                    </div>
                                 </div>
                                 <FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} />
                             </div>
                         ))}
-                        <Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button>
+                        <Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", currency: "USD", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed">
