@@ -9,11 +9,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, DollarSign, Target, CalendarClock, Brain, ListTodo, Link as LinkIcon, X, Plus, Clock, FileText, AlertCircle, CheckCircle2, Mic, ChevronDown, ChevronUp } from "lucide-react";
+import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, DollarSign, Target, CalendarClock, Brain, ListTodo, Link as LinkIcon, X, Plus, Clock, FileText, AlertCircle, CheckCircle2, Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { format, isSameDay, isAfter, setHours, setMinutes } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, useFirebase, useStorage } from "@/firebase";
 import { collection, query, where, orderBy, doc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
@@ -60,6 +60,7 @@ type Report = {
   potentialClients?: number;
   followUpCount?: number;
   followUpClients?: string[];
+  quotationsReleased?: number;
   netRevenueCollected?: number;
   committedNetRevenue?: number;
   pipelineValue?: number;
@@ -99,6 +100,7 @@ const businessReportSchema = z.object({
   potentialClients: z.coerce.number().min(0).default(0),
   followUpCount: z.coerce.number().min(0).default(0),
   followUpClients: z.array(z.string()).optional(),
+  quotationsReleased: z.coerce.number().min(0).default(0),
   netRevenueCollected: z.coerce.number().min(0).default(0),
   committedNetRevenue: z.coerce.number().min(0).default(0),
   pipelineValue: z.coerce.number().min(0).default(0),
@@ -237,16 +239,24 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-tighter"><Target className="size-3" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-4">
+                    <div className="flex items-center justify-between p-4 bg-primary/5 rounded-xl border border-primary/10 mb-4">
+                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Quotations Released Today</p>
+                        <p className="text-2xl font-black text-primary">{report.quotationsReleased || 0}</p>
+                    </div>
+
                     <div className="space-y-3">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Meetings/Demos & Quotations</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Meetings/Demos Secured</p>
                         <div className="grid gap-3">
                             {Array.isArray(report.meetingsSecured) && report.meetingsSecured.length > 0 && report.meetingsSecured.some(m => m.clientName) ? report.meetingsSecured.map((m, i) => m.clientName ? (
                                 <div key={i} className="p-3 bg-white/80 rounded-xl border border-border/50 shadow-sm text-sm relative overflow-hidden">
                                     <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
-                                    <p className="font-bold flex items-center justify-between">{m.clientName} <span className="text-primary">{sym}{m.quotationValue?.toLocaleString() ?? 0}</span></p>
+                                    <p className="font-bold flex items-center justify-between">
+                                        <span>{i + 1}. {m.clientName}</span> 
+                                        <span className="text-primary">{sym}{m.quotationValue?.toLocaleString() ?? 0}</span>
+                                    </p>
                                     <p className="text-muted-foreground text-xs mt-1 leading-relaxed">{m.context || "NIL"}</p>
                                 </div>
-                            ) : null) : <div className="text-muted-foreground/50 italic text-sm p-4 bg-muted/10 rounded-lg text-center border border-dashed">No high-value engagements reported (NIL)</div>}
+                            ) : null) : <div className="text-muted-foreground/50 italic text-sm p-4 bg-muted/10 rounded-lg text-center border border-dashed">No meetings/demos reported (NIL)</div>}
                         </div>
                     </div>
                     
@@ -428,23 +438,17 @@ export default function ReportsPage() {
 
   const resetForm = React.useCallback(() => {
       const now = new Date();
-      // Generate IST Timestamp string
-      const istTimestamp = new Intl.DateTimeFormat('en-GB', { 
-          timeZone: 'Asia/Kolkata', 
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit',
-          hour12: false 
-      }).format(now).replace(',', '');
-      
-      const [d, m, y, h, min, s] = istTimestamp.split(/[\/\s:]/);
-      const formattedIst = `${d}/${m}/${y} | ${h}:${min}:${s} IST`;
+      // IST Formatting
+      const istDate = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric' }).format(now);
+      const istTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(now);
+      const signatureStr = currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${currentUserData.jobTitle} | ${istDate} | ${istTime} IST` : "";
 
       form.reset({
-        signature: currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${currentUserData.jobTitle} | ${formattedIst}` : "",
+        signature: signatureStr,
         declaration: false,
         ...(isBusinessUser ? {
             currency: "USD", outreachColdCalls: 0, outreachLinkedIn: 0, outreachEmails: 0, newLeadsGenerated: 0, potentialClients: 0, followUpCount: 0, followUpClients: [],
-            netRevenueCollected: 0, committedNetRevenue: 0, pipelineValue: 0, revenueVariance: 0, meetingsSecured: [{ clientName: "", quotationValue: 0, context: "" }],
+            quotationsReleased: 0, netRevenueCollected: 0, committedNetRevenue: 0, pipelineValue: 0, revenueVariance: 0, meetingsSecured: [{ clientName: "", quotationValue: 0, context: "" }],
             clientWinHighlight: "", strategicLearning: "", meetingsBookedTomorrow: 0, criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None", interventionReason: "",
             bestCallRecording: "", worstCallRecording: ""
         } : {
@@ -610,18 +614,28 @@ export default function ReportsPage() {
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
+                    <div className="p-4 bg-muted/10 rounded-2xl border border-dashed mb-4">
+                        <FormField control={form.control} name="quotationsReleased" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-xs uppercase font-bold text-primary">No. of Quotation Released Today</FormLabel>
+                                <FormControl><Input type="number" {...field} className="rounded-full font-bold" /></FormControl>
+                            </FormItem>
+                        )} />
+                    </div>
+
                     <div className="space-y-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Meetings/Demos Secured Today:</p>
                         {meetings.map((field, index) => (
                             <div key={field.id} className="p-5 bg-white/50 border rounded-2xl relative group space-y-4 transition-all hover:shadow-md">
                                 <Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)} disabled={meetings.length <= 1}><X className="size-4" /></Button>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Client / Entity Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                                     <FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                                 </div>
-                                <FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Brief Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} />
+                                <FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} />
                             </div>
                         ))}
-                        <Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW ENGAGEMENT RECORD</Button>
+                        <Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed">
