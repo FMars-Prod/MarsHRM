@@ -454,15 +454,10 @@ export default function ReportsPage() {
 
   const submissionConstraints = React.useMemo(() => {
     const now = new Date();
-    const istHourRaw = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
-    const [h, m] = istHourRaw.split(':').map(Number);
-    const totalMinutes = h * 60 + m;
-    
-    // Deadline: 18:45 IST (6:45 PM)
-    const deadlineMinutes = 18 * 60 + 45;
-    const isDeadlinePassed = totalMinutes >= deadlineMinutes;
+    // Deadline temporarily removed as requested
+    const isDeadlinePassed = false;
     const hasSubmittedToday = reports?.some(r => isSameDay(r.date.toDate(), now)) || false;
-    return { isDeadlinePassed, hasSubmittedToday, canSubmit: !isDeadlinePassed && !hasSubmittedToday };
+    return { isDeadlinePassed, hasSubmittedToday, canSubmit: !hasSubmittedToday };
   }, [reports]);
 
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
@@ -797,21 +792,11 @@ export default function ReportsPage() {
         {!isAdmin && (
             <Button onClick={() => setIsAddDialogOpen(true)} disabled={!submissionConstraints.canSubmit} className={cn("rounded-full h-11 px-6 shadow-lg transition-all active:scale-95", !submissionConstraints.canSubmit ? "bg-muted text-muted-foreground border-none cursor-not-allowed opacity-50" : "bg-primary hover:bg-primary/90")}>
                 <PlusCircle className="mr-2 h-4 w-4"/> 
-                {submissionConstraints.hasSubmittedToday ? "Submission Complete" : submissionConstraints.isDeadlinePassed ? "Deadline Passed (6:45 PM)" : "Add Daily Report"}
+                {submissionConstraints.hasSubmittedToday ? "Submission Complete" : "Add Daily Report"}
             </Button>
         )}
       </PageHeader>
       
-      {!isAdmin && !submissionConstraints.canSubmit && (
-          <Alert variant="destructive" className="mb-8 animate-fade-in-up border-orange-200 bg-orange-50/50 text-orange-900 rounded-2xl py-6">
-              <AlertCircle className="h-5 w-5 text-orange-600" />
-              <div className="ml-2">
-                <AlertTitle className="font-black uppercase tracking-tighter">Report Restriction Policy</AlertTitle>
-                <AlertDescription className="text-sm font-medium opacity-80">{submissionConstraints.hasSubmittedToday ? "You have already fulfilled your reporting requirement for today. Thank you!" : "The 6:45 PM IST submission deadline has passed."}</AlertDescription>
-              </div>
-          </Alert>
-      )}
-
       {isAdmin ? (
         <>
           <div className="flex flex-col sm:flex-row gap-4 mb-6"><div className="relative flex-1"><Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Search member by name..." className="pl-10 h-12 rounded-2xl shadow-sm border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>
