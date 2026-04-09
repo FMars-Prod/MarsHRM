@@ -805,8 +805,8 @@ export default function ReportsPage() {
                 <AccordionItem value={r.id} key={r.id} className="border-none">
                     <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white/80 shadow-sm bg-white/50 ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none data-[state=open]:ring-primary/20">
                         <div className="flex-1 text-left flex items-center justify-between">
-                            <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Professional Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{format(r.date.toDate(), "PPPP")}</p></div>
-                            <div className="mr-4 text-right hidden sm:block"><p className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Submitted</p><p className="text-xs font-mono font-bold">{format(r.date.toDate(), "p")}</p></div>
+                            <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Professional Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{format(r.date.toDate(), "PPPP")} (IST)</p></div>
+                            <div className="mr-4 text-right hidden sm:block"><p className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Submitted</p><p className="text-xs font-mono font-bold">{new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(r.date.toDate())} IST</p></div>
                         </div>
                     </AccordionTrigger>
                     <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white/30 space-y-6 ring-1 ring-border/50 shadow-lg mt-[-1px]">
@@ -828,7 +828,7 @@ export default function ReportsPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily {currentReportType} Submission</DialogTitle>
-                                <DialogDescription className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{format(new Date(), "PPPP")}</DialogDescription>
+                                <DialogDescription className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{format(new Date(), "PPPP")} (IST)</DialogDescription>
                             </div>
                             <div className="text-right hidden sm:block">
                                 <p className="text-[10px] font-black text-muted-foreground uppercase">Deadline</p>
@@ -883,8 +883,8 @@ export default function ReportsPage() {
                             <AccordionItem value={r.id} key={r.id} className="border-none">
                                 <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:ring-primary/20 data-[state=open]:rounded-b-none">
                                     <div className="flex-1 text-left flex items-center justify-between">
-                                        <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{format(r.date.toDate(), "PPPP")}</p></div>
-                                        <Badge variant="secondary" className="mr-4 text-[10px] font-black bg-muted/50 uppercase tracking-tighter">{format(r.date.toDate(), "p")}</Badge>
+                                        <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{format(r.date.toDate(), "PPPP")} (IST)</p></div>
+                                        <Badge variant="secondary" className="mr-4 text-[10px] font-black bg-muted/50 uppercase tracking-tighter">{new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(r.date.toDate())} IST</Badge>
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]">
