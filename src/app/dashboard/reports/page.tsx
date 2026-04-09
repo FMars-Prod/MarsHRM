@@ -554,7 +554,7 @@ export default function ReportsPage() {
       outreachTotal: isBusinessUser ? outreach : undefined,
       employeeId: user.uid,
       employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
-      employeeDepartment: currentUserData.department || (isBusinessUser ? 'Business' : 'Technical'),
+      employeeDepartment: currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL'),
       date: new Date(),
       reportType: currentReportType,
     };
