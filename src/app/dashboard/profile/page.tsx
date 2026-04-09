@@ -262,6 +262,7 @@ export default function ProfilePage() {
 
     const employeeAvatar = (employee as any)?.avatar;
     const isWfh = (employee as any)?.isWfhAllowed;
+    const employmentType = (employee as any)?.employmentType || "Intern";
 
     return (
         <>
@@ -315,12 +316,15 @@ export default function ProfilePage() {
                              <div className="mt-4 space-y-2">
                                 <CardTitle className="font-headline text-2xl">{(employee as any).firstName} {(employee as any).lastName}</CardTitle>
                                 <CardDescription>{(employee as any).jobTitle}</CardDescription>
-                                {isWfh && (
-                                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none font-semibold px-3 py-1 gap-1">
-                                        <Home className="h-3 w-3" />
-                                        Work From Home
-                                    </Badge>
-                                )}
+                                <div className="flex flex-wrap justify-center gap-2 mt-2">
+                                    <Badge variant="outline" className="font-semibold">{employmentType}</Badge>
+                                    {isWfh && (
+                                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none font-semibold px-3 py-1 gap-1">
+                                            <Home className="h-3 w-3" />
+                                            Work From Home
+                                        </Badge>
+                                    )}
+                                </div>
                              </div>
                         </CardHeader>
                         <CardContent>
@@ -455,6 +459,10 @@ export default function ProfilePage() {
                                     <p className="text-sm font-medium text-muted-foreground">Role</p>
                                     <p className="font-semibold">{(employee as any).role}</p>
                                 </div>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Employment Type</p>
+                                <p className="font-semibold">{employmentType}</p>
                             </div>
                         </CardContent>
                     </Card>

@@ -36,6 +36,11 @@
           "type": "string",
           "description": "The department the employee belongs to."
         },
+        "employmentType": {
+          "type": "string",
+          "enum": ["Intern", "Employee"],
+          "description": "The type of employment."
+        },
         "dateOfBirth": {
           "type": "string",
           "description": "Date of birth of the employee.",
@@ -555,6 +560,11 @@
         "role": {
           "type": "string",
           "description": "Role of the user within the system (e.g., Member, Team Lead, HR Manager, CEO/Admin)."
+        },
+        "employmentType": {
+          "type": "string",
+          "enum": ["Intern", "Employee"],
+          "description": "The type of employment."
         }
       },
       "required": [

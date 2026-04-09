@@ -220,7 +220,7 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                 <div className="flex items-center gap-2 font-bold text-primary uppercase tracking-widest text-xs">🖋️ Signature Section</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 text-sm">
                     <div className="space-y-1">
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground">{report.employeeJobTitle?.toLowerCase().includes('intern') ? 'Intern' : 'Employee'} Name</p>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">{(report.employeeEmploymentType || 'Intern') === 'Intern' ? 'Intern' : 'Employee'} Name</p>
                         <p className="font-bold">{report.employeeName || "NIL"}</p>
                     </div>
                     <div className="space-y-1">
@@ -299,7 +299,7 @@ const TechnicalReportDetails = ({ report }: { report: any }) => (
             <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 text-sm">
                     <div className="space-y-1">
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground">{report.employeeJobTitle?.toLowerCase().includes('intern') ? 'Intern' : 'Employee'} Name</p>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">{(report.employeeEmploymentType || 'Intern') === 'Intern' ? 'Intern' : 'Employee'} Name</p>
                         <p className="font-bold">{report.employeeName || "NIL"}</p>
                     </div>
                     <div className="space-y-1">
@@ -510,6 +510,7 @@ export default function ReportsPage() {
       employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
       employeeDepartment: currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL'),
       employeeJobTitle: currentUserData.jobTitle,
+      employeeEmploymentType: currentUserData.employmentType || "Intern",
       date: new Date(),
       reportType: currentReportType,
     };

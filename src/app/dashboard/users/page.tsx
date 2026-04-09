@@ -53,6 +53,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
+type EmploymentType = 'Intern' | 'Employee';
 
 const userSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -61,6 +62,7 @@ const userSchema = z.object({
   phoneNumber: z.string().optional(),
   jobTitle: z.string().min(1, "Job title is required"),
   department: z.string().min(1, "Department is required"),
+  employmentType: z.enum(['Intern', 'Employee']),
   role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/Admin']),
   password: z.string().optional(),
   confirmPassword: z.string().optional(),
@@ -114,6 +116,7 @@ export default function UsersPage() {
       phoneNumber: "",
       jobTitle: "",
       department: "",
+      employmentType: "Intern",
       role: "Member",
       password: "",
       confirmPassword: "",
@@ -134,6 +137,7 @@ export default function UsersPage() {
       phoneNumber: "",
       jobTitle: "",
       department: "",
+      employmentType: "Intern",
       role: "Member",
       password: "",
       confirmPassword: "",
@@ -153,6 +157,7 @@ export default function UsersPage() {
       phoneNumber: userToEdit.phoneNumber || "",
       jobTitle: userToEdit.jobTitle || "",
       department: userToEdit.department || "",
+      employmentType: userToEdit.employmentType || "Intern",
       role: userToEdit.role || "Member",
       password: "",
       confirmPassword: "",
@@ -364,25 +369,42 @@ export default function UsersPage() {
                           <FormItem><FormLabel>Department</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                   </div>
-                  <FormField control={form.control} name="role" render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Role</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={editingUser?.id === currentUser?.uid || !canModify(field.value)}>
-                              <FormControl>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Select a role" />
-                                  </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  <SelectItem value="Member">Member</SelectItem>
-                                  <SelectItem value="Team Lead">Team Lead</SelectItem>
-                                  <SelectItem value="HR Manager">HR Manager</SelectItem>
-                                  {currentUserRole === 'CEO/Admin' && <SelectItem value="CEO/Admin">CEO/Admin</SelectItem>}
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                      </FormItem>
-                  )} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="employmentType" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Employment Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="Intern">Intern</SelectItem>
+                                    <SelectItem value="Employee">Employee</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="role" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Role</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={editingUser?.id === currentUser?.uid || !canModify(field.value)}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a role" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="Member">Member</SelectItem>
+                                    <SelectItem value="Team Lead">Team Lead</SelectItem>
+                                    <SelectItem value="HR Manager">HR Manager</SelectItem>
+                                    {currentUserRole === 'CEO/Admin' && <SelectItem value="CEO/Admin">CEO/Admin</SelectItem>}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                  </div>
                   <FormField
                       control={form.control}
                       name="password"
@@ -444,6 +466,7 @@ export default function UsersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Job Title</TableHead>
               <TableHead>Role</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -451,10 +474,11 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center h-24">Loading users...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center h-24">Loading users...</TableCell></TableRow>
             ) : users?.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
+                <TableCell><Badge variant="secondary">{user.employmentType || "Intern"}</Badge></TableCell>
                 <TableCell>{user.jobTitle}</TableCell>
                 <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
                 <TableCell className="text-right">
