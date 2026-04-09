@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, DollarSign, Target, CalendarClock, Brain, ListTodo, Link as LinkIcon, X, Plus, Clock, FileText, AlertCircle, CheckCircle2, Mic } from "lucide-react";
+import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, Target, CalendarClock, Brain, ListTodo, Link as LinkIcon, X, Plus, Clock, FileText, AlertCircle, CheckCircle2, Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -177,7 +177,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-3" /> 2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
                 <CardContent className="pt-4">
                     <div className="border rounded-xl overflow-hidden bg-white/50">
                         <Table>
@@ -227,7 +227,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pt-4 border-t border-border/50">
-                        <ReportDetailItem label="Best Call Recording">
+                        <ReportDetailItem label="Best Call Evidence">
                             {report.bestCallRecording ? (
                                 <div className="flex items-center gap-2 mt-1 p-2 bg-green-50 rounded-lg border border-green-100">
                                     <Mic className="size-3 text-green-600" />
@@ -235,7 +235,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                                 </div>
                             ) : "NIL"}
                         </ReportDetailItem>
-                        <ReportDetailItem label="Worst Call Recording">
+                        <ReportDetailItem label="Worst Call Evidence">
                             {report.worstCallRecording ? (
                                 <div className="flex items-center gap-2 mt-1 p-2 bg-red-50 rounded-lg border border-red-100">
                                     <Mic className="size-3 text-red-600" />
@@ -549,12 +549,15 @@ export default function ReportsPage() {
     if (!user || !currentUserData) return;
     setSubmitProgress(10);
     const outreach = Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0);
+    
+    const userDept = currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL');
+
     const payload = {
       ...values,
       outreachTotal: isBusinessUser ? outreach : undefined,
       employeeId: user.uid,
       employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
-      employeeDepartment: currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL'),
+      employeeDepartment: userDept,
       date: new Date(),
       reportType: currentReportType,
     };
@@ -630,7 +633,7 @@ export default function ReportsPage() {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="currency" render={({ field }) => (
                         <FormItem><FormLabel className="text-xs uppercase font-bold">Base Currency</FormLabel>
