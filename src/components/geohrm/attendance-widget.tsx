@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -704,23 +704,49 @@ export function AttendanceWidget() {
             </div>
             
             {/* Milestone Indicators */}
-            <div className="w-full max-w-lg grid grid-cols-3 gap-4 mt-4">
-                <div className={cn("p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2", milestones?.lOut && status === 'break' && autoLunchTriggered ? "bg-yellow-50 border-yellow-200" : "bg-white/50 border-border/50")}>
-                    <Utensils className={cn("size-5", milestones?.lOut && status === 'break' && autoLunchTriggered ? "text-yellow-600" : "text-muted-foreground/50")} />
+            <div className="w-full max-w-2xl grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+                {/* Log In Indicator */}
+                <div className={cn(
+                    "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
+                    status !== 'out' ? "bg-gradient-to-br from-green-500/20 to-green-500/5 border-green-200" : "bg-white/50 border-border/50"
+                )}>
+                    <LogIn className={cn("size-5", status !== 'out' ? "text-green-600" : "text-muted-foreground/50")} />
+                    <div className="text-center">
+                        <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log In</p>
+                        <p className="text-sm font-bold">{lastClockInTime ? format(lastClockInTime, 'p') : '--:--'}</p>
+                    </div>
+                </div>
+
+                {/* L-Out Indicator */}
+                <div className={cn(
+                    "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
+                    status === 'break' ? "bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 border-yellow-200" : "bg-white/50 border-border/50"
+                )}>
+                    <Utensils className={cn("size-5", status === 'break' ? "text-yellow-600" : "text-muted-foreground/50")} />
                     <div className="text-center">
                         <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-Out</p>
                         <p className="text-sm font-bold">{milestones?.lOut ? format(milestones.lOut, 'p') : '--:--'}</p>
                     </div>
                 </div>
-                <div className={cn("p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2", milestones?.lIn && status === 'in' && autoLunchTriggered ? "bg-blue-50 border-blue-200" : "bg-white/50 border-border/50")}>
-                    <Clock className={cn("size-5", milestones?.lIn && status === 'in' && autoLunchTriggered ? "text-blue-600" : "text-muted-foreground/50")} />
+
+                {/* L-In Indicator */}
+                <div className={cn(
+                    "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
+                    status === 'in' && autoLunchTriggered ? "bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-blue-200" : "bg-white/50 border-border/50"
+                )}>
+                    <Clock className={cn("size-5", status === 'in' && autoLunchTriggered ? "text-blue-600" : "text-muted-foreground/50")} />
                     <div className="text-center">
                         <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-In</p>
                         <p className="text-sm font-bold">{milestones?.lIn ? format(milestones.lIn, 'p') : '--:--'}</p>
                     </div>
                 </div>
-                <div className={cn("p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2", hasClockedOutToday ? "bg-green-50 border-green-200" : "bg-white/50 border-border/50")}>
-                    <LogOut className={cn("size-5", hasClockedOutToday ? "text-green-600" : "text-muted-foreground/50")} />
+
+                {/* Log-out Indicator */}
+                <div className={cn(
+                    "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
+                    hasClockedOutToday ? "bg-gradient-to-br from-purple-500/20 to-purple-500/5 border-purple-200" : "bg-white/50 border-border/50"
+                )}>
+                    <LogOut className={cn("size-5", hasClockedOutToday ? "text-purple-600" : "text-muted-foreground/50")} />
                     <div className="text-center">
                         <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log-out</p>
                         <p className="text-sm font-bold">{milestones?.logout ? format(milestones.logout, 'p') : '--:--'}</p>
