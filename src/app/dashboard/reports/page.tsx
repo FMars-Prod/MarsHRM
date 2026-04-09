@@ -89,59 +89,20 @@ type Report = {
 
 type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; department?: string; };
 
-// --- Schemas ---
+// --- Helpers ---
 
-const businessReportSchema = z.object({
-  currency: z.enum(["USD", "EUR", "GBP", "INR"]),
-  outreachColdCalls: z.coerce.number().min(0).default(0),
-  outreachLinkedIn: z.coerce.number().min(0).default(0),
-  outreachEmails: z.coerce.number().min(0).default(0),
-  newLeadsGenerated: z.coerce.number().min(0).default(0),
-  potentialClients: z.coerce.number().min(0).default(0),
-  followUpCount: z.coerce.number().min(0).default(0),
-  followUpClients: z.array(z.string()).optional(),
-  quotationsReleased: z.coerce.number().min(0).default(0),
-  netRevenueCollected: z.coerce.number().min(0).default(0),
-  committedNetRevenue: z.coerce.number().min(0).default(0),
-  pipelineValue: z.coerce.number().min(0).default(0),
-  revenueVariance: z.coerce.number().default(0),
-  meetingsSecured: z.array(z.object({ 
-    clientName: z.string().optional(), 
-    quotationValue: z.coerce.number().min(0).default(0),
-    context: z.string().optional()
-  })),
-  clientWinHighlight: z.string().optional(),
-  strategicLearning: z.string().optional(),
-  meetingsBookedTomorrow: z.coerce.number().min(0).default(0),
-  criticalPathTomorrow: z.string().optional(),
-  pendingDeliverables: z.string().optional(),
-  interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]),
-  interventionReason: z.string().optional(),
-  bestCallRecording: z.string().optional(),
-  worstCallRecording: z.string().optional(),
-  declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Required" }) }),
-  signature: z.string().min(1, "Signature is required."),
-});
-
-const technicalReportSchema = z.object({
-  logInTime: z.string().min(1, "Required"),
-  logOutTime: z.string().min(1, "Required"),
-  tasksAssigned: z.array(z.object({ value: z.string() })),
-  completedTasks: z.array(z.object({ 
-    moduleName: z.string(), 
-    workDone: z.string() 
-  })),
-  repoLinks: z.array(z.object({ value: z.string() })),
-  workInProgress: z.array(z.object({ value: z.string() })),
-  pendingTasks: z.array(z.object({ value: z.string() })),
-  whatILearned: z.array(z.object({ value: z.string() })),
-  challengesFaced: z.array(z.object({ value: z.string() })),
-  nextSteps: z.array(z.object({ value: z.string() })),
-  declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Required" }) }),
-  signature: z.string().min(1, "Signature is required."),
-});
-
-// --- Helper Components ---
+const formatIST = (date: Date) => {
+    return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).format(date).replace(',', ' |') + " IST";
+};
 
 const ReportDetailItem = ({ label, value, children, className }: { label: string, value?: React.ReactNode, children?: React.ReactNode, className?: string }) => (
   <div className={cn("space-y-1.5", className)}>
@@ -319,7 +280,9 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                     </div>
                     <div className="space-y-1">
                         <p className="text-[10px] uppercase font-bold text-muted-foreground">Timestamp (IST)</p>
-                        <p className="font-mono text-xs font-semibold bg-white/50 px-2 py-1 rounded inline-block">{report.signature?.split(' | ').pop() || "NIL"}</p>
+                        <p className="font-mono text-xs font-semibold bg-white/50 px-2 py-1 rounded inline-block">
+                            {report.date ? formatIST(report.date.toDate()) : "NIL"}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -377,16 +340,89 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
         </div>
 
         <div className="pt-8 border-t border-dashed space-y-6">
-            <p className="text-sm italic font-medium text-muted-foreground px-2">Thank you.</p>
+            <div className="px-2">
+                <p className="text-sm italic font-medium text-muted-foreground">Thank you.</p>
+            </div>
             <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-                <ReportDetailItem label="Verified Digital Signature" value={report.signature || "NIL"} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 text-sm">
+                    <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Intern Name</p>
+                        <p className="font-bold">{report.employeeName || "NIL"}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Department</p>
+                        <p className="font-bold">{report.employeeDepartment || "NIL"}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">E-Signature Status</p>
+                        <p className="text-green-600 font-bold flex items-center gap-1.5"><CheckCircle2 className="size-4" /> ✅ Verified Identity</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Timestamp (IST)</p>
+                        <p className="font-mono text-xs font-semibold bg-white/50 px-2 py-1 rounded inline-block">
+                            {report.date ? formatIST(report.date.toDate()) : "NIL"}
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </CardContent>
   </Card>
 );
 
-// --- Page ---
+// --- Schemas ---
+
+const businessReportSchema = z.object({
+  currency: z.enum(["USD", "EUR", "GBP", "INR"]),
+  outreachColdCalls: z.coerce.number().min(0).default(0),
+  outreachLinkedIn: z.coerce.number().min(0).default(0),
+  outreachEmails: z.coerce.number().min(0).default(0),
+  newLeadsGenerated: z.coerce.number().min(0).default(0),
+  potentialClients: z.coerce.number().min(0).default(0),
+  followUpCount: z.coerce.number().min(0).default(0),
+  followUpClients: z.array(z.string()).optional(),
+  quotationsReleased: z.coerce.number().min(0).default(0),
+  netRevenueCollected: z.coerce.number().min(0).default(0),
+  committedNetRevenue: z.coerce.number().min(0).default(0),
+  pipelineValue: z.coerce.number().min(0).default(0),
+  revenueVariance: z.coerce.number().default(0),
+  meetingsSecured: z.array(z.object({ 
+    clientName: z.string().optional(), 
+    quotationValue: z.coerce.number().min(0).default(0),
+    context: z.string().optional()
+  })),
+  clientWinHighlight: z.string().optional(),
+  strategicLearning: z.string().optional(),
+  meetingsBookedTomorrow: z.coerce.number().min(0).default(0),
+  criticalPathTomorrow: z.string().optional(),
+  pendingDeliverables: z.string().optional(),
+  interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]),
+  interventionReason: z.string().optional(),
+  bestCallRecording: z.string().optional(),
+  worstCallRecording: z.string().optional(),
+  declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Required" }) }),
+  signature: z.string().min(1, "Signature is required."),
+});
+
+const technicalReportSchema = z.object({
+  logInTime: z.string().min(1, "Required"),
+  logOutTime: z.string().min(1, "Required"),
+  tasksAssigned: z.array(z.object({ value: z.string() })),
+  completedTasks: z.array(z.object({ 
+    moduleName: z.string(), 
+    workDone: z.string() 
+  })),
+  repoLinks: z.array(z.object({ value: z.string() })),
+  workInProgress: z.array(z.object({ value: z.string() })),
+  pendingTasks: z.array(z.object({ value: z.string() })),
+  whatILearned: z.array(z.object({ value: z.string() })),
+  challengesFaced: z.array(z.object({ value: z.string() })),
+  nextSteps: z.array(z.object({ value: z.string() })),
+  declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Required" }) }),
+  signature: z.string().min(1, "Signature is required."),
+});
+
+// --- Main Page Component ---
 
 export default function ReportsPage() {
   const { user } = useFirebase();
@@ -438,10 +474,8 @@ export default function ReportsPage() {
 
   const resetForm = React.useCallback(() => {
       const now = new Date();
-      // IST Formatting
-      const istDate = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric' }).format(now);
-      const istTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(now);
-      const signatureStr = currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${currentUserData.jobTitle} | ${istDate} | ${istTime} IST` : "";
+      const istTimestamp = formatIST(now);
+      const signatureStr = currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${currentUserData.jobTitle} | ${istTimestamp}` : "";
 
       form.reset({
         signature: signatureStr,
@@ -466,7 +500,9 @@ export default function ReportsPage() {
 
   const submissionConstraints = React.useMemo(() => {
     const now = new Date();
-    const isDeadlinePassed = now.getHours() >= 18;
+    const istHour = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false }).format(now));
+    
+    const isDeadlinePassed = istHour >= 18;
     const hasSubmittedToday = reports?.some(r => isSameDay(r.date.toDate(), now)) || false;
     return { isDeadlinePassed, hasSubmittedToday, canSubmit: !isDeadlinePassed && !hasSubmittedToday };
   }, [reports]);
@@ -518,7 +554,7 @@ export default function ReportsPage() {
       outreachTotal: isBusinessUser ? outreach : undefined,
       employeeId: user.uid,
       employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
-      employeeDepartment: currentUserData.department || (isBusinessUser ? 'Sales-BD' : 'Engineering'),
+      employeeDepartment: currentUserData.department || (isBusinessUser ? 'Business' : 'Technical'),
       date: new Date(),
       reportType: currentReportType,
     };
@@ -805,8 +841,8 @@ export default function ReportsPage() {
                 <AccordionItem value={r.id} key={r.id} className="border-none">
                     <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white/80 shadow-sm bg-white/50 ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none data-[state=open]:ring-primary/20">
                         <div className="flex-1 text-left flex items-center justify-between">
-                            <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Professional Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{format(r.date.toDate(), "PPPP")} (IST)</p></div>
-                            <div className="mr-4 text-right hidden sm:block"><p className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Submitted</p><p className="text-xs font-mono font-bold">{new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(r.date.toDate())} IST</p></div>
+                            <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Professional Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
+                            <div className="mr-4 text-right hidden sm:block"><p className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Status</p><p className="text-xs font-mono font-bold text-green-600">✅ Submitted</p></div>
                         </div>
                     </AccordionTrigger>
                     <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white/30 space-y-6 ring-1 ring-border/50 shadow-lg mt-[-1px]">
@@ -828,7 +864,7 @@ export default function ReportsPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily {currentReportType} Submission</DialogTitle>
-                                <DialogDescription className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{format(new Date(), "PPPP")} (IST)</DialogDescription>
+                                <DialogDescription className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{formatIST(new Date())}</DialogDescription>
                             </div>
                             <div className="text-right hidden sm:block">
                                 <p className="text-[10px] font-black text-muted-foreground uppercase">Deadline</p>
@@ -883,8 +919,8 @@ export default function ReportsPage() {
                             <AccordionItem value={r.id} key={r.id} className="border-none">
                                 <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:ring-primary/20 data-[state=open]:rounded-b-none">
                                     <div className="flex-1 text-left flex items-center justify-between">
-                                        <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{format(r.date.toDate(), "PPPP")} (IST)</p></div>
-                                        <Badge variant="secondary" className="mr-4 text-[10px] font-black bg-muted/50 uppercase tracking-tighter">{new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(r.date.toDate())} IST</Badge>
+                                        <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
+                                        <Badge variant="secondary" className="mr-4 text-[10px] font-black bg-muted/50 uppercase tracking-tighter">✅ SUBMITTED</Badge>
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]">
