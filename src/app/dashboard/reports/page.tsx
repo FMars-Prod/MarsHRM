@@ -41,54 +41,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// --- Types ---
-
-type Report = { 
-  id: string; 
-  employeeId: string;
-  employeeName?: string;
-  employeeDepartment?: string;
-  date: any; 
-  reportType: 'Business' | 'Technical';
-  signature: string;
-  currency?: 'USD' | 'EUR' | 'GBP' | 'INR';
-  outreachTotal?: number;
-  outreachColdCalls?: number;
-  outreachLinkedIn?: number;
-  outreachEmails?: number;
-  newLeadsGenerated?: number;
-  potentialClients?: number;
-  followUpCount?: number;
-  followUpClients?: string[];
-  quotationsReleased?: number;
-  netRevenueCollected?: number;
-  committedNetRevenue?: number;
-  pipelineValue?: number;
-  revenueVariance?: number;
-  meetingsSecured?: { clientName: string, quotationValue: number, context: string }[];
-  clientWinHighlight?: string;
-  strategicLearning?: string;
-  meetingsBookedTomorrow?: number;
-  criticalPathTomorrow?: string;
-  pendingDeliverables?: string;
-  interventionTrigger?: string;
-  interventionReason?: string;
-  bestCallRecording?: string;
-  worstCallRecording?: string;
-  logInTime?: string;
-  logOutTime?: string;
-  tasksAssigned?: { value: string }[];
-  completedTasks?: { moduleName: string, workDone: string }[];
-  repoLinks?: { value: string }[];
-  workInProgress?: { value: string }[];
-  pendingTasks?: { value: string }[];
-  whatILearned?: { value: string }[];
-  challengesFaced?: { value: string }[];
-  nextSteps?: { value: string }[];
-};
-
-type UserData = { id: string; firstName: string; lastName: string; jobTitle: string; role: string; department?: string; };
-
 // --- Helpers ---
 
 const formatIST = (date: Date) => {
@@ -124,7 +76,7 @@ const ChipDisplay = ({ items }: { items?: { value: string }[] }) => {
     );
 };
 
-const BusinessReportDetails = ({ report }: { report: Report }) => {
+const BusinessReportDetails = ({ report }: { report: any }) => {
     const currencySymbol: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
     const sym = currencySymbol[report.currency || 'USD'];
     const outreach = Number(report.outreachTotal || 0);
@@ -167,12 +119,10 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                         <div className="space-y-2">
                             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clients Followed Up:</p>
                             <div className="flex flex-wrap gap-2">
-                                {report.followUpClients.map((c, i) => <Badge key={i} variant="outline" className="bg-white">{c}</Badge>)}
+                                {report.followUpClients.map((c: string, i: number) => <Badge key={i} variant="outline" className="bg-white">{c}</Badge>)}
                             </div>
                         </div>
-                    ) : (
-                        <ReportDetailItem label="Follow-ups" value="NIL" />
-                    )}
+                    ) : null}
                 </CardContent>
             </Card>
 
@@ -208,11 +158,11 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                     <div className="space-y-3">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Meetings/Demos Secured Today:</p>
                         <div className="grid gap-3">
-                            {Array.isArray(report.meetingsSecured) && report.meetingsSecured.length > 0 && report.meetingsSecured.some(m => m.clientName) ? report.meetingsSecured.map((m, i) => m.clientName ? (
+                            {Array.isArray(report.meetingsSecured) && report.meetingsSecured.length > 0 && report.meetingsSecured.some((m: any) => m.clientName) ? report.meetingsSecured.map((m: any, i: number) => m.clientName ? (
                                 <div key={i} className="p-3 bg-white/80 rounded-xl border border-border/50 shadow-sm text-sm relative overflow-hidden">
                                     <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
                                     <p className="font-bold flex items-center justify-between">
-                                        <span>{i + 1}. {m.clientName}</span> 
+                                        <span>Serial No. {i + 1}: {m.clientName}</span> 
                                         <span className="text-primary">{sym}{m.quotationValue?.toLocaleString() ?? 0}</span>
                                     </p>
                                     <p className="text-muted-foreground text-xs mt-1 leading-relaxed">{m.context || "NIL"}</p>
@@ -267,7 +217,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                 <div className="flex items-center gap-2 font-bold text-primary uppercase tracking-widest text-xs">🖋️ Signature Section</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 text-sm">
                     <div className="space-y-1">
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Intern Name</p>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">{report.employeeJobTitle?.toLowerCase().includes('intern') ? 'Intern' : 'Employee'} Name</p>
                         <p className="font-bold">{report.employeeName || "NIL"}</p>
                     </div>
                     <div className="space-y-1">
@@ -290,7 +240,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
     );
 };
 
-const TechnicalReportDetails = ({ report }: { report: Report }) => (
+const TechnicalReportDetails = ({ report }: { report: any }) => (
   <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
     <CardContent className="space-y-6 pt-8 text-sm">
         <div className="space-y-1 p-4 bg-muted/10 rounded-xl border border-dashed">
@@ -305,9 +255,9 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
         <Card className="bg-white/50 border-none shadow-none ring-1 ring-border/50">
             <CardHeader className="py-3 px-4"><CardTitle className="text-xs font-bold text-primary uppercase tracking-widest">Tasks Assigned for the Day</CardTitle></CardHeader>
             <CardContent className="px-4 pb-4">
-                {Array.isArray(report.tasksAssigned) && report.tasksAssigned.length > 0 && report.tasksAssigned.some(t => t.value) ? (
+                {Array.isArray(report.tasksAssigned) && report.tasksAssigned.length > 0 && report.tasksAssigned.some((t:any) => t.value) ? (
                     <ul className="list-disc pl-5 space-y-2">
-                        {report.tasksAssigned.map((t, i) => t.value ? <li key={i} className="text-sm font-medium">{t.value}</li> : null)}
+                        {report.tasksAssigned.map((t:any, i:number) => t.value ? <li key={i} className="text-sm font-medium">{t.value}</li> : null)}
                     </ul>
                 ) : <span className="text-muted-foreground/50 italic">NIL</span>}
             </CardContent>
@@ -316,7 +266,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
         <div className="space-y-4">
             <p className="font-bold text-xs text-primary uppercase tracking-widest px-2">Tasks Completed Today:</p>
             <div className="grid gap-4">
-                {Array.isArray(report.completedTasks) && report.completedTasks.length > 0 && report.completedTasks.some(t => t.moduleName) ? report.completedTasks.map((task, i) => task.moduleName ? (
+                {Array.isArray(report.completedTasks) && report.completedTasks.length > 0 && report.completedTasks.some((t:any) => t.moduleName) ? report.completedTasks.map((task:any, i:number) => task.moduleName ? (
                     <div key={i} className="p-4 bg-white/80 rounded-2xl border border-border/50 shadow-sm relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20" />
                         <p className="font-bold text-sm text-foreground">{i + 1}. {task.moduleName}</p>
@@ -346,7 +296,7 @@ const TechnicalReportDetails = ({ report }: { report: Report }) => (
             <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 text-sm">
                     <div className="space-y-1">
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Intern Name</p>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">{report.employeeJobTitle?.toLowerCase().includes('intern') ? 'Intern' : 'Employee'} Name</p>
                         <p className="font-bold">{report.employeeName || "NIL"}</p>
                     </div>
                     <div className="space-y-1">
@@ -430,31 +380,30 @@ export default function ReportsPage() {
   const storage = useStorage();
   const { toast } = useToast();
   
-  const [selectedUser, setSelectedUser] = React.useState<UserData | null>(null);
+  const [selectedUser, setSelectedUser] = React.useState<any | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [submitProgress, setSubmitProgress] = React.useState(0);
   const [uploadProgress, setUploadProgress] = React.useState<{ [key: string]: number }>({});
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
-  const { data: currentUserData } = useDoc<UserData>(userDocRef);
+  const { data: currentUserData } = useDoc<any>(userDocRef);
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
 
   const currentReportType = React.useMemo(() => {
     const title = (currentUserData?.jobTitle || '').toUpperCase();
-    if (title.includes("TECHNICAL SUPPORT INTERN")) return 'Technical';
-    if (title.includes("BUSINESS EXECUTIVE INTERN")) return 'Business';
-    return 'Technical';
+    if (title.includes("TECHNICAL")) return 'Technical';
+    return 'Business';
   }, [currentUserData?.jobTitle]);
 
   const isBusinessUser = currentReportType === 'Business';
 
   const usersQuery = useMemoFirebase(() => isAdmin ? query(collection(firestore, "users")) : null, [firestore, isAdmin]);
-  const { data: usersData, isLoading: areUsersLoading } = useCollection<UserData>(usersQuery);
+  const { data: usersData, isLoading: areUsersLoading } = useCollection<any>(usersQuery);
 
   const reportUserId = isAdmin ? selectedUser?.id : user?.uid;
   const reportsQuery = useMemoFirebase(() => reportUserId ? query(collection(firestore, `users/${reportUserId}/reports`), orderBy('date', 'desc')) : null, [firestore, reportUserId]);
-  const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
+  const { data: reports, isLoading: areReportsLoading } = useCollection<any>(reportsQuery);
   
   const attendanceQuery = useMemoFirebase(() => {
       if (!user) return null;
@@ -532,7 +481,7 @@ export default function ReportsPage() {
     );
   };
 
-  const handleDeleteReport = async (report: Report) => {
+  const handleDeleteReport = async (report: any) => {
     if (!isAdmin || !reportUserId) return;
     try {
       await deleteDoc(doc(firestore, `users/${reportUserId}/reports`, report.id));
@@ -550,14 +499,13 @@ export default function ReportsPage() {
     setSubmitProgress(10);
     const outreach = Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0);
     
-    const userDept = currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL');
-
     const payload = {
       ...values,
       outreachTotal: isBusinessUser ? outreach : undefined,
       employeeId: user.uid,
       employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
-      employeeDepartment: userDept,
+      employeeDepartment: currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL'),
+      employeeJobTitle: currentUserData.jobTitle,
       date: new Date(),
       reportType: currentReportType,
     };
@@ -668,7 +616,7 @@ export default function ReportsPage() {
                             <div key={field.id} className="p-5 bg-white/50 border rounded-2xl relative group space-y-4 transition-all hover:shadow-md">
                                 <Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)} disabled={meetings.length <= 1}><X className="size-4" /></Button>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial No. {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                                     <FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                                 </div>
                                 <FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} />
@@ -815,7 +763,7 @@ export default function ReportsPage() {
 
   return (
     <>
-      <PageHeader title={isAdmin ? "Organization Reports" : "My Daily Submissions"} description={isAdmin ? "Comprehensive daily summaries from all team members." : "Submit your professional daily report below."}>
+      <PageHeader title={isAdmin ? "Organization Reports" : "My Daily Submissions"} description={isAdmin ? "Review submissions from Interns and Employees." : "Standardized professional reporting."}>
         {!isAdmin && (
             <Button onClick={() => setIsAddDialogOpen(true)} disabled={!submissionConstraints.canSubmit} className={cn("rounded-full h-11 px-6 shadow-lg transition-all active:scale-95", !submissionConstraints.canSubmit ? "bg-muted text-muted-foreground border-none cursor-not-allowed opacity-50" : "bg-primary hover:bg-primary/90")}>
                 <PlusCircle className="mr-2 h-4 w-4"/> 
@@ -829,34 +777,30 @@ export default function ReportsPage() {
               <AlertCircle className="h-5 w-5 text-orange-600" />
               <div className="ml-2">
                 <AlertTitle className="font-black uppercase tracking-tighter">Report Restriction Policy</AlertTitle>
-                <AlertDescription className="text-sm font-medium opacity-80">{submissionConstraints.hasSubmittedToday ? "You have already fulfilled your reporting requirement for today. Thank you!" : "The 6:00 PM (18:00) IST submission deadline has passed. Reports must be submitted within standard working hours."}</AlertDescription>
+                <AlertDescription className="text-sm font-medium opacity-80">{submissionConstraints.hasSubmittedToday ? "You have already fulfilled your reporting requirement for today. Thank you!" : "The 6:00 PM IST submission deadline has passed."}</AlertDescription>
               </div>
           </Alert>
       )}
 
       {isAdmin ? (
         <>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6"><div className="relative flex-1"><Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Search employee by name..." className="pl-10 h-12 rounded-2xl shadow-sm border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>
-          <div className="border rounded-2xl overflow-hidden shadow-sm bg-white/50 ring-1 ring-border/50"><Table><TableHeader className="bg-muted/30"><TableRow className="hover:bg-transparent border-border/50"><TableHead className="font-black uppercase tracking-tighter text-[10px]">Employee Name</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px]">Current Job Title</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px] text-right">Action</TableHead></TableRow></TableHeader><TableBody>{areUsersLoading ? (<TableRow><TableCell colSpan={3} className="h-32 text-center text-muted-foreground animate-pulse font-medium">Scanning employee database...</TableCell></TableRow>) : filteredUsers?.length === 0 ? (<TableRow><TableCell colSpan={3} className="h-32 text-center text-muted-foreground italic font-normal">No team members match your search.</TableCell></TableRow>) : filteredUsers?.map(u => (<TableRow key={u.id} className="cursor-pointer hover:bg-white/80 transition-colors border-border/50" onClick={() => setSelectedUser(u)}><TableCell className="font-bold py-4">{u.firstName} {u.lastName}</TableCell><TableCell className="py-4 text-muted-foreground font-medium">{u.jobTitle}</TableCell><TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-xs uppercase tracking-tighter h-8 px-4 bg-white">Open Reports</Button></TableCell></TableRow>))}</TableBody></Table></div>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6"><div className="relative flex-1"><Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Search member by name..." className="pl-10 h-12 rounded-2xl shadow-sm border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div></div>
+          <div className="border rounded-2xl overflow-hidden shadow-sm bg-white/50 ring-1 ring-border/50"><Table><TableHeader className="bg-muted/30"><TableRow className="hover:bg-transparent border-border/50"><TableHead className="font-black uppercase tracking-tighter text-[10px]">Name</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px]">Job Title</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px] text-right">Action</TableHead></TableRow></TableHeader><TableBody>{areUsersLoading ? (<TableRow><TableCell colSpan={3} className="h-32 text-center text-muted-foreground animate-pulse font-medium">Scanning employee database...</TableCell></TableRow>) : filteredUsers?.length === 0 ? (<TableRow><TableCell colSpan={3} className="h-32 text-center text-muted-foreground italic font-normal">No team members match your search.</TableCell></TableRow>) : filteredUsers?.map(u => (<TableRow key={u.id} className="cursor-pointer hover:bg-white/80 transition-colors border-border/50" onClick={() => setSelectedUser(u)}><TableCell className="font-bold py-4">{u.firstName} {u.lastName}</TableCell><TableCell className="py-4 text-muted-foreground font-medium">{u.jobTitle}</TableCell><TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-xs uppercase tracking-tighter h-8 px-4 bg-white">Open Reports</Button></TableCell></TableRow>))}</TableBody></Table></div>
         </>
       ) : (
-        <div className="space-y-4">{areReportsLoading ? (<div className="h-48 flex items-center justify-center text-muted-foreground animate-pulse font-medium">Loading submission history...</div>) : reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full space-y-3">{reports.map(r => (
+        <div className="space-y-4">{areReportsLoading ? (<div className="h-48 flex items-center justify-center text-muted-foreground animate-pulse font-medium">Loading history...</div>) : reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full space-y-3">{reports.map(r => (
                 <AccordionItem value={r.id} key={r.id} className="border-none">
                     <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white/80 shadow-sm bg-white/50 ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none data-[state=open]:ring-primary/20">
                         <div className="flex-1 text-left flex items-center justify-between">
-                            <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Professional Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
+                            <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
                             <div className="mr-4 text-right hidden sm:block"><p className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Status</p><p className="text-xs font-mono font-bold text-green-600">✅ Submitted</p></div>
                         </div>
                     </AccordionTrigger>
                     <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white/30 space-y-6 ring-1 ring-border/50 shadow-lg mt-[-1px]">
-                        <div className="flex justify-end gap-2 mb-4">
-                            <Button variant="outline" size="sm" className="rounded-full bg-white text-[10px] font-bold uppercase tracking-widest h-8" onClick={() => toast({ title: "PDF Export Ready" })}><Download className="h-3 w-3 mr-2" />Export PDF</Button>
-                            <Button variant="outline" size="sm" className="rounded-full bg-white text-[10px] font-bold uppercase tracking-widest h-8" onClick={() => toast({ title: "Shared via Email" })}><Mail className="h-3 w-3 mr-2" />Share Email</Button>
-                        </div>
                         {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}
                     </AccordionContent>
                 </AccordionItem>
-              ))}</Accordion>) : <div className="h-64 flex flex-col items-center justify-center text-muted-foreground p-10 bg-muted/10 rounded-3xl border border-dashed"><FileText className="size-10 mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-xs opacity-50">No reports found in history.</p></div>}</div>
+              ))}</Accordion>) : <div className="h-64 flex flex-col items-center justify-center text-muted-foreground p-10 bg-muted/10 rounded-3xl border border-dashed"><FileText className="size-10 mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-xs opacity-50">No reports found.</p></div>}</div>
       )}
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -864,21 +808,12 @@ export default function ReportsPage() {
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 bg-secondary/30">
                     <DialogHeader className="p-8 pb-6 border-b bg-white/80 backdrop-blur-md">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily {currentReportType} Submission</DialogTitle>
-                                <DialogDescription className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{formatIST(new Date())}</DialogDescription>
-                            </div>
-                            <div className="text-right hidden sm:block">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase">Deadline</p>
-                                <p className="text-xs font-black text-red-600 uppercase">18:00 IST</p>
-                            </div>
-                        </div>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily {currentReportType} Submission</DialogTitle>
+                        <DialogDescription className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{formatIST(new Date())}</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10 max-w-4xl mx-auto">
                             {isBusinessUser ? <BusinessFormFields /> : <TechnicalFormFields />}
-                            
                             <div className="pt-10 border-t border-dashed space-y-6">
                                 <FormField control={form.control} name="signature" render={({ field }) => (
                                     <FormItem><FormLabel className="text-xs font-black uppercase tracking-[0.2em] text-primary">Digital Identity Verification (Locked)</FormLabel><FormControl><Input {...field} readOnly className="bg-muted/50 font-mono text-[10px] h-12 rounded-xl border-none ring-1 ring-border/50 cursor-not-allowed font-bold" /></FormControl></FormItem>
@@ -886,16 +821,15 @@ export default function ReportsPage() {
                                 <FormField control={form.control} name="declaration" render={({ field }) => (
                                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20 shadow-sm">
                                         <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5 rounded-md" /></FormControl>
-                                        <div className="space-y-1 leading-none"><FormLabel className="text-sm font-bold leading-relaxed cursor-pointer">I hereby certify that all information provided in this daily summary is accurate, verified, and complete according to organizational standards.</FormLabel></div>
+                                        <div className="space-y-1 leading-none"><FormLabel className="text-sm font-bold leading-relaxed cursor-pointer">I certify that all information provided is accurate and complete.</FormLabel></div>
                                     </FormItem>
                                 )} />
                             </div>
                         </div>
                     </ScrollArea>
-                    <div className="p-6 border-t bg-white/80 backdrop-blur-md space-y-4 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)]">
-                        {submitProgress > 0 && (<div className="space-y-2 max-w-lg mx-auto"><div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-primary"><span>Transmitting Record...</span><span>{submitProgress}%</span></div><Progress value={submitProgress} className="h-1.5 rounded-full" /></div>)}
+                    <div className="p-6 border-t bg-white/80 backdrop-blur-md space-y-4">
                         <DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col">
-                            <Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard Draft</Button>
+                            <Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button>
                             <Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">Finalize & Submit</Button>
                         </DialogFooter>
                     </div>
@@ -907,35 +841,26 @@ export default function ReportsPage() {
       <Sheet open={!!selectedUser} onOpenChange={isOpen => !isOpen && setSelectedUser(null)}>
         <SheetContent className="sm:max-w-4xl w-full flex flex-col p-0 border-none ring-1 ring-border/50 shadow-2xl rounded-l-3xl">
             <SheetHeader className="p-8 border-b bg-muted/5">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-primary/10 rounded-2xl"><FileText className="size-6 text-primary" /></div>
-                    <div>
-                        <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">{selectedUser?.firstName}'s Professional Submissions</SheetTitle>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{selectedUser?.jobTitle}</p>
-                    </div>
-                </div>
+                <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">{selectedUser?.firstName}'s Submissions</SheetTitle>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{selectedUser?.jobTitle}</p>
             </SheetHeader>
             <ScrollArea className="flex-1 p-8 bg-secondary/10">
                 {reports && reports.length > 0 ? (
                     <Accordion type="single" collapsible className="w-full space-y-4">
                         {reports.map(r => (
                             <AccordionItem value={r.id} key={r.id} className="border-none">
-                                <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:ring-primary/20 data-[state=open]:rounded-b-none">
+                                <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none">
                                     <div className="flex-1 text-left flex items-center justify-between">
                                         <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
-                                        <Badge variant="secondary" className="mr-4 text-[10px] font-black bg-muted/50 uppercase tracking-tighter">✅ SUBMITTED</Badge>
+                                        <Badge variant="secondary" className="mr-4 text-[10px] font-black uppercase">✅ SUBMITTED</Badge>
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]">
                                     <div className="flex justify-end gap-2 mb-4">
-                                        <Button variant="outline" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8" onClick={() => toast({ title: "Admin PDF Generated" })}><Download className="h-3 w-3 mr-2" />PDF</Button>
-                                        <Button variant="outline" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8" onClick={() => toast({ title: "Internal Email Forwarded" })}><Mail className="h-3 w-3 mr-2" />Forward</Button>
-                                        {isAdmin && (
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild><Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Delete</Button></AlertDialogTrigger>
-                                                <AlertDialogContent className="rounded-3xl p-8 border-none ring-1 ring-border/50"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Confirm Permanent Deletion</AlertDialogTitle><AlertDialogDescription className="text-sm font-medium">This will permanently remove the report record and all associated high-quality audio evidence from central storage. This action cannot be reversed.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter className="mt-6"><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase tracking-widest">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase tracking-widest bg-red-600 hover:bg-red-700" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                                            </AlertDialog>
-                                        )}
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild><Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Delete</Button></AlertDialogTrigger>
+                                            <AlertDialogContent className="rounded-3xl p-8"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently remove the record and any audio evidence.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                        </AlertDialog>
                                     </div>
                                     {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}
                                 </AccordionContent>
@@ -943,7 +868,7 @@ export default function ReportsPage() {
                         ))}
                     </Accordion>
                 ) : (
-                    <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-white rounded-3xl border border-dashed border-border/50"><p className="font-bold uppercase tracking-widest text-[10px] opacity-50">No submission records available for this member.</p></div>
+                    <div className="h-64 flex flex-col items-center justify-center text-muted-foreground"><p className="font-bold uppercase tracking-widest text-[10px] opacity-50">No reports available.</p></div>
                 )}
             </ScrollArea>
         </SheetContent>

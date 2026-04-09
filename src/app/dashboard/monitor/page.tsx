@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
-import { User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download, AlertTriangle, Share2, FileText, Mail, MessageSquare, Users, Phone } from 'lucide-react';
+import { User, UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, Download, AlertTriangle, Share2, FileText, Mail, MessageSquare, Users, Phone, PieChart as PieChartIcon } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -24,9 +24,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
-
 
 type UserData = {
   id: string;
@@ -94,7 +95,6 @@ const MonitorPage = () => {
         const selectedDayStart = startOfDay(date);
         const selectedDayEnd = endOfDay(date);
 
-        // 1. Fetch today's attendance records using a collectionGroup query
         const attendanceQuery = query(
           collectionGroup(firestore, 'attendances'),
           where('checkInTime', '>=', selectedDayStart),
@@ -108,7 +108,6 @@ const MonitorPage = () => {
         });
         setAttendanceRecords(attendanceMap);
 
-        // 2. Fetch approved leaves that cover today
         const leavesQuery = query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved'));
         const leavesSnapshot = await getDocs(leavesQuery);
         const allApprovedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveRequest);
@@ -167,142 +166,21 @@ const MonitorPage = () => {
     fetchMonitorData();
   }, [users, usersLoading, firestore, date, toast]);
   
+  const chartData = React.useMemo(() => {
+    return [
+      { name: 'Present', value: summary.present.length, color: 'hsl(var(--chart-5))' },
+      { name: 'Late', value: summary.late.length, color: 'hsl(var(--chart-3))' },
+      { name: 'Absent', value: summary.absent.length, color: 'hsl(var(--destructive))' },
+      { name: 'On Leave', value: summary.onLeave.length, color: 'hsl(var(--chart-1))' },
+      { name: 'Out of Range', value: summary.outOfRange.length, color: 'hsl(var(--chart-2))' },
+    ].filter(d => d.value > 0);
+  }, [summary]);
+
   const formatDuration = (seconds: number) => {
     if (seconds < 0) seconds = 0;
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
-  };
-
-  const handleExport = () => {
-    const { present, late, absent, onLeave, outOfRange, isLoading } = summary;
-    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length && !outOfRange.length)) {
-      toast({ variant: "destructive", title: "No data to export" });
-      return;
-    }
-
-    const allUsersWithStatus = [
-      ...present.map(u => ({ ...u, status: 'Present' })),
-      ...late.map(u => ({ ...u, status: 'Late' })),
-      ...outOfRange.map(u => ({ ...u, status: 'Out of Range' })),
-      ...absent.map(u => ({ ...u, status: 'Absent' })),
-      ...onLeave.map(u => ({ ...u, status: 'On Leave' })),
-    ];
-
-    const headers = ['Status', 'First Name', 'Last Name', 'Job Title', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Location', 'Notes'];
-    const csvRows = [
-      headers.join(','),
-      ...allUsersWithStatus.map(user => {
-        const rec = attendanceRecords.get(user.id);
-        let workDuration = 0;
-        let timeInOut = "N/A";
-        let durationWorkBreak = "N/A";
-        let location = "N/A";
-        let notes = "";
-        const recordDate = `"${format(date, "PP")}"`;
-
-        if (rec && rec.checkInTime) {
-            if (rec.checkOutTime) {
-                workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
-            }
-            timeInOut = `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"`;
-            durationWorkBreak = `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
-            location = rec.locationCheckInLatitude && rec.locationCheckInLongitude ? `"${rec.locationCheckInLatitude}, ${rec.locationCheckInLongitude}"` : "N/A";
-            notes = `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"`;
-        } else if (user.status === 'On Leave') {
-            notes = '"On Approved Leave"';
-        } else if (user.status === 'Absent') {
-            notes = '"Absent"';
-        }
-
-        const row = [
-          `"${user.status}"`,
-          `"${user.firstName}"`,
-          `"${user.lastName}"`,
-          `"${user.jobTitle}"`,
-          recordDate,
-          timeInOut,
-          durationWorkBreak,
-          location,
-          notes,
-        ];
-        return row.join(',');
-      })
-    ];
-
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute('download', `daily_monitor_${format(date, 'yyyy-MM-dd')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-  
-  const handleShare = (platform: 'email' | 'whatsapp' | 'teams') => {
-    if (summary.isLoading) {
-      toast({ variant: 'destructive', title: 'Data not ready' });
-      return;
-    }
-
-    const reportDate = format(date, 'PPP');
-    const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
-
-    let reportText = `FortuMars - Daily Attendance Summary\n`;
-    reportText += `Date: ${reportDate}\n`;
-    reportText += `Generated by: ${generatorName}\n\n`;
-
-    const createSection = (title: string, users: UserData[], includeTime: boolean = false) => {
-        if (users.length === 0) return '';
-        let section = `${title} (${users.length})\n`;
-        users.forEach(u => {
-            const rec = attendanceRecords.get(u.id);
-            const timeIn = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--';
-            const timeOut = rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
-            const breakTime = rec?.totalBreakDuration ? formatDuration(rec.totalBreakDuration) : '0m';
-            
-            const detailStr = includeTime ? ` (In: ${timeIn} / Out: ${timeOut} - Break: ${breakTime})` : '';
-            section += `- ${u.firstName} ${u.lastName}${detailStr}\n`;
-        });
-        return section + '\n';
-    };
-
-    reportText += createSection('Present', summary.present, true);
-    reportText += createSection('Late', summary.late, true);
-    reportText += createSection('Out of Range', summary.outOfRange, true);
-    reportText += createSection('Absent', summary.absent);
-    reportText += createSection('On Leave', summary.onLeave);
-
-    const encodedText = encodeURIComponent(reportText);
-
-    let url = '';
-    if (platform === 'email') {
-      url = `mailto:?subject=Daily Attendance Summary - ${reportDate}&body=${encodedText}`;
-    } else if (platform === 'whatsapp') {
-      url = `https://wa.me/?text=${encodedText}`;
-    } else if (platform === 'teams') {
-      url = `https://teams.microsoft.com/l/chat/0/0?users=&message=${encodedText}`;
-    }
-    
-    window.open(url, '_blank');
-  };
-
-  const handleNudgeWhatsApp = (user: UserData, type: 'missing_login' | 'missing_logout') => {
-      if (!user.phoneNumber) {
-          toast({ variant: 'destructive', title: 'No phone number', description: 'Please add a phone number in the Manage Users section.' });
-          return;
-      }
-      
-      const message = type === 'missing_login' 
-        ? `Hello ${user.firstName}, you haven't clocked in today. Please log in to MarsHRM immediately.`
-        : `Hello ${user.firstName}, you missed your clock-out yesterday. Please update your attendance.`;
-      
-      const cleanNumber = user.phoneNumber.replace(/\D/g, '');
-      const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank');
   };
 
   const handleExportPdf = () => {
@@ -337,8 +215,8 @@ const MonitorPage = () => {
       if (users.length > 0) {
         const body = users.map(u => {
             const rec = attendanceRecords.get(u.id);
-            const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : '--:--';
-            const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+            const clockIn = (rec && rec.checkInTime) ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+            const clockOut = (rec && rec.checkOutTime) ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
             const breakTime = (rec && rec.totalBreakDuration) ? formatDuration(rec.totalBreakDuration) : '0m';
             
             const detailLine = includeTime 
@@ -359,7 +237,7 @@ const MonitorPage = () => {
 
         autoTable(pdfDoc, {
           startY: (pdfDoc as any).lastAutoTable.finalY,
-          head: [['Employee Status Details']],
+          head: [['Status Details']],
           body: body,
           theme: 'striped',
           headStyles: { fillColor: [39, 55, 70] },
@@ -377,50 +255,52 @@ const MonitorPage = () => {
     addSection('On Leave', summary.onLeave, 'On Leave', false);
     
     addPageContent({ settings: { margin: { left: 14 } } });
-
     pdfDoc.save(`daily_report_${format(date, 'yyyy-MM-dd')}.pdf`);
   };
 
   const UserListCard = ({ title, users, Icon, iconColor, nudgeType }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; nudgeType?: 'missing_login' | 'missing_logout' }) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-3">
-            <Icon className={`h-6 w-6 ${iconColor}`} />
+    <Card className="h-fit">
+      <CardHeader className="p-4">
+        <CardTitle className="flex items-center gap-3 text-sm">
+            <Icon className={`h-5 w-5 ${iconColor}`} />
             <span>{title}</span>
-            <span className="ml-auto text-lg font-semibold">{users.length}</span>
+            <span className="ml-auto text-base font-bold">{users.length}</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-0">
         {users.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {users.map(user => (
-              <div key={user.id} className="flex items-center justify-between group p-2 -m-2 rounded-lg hover:bg-muted transition-colors">
-                <Link href={`/dashboard/analytics?userId=${user.id}`} className="flex items-center gap-3 flex-1">
-                    <Avatar className="h-9 w-9">
-                    {user.avatar && <span className="text-xl">{user.avatar}</span>}
-                    <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
+              <div key={user.id} className="flex items-center justify-between group p-1.5 -mx-1 rounded-md hover:bg-muted transition-colors">
+                <Link href={`/dashboard/analytics?userId=${user.id}`} className="flex items-center gap-2 flex-1">
+                    <Avatar className="h-7 w-7">
+                    {user.avatar && <span className="text-sm">{user.avatar}</span>}
+                    <AvatarFallback className="text-[10px]">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
                     </Avatar>
                     <div>
-                    <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>
-                    <p className="text-xs text-muted-foreground">{user.jobTitle}</p>
+                    <p className="font-semibold text-xs leading-tight">{user.firstName} {user.lastName}</p>
+                    <p className="text-[10px] text-muted-foreground leading-tight">{user.jobTitle}</p>
                     </div>
                 </Link>
                 {nudgeType && (
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="opacity-0 group-hover:opacity-100 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => handleNudgeWhatsApp(user, nudgeType)}
-                        title="Nudge via WhatsApp"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => {
+                            const cleanNumber = user.phoneNumber?.replace(/\D/g, '');
+                            const msg = `Hello ${user.firstName}, you haven't clocked in today. Please log in immediately.`;
+                            window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+                        }}
                     >
-                        <Phone className="h-4 w-4" />
+                        <Phone className="h-3 w-3" />
                     </Button>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">No employees in this category today.</p>
+          <p className="text-[10px] text-muted-foreground text-center py-2">No records found.</p>
         )}
       </CardContent>
     </Card>
@@ -428,88 +308,78 @@ const MonitorPage = () => {
 
   return (
     <>
-      <PageHeader title="Daily Monitor" description={`An overview of employee status for ${format(date, 'MMMM d, yyyy')}.`}>
+      <PageHeader title="Daily Monitor" description={`Real-time team status for ${format(date, 'MMMM d, yyyy')}.`}>
         <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setDate(new Date())}>Today</Button>
-            <Button variant="outline" onClick={() => setDate(subDays(new Date(), 1))}>Yesterday</Button>
+            <Button variant="outline" size="sm" onClick={() => setDate(new Date())}>Today</Button>
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button
-                        variant={"outline"}
-                        className={cn(
-                            "w-[240px] justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
-                        )}
-                    >
+                    <Button variant={"outline"} size="sm" className={cn("w-[180px] justify-start text-left font-normal")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                        {format(date, "PP")}
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={(d) => d && setDate(d)}
-                        initialFocus
-                    />
+                    <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus />
                 </PopoverContent>
             </Popover>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" disabled={summary.isLoading}>
-                        <Share2 className="mr-2 h-4 w-4" />
-                        Share / Export
-                    </Button>
+                    <Button variant="outline" size="sm" disabled={summary.isLoading}><Share2 className="mr-2 h-4 w-4" /> Report</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleExport}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportPdf}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Download PDF
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Share Summary via</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => handleShare('email')}>
-                        <Mail className="mr-2 h-4 w-4"/> 
-                        Email
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
-                        <MessageSquare className="mr-2 h-4 w-4"/>
-                        WhatsApp
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleShare('teams')}>
-                        <Users className="mr-2 h-4 w-4"/>
-                        Microsoft Teams
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportPdf}><FileText className="mr-2 h-4 w-4" /> Download PDF Summary</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
       </PageHeader>
       
       {summary.isLoading ? (
-        <div className="flex h-64 items-center justify-center">
-            <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                <div className="relative h-16 w-48 animate-pulse">
-                    <Image
-                      src="https://fortumars.com/fortumarslogo.png"
-                      alt="FortuMars Logo"
-                      fill
-                      style={{ objectFit: 'contain' }}
-                      priority
-                    />
-                </div>
-            </div>
-        </div>
+        <div className="flex h-64 items-center justify-center"><Building2 className="h-10 w-10 animate-pulse text-muted-foreground" /></div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <UserListCard title="Present" users={summary.present} Icon={UserCheck} iconColor="text-green-500" />
-          <UserListCard title="Late" users={summary.late} Icon={UserX} iconColor="text-yellow-500" />
-          <UserListCard title="Out of Range" users={summary.outOfRange} Icon={AlertTriangle} iconColor="text-orange-500" />
-          <UserListCard title="Absent" users={summary.absent} Icon={UserRoundX} iconColor="text-red-500" nudgeType="missing_login" />
-          <UserListCard title="On Leave" users={summary.onLeave} Icon={User} iconColor="text-blue-500" />
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2 bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-headline flex items-center gap-2">
+                        <PieChartIcon className="size-5" />
+                        Status Distribution
+                    </CardTitle>
+                    <CardDescription>Visual breakdown of current attendance.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={chartData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={100}
+                                paddingAngle={5}
+                                dataKey="value"
+                            >
+                                {chartData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <RechartsTooltip content={<ChartTooltipContent hideLabel />} />
+                            <Legend verticalAlign="bottom" height={36}/>
+                        </PieChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+            
+            <div className="space-y-4">
+                <UserListCard title="Out of Range" users={summary.outOfRange} Icon={AlertTriangle} iconColor="text-orange-500" />
+                <UserListCard title="Absent Today" users={summary.absent} Icon={UserRoundX} iconColor="text-red-500" nudgeType="missing_login" />
+                <UserListCard title="On Approved Leave" users={summary.onLeave} Icon={User} iconColor="text-blue-500" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <UserListCard title="Present (On Time)" users={summary.present} Icon={UserCheck} iconColor="text-green-500" />
+            <UserListCard title="Late Arrivals" users={summary.late} Icon={UserX} iconColor="text-yellow-500" />
+          </div>
         </div>
       )}
     </>
