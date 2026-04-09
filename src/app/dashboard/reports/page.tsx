@@ -136,7 +136,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
     return (
         <div className="space-y-6">
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-tighter"><TrendingUp className="size-3" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-3" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-white/50 rounded-xl border border-border/50 shadow-inner">
                         <ReportDetailItem label="Total Outreach" value={outreach} />
@@ -177,7 +177,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-tighter"><DollarSign className="size-3" /> 2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-3" /> 2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
                 <CardContent className="pt-4">
                     <div className="border rounded-xl overflow-hidden bg-white/50">
                         <Table>
@@ -198,7 +198,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-tighter"><Target className="size-3" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-3" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-4">
                     <div className="flex items-center justify-between p-4 bg-primary/5 rounded-xl border border-primary/10 mb-4">
                         <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Quotations Released Today</p>
@@ -206,7 +206,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
                     </div>
 
                     <div className="space-y-3">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Meetings/Demos Secured</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Meetings/Demos Secured Today:</p>
                         <div className="grid gap-3">
                             {Array.isArray(report.meetingsSecured) && report.meetingsSecured.length > 0 && report.meetingsSecured.some(m => m.clientName) ? report.meetingsSecured.map((m, i) => m.clientName ? (
                                 <div key={i} className="p-3 bg-white/80 rounded-xl border border-border/50 shadow-sm text-sm relative overflow-hidden">
@@ -248,7 +248,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-tighter"><CalendarClock className="size-3" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><CalendarClock className="size-3" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-4">
                     <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
                         <ReportDetailItem label="Meetings Tomorrow" value={report.meetingsBookedTomorrow ?? 0} />
@@ -264,7 +264,7 @@ const BusinessReportDetails = ({ report }: { report: Report }) => {
             </Card>
 
             <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10 space-y-4">
-                <div className="flex items-center gap-2 font-bold text-primary uppercase tracking-tighter text-xs">🖋️ Signature Section</div>
+                <div className="flex items-center gap-2 font-bold text-primary uppercase tracking-widest text-xs">🖋️ Signature Section</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 text-sm">
                     <div className="space-y-1">
                         <p className="text-[10px] uppercase font-bold text-muted-foreground">Intern Name</p>
