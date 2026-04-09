@@ -14,8 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, useFirebase, useStorage } from "@/firebase";
-import { collection, query, where, orderBy, doc, deleteDoc } from "firebase/firestore";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useStorage } from "@/firebase";
+import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
@@ -333,7 +333,7 @@ const businessReportSchema = z.object({
   newLeadsGenerated: z.coerce.number().min(0).default(0),
   potentialClients: z.coerce.number().min(0).default(0),
   followUpCount: z.coerce.number().min(0).default(0),
-  followUpClients: z.array(z.string()).optional(),
+  followUpClients: z.array(z.string().min(0)).optional(),
   quotationsReleased: z.coerce.number().min(0).default(0),
   netRevenueCollected: z.coerce.number().min(0).default(0),
   committedNetRevenue: z.coerce.number().min(0).default(0),
@@ -344,16 +344,16 @@ const businessReportSchema = z.object({
     currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("USD"),
     quotationValue: z.coerce.number().min(0).default(0),
     context: z.string().optional()
-  })),
-  clientWinHighlight: z.string().optional(),
-  strategicLearning: z.string().optional(),
+  })).optional().default([]),
+  clientWinHighlight: z.string().optional().default(""),
+  strategicLearning: z.string().optional().default(""),
   meetingsBookedTomorrow: z.coerce.number().min(0).default(0),
-  criticalPathTomorrow: z.string().optional(),
-  pendingDeliverables: z.string().optional(),
+  criticalPathTomorrow: z.string().optional().default(""),
+  pendingDeliverables: z.string().optional().default(""),
   interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]),
-  interventionReason: z.string().optional(),
-  bestCallRecording: z.string().optional(),
-  worstCallRecording: z.string().optional(),
+  interventionReason: z.string().optional().default(""),
+  bestCallRecording: z.string().optional().default(""),
+  worstCallRecording: z.string().optional().default(""),
   declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Required" }) }),
   signature: z.string().min(1, "Signature is required."),
 });
@@ -361,17 +361,17 @@ const businessReportSchema = z.object({
 const technicalReportSchema = z.object({
   logInTime: z.string().min(1, "Required"),
   logOutTime: z.string().min(1, "Required"),
-  tasksAssigned: z.array(z.object({ value: z.string() })),
+  tasksAssigned: z.array(z.object({ value: z.string() })).optional().default([]),
   completedTasks: z.array(z.object({ 
-    moduleName: z.string(), 
-    workDone: z.string() 
-  })),
-  repoLinks: z.array(z.object({ value: z.string() })),
-  workInProgress: z.array(z.object({ value: z.string() })),
-  pendingTasks: z.array(z.object({ value: z.string() })),
-  whatILearned: z.array(z.object({ value: z.string() })),
-  challengesFaced: z.array(z.object({ value: z.string() })),
-  nextSteps: z.array(z.object({ value: z.string() })),
+    moduleName: z.string().min(0), 
+    workDone: z.string().min(0) 
+  })).optional().default([]),
+  repoLinks: z.array(z.object({ value: z.string() })).optional().default([]),
+  workInProgress: z.array(z.object({ value: z.string() })).optional().default([]),
+  pendingTasks: z.array(z.object({ value: z.string() })).optional().default([]),
+  whatILearned: z.array(z.object({ value: z.string() })).optional().default([]),
+  challengesFaced: z.array(z.object({ value: z.string() })).optional().default([]),
+  nextSteps: z.array(z.object({ value: z.string() })).optional().default([]),
   declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Required" }) }),
   signature: z.string().min(1, "Signature is required."),
 });
@@ -428,18 +428,19 @@ export default function ReportsPage() {
   const resetForm = React.useCallback(() => {
       const now = new Date();
       const istTimestamp = formatIST(now);
-      const signatureStr = currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${currentUserData.jobTitle} | ${istTimestamp}` : "";
+      const eType = currentUserData?.employmentType || "Intern";
+      const signatureStr = currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${eType} | ${istTimestamp}` : "";
 
       form.reset({
         signature: signatureStr,
         declaration: false,
         ...(isBusinessUser ? {
             currency: "USD", outreachColdCalls: 0, outreachLinkedIn: 0, outreachEmails: 0, newLeadsGenerated: 0, potentialClients: 0, followUpCount: 0, followUpClients: [],
-            quotationsReleased: 0, netRevenueCollected: 0, committedNetRevenue: 0, pipelineValue: 0, revenueVariance: 0, meetingsSecured: [{ clientName: "", currency: "USD", quotationValue: 0, context: "" }],
+            quotationsReleased: 0, netRevenueCollected: 0, committedNetRevenue: 0, pipelineValue: 0, revenueVariance: 0, meetingsSecured: [],
             clientWinHighlight: "", strategicLearning: "", meetingsBookedTomorrow: 0, criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None", interventionReason: "",
             bestCallRecording: "", worstCallRecording: ""
         } : {
-            tasksAssigned: [{ value: "" }], completedTasks: [{ moduleName: "", workDone: "" }], repoLinks: [{ value: "" }],
+            tasksAssigned: [], completedTasks: [], repoLinks: [],
             workInProgress: [], pendingTasks: [], whatILearned: [], challengesFaced: [], nextSteps: [],
             logInTime: todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'HH:mm') : "09:30",
             logOutTime: todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'HH:mm') : format(now, 'HH:mm'),
@@ -449,13 +450,17 @@ export default function ReportsPage() {
       setUploadProgress({});
   }, [form, currentUserData, isBusinessUser, todaysAttendance]);
 
-  React.useEffect(() => { if (isAddDialogOpen) resetForm(); }, [isAddDialogOpen, resetForm]);
+  React.useEffect(() => { if (isAddDialogOpen && currentUserData) resetForm(); }, [isAddDialogOpen, resetForm, currentUserData]);
 
   const submissionConstraints = React.useMemo(() => {
     const now = new Date();
-    const istHour = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false }).format(now));
+    const istHourRaw = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+    const [h, m] = istHourRaw.split(':').map(Number);
+    const totalMinutes = h * 60 + m;
     
-    const isDeadlinePassed = istHour >= 18;
+    // Deadline: 18:45 IST (6:45 PM)
+    const deadlineMinutes = 18 * 60 + 45;
+    const isDeadlinePassed = totalMinutes >= deadlineMinutes;
     const hasSubmittedToday = reports?.some(r => isSameDay(r.date.toDate(), now)) || false;
     return { isDeadlinePassed, hasSubmittedToday, canSubmit: !isDeadlinePassed && !hasSubmittedToday };
   }, [reports]);
@@ -499,7 +504,10 @@ export default function ReportsPage() {
   };
 
   const onSubmit = async (values: any) => {
-    if (!user || !currentUserData) return;
+    if (!user || !currentUserData) {
+        toast({ variant: 'destructive', title: 'Session Error', description: 'User data not loaded.' });
+        return;
+    }
     setSubmitProgress(10);
     const outreach = Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0);
     
@@ -514,10 +522,17 @@ export default function ReportsPage() {
       date: new Date(),
       reportType: currentReportType,
     };
-    setSubmitProgress(70);
-    await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
-    setSubmitProgress(100);
-    setTimeout(() => { toast({ title: "Report Submitted" }); setIsAddDialogOpen(false); }, 500);
+    
+    try {
+        setSubmitProgress(70);
+        await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
+        setSubmitProgress(100);
+        toast({ title: "Report Submitted", description: "Your daily report has been saved successfully." });
+        setIsAddDialogOpen(false);
+    } catch (err: any) {
+        setSubmitProgress(0);
+        toast({ variant: 'destructive', title: 'Submission Failed', description: err.message || 'Could not save report.' });
+    }
   };
 
   const filteredUsers = usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -530,7 +545,6 @@ export default function ReportsPage() {
     const total = cold + linkedin + email;
     const leads = Number(useWatch({ control: form.control, name: "newLeadsGenerated" }) || 0);
     
-    // Formula: (New Leads / Total Outreach) * 100. Don't allow negative.
     const rate = (total > 0 && leads >= 0) ? (leads / total) * 100 : 0;
     const rateColor = rate < 5 ? 'text-red-600' : rate < 15 ? 'text-orange-600' : 'text-green-600';
 
@@ -620,7 +634,7 @@ export default function ReportsPage() {
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Meetings/Demos Secured Today:</p>
                         {meetings.map((field, index) => (
                             <div key={field.id} className="p-5 bg-white/50 border rounded-2xl relative group space-y-4 transition-all hover:shadow-md">
-                                <Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)} disabled={meetings.length <= 1}><X className="size-4" /></Button>
+                                <Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)}><X className="size-4" /></Button>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial No. {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                                     <div className="grid grid-cols-3 gap-2">
@@ -707,8 +721,8 @@ export default function ReportsPage() {
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader className="py-3 px-4"><CardTitle className="text-[10px] font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Icon className="size-3" />{label}</CardTitle></CardHeader>
                 <CardContent className="space-y-3 px-4 pb-4">
-                    <div className="flex gap-2"><Input value={val} onChange={e => setVal(e.target.value)} placeholder={placeholder} className="rounded-full h-9 text-xs" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}/><Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0" onClick={add}><Plus className="size-4" /></Button></div>
-                    <div className="flex flex-wrap gap-2">{fields.map((f, i) => (<Badge key={f.id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 group bg-muted/50 border-none transition-all hover:bg-muted"><span className="text-[10px] font-bold">{(f as any).value}</span><button type="button" onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive opacity-50 group-hover:opacity-100"><X className="size-3" /></button></Badge>))}</div>
+                    <div className="flex gap-2"><Input value={val} onChange={e => setVal(e.target.value)} placeholder={placeholder} className="rounded-full h-9 w-9 flex-1 text-xs" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}/><Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0" onClick={add}><Plus className="size-4" /></Button></div>
+                    <div className="flex flex-wrap gap-2 mt-2">{fields.map((f, i) => (<Badge key={f.id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 group bg-muted/50 border-none transition-all hover:bg-muted"><span className="text-[10px] font-bold">{(f as any).value}</span><button type="button" onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive opacity-50 group-hover:opacity-100"><X className="size-3" /></button></Badge>))}</div>
                 </CardContent>
             </Card>
         );
@@ -734,7 +748,7 @@ export default function ReportsPage() {
                     {tasks.map((f, i) => (
                         <div key={f.id} className="flex gap-2">
                             <FormField control={form.control} name={`tasksAssigned.${i}.value`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input {...field} placeholder={`Specific Task ${i + 1}`} className="rounded-xl h-10 text-sm" /></FormControl></FormItem>)} />
-                            <Button type="button" variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-destructive" onClick={() => removeTask(i)} disabled={tasks.length <= 1}><Trash2 className="size-4" /></Button>
+                            <Button type="button" variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-destructive" onClick={() => removeTask(i)}><Trash2 className="size-4" /></Button>
                         </div>
                     ))}
                     <Button type="button" variant="outline" size="sm" onClick={() => appendTask({ value: "" })} className="w-full border-dashed rounded-xl h-10 text-[10px] font-black uppercase tracking-widest"><Plus className="size-3 mr-2" /> Add Task Item</Button>
@@ -746,7 +760,7 @@ export default function ReportsPage() {
                 {modules.map((f, i) => (
                     <Card key={f.id} className="relative group bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-2xl transition-all hover:shadow-md">
                         <CardContent className="pt-6 space-y-4 px-6 pb-6">
-                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeModule(i)} disabled={modules.length <= 1}><X className="size-4" /></Button>
+                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeModule(i)}><X className="size-4" /></Button>
                             <FormField control={form.control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Module / Component Name</FormLabel><FormControl><Input {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)}/>
                             <FormField control={form.control} name={`completedTasks.${i}.workDone`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Work Details / Functionality Implemented</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)}/>
                         </CardContent>
@@ -783,7 +797,7 @@ export default function ReportsPage() {
         {!isAdmin && (
             <Button onClick={() => setIsAddDialogOpen(true)} disabled={!submissionConstraints.canSubmit} className={cn("rounded-full h-11 px-6 shadow-lg transition-all active:scale-95", !submissionConstraints.canSubmit ? "bg-muted text-muted-foreground border-none cursor-not-allowed opacity-50" : "bg-primary hover:bg-primary/90")}>
                 <PlusCircle className="mr-2 h-4 w-4"/> 
-                {submissionConstraints.hasSubmittedToday ? "Submission Complete" : submissionConstraints.isDeadlinePassed ? "Deadline Passed (6 PM)" : "Add Daily Report"}
+                {submissionConstraints.hasSubmittedToday ? "Submission Complete" : submissionConstraints.isDeadlinePassed ? "Deadline Passed (6:45 PM)" : "Add Daily Report"}
             </Button>
         )}
       </PageHeader>
@@ -793,7 +807,7 @@ export default function ReportsPage() {
               <AlertCircle className="h-5 w-5 text-orange-600" />
               <div className="ml-2">
                 <AlertTitle className="font-black uppercase tracking-tighter">Report Restriction Policy</AlertTitle>
-                <AlertDescription className="text-sm font-medium opacity-80">{submissionConstraints.hasSubmittedToday ? "You have already fulfilled your reporting requirement for today. Thank you!" : "The 6:00 PM IST submission deadline has passed."}</AlertDescription>
+                <AlertDescription className="text-sm font-medium opacity-80">{submissionConstraints.hasSubmittedToday ? "You have already fulfilled your reporting requirement for today. Thank you!" : "The 6:45 PM IST submission deadline has passed."}</AlertDescription>
               </div>
           </Alert>
       )}
