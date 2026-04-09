@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -40,8 +39,9 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { format, parse, isSameDay, endOfDay, isAfter, addMinutes } from "date-fns";
+import { format, parse, isSameDay, endOfDay, isAfter, addMinutes, differenceInMinutes } from "date-fns";
 import { Textarea } from "../ui/textarea";
+import { Badge } from "../ui/badge";
 
 type AttendanceStatus = "out" | "in" | "break";
 
@@ -548,8 +548,7 @@ export function AttendanceWidget() {
     return isAfter(lastClockInTime, shiftStart);
   };
 
-  // Milestone Calculations
-  const milestones = (() => {
+  const milestones = useMemo(() => {
     if (!officeLocation) return null;
     const now = new Date();
     
@@ -568,10 +567,19 @@ export function AttendanceWidget() {
     const logout = officeLocation.shiftEndTime ? parseTime(officeLocation.shiftEndTime) : null;
 
     return { lOut, lIn, logout };
-  })();
+  }, [officeLocation]);
+
+  const upcomingMilestone = useMemo(() => {
+    if (!milestones) return null;
+    const now = new Date();
+    if (milestones.lOut && now < milestones.lOut && differenceInMinutes(milestones.lOut, now) < 30) return { type: 'L-Out', time: milestones.lOut };
+    if (milestones.lIn && now < milestones.lIn && differenceInMinutes(milestones.lIn, now) < 15) return { type: 'L-In', time: milestones.lIn };
+    if (milestones.logout && now < milestones.logout && differenceInMinutes(milestones.logout, now) < 30) return { type: 'Log-out', time: milestones.logout };
+    return null;
+  }, [milestones]);
 
   return (
-    <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
+    <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm relative overflow-hidden">
       <CardHeader>
         <div className="flex items-start justify-between">
             <CardTitle className="font-headline flex items-center gap-2">
@@ -645,7 +653,7 @@ export function AttendanceWidget() {
           </span>.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow flex flex-col items-center justify-center gap-6 text-center">
+      <CardContent className="flex-grow flex flex-col items-center justify-center gap-6 text-center pb-8">
         {isLocationLoading && !isWfhAllowed ? (
              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <Building2 className="h-10 w-10 animate-pulse" />
@@ -653,59 +661,77 @@ export function AttendanceWidget() {
             </div>
         ) : (officeLocation || isWfhAllowed) ? (
           <>
+            {upcomingMilestone && status === 'in' && (
+                <div className="absolute top-0 left-0 right-0 p-2 bg-primary/10 border-b border-primary/20 animate-pulse flex items-center justify-center gap-2">
+                    <AlertCircle className="size-4 text-primary" />
+                    <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                        Upcoming Milestone: {upcomingMilestone.type} at {format(upcomingMilestone.time, 'p')}
+                    </span>
+                </div>
+            )}
+
             <div
               className={cn(
-                "flex items-center justify-center gap-2 font-semibold",
+                "flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs",
                 status === "in" && (isLate() ? "text-orange-600" : "text-green-600"),
                 status === "break" && "text-yellow-600",
                 status === "out" && !hasClockedOutToday && "text-red-600",
                 status === "out" && hasClockedOutToday && "text-muted-foreground"
               )}
             >
-              {status === "in" && (isLate() ? <Clock className="size-5" /> : <Briefcase className="size-5" />)}
-              {status === "break" && <Coffee className="size-5" />}
-              {status === "out" && <CheckCircle2 className="size-5" />}
+              {status === "in" && (isLate() ? <Clock className="size-4" /> : <Briefcase className="size-4" />)}
+              {status === "break" && <Coffee className="size-4" />}
+              {status === "out" && <CheckCircle2 className="size-4" />}
 
               {
                 hasClockedOutToday
-                  ? "Clocked out for today"
+                  ? "Daily Session Complete"
                   : status === 'break'
-                    ? (autoLunchTriggered ? "Clocked Out for Lunch" : "Currently on Break")
-                    : isLate() ? "Clocked In (Late Login)" : `Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
+                    ? (autoLunchTriggered ? "Lunch Break Active" : "On Break")
+                    : isLate() ? "Late Attendance" : `Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
               }
             </div>
-            <div className="text-6xl font-bold font-mono tabular-nums tracking-tighter drop-shadow-sm">
-              {formatTime(timer)}
+            
+            <div className="space-y-1">
+                <div className="text-7xl font-black font-mono tabular-nums tracking-tighter drop-shadow-sm text-primary">
+                {formatTime(timer)}
+                </div>
+                {lastClockInTime && status !== "out" && (
+                <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-bold px-3 py-1">
+                    Log In: {format(lastClockInTime, 'p')}
+                </Badge>
+                )}
             </div>
             
-            {/* Upcoming Milestones Notification */}
-            {milestones && !hasClockedOutToday && (
-                <div className="w-full max-w-md bg-white/40 backdrop-blur-sm rounded-xl p-4 border border-primary/10 shadow-inner grid grid-cols-3 gap-2">
-                    <div className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
-                            <Utensils className="size-3 text-yellow-600" /> L-Out
-                        </span>
-                        <span className="text-sm font-semibold">{milestones.lOut ? format(milestones.lOut, 'p') : '--:--'}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1 border-x border-primary/5">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
-                            <Clock className="size-3 text-blue-600" /> L-In
-                        </span>
-                        <span className="text-sm font-semibold">{milestones.lIn ? format(milestones.lIn, 'p') : '--:--'}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
-                            <LogOut className="size-3 text-red-600" /> Logout
-                        </span>
-                        <span className="text-sm font-semibold">{milestones.logout ? format(milestones.logout, 'p') : '--:--'}</span>
+            {/* Milestone Indicators */}
+            <div className="w-full max-w-lg grid grid-cols-3 gap-4 mt-4">
+                <div className={cn("p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2", milestones?.lOut && status === 'break' && autoLunchTriggered ? "bg-yellow-50 border-yellow-200" : "bg-white/50 border-border/50")}>
+                    <Utensils className={cn("size-5", milestones?.lOut && status === 'break' && autoLunchTriggered ? "text-yellow-600" : "text-muted-foreground/50")} />
+                    <div className="text-center">
+                        <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-Out</p>
+                        <p className="text-sm font-bold">{milestones?.lOut ? format(milestones.lOut, 'p') : '--:--'}</p>
                     </div>
                 </div>
-            )}
+                <div className={cn("p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2", milestones?.lIn && status === 'in' && autoLunchTriggered ? "bg-blue-50 border-blue-200" : "bg-white/50 border-border/50")}>
+                    <Clock className={cn("size-5", milestones?.lIn && status === 'in' && autoLunchTriggered ? "text-blue-600" : "text-muted-foreground/50")} />
+                    <div className="text-center">
+                        <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-In</p>
+                        <p className="text-sm font-bold">{milestones?.lIn ? format(milestones.lIn, 'p') : '--:--'}</p>
+                    </div>
+                </div>
+                <div className={cn("p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2", hasClockedOutToday ? "bg-green-50 border-green-200" : "bg-white/50 border-border/50")}>
+                    <LogOut className={cn("size-5", hasClockedOutToday ? "text-green-600" : "text-muted-foreground/50")} />
+                    <div className="text-center">
+                        <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log-out</p>
+                        <p className="text-sm font-bold">{milestones?.logout ? format(milestones.logout, 'p') : '--:--'}</p>
+                    </div>
+                </div>
+            </div>
 
             <div className="flex items-center gap-6">
               {status === "break" && (
                 <div className="flex flex-col items-center">
-                  <span className="text-sm text-muted-foreground">Break</span>
+                  <span className="text-[10px] font-black uppercase text-muted-foreground">Current Break</span>
                   <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
                     {formatTime(breakTimer)}
                   </div>
@@ -713,24 +739,20 @@ export function AttendanceWidget() {
               )}
               {totalBreakTime > 0 && (
                 <div className="flex flex-col items-center">
-                  <span className="text-sm text-muted-foreground">Total Break</span>
+                  <span className="text-[10px] font-black uppercase text-muted-foreground">Total Break Today</span>
                   <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
                     {formatTime(totalBreakTime)}
                   </div>
                 </div>
               )}
             </div>
-            {lastClockInTime && status !== "out" && (
-              <p className="text-sm text-muted-foreground">
-                In at {lastClockInTime.toLocaleTimeString()}
-              </p>
-            )}
+
             {currentUserLocation && (
-              <div className="flex items-center text-xs text-muted-foreground gap-1">
+              <div className="flex items-center text-xs text-muted-foreground gap-1 bg-muted/30 px-3 py-1 rounded-full">
                 <MapPin className="size-3" />
-                <span>{`Lat: ${currentUserLocation.latitude.toFixed(4)}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
+                <span className="font-medium">{`Lat: ${currentUserLocation.latitude.toFixed(4)}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
                 {distance !== null && (
-                  <span>({distance.toFixed(2)} km away)</span>
+                  <span className="text-primary font-bold">({distance.toFixed(2)} km)</span>
                 )}
               </div>
             )}
@@ -738,47 +760,47 @@ export function AttendanceWidget() {
         ) : (
              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <Building2 className="h-10 w-10" />
-                <p className="max-w-xs">Location not set.</p>
+                <p className="max-w-xs font-medium">Location not set. Please contact Admin.</p>
             </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-center items-center py-6 px-6">
+      <CardFooter className="flex justify-center items-center py-6 px-6 bg-muted/5 border-t">
         {status === 'out' && !hasClockedOutToday && (
             <Button
                 onClick={handleClockIn}
-                className="w-full max-w-[240px] rounded-full h-14 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 bg-primary text-white"
+                className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 bg-primary text-white"
                 disabled={!isWfhAllowed && !officeLocation}
             >
-                <Clock className="mr-2 h-5 w-5" /> Clock In
+                <Clock className="mr-2 h-5 w-5" /> Start Shift
             </Button>
         )}
         {status !== 'out' && (
-            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-[400px] justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-[450px] justify-center">
                 <Button
                     onClick={handleBreak}
                     variant={status === "break" ? "default" : "outline"}
                     className={cn(
-                        "rounded-full h-12 flex-1 font-semibold shadow-md transition-all active:scale-95 px-8",
-                        status !== "break" ? "bg-white/50 border-primary/20 text-primary hover:bg-primary/5" : "bg-primary text-white"
+                        "rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8",
+                        status !== "break" ? "bg-white border-primary/20 text-primary hover:bg-primary/5" : "bg-primary text-white"
                     )}
                 >
                     {status === 'break' && autoLunchTriggered ? <Clock className="mr-2 h-4 w-4" /> : <Coffee className="mr-2 h-4 w-4" />}
-                    {status === 'break' ? (autoLunchTriggered ? 'Clock In' : 'End Break') : 'Start Break'}
+                    {status === 'break' ? (autoLunchTriggered ? 'End Lunch' : 'End Break') : 'Start Break'}
                 </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="rounded-full h-12 flex-1 font-semibold shadow-md transition-all active:scale-95 px-8">
-                            Clock Out
+                        <Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8">
+                            Finish Day
                         </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="rounded-3xl">
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Confirm Clock Out</AlertDialogTitle>
-                            <AlertDialogDescription>End your session?</AlertDialogDescription>
+                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Ready to Clock Out?</AlertDialogTitle>
+                            <AlertDialogDescription className="font-medium text-muted-foreground">This will finalize your attendance records for today.</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleClockOut}>Confirm</AlertDialogAction>
+                            <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Continue Working</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleClockOut} className="rounded-full font-bold uppercase text-[10px]">Confirm Clock Out</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
@@ -787,31 +809,33 @@ export function AttendanceWidget() {
       </CardFooter>
 
       <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-3xl">
             <DialogHeader>
-                <DialogTitle>Out of Range</DialogTitle>
-                <DialogDescription>{outOfRangeInfo}</DialogDescription>
+                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Location Verification Required</DialogTitle>
+                <DialogDescription className="font-medium text-muted-foreground">{outOfRangeInfo}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-                <Label htmlFor="reason">Reason</Label>
-                <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Client meeting" />
+                <Label htmlFor="reason" className="font-bold text-xs uppercase tracking-widest">Provide Reason for Out of Range</Label>
+                <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Client visit, working from temporary location..." className="rounded-2xl min-h-[100px]" />
             </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => { setIsOutOfRangeReasonDialogOpen(false); setOutOfRangeReason(""); }}>Cancel</Button>
-                <Button onClick={handleOutOfRangeSubmit}>Submit</Button>
+                <Button variant="outline" className="rounded-full font-bold uppercase text-[10px]" onClick={() => { setIsOutOfRangeReasonDialogOpen(false); setOutOfRangeReason(""); }}>Cancel</Button>
+                <Button onClick={handleOutOfRangeSubmit} className="rounded-full font-bold uppercase text-[10px]">Submit & Proceed</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
       
       <AlertDialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader>
-                <AlertDialogTitle>Set Home Location?</AlertDialogTitle>
-                <AlertDialogDescription>Use current coordinates for WFH?</AlertDialogDescription>
+                <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Set Home Location?</AlertDialogTitle>
+                <AlertDialogDescription className="font-medium text-muted-foreground text-sm">
+                    You haven't set a home location yet. Would you like to use your current coordinates as your WFH address?
+                </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmSetHomeLocation}>Confirm & Clock In</AlertDialogAction>
+                <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]" onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmSetHomeLocation} className="rounded-full font-bold uppercase text-[10px]">Yes, Set & Clock In</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 220 13% 97%; /* Soft off-white */
+    --background: 270 20% 98%; /* Very light purple background */
     --foreground: 224 71% 4%;
     --card: 0 0% 100%;
     --card-foreground: 224 71% 4%;
@@ -29,13 +29,13 @@
     --chart-4: 197 37% 24%;
     --chart-5: 217 91% 60%; /* Bright blue */
     --radius: 0.5rem;
-    --sidebar-background: 224 71% 8%; /* Very dark blue, almost black */
+    --sidebar-background: 273 50% 10%; /* Dark Purple Sidebar */
     --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 273 100% 75%; /* Lighter Electric Purple */
+    --sidebar-primary: 273 100% 75%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 224 71% 14%; /* Slightly lighter dark blue */
+    --sidebar-accent: 273 50% 15%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 224 71% 14%;
+    --sidebar-border: 273 50% 15%;
     --sidebar-ring: 273 100% 75%;
   }
 
@@ -46,13 +46,13 @@
     --card-foreground: 210 40% 98%;
     --popover: 224 71% 4%;
     --popover-foreground: 210 40% 98%;
-    --primary: 273 100% 70%; /* Lighter Electric Purple for dark mode */
+    --primary: 273 100% 70%;
     --primary-foreground: 224 71% 4%;
     --secondary: 215 28% 15%;
     --secondary-foreground: 210 40% 98%;
     --muted: 215 28% 15%;
     --muted-foreground: 215 28% 57%;
-    --accent: 345 95% 68%; /* Lighter coral */
+    --accent: 345 95% 68%;
     --accent-foreground: 224 71% 4%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
@@ -81,6 +81,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(at 0% 0%, hsla(273, 100%, 95%, 1) 0, transparent 50%),
+                      radial-gradient(at 100% 100%, hsla(273, 100%, 95%, 1) 0, transparent 50%);
+    background-attachment: fixed;
   }
   [data-sidebar="menu-button"][data-active="true"] svg {
     @apply text-primary;
