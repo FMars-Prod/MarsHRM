@@ -425,7 +425,7 @@ export function AttendanceWidget() {
           if (reason) {
             payload.checkOutNotes = reason;
           }
-          updateDocumentNonBlocking(getTodaysAttendanceRef, payload);
+          setDocumentNonBlocking(getTodaysAttendanceRef, payload, { merge: true });
       }
       setStatus("out");
       setHasClockedOutToday(true);
@@ -913,11 +913,11 @@ export function AttendanceWidget() {
                       <AlertDialogContent className="rounded-3xl">
                           <AlertDialogHeader>
                               <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Ready to Clock Out?</AlertDialogTitle>
-                              <AlertDialogDescription className="font-medium text-muted-foreground">This will finalize your attendance records for today.</AlertDialogDescription>
+                              <AlertDialogDescription className="font-medium text-muted-foreground">This will finalize your attendance records for today. Please complete your report next.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                               <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Continue Working</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleClockOut} className="rounded-full font-bold uppercase text-[10px]">Confirm Clock Out</AlertDialogAction>
+                              <AlertDialogAction onClick={handleClockOut} className="rounded-full font-bold uppercase text-[10px]">Go to Reports</AlertDialogAction>
                           </AlertDialogFooter>
                       </AlertDialogContent>
                   </AlertDialog>

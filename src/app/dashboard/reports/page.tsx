@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useAuth } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useAuth, setDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -490,6 +490,14 @@ export default function ReportsPage() {
     try {
         setSubmitProgress(70);
         await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
+        
+        // Finalize Attendance (Clock Out) if not already done
+        const todayId = format(new Date(), 'yyyy-MM-dd');
+        const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
+        setDocumentNonBlocking(attRef, {
+            checkOutTime: serverTimestamp(),
+        }, { merge: true });
+
         setSubmitProgress(100);
         toast({ title: "Report Submitted Successfully", description: "Logging out..." });
         
