@@ -24,6 +24,7 @@ import {
   FileText,
   Activity,
   MapPin,
+  ClipboardCheck,
 } from "lucide-react";
 import React from "react";
 
@@ -32,6 +33,7 @@ const links = [
   { href: "/dashboard/profile", label: "Profile", icon: User, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/leave", label: "Leave", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
+  { href: "/dashboard/attendance-requests", label: "Attendance Requests", icon: ClipboardCheck, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingAttendanceRequestsCount" },
   { href: "/dashboard/announcements", label: "Announcements", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
   { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
   { href: "/dashboard/payslips", label: "Payslips", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
@@ -51,6 +53,7 @@ interface MainNavProps {
   unreadAnnouncementsCount?: number;
   todaysEventsCount?: number;
   pendingLocationRequestsCount?: number;
+  pendingAttendanceRequestsCount?: number;
 }
 
 export function MainNav({ 
@@ -58,7 +61,8 @@ export function MainNav({
   pendingLeaveCount = 0,
   unreadAnnouncementsCount = 0,
   todaysEventsCount = 0,
-  pendingLocationRequestsCount = 0
+  pendingLocationRequestsCount = 0,
+  pendingAttendanceRequestsCount = 0
 }: MainNavProps) {
   const pathname = usePathname();
 
@@ -66,7 +70,8 @@ export function MainNav({
     pendingLeaveCount,
     unreadAnnouncementsCount,
     todaysEventsCount,
-    pendingLocationRequestsCount
+    pendingLocationRequestsCount,
+    pendingAttendanceRequestsCount
   };
 
   return (

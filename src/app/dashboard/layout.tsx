@@ -1,3 +1,4 @@
+
 'use client';
 import {
   SidebarProvider,
@@ -32,6 +33,9 @@ type EventItem = {
 type LocationRequest = {
   status: string;
 };
+type AttendanceRequest = {
+  status: string;
+}
 
 export default function DashboardLayout({
   children,
@@ -68,6 +72,13 @@ export default function DashboardLayout({
 
   const { data: leaveRequests } = useCollection<LeaveRequest>(leaveRequestsQuery);
   const pendingLeaveCount = leaveRequests?.length || 0;
+
+  const attendanceRequestsQuery = useMemoFirebase(() => {
+    if (!userRole || (userRole !== 'HR Manager' && userRole !== 'CEO/Admin')) return null;
+    return query(collection(firestore, "attendanceApprovalRequests"), where("status", "==", "Pending"));
+  }, [firestore, userRole]);
+  const { data: attendanceRequests } = useCollection<AttendanceRequest>(attendanceRequestsQuery);
+  const pendingAttendanceRequestsCount = attendanceRequests?.length || 0;
 
   const allAnnouncementsQuery = useMemoFirebase(
     () => collection(firestore, 'announcements'),
@@ -149,6 +160,7 @@ export default function DashboardLayout({
             unreadAnnouncementsCount={unreadAnnouncements}
             todaysEventsCount={todaysEventsCount}
             pendingLocationRequestsCount={pendingLocationRequestsCount}
+            pendingAttendanceRequestsCount={pendingAttendanceRequestsCount}
           />
         </SidebarContent>
         <SidebarFooter>

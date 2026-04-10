@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle, LogIn, LocateFixed } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle, LogIn, LocateFixed, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -35,9 +35,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useCollection } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { doc, serverTimestamp, Timestamp, collection, query, where, orderBy, limit } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format, parse, isSameDay, endOfDay, isAfter, addMinutes, differenceInMinutes } from "date-fns";
@@ -120,6 +120,18 @@ export function AttendanceWidget() {
   
   const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = useState(false);
   const [capturedLocation, setCapturedLocation] = useState<Location | null>(null);
+
+  const pendingRequestQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, "attendanceApprovalRequests"),
+      where("employeeId", "==", user.uid),
+      orderBy("requestTimestamp", "desc"),
+      limit(1)
+    );
+  }, [user, firestore]);
+  const { data: latestRequests } = useCollection(pendingRequestQuery);
+  const latestRequest = latestRequests?.[0];
 
   useEffect(() => {
     if (officeLocation) {
@@ -394,6 +406,15 @@ export function AttendanceWidget() {
                 }
             }
             
+            // Check for approved requests
+            if (latestRequest && latestRequest.status === 'Approved' && isSameDay(latestRequest.requestTimestamp.toDate(), new Date())) {
+                const reqDist = getDistanceInKm(userLocation, { latitude: latestRequest.requestedLatitude, longitude: latestRequest.requestedLongitude });
+                if (reqDist < 0.5) { // Within 500m of approved spot
+                    proceedWithClockIn(userLocation, reqDist, `Approved Remote: ${latestRequest.reason}`, true);
+                    return;
+                }
+            }
+
             const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
 
             let infoMsg = '';
@@ -409,7 +430,7 @@ export function AttendanceWidget() {
             setOutOfRangeInfo(infoMsg);
             
             setDistance(officeDist);
-            setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, officeDist, outOfRangeReason, true));
+            setCapturedLocation(userLocation);
             setIsOutOfRangeReasonDialogOpen(true);
         },
         () => {
@@ -420,6 +441,29 @@ export function AttendanceWidget() {
     );
   };
   
+  const handleRequestApproval = () => {
+      if (!user || !capturedLocation || !outOfRangeReason) {
+          toast({ variant: 'destructive', title: 'Reason Required', description: 'Please provide a reason for the approval request.' });
+          return;
+      }
+
+      const requestPayload = {
+          employeeId: user.uid,
+          employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
+          requestedCheckInTime: format(new Date(), 'PPpp'),
+          requestedLatitude: capturedLocation.latitude,
+          requestedLongitude: capturedLocation.longitude,
+          reason: outOfRangeReason,
+          status: 'Pending',
+          requestTimestamp: serverTimestamp(),
+      };
+
+      addDocumentNonBlocking(collection(firestore, "attendanceApprovalRequests"), requestPayload);
+      toast({ title: "Request Submitted", description: "Waiting for Admin/HR approval." });
+      setIsOutOfRangeReasonDialogOpen(false);
+      setOutOfRangeReason("");
+  };
+
   const proceedWithClockOut = (userLocation: Location, reason?: string) => {
       if (getTodaysAttendanceRef) {
           const payload: any = {
@@ -776,6 +820,13 @@ export function AttendanceWidget() {
                       Logged In At: {format(lastClockInTime, 'p')}
                   </Badge>
                   )}
+                  {latestRequest && status === 'out' && (
+                      <div className="mt-2">
+                          {latestRequest.status === 'Pending' && <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 animate-pulse"><Clock className="size-3 mr-1"/> Range Approval Pending</Badge>}
+                          {latestRequest.status === 'Approved' && <Badge variant="secondary" className="bg-green-100 text-green-700"><ClipboardCheck className="size-3 mr-1"/> Range Approval Granted</Badge>}
+                          {latestRequest.status === 'Rejected' && <Badge variant="secondary" className="bg-red-100 text-red-700"><AlertCircle className="size-3 mr-1"/> Range Approval Rejected</Badge>}
+                      </div>
+                  )}
               </div>
               
               <div className="w-full max-w-2xl grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
@@ -963,9 +1014,9 @@ export function AttendanceWidget() {
                   <Label htmlFor="reason" className="font-bold text-xs uppercase tracking-widest text-primary">Provide Mandatory Reason for Out of Range</Label>
                   <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Client visit, working from temporary location, GPS deviation..." className="rounded-2xl min-h-[100px]" />
               </div>
-              <DialogFooter>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
                   <Button variant="outline" className="rounded-full font-bold uppercase text-[10px]" onClick={() => { setIsOutOfRangeReasonDialogOpen(false); setOutOfRangeReason(""); }}>Cancel</Button>
-                  <Button onClick={handleOutOfRangeSubmit} className="rounded-full font-bold uppercase text-[10px]">Confirm Precision Point</Button>
+                  <Button onClick={handleRequestApproval} className="rounded-full font-bold uppercase text-[10px] bg-primary text-white">Submit Approval Request</Button>
               </DialogFooter>
           </DialogContent>
         </Dialog>
