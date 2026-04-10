@@ -1,4 +1,3 @@
-
 'use client';
 import {
   SidebarProvider,
@@ -54,6 +53,7 @@ export default function DashboardLayout({
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
   
   const userRole = (userData as any)?.role || 'Member';
+  const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
@@ -74,9 +74,9 @@ export default function DashboardLayout({
   const pendingLeaveCount = leaveRequests?.length || 0;
 
   const attendanceRequestsQuery = useMemoFirebase(() => {
-    if (!userRole || (userRole !== 'HR Manager' && userRole !== 'CEO/Admin')) return null;
+    if (!isPrivileged) return null;
     return query(collection(firestore, "attendanceApprovalRequests"), where("status", "==", "Pending"));
-  }, [firestore, userRole]);
+  }, [firestore, isPrivileged]);
   const { data: attendanceRequests } = useCollection<AttendanceRequest>(attendanceRequestsQuery);
   const pendingAttendanceRequestsCount = attendanceRequests?.length || 0;
 
@@ -93,9 +93,9 @@ export default function DashboardLayout({
   const { data: readAnnouncements } = useCollection<{id: string}>(readAnnouncementsQuery);
 
   const locationRequestsQuery = useMemoFirebase(() => {
-    if (!userRole || (userRole !== 'HR Manager' && userRole !== 'CEO/Admin')) return null;
+    if (!isPrivileged) return null;
     return query(collection(firestore, "location_change_requests"), where("status", "==", "pending"));
-  }, [firestore, userRole]);
+  }, [firestore, isPrivileged]);
   const { data: locationRequests } = useCollection<LocationRequest>(locationRequestsQuery);
   const pendingLocationRequestsCount = locationRequests?.length || 0;
 

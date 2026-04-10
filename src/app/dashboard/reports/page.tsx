@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -14,10 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useStorage } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -181,23 +179,17 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                         <ReportDetailItem label="Strategic Learning" value={report.strategicLearning || "NIL"} />
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pt-4 border-t border-border/50">
-                        <ReportDetailItem label="Best Call Evidence">
-                            {report.bestCallRecording ? (
-                                <div className="flex items-center gap-2 mt-1 p-2 bg-green-50 rounded-lg border border-green-100">
-                                    <Mic className="size-3 text-green-600" />
-                                    <audio controls className="h-6 w-full"><source src={report.bestCallRecording} /></audio>
-                                </div>
-                            ) : "NIL"}
-                        </ReportDetailItem>
-                        <ReportDetailItem label="Worst Call Evidence">
-                            {report.worstCallRecording ? (
-                                <div className="flex items-center gap-2 mt-1 p-2 bg-red-50 rounded-lg border border-red-100">
-                                    <Mic className="size-3 text-red-600" />
-                                    <audio controls className="h-6 w-full"><source src={report.worstCallRecording} /></audio>
-                                </div>
-                            ) : "NIL"}
-                        </ReportDetailItem>
+                    <div className="pt-4 border-t border-border/50">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Call Recording Drive Links:</p>
+                        <div className="flex flex-wrap gap-2">
+                            {Array.isArray(report.callRecordingLinks) && report.callRecordingLinks.length > 0 ? report.callRecordingLinks.map((link: any, i: number) => (
+                                <Badge key={i} variant="outline" className="bg-white hover:bg-muted transition-colors">
+                                    <Link href={link.value} target="_blank" className="flex items-center gap-1.5 py-1">
+                                        <LinkIcon className="size-3" /> Link {i + 1}
+                                    </Link>
+                                </Badge>
+                            )) : <span className="text-muted-foreground/50 italic text-sm">NIL</span>}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -352,8 +344,7 @@ const businessReportSchema = z.object({
   pendingDeliverables: z.string().optional().default(""),
   interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]).default("None"),
   interventionReason: z.string().optional().default(""),
-  bestCallRecording: z.string().optional().default(""),
-  worstCallRecording: z.string().optional().default(""),
+  callRecordingLinks: z.array(z.object({ value: z.string().url("Invalid Drive Link") })).optional().default([]),
   declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Certification required." }) }),
   signature: z.string().min(1, "Signature is required."),
 });
@@ -379,14 +370,12 @@ const technicalReportSchema = z.object({
 export default function ReportsPage() {
   const { user } = useFirebase();
   const firestore = useFirestore();
-  const storage = useStorage();
   const { toast } = useToast();
   
   const [selectedUser, setSelectedUser] = React.useState<any | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [submitProgress, setSubmitProgress] = React.useState(0);
-  const [uploadProgress, setUploadProgress] = React.useState<{ [key: string]: number }>({});
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
@@ -436,7 +425,7 @@ export default function ReportsPage() {
             currency: "USD", outreachColdCalls: 0, outreachLinkedIn: 0, outreachEmails: 0, newLeadsGenerated: 0, potentialClients: 0, followUpCount: 0, followUpClients: [],
             quotationsReleased: 0, netRevenueCollected: 0, committedNetRevenue: 0, pipelineValue: 0, revenueVariance: 0, meetingsSecured: [],
             clientWinHighlight: "", strategicLearning: "", meetingsBookedTomorrow: 0, criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None", interventionReason: "",
-            bestCallRecording: "", worstCallRecording: ""
+            callRecordingLinks: []
         } : {
             tasksAssigned: [], completedTasks: [], repoLinks: [],
             workInProgress: [], pendingTasks: [], whatILearned: [], challengesFaced: [], nextSteps: [],
@@ -445,7 +434,6 @@ export default function ReportsPage() {
         })
       });
       setSubmitProgress(0);
-      setUploadProgress({});
   }, [form, currentUserData, isBusinessUser, todaysAttendance]);
 
   React.useEffect(() => { if (isAddDialogOpen && currentUserData) resetForm(); }, [isAddDialogOpen, resetForm, currentUserData]);
@@ -470,35 +458,10 @@ export default function ReportsPage() {
     };
   }, [reports]);
 
-  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
-    const file = e.target.files?.[0];
-    if (!file || !user || !currentUserData) return;
-    if (file.size > 5 * 1024 * 1024) {
-        toast({ variant: 'destructive', title: 'File too large', description: 'Maximum file size is 5MB.' });
-        return;
-    }
-    const dateStr = format(new Date(), 'yyyy-MM-dd');
-    const fileName = `${currentUserData.firstName}_${currentUserData.lastName}_${dateStr}_${fieldName}_${Date.now()}`;
-    const storageRef = ref(storage, `audio_reports/${user.uid}/${fileName}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-    uploadTask.on('state_changed', 
-        (snapshot) => setUploadProgress(prev => ({ ...prev, [fieldName]: (snapshot.bytesTransferred / snapshot.totalBytes) * 100 })),
-        (error) => toast({ variant: 'destructive', title: 'Upload Failed', description: error.message }),
-        async () => {
-            const url = await getDownloadURL(uploadTask.snapshot.ref);
-            form.setValue(fieldName, url);
-            toast({ title: 'Audio Attached', description: 'File uploaded successfully.' });
-        }
-    );
-  };
-
   const handleDeleteReport = async (report: any) => {
     if (!isAdmin || !reportUserId) return;
     try {
       await deleteDoc(doc(firestore, `users/${reportUserId}/reports`, report.id));
-      const cleanup = async (url?: string) => { if (url) try { await deleteObject(ref(storage, url)); } catch {} };
-      await cleanup(report.bestCallRecording);
-      await cleanup(report.worstCallRecording);
       toast({ title: "Report Deleted" });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e.message });
@@ -536,6 +499,7 @@ export default function ReportsPage() {
 
   const BusinessFormFields = () => {
     const { fields: meetings, append: appendMeeting, remove: removeMeeting } = useFieldArray({ control: form.control, name: "meetingsSecured" });
+    const { fields: links, append: appendLink, remove: removeLink } = useFieldArray({ control: form.control, name: "callRecordingLinks" });
     const cold = Number(useWatch({ control: form.control, name: "outreachColdCalls" }) || 0);
     const linkedin = Number(useWatch({ control: form.control, name: "outreachLinkedIn" }) || 0);
     const email = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
@@ -547,7 +511,7 @@ export default function ReportsPage() {
         <div className="space-y-8">
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader><CardContent className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/20 rounded-2xl border border-border/50"><FormField control={form.control} name="outreachColdCalls" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="outreachLinkedIn" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="outreachEmails" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Emails</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /></div><div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end px-2"><div className="p-4 bg-white rounded-2xl border shadow-sm"><Label className="text-[10px] uppercase font-black text-muted-foreground">Total Outreach Volume</Label><p className="text-2xl font-black text-primary tracking-tighter">{total}</p></div><FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">New Leads Generated</FormLabel><FormControl><Input type="number" {...field} className="rounded-2xl h-12 text-lg font-bold" /></FormControl></FormItem>)} /><div className="p-4 bg-white rounded-2xl border shadow-sm"><Label className="text-[10px] uppercase font-black text-muted-foreground">Conversion Rate</Label><p className={cn("text-2xl font-black tracking-tighter", rateColor)}>{rate.toFixed(2)}%</p></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed"><FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Active Potential Clients</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="followUpCount" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Number of Follow-ups</FormLabel><Select onValueChange={field.onChange} value={field.value?.toString() || "0"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent>{Array.from({ length: 21 }).map((_, i) => (<SelectItem key={i} value={i.toString()}>{i}</SelectItem>))}</SelectContent></Select></FormItem>)} /></div>{Number(followUpCount) > 0 && (<div className="space-y-3 p-4 bg-muted/10 rounded-2xl border border-dashed"><p className="text-[10px] uppercase font-black text-muted-foreground mb-2">Enter Follow-up Client Names:</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{Array.from({ length: Number(followUpCount) }).map((_, i) => (<FormField key={i} control={form.control} name={`followUpClients.${i}`} render={({ field }) => (<FormControl><Input {...field} placeholder={`Client Name ${i + 1}`} className="rounded-xl h-10 text-xs bg-white" /></FormControl>)} />))}</div></div>)}</CardContent></Card>
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">2️⃣ Revenue & Financial Impact</CardTitle></CardHeader><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormField control={form.control} name="currency" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Default Report Currency</FormLabel><Select onValueChange={field.onChange} value={field.value || "USD"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="INR">INR (₹)</SelectItem></SelectContent></Select></FormItem>)} /><FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">NET Revenue Collected Today</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="committedNetRevenue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Committed NET Revenue</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pipeline Business Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Revenue Variance (Optional)</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /></CardContent></Card>
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader><CardContent className="space-y-6"><div className="p-4 bg-muted/10 rounded-2xl border border-dashed mb-4"><FormField control={form.control} name="quotationsReleased" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold text-primary">No. of Quotations Released Today</FormLabel><FormControl><Input type="number" {...field} className="rounded-full font-bold" /></FormControl></FormItem>)} /></div><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Meetings/Demos Secured Today:</p>{meetings.map((field, index) => (<div key={field.id} className="p-5 bg-white/50 border rounded-2xl relative group space-y-4 transition-all hover:shadow-md"><Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)}><X className="size-4" /></Button><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial No. {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} /><div className="grid grid-cols-3 gap-2"><FormField control={form.control} name={`meetingsSecured.${index}.currency`} render={({ field }) => (<FormItem className="col-span-1"><FormLabel className="text-[10px] uppercase font-bold">Cur</FormLabel><Select onValueChange={field.onChange} value={field.value || "USD"}><FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">$</SelectItem><SelectItem value="EUR">€</SelectItem><SelectItem value="GBP">£</SelectItem><SelectItem value="INR">₹</SelectItem></SelectContent></Select></FormItem>)} /><FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem className="col-span-2"><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>)} /></div></div><FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} /></div>))}<Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", currency: "USD", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed"><FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Client Win / Today's Highlight</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /><FormField control={form.control} name="strategicLearning" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Strategic Tactical Learning</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t"><div className="space-y-2"><Label className="text-xs uppercase font-bold text-green-700">Best Call Evidence (Max 5MB)</Label><div className="flex items-center gap-2"><Input type="file" accept="audio/*" onChange={e => handleAudioUpload(e, 'bestCallRecording')} className="rounded-full text-xs" />{form.getValues('bestCallRecording') && <CheckCircle2 className="size-5 text-green-600" />}</div></div><div className="space-y-2"><Label className="text-xs uppercase font-bold text-red-700">Worst Call Evidence (Max 5MB)</Label><div className="flex items-center gap-2"><Input type="file" accept="audio/*" onChange={e => handleAudioUpload(e, 'worstCallRecording')} className="rounded-full text-xs" />{form.getValues('worstCallRecording') && <CheckCircle2 className="size-5 text-red-600" />}</div></div></div></CardContent></Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader><CardContent className="space-y-6"><div className="p-4 bg-muted/10 rounded-2xl border border-dashed mb-4"><FormField control={form.control} name="quotationsReleased" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold text-primary">No. of Quotations Released Today</FormLabel><FormControl><Input type="number" {...field} className="rounded-full font-bold" /></FormControl></FormItem>)} /></div><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Meetings/Demos Secured Today:</p>{meetings.map((field, index) => (<div key={field.id} className="p-5 bg-white/50 border rounded-2xl relative group space-y-4 transition-all hover:shadow-md"><Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)}><X className="size-4" /></Button><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial No. {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} /><div className="grid grid-cols-3 gap-2"><FormField control={form.control} name={`meetingsSecured.${index}.currency`} render={({ field }) => (<FormItem className="col-span-1"><FormLabel className="text-[10px] uppercase font-bold">Cur</FormLabel><Select onValueChange={field.onChange} value={field.value || "USD"}><FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">$</SelectItem><SelectItem value="EUR">€</SelectItem><SelectItem value="GBP">£</SelectItem><SelectItem value="INR">₹</SelectItem></SelectContent></Select></FormItem>)} /><FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem className="col-span-2"><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>)} /></div></div><FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} /></div>))}<Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", currency: "USD", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed"><FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Client Win / Today's Highlight</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /><FormField control={form.control} name="strategicLearning" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Strategic Tactical Learning</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /></div><div className="pt-4 border-t border-dashed space-y-4"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Call Recording Drive Links:</p>{links.map((field, index) => (<div key={field.id} className="flex gap-2"><FormField control={form.control} name={`callRecordingLinks.${index}.value`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input {...field} placeholder="https://drive.google.com/..." className="rounded-xl h-10 text-xs" /></FormControl><FormMessage /></FormItem>)}/><Button type="button" variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-destructive" onClick={() => removeLink(index)}><Trash2 className="size-4" /></Button></div>))}<Button type="button" variant="outline" size="sm" onClick={() => appendLink({ value: "" })} className="w-full border-dashed rounded-xl h-10 text-[10px] font-black uppercase tracking-widest"><Plus className="size-3 mr-2" /> Add Drive Link</Button></div></CardContent></Card>
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><CalendarClock className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader><CardContent className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Meetings Booked for Tomorrow</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">T+1 Critical Path Action</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} /></div><FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pending Deliverables / Follow-ups</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} /><FormField control={form.control} name="interventionTrigger" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold text-primary">Intervention Trigger Required?</FormLabel><Select onValueChange={field.onChange} value={field.value || "None"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="None">None (Standard)</SelectItem><SelectItem value="Coaching">Coaching Needed</SelectItem><SelectItem value="Technical Support">Technical Support Needed</SelectItem><SelectItem value="Client meeting">Client Meeting Support</SelectItem></SelectContent></Select></FormItem>)} />{intervention !== 'None' && <FormField control={form.control} name="interventionReason" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Reason for Support Trigger</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl bg-orange-50/30 border-orange-100" /></FormControl></FormItem>)} />}</CardContent></Card>
         </div>
     );
@@ -639,7 +603,7 @@ export default function ReportsPage() {
                         {reports.map(r => (
                             <AccordionItem value={r.id} key={r.id} className="border-none">
                                 <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none"><div className="flex-1 text-left flex items-center justify-between"><div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div><Badge variant="secondary" className="mr-4 text-[10px] font-black uppercase">✅ SUBMITTED</Badge></div></AccordionTrigger>
-                                <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]"><div className="flex justify-end gap-2 mb-4"><AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Delete</Button></AlertDialogTrigger><AlertDialogContent className="rounded-3xl p-8"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently remove the record and any audio evidence.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent>
+                                <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]"><div className="flex justify-end gap-2 mb-4"><AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Delete</Button></AlertDialogTrigger><AlertDialogContent className="rounded-3xl p-8"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently remove the record.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent>
                             </AccordionItem>
                         ))}
                     </Accordion>
