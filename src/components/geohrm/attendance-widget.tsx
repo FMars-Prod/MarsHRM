@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -78,7 +79,7 @@ export function AttendanceWidget() {
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
   const [currentUserLocation, setCurrentUserLocation] = useState<Location | null>(null);
-  const [distance, setDistance] = setDistance(null);
+  const [distance, setDistance] = useState<number | null>(null);
   const { toast } = useToast();
 
   const { user } = useUser();
