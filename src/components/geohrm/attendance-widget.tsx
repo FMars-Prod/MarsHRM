@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -80,6 +79,7 @@ export function AttendanceWidget() {
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
   const [currentUserLocation, setCurrentUserLocation] = useState<Location | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
+  const [isVerifyingLocation, setIsVerifyingLocation] = useState(false);
   const { toast } = useToast();
 
   const { user } = useUser();
@@ -156,7 +156,6 @@ export function AttendanceWidget() {
             setTotalBreakTime(todaysAttendance.totalBreakDuration || 0);
         } else {
           if (todaysAttendance.checkInTime) {
-            // Restore status based on existing records
             if (todaysAttendance.locationLunchOutLatitude && !todaysAttendance.locationLunchInLatitude) {
                 setStatus("lunch");
             } else {
@@ -233,11 +232,13 @@ export function AttendanceWidget() {
   const handleLunch = () => {
     if (status === "lunch") {
         if (!user) return;
+        setIsVerifyingLocation(true);
         navigator.geolocation.getCurrentPosition(
             (position) => {
               const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
               const dist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : 0;
               
+              setIsVerifyingLocation(false);
               if (officeLocation && dist > maxDistanceKm) {
                   setOutOfRangeAction(() => () => proceedWithBreakEnd(userLocation, dist, outOfRangeReason));
                   setIsOutOfRangeReasonDialogOpen(true);
@@ -245,11 +246,15 @@ export function AttendanceWidget() {
                   proceedWithBreakEnd(userLocation, dist);
               }
             },
-            () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
+            () => {
+                setIsVerifyingLocation(false);
+                toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."});
+            },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     } else {
       if (!user) return;
+      setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(
           (position) => {
               const userLocation = { latitude: position.coords.latitude, longitude: position.coords.longitude };
@@ -260,10 +265,12 @@ export function AttendanceWidget() {
                   });
               }
               setStatus("lunch");
+              setIsVerifyingLocation(false);
               toast({ title: "Lunch Break Started (L-OUT)", description: "Your L-OUT location has been recorded." });
           },
           () => {
               setStatus("lunch");
+              setIsVerifyingLocation(false);
               toast({ variant: "destructive", title: "Location Warning", description: "L-OUT started but location couldn't be captured." });
           },
           { enableHighAccuracy: true, timeout: 10000 }
@@ -351,6 +358,7 @@ export function AttendanceWidget() {
         return;
     }
 
+    setIsVerifyingLocation(true);
     navigator.geolocation.getCurrentPosition(
         (position) => {
             const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
@@ -358,6 +366,7 @@ export function AttendanceWidget() {
             const homeLon = (userData as any)?.homeLongitude;
             const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
             
+            setIsVerifyingLocation(false);
             if (officeLocation) {
                 const officeDist = getDistanceInKm(userLocation, officeLocation);
                 if (officeDist <= maxDistanceKm) {
@@ -400,7 +409,10 @@ export function AttendanceWidget() {
             setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, officeDist, outOfRangeReason, true));
             setIsOutOfRangeReasonDialogOpen(true);
         },
-        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get your location. Please enable location services." }),
+        () => {
+            setIsVerifyingLocation(false);
+            toast({ variant: "destructive", title: "Location Error", description: "Could not get your location. Please enable location services." });
+        },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
@@ -430,6 +442,7 @@ export function AttendanceWidget() {
       return;
     }
 
+    setIsVerifyingLocation(true);
     navigator.geolocation.getCurrentPosition(
         (position) => {
             const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
@@ -437,6 +450,7 @@ export function AttendanceWidget() {
             const homeLon = (userData as any)?.homeLongitude;
             const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
             
+            setIsVerifyingLocation(false);
             if (officeLocation) {
                 const officeDist = getDistanceInKm(userLocation, officeLocation);
                 if (officeDist <= maxDistanceKm) {
@@ -473,7 +487,10 @@ export function AttendanceWidget() {
             setOutOfRangeAction(() => () => proceedWithClockOut(userLocation, outOfRangeReason));
             setIsOutOfRangeReasonDialogOpen(true);
         },
-        () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."}),
+        () => {
+            setIsVerifyingLocation(false);
+            toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."});
+        },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
@@ -526,13 +543,18 @@ export function AttendanceWidget() {
   }
 
   const handleCaptureOfficeLocation = () => {
+      setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(
           (position) => {
               setNewLatitude(position.coords.latitude.toString());
               setNewLongitude(position.coords.longitude.toString());
+              setIsVerifyingLocation(false);
               toast({ title: "Location Captured", description: "Coordinates updated to your current position." });
           },
-          (error) => toast({ variant: "destructive", title: "Capture Failed", description: error.message }),
+          (error) => {
+              setIsVerifyingLocation(false);
+              toast({ variant: "destructive", title: "Capture Failed", description: error.message });
+          },
           { enableHighAccuracy: true }
       );
   }
@@ -599,354 +621,370 @@ export function AttendanceWidget() {
   }
 
   return (
-    <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm relative overflow-hidden">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-            <CardTitle className="font-headline flex items-center gap-2 text-primary">
-            <Clock className="size-5" />
-            High-Accuracy Attendance
-            </CardTitle>
-            {isAdmin && (
-                <Dialog open={isSettingsDialogOpen} onOpenChange={(open) => {
-                    setIsSettingsDialogOpen(open);
-                    if (!open) window.location.reload();
-                }}>
-                    <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <Settings className="size-5" />
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md flex flex-col max-h-[90vh]">
-                        <DialogHeader>
-                            <DialogTitle>Company Settings</DialogTitle>
-                            <DialogDescription>
-                                Set global settings for attendance and location.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="flex-1 overflow-y-auto -mx-6 px-6">
-                            <div className="grid gap-4 py-4 pr-2">
-                               <div className="p-4 bg-muted/30 rounded-xl space-y-3">
-                                    <Label className="text-xs font-black uppercase text-primary">Precision Setup</Label>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="latitude">Office Latitude</Label>
-                                            <Input id="latitude" value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} placeholder="e.g., 37.7749" />
-                                        </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="longitude">Office Longitude</Label>
-                                            <Input id="longitude" value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} placeholder="e.g., -122.4194" />
-                                        </div>
-                                    </div>
-                                    <Button variant="secondary" className="w-full h-10 font-bold uppercase text-[10px]" onClick={handleCaptureOfficeLocation}>
-                                        <LocateFixed className="mr-2 h-4 w-4" /> Pin Current Office Coordinates
-                                    </Button>
-                               </div>
-                               <div className="grid gap-2">
-                                    <Label htmlFor="range">Clock-in Range (km)</Label>
-                                    <Input id="range" type="number" value={newMaxDistance} onChange={(e) => setNewMaxDistance(e.target.value)} placeholder="e.g., 2" />
-                               </div>
-                               <div className="grid grid-cols-2 gap-4">
-                                 <div className="grid gap-2">
-                                      <Label htmlFor="shift-start">Shift Start Time (Late Trigger)</Label>
-                                      <Input id="shift-start" type="time" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)} />
-                                 </div>
-                                 <div className="grid gap-2">
-                                      <Label htmlFor="shift-end">Shift End Time</Label>
-                                      <Input id="shift-end" type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
-                                 </div>
-                               </div>
-                               <div className="grid grid-cols-2 gap-4">
-                                 <div className="grid gap-2">
-                                      <Label htmlFor="lunch-start">Lunch Start Time</Label>
-                                      <Input id="lunch-start" type="time" value={newLunchStart} onChange={(e) => setNewLunchStart(e.target.value)} />
-                                 </div>
-                                 <div className="grid gap-2">
-                                      <Label htmlFor="lunch-duration">Lunch Duration (mins)</Label>
-                                      <Input id="lunch-duration" type="number" value={newLunchDuration} onChange={(e) => setNewLunchDuration(e.target.value)} />
-                                 </div>
-                               </div>
-                            </div>
-                        </div>
-                        <DialogFooter className="mt-auto pt-4 border-t">
-                            <DialogClose asChild>
-                                <Button variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <Button onClick={handleSaveSettings}>Save Settings</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            )}
+    <>
+      {isVerifyingLocation && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md">
+            <div className="relative">
+                <div className="h-24 w-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary animate-pulse" />
+            </div>
+            <h2 className="mt-6 text-xl font-black uppercase tracking-tighter text-primary">Verifying Precision Point</h2>
+            <p className="text-sm text-muted-foreground font-medium">Communicating with GPS satellites...</p>
+            <div className="mt-8 w-48 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-primary animate-progress-loading" />
+            </div>
         </div>
-        <CardDescription>
-          Precise location verification. Designated:
-          <span className="font-semibold text-foreground">
-            {isWfhAllowed ? " Work From Home" : " Work From Office"}
-          </span>.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow flex flex-col items-center justify-center gap-6 text-center pb-8">
-        {isLocationLoading && !isWfhAllowed && !isAdmin ? (
-             <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                <Building2 className="h-10 w-10 animate-pulse" />
-                <p>Loading Location...</p>
-            </div>
-        ) : (officeLocation || isWfhAllowed || isAdmin) ? (
-          <>
-            {upcomingMilestone && (status === 'in' || status === 'lunch' || status === 'short_break') && (
-                <div className="absolute top-0 left-0 right-0 p-2 bg-primary/10 border-b border-primary/20 animate-pulse flex items-center justify-center gap-2">
-                    <AlertCircle className="size-4 text-primary" />
-                    <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                        Upcoming Milestone: {upcomingMilestone.type} at {format(upcomingMilestone.time, 'p')}
-                    </span>
-                </div>
-            )}
+      )}
 
-            <div
-              className={cn(
-                "flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs",
-                status === "in" && (isLate() ? "text-orange-600" : "text-green-600"),
-                status === "lunch" && "text-yellow-600",
-                status === "short_break" && "text-blue-600",
-                status === "out" && !hasClockedOutToday && "text-red-600",
-                status === "out" && hasClockedOutToday && "text-muted-foreground"
+      <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm relative overflow-hidden">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+              <CardTitle className="font-headline flex items-center gap-2 text-primary">
+              <Clock className="size-5" />
+              High-Accuracy Attendance
+              </CardTitle>
+              {isAdmin && (
+                  <Dialog open={isSettingsDialogOpen} onOpenChange={(open) => {
+                      setIsSettingsDialogOpen(open);
+                      if (!open) window.location.reload();
+                  }}>
+                      <DialogTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                              <Settings className="size-5" />
+                          </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md flex flex-col max-h-[90vh]">
+                          <DialogHeader>
+                              <DialogTitle>Company Settings</DialogTitle>
+                              <DialogDescription>
+                                  Set global settings for attendance and location.
+                              </DialogDescription>
+                          </DialogHeader>
+                          <div className="flex-1 overflow-y-auto -mx-6 px-6">
+                              <div className="grid gap-4 py-4 pr-2">
+                                <div className="p-4 bg-muted/30 rounded-xl space-y-3">
+                                      <Label className="text-xs font-black uppercase text-primary">Precision Setup</Label>
+                                      <div className="grid grid-cols-2 gap-4">
+                                          <div className="grid gap-2">
+                                              <Label htmlFor="latitude">Office Latitude</Label>
+                                              <Input id="latitude" value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} placeholder="e.g., 37.7749" />
+                                          </div>
+                                          <div className="grid gap-2">
+                                              <Label htmlFor="longitude">Office Longitude</Label>
+                                              <Input id="longitude" value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} placeholder="e.g., -122.4194" />
+                                          </div>
+                                      </div>
+                                      <Button variant="secondary" className="w-full h-10 font-bold uppercase text-[10px]" onClick={handleCaptureOfficeLocation}>
+                                          <LocateFixed className="mr-2 h-4 w-4" /> Pin Current Office Coordinates
+                                      </Button>
+                                </div>
+                                <div className="grid gap-2">
+                                      <Label htmlFor="range">Clock-in Range (km)</Label>
+                                      <Input id="range" type="number" value={newMaxDistance} onChange={(e) => setNewMaxDistance(e.target.value)} placeholder="e.g., 2" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="grid gap-2">
+                                        <Label htmlFor="shift-start">Shift Start Time (Late Trigger)</Label>
+                                        <Input id="shift-start" type="time" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)} />
+                                  </div>
+                                  <div className="grid gap-2">
+                                        <Label htmlFor="shift-end">Shift End Time</Label>
+                                        <Input id="shift-end" type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="grid gap-2">
+                                        <Label htmlFor="lunch-start">Lunch Start Time</Label>
+                                        <Input id="lunch-start" type="time" value={newLunchStart} onChange={(e) => setNewLunchStart(e.target.value)} />
+                                  </div>
+                                  <div className="grid gap-2">
+                                        <Label htmlFor="lunch-duration">Lunch Duration (mins)</Label>
+                                        <Input id="lunch-duration" type="number" value={newLunchDuration} onChange={(e) => setNewLunchDuration(e.target.value)} />
+                                  </div>
+                                </div>
+                              </div>
+                          </div>
+                          <DialogFooter className="mt-auto pt-4 border-t">
+                              <DialogClose asChild>
+                                  <Button variant="outline">Cancel</Button>
+                              </DialogClose>
+                              <Button onClick={handleSaveSettings}>Save Settings</Button>
+                          </DialogFooter>
+                      </DialogContent>
+                  </Dialog>
               )}
-            >
-              {status === "in" && (isLate() ? <Clock className="size-4" /> : <Briefcase className="size-4" />)}
-              {status === "lunch" && <Utensils className="size-4" />}
-              {status === "short_break" && <Coffee className="size-4" />}
-              {status === "out" && <CheckCircle2 className="size-4" />}
+          </div>
+          <CardDescription>
+            Precise location verification. Designated:
+            <span className="font-semibold text-foreground">
+              {isWfhAllowed ? " Work From Home" : " Work From Office"}
+            </span>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow flex flex-col items-center justify-center gap-6 text-center pb-8">
+          {isLocationLoading && !isWfhAllowed && !isAdmin ? (
+              <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                  <Building2 className="h-10 w-10 animate-pulse" />
+                  <p>Loading Location...</p>
+              </div>
+          ) : (officeLocation || isWfhAllowed || isAdmin) ? (
+            <>
+              {upcomingMilestone && (status === 'in' || status === 'lunch' || status === 'short_break') && (
+                  <div className="absolute top-0 left-0 right-0 p-2 bg-primary/10 border-b border-primary/20 animate-pulse flex items-center justify-center gap-2">
+                      <AlertCircle className="size-4 text-primary" />
+                      <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                          Upcoming Milestone: {upcomingMilestone.type} at {format(upcomingMilestone.time, 'p')}
+                      </span>
+                  </div>
+              )}
 
-              {
-                hasClockedOutToday
-                  ? "Daily Session Complete"
-                  : status === 'lunch'
-                    ? "L-OUT Active"
-                    : status === 'short_break'
-                    ? "Short Break Active"
-                    : isLate() ? "Late Attendance" : `Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
-              }
-            </div>
-            
-            <div className="space-y-1">
-                <div className="text-7xl font-black font-mono tabular-nums tracking-tighter drop-shadow-sm text-primary">
-                {formatTime(timer)}
-                </div>
-                {lastClockInTime && status !== "out" && (
-                <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-bold px-3 py-1">
-                    Logged In At: {format(lastClockInTime, 'p')}
-                </Badge>
+              <div
+                className={cn(
+                  "flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs",
+                  status === "in" && (isLate() ? "text-orange-600" : "text-green-600"),
+                  status === "lunch" && "text-yellow-600",
+                  status === "short_break" && "text-blue-600",
+                  status === "out" && !hasClockedOutToday && "text-red-600",
+                  status === "out" && hasClockedOutToday && "text-muted-foreground"
                 )}
-            </div>
-            
-            <div className="w-full max-w-2xl grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-                <div className={cn(
-                    "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                    status !== 'out' ? "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 shadow-inner" : "bg-white/50 border-border/50"
-                )}>
-                    <LogIn className={cn("size-5", status !== 'out' ? "text-primary" : "text-muted-foreground/50")} />
-                    <div className="text-center">
-                        <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log In</p>
-                        <p className="text-sm font-bold">{lastClockInTime ? format(lastClockInTime, 'p') : '--:--'}</p>
-                        {todaysAttendance?.locationCheckInLatitude && (
-                            <p className="text-[10px] text-primary/60 font-mono mt-1">
-                                {formatCapturedLocation(todaysAttendance.locationCheckInLatitude, todaysAttendance.locationCheckInLongitude)}
-                            </p>
-                        )}
-                    </div>
-                </div>
+              >
+                {status === "in" && (isLate() ? <Clock className="size-4" /> : <Briefcase className="size-4" />)}
+                {status === "lunch" && <Utensils className="size-4" />}
+                {status === "short_break" && <Coffee className="size-4" />}
+                {status === "out" && <CheckCircle2 className="size-4" />}
 
-                <div className={cn(
-                    "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                    status === 'lunch' || todaysAttendance?.locationLunchOutLatitude ? "bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 border-yellow-200" : "bg-white/50 border-border/50"
-                )}>
-                    <Utensils className={cn("size-5", status === 'lunch' ? "text-yellow-600" : "text-muted-foreground/50")} />
-                    <div className="text-center">
-                        <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-Out</p>
-                        <p className="text-sm font-bold">{milestones?.lOut ? format(milestones.lOut, 'p') : '--:--'}</p>
-                        {todaysAttendance?.locationLunchOutLatitude && (
-                            <p className="text-[10px] text-yellow-600/60 font-mono mt-1">
-                                {formatCapturedLocation(todaysAttendance.locationLunchOutLatitude, todaysAttendance.locationLunchOutLongitude)}
-                            </p>
-                        )}
-                    </div>
-                </div>
-
-                <div className={cn(
-                    "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                    todaysAttendance?.locationLunchInLatitude ? "bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-blue-200" : "bg-white/50 border-border/50"
-                )}>
-                    <Clock className={cn("size-5", todaysAttendance?.locationLunchInLatitude ? "text-blue-600" : "text-muted-foreground/50")} />
-                    <div className="text-center">
-                        <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-In</p>
-                        <p className="text-sm font-bold">{milestones?.lIn ? format(milestones.lIn, 'p') : '--:--'}</p>
-                        {todaysAttendance?.locationLunchInLatitude && (
-                            <p className="text-[10px] text-blue-600/60 font-mono mt-1">
-                                {formatCapturedLocation(todaysAttendance.locationLunchInLatitude, todaysAttendance.locationLunchInLongitude)}
-                            </p>
-                        )}
-                    </div>
-                </div>
-
-                <div className={cn(
-                    "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                    hasClockedOutToday ? "bg-gradient-to-br from-purple-500/20 to-purple-500/5 border-purple-200" : "bg-white/50 border-border/50"
-                )}>
-                    <LogOut className={cn("size-5", hasClockedOutToday ? "text-purple-600" : "text-muted-foreground/50")} />
-                    <div className="text-center">
-                        <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log-out</p>
-                        <p className="text-sm font-bold">{milestones?.logout ? format(milestones.logout, 'p') : '--:--'}</p>
-                        {todaysAttendance?.locationCheckOutLatitude && (
-                            <p className="text-[10px] text-purple-600/60 font-mono mt-1">
-                                {formatCapturedLocation(todaysAttendance.locationCheckOutLatitude, todaysAttendance.locationCheckOutLongitude)}
-                            </p>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex items-center gap-6">
-              {(status === "lunch" || status === "short_break") && (
-                <div className="flex flex-col items-center">
-                  <span className="text-[10px] font-black uppercase text-muted-foreground">Current Break</span>
-                  <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
-                    {formatTime(breakTimer)}
+                {
+                  hasClockedOutToday
+                    ? "Daily Session Complete"
+                    : status === 'lunch'
+                      ? "L-OUT Active"
+                      : status === 'short_break'
+                      ? "Short Break Active"
+                      : isLate() ? "Late Attendance" : `Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
+                }
+              </div>
+              
+              <div className="space-y-1">
+                  <div className="text-7xl font-black font-mono tabular-nums tracking-tighter drop-shadow-sm text-primary">
+                  {formatTime(timer)}
                   </div>
-                </div>
-              )}
-              {totalBreakTime > 0 && (
-                <div className="flex flex-col items-center">
-                  <span className="text-[10px] font-black uppercase text-muted-foreground">Total Break Today</span>
-                  <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
-                    {formatTime(totalBreakTime)}
+                  {lastClockInTime && status !== "out" && (
+                  <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-bold px-3 py-1">
+                      Logged In At: {format(lastClockInTime, 'p')}
+                  </Badge>
+                  )}
+              </div>
+              
+              <div className="w-full max-w-2xl grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+                  <div className={cn(
+                      "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
+                      status !== 'out' ? "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 shadow-inner" : "bg-white/50 border-border/50"
+                  )}>
+                      <LogIn className={cn("size-5", status !== 'out' ? "text-primary" : "text-muted-foreground/50")} />
+                      <div className="text-center">
+                          <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log In</p>
+                          <p className="text-sm font-bold">{lastClockInTime ? format(lastClockInTime, 'p') : '--:--'}</p>
+                          {todaysAttendance?.locationCheckInLatitude && (
+                              <p className="text-[10px] text-primary/60 font-mono mt-1">
+                                  {formatCapturedLocation(todaysAttendance.locationCheckInLatitude, todaysAttendance.locationCheckInLongitude)}
+                              </p>
+                          )}
+                      </div>
                   </div>
-                </div>
-              )}
-            </div>
 
-            {currentUserLocation && (
-              <div className="flex items-center text-xs text-muted-foreground gap-1 bg-muted/30 px-3 py-1 rounded-full">
-                <MapPin className="size-3" />
-                <span className="font-medium">{`Point Lat: ${currentUserLocation.latitude.toFixed(4)}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
-                {distance !== null && distance > 0 && (
-                  <span className="text-primary font-bold">({distance.toFixed(2)} km from base)</span>
+                  <div className={cn(
+                      "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
+                      status === 'lunch' || todaysAttendance?.locationLunchOutLatitude ? "bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 border-yellow-200" : "bg-white/50 border-border/50"
+                  )}>
+                      <Utensils className={cn("size-5", status === 'lunch' ? "text-yellow-600" : "text-muted-foreground/50")} />
+                      <div className="text-center">
+                          <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-Out</p>
+                          <p className="text-sm font-bold">{milestones?.lOut ? format(milestones.lOut, 'p') : '--:--'}</p>
+                          {todaysAttendance?.locationLunchOutLatitude && (
+                              <p className="text-[10px] text-yellow-600/60 font-mono mt-1">
+                                  {formatCapturedLocation(todaysAttendance.locationLunchOutLatitude, todaysAttendance.locationLunchOutLongitude)}
+                              </p>
+                          )}
+                      </div>
+                  </div>
+
+                  <div className={cn(
+                      "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
+                      todaysAttendance?.locationLunchInLatitude ? "bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-blue-200" : "bg-white/50 border-border/50"
+                  )}>
+                      <Clock className={cn("size-5", todaysAttendance?.locationLunchInLatitude ? "text-blue-600" : "text-muted-foreground/50")} />
+                      <div className="text-center">
+                          <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-In</p>
+                          <p className="text-sm font-bold">{milestones?.lIn ? format(milestones.lIn, 'p') : '--:--'}</p>
+                          {todaysAttendance?.locationLunchInLatitude && (
+                              <p className="text-[10px] text-blue-600/60 font-mono mt-1">
+                                  {formatCapturedLocation(todaysAttendance.locationLunchInLatitude, todaysAttendance.locationLunchInLongitude)}
+                              </p>
+                          )}
+                      </div>
+                  </div>
+
+                  <div className={cn(
+                      "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
+                      hasClockedOutToday ? "bg-gradient-to-br from-purple-500/20 to-purple-500/5 border-purple-200" : "bg-white/50 border-border/50"
+                  )}>
+                      <LogOut className={cn("size-5", hasClockedOutToday ? "text-purple-600" : "text-muted-foreground/50")} />
+                      <div className="text-center">
+                          <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log-out</p>
+                          <p className="text-sm font-bold">{milestones?.logout ? format(milestones.logout, 'p') : '--:--'}</p>
+                          {todaysAttendance?.locationCheckOutLatitude && (
+                              <p className="text-[10px] text-purple-600/60 font-mono mt-1">
+                                  {formatCapturedLocation(todaysAttendance.locationCheckOutLatitude, todaysAttendance.locationCheckOutLongitude)}
+                              </p>
+                          )}
+                      </div>
+                  </div>
+              </div>
+
+              <div className="flex items-center gap-6">
+                {(status === "lunch" || status === "short_break") && (
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase text-muted-foreground">Current Break</span>
+                    <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
+                      {formatTime(breakTimer)}
+                    </div>
+                  </div>
+                )}
+                {totalBreakTime > 0 && (
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase text-muted-foreground">Total Break Today</span>
+                    <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
+                      {formatTime(totalBreakTime)}
+                    </div>
+                  </div>
                 )}
               </div>
-            )}
-          </>
-        ) : (
-             <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                <Building2 className="h-10 w-10" />
-                <p className="max-w-xs font-medium">Location not set. Please contact Admin.</p>
-            </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-center items-center py-6 px-6 bg-muted/5 border-t">
-        {status === 'out' && !hasClockedOutToday && (
-            <Button
-                onClick={handleClockIn}
-                className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 bg-primary text-white"
-                disabled={!isWfhAllowed && !officeLocation && !isAdmin}
-            >
-                <Clock className="mr-2 h-5 w-5" /> Start Shift
-            </Button>
-        )}
-        {status !== 'out' && (
-            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-[600px] justify-center">
-                {status === "in" && (
-                    <>
-                        <Button
-                            onClick={handleLunch}
-                            variant="outline"
-                            className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-white border-primary/20 text-primary hover:bg-primary/5"
-                        >
-                            <Utensils className="mr-2 h-4 w-4" /> L-OUT
-                        </Button>
-                        <Button
-                            onClick={handleShortBreak}
-                            variant="outline"
-                            className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-white border-primary/20 text-primary hover:bg-primary/5"
-                        >
-                            <Coffee className="mr-2 h-4 w-4" /> Short Break
-                        </Button>
-                    </>
-                )}
 
-                {status === "lunch" && (
-                    <Button
-                        onClick={handleLunch}
-                        className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-primary text-white"
-                    >
-                        <LogIn className="mr-2 h-4 w-4" /> L-IN
-                    </Button>
-                )}
+              {currentUserLocation && (
+                <div className="flex items-center text-xs text-muted-foreground gap-1 bg-muted/30 px-3 py-1 rounded-full">
+                  <MapPin className="size-3" />
+                  <span className="font-medium">{`Point Lat: ${currentUserLocation.latitude.toFixed(4)}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
+                  {distance !== null && distance > 0 && (
+                    <span className="text-primary font-bold">({distance.toFixed(2)} km from base)</span>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+              <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                  <Building2 className="h-10 w-10" />
+                  <p className="max-w-xs font-medium">Location not set. Please contact Admin.</p>
+              </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-center items-center py-6 px-6 bg-muted/5 border-t">
+          {status === 'out' && !hasClockedOutToday && (
+              <Button
+                  onClick={handleClockIn}
+                  className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 bg-primary text-white"
+                  disabled={!isWfhAllowed && !officeLocation && !isAdmin}
+              >
+                  <Clock className="mr-2 h-5 w-5" /> Start Shift
+              </Button>
+          )}
+          {status !== 'out' && (
+              <div className="flex flex-col sm:flex-row gap-4 w-full max-w-[600px] justify-center">
+                  {status === "in" && (
+                      <>
+                          <Button
+                              onClick={handleLunch}
+                              variant="outline"
+                              className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-white border-primary/20 text-primary hover:bg-primary/5"
+                          >
+                              <Utensils className="mr-2 h-4 w-4" /> L-OUT
+                          </Button>
+                          <Button
+                              onClick={handleShortBreak}
+                              variant="outline"
+                              className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-white border-primary/20 text-primary hover:bg-primary/5"
+                          >
+                              <Coffee className="mr-2 h-4 w-4" /> Short Break
+                          </Button>
+                      </>
+                  )}
 
-                {status === "short_break" && (
-                    <Button
-                        onClick={handleShortBreak}
-                        className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-primary text-white"
-                    >
-                        <Clock className="mr-2 h-4 w-4" /> End Short Break
-                    </Button>
-                )}
+                  {status === "lunch" && (
+                      <Button
+                          onClick={handleLunch}
+                          className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-primary text-white"
+                      >
+                          <LogIn className="mr-2 h-4 w-4" /> L-IN
+                      </Button>
+                  )}
 
-                <AlertDialog onOpenChange={(open) => { if (!open) window.location.reload(); }}>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8">
-                            Finish Day
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-3xl">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Ready to Clock Out?</AlertDialogTitle>
-                            <AlertDialogDescription className="font-medium text-muted-foreground">This will finalize your attendance records for today.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Continue Working</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleClockOut} className="rounded-full font-bold uppercase text-[10px]">Confirm Clock Out</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </div>
-        )}
-      </CardFooter>
+                  {status === "short_break" && (
+                      <Button
+                          onClick={handleShortBreak}
+                          className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-primary text-white"
+                      >
+                          <Clock className="mr-2 h-4 w-4" /> End Short Break
+                      </Button>
+                  )}
 
-      <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={(open) => {
-          setIsOutOfRangeReasonDialogOpen(open);
-          if (!open) window.location.reload();
-      }}>
-        <DialogContent className="rounded-3xl">
-            <DialogHeader>
-                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Precise Verification Required</DialogTitle>
-                <DialogDescription className="font-medium text-muted-foreground">{outOfRangeInfo}</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-                <Label htmlFor="reason" className="font-bold text-xs uppercase tracking-widest text-primary">Provide Mandatory Reason for Out of Range</Label>
-                <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Client visit, working from temporary location, GPS deviation..." className="rounded-2xl min-h-[100px]" />
-            </div>
-            <DialogFooter>
-                <Button variant="outline" className="rounded-full font-bold uppercase text-[10px]" onClick={() => { setIsOutOfRangeReasonDialogOpen(false); setOutOfRangeReason(""); }}>Cancel</Button>
-                <Button onClick={handleOutOfRangeSubmit} className="rounded-full font-bold uppercase text-[10px]">Confirm Precision Point</Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <AlertDialog open={isSetHomeLocationDialogOpen} onOpenChange={(open) => {
-          setIsSetHomeLocationDialogOpen(open);
-          if (!open) window.location.reload();
-      }}>
-        <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader>
-                <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Pin Exact WFH Location?</AlertDialogTitle>
-                <AlertDialogDescription className="font-medium text-muted-foreground text-sm">
-                    You haven't set a home location yet. Would you like to use your current precise coordinates as your WFH address?
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]" onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmSetHomeLocation} className="rounded-full font-bold uppercase text-[10px]">Yes, Set High-Accuracy Point</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+                  <AlertDialog onOpenChange={(open) => { if (!open) window.location.reload(); }}>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8">
+                              Finish Day
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="rounded-3xl">
+                          <AlertDialogHeader>
+                              <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Ready to Clock Out?</AlertDialogTitle>
+                              <AlertDialogDescription className="font-medium text-muted-foreground">This will finalize your attendance records for today.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Continue Working</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleClockOut} className="rounded-full font-bold uppercase text-[10px]">Confirm Clock Out</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+              </div>
+          )}
+        </CardFooter>
+
+        <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={(open) => {
+            setIsOutOfRangeReasonDialogOpen(open);
+            if (!open) window.location.reload();
+        }}>
+          <DialogContent className="rounded-3xl">
+              <DialogHeader>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Precise Verification Required</DialogTitle>
+                  <DialogDescription className="font-medium text-muted-foreground">{outOfRangeInfo}</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                  <Label htmlFor="reason" className="font-bold text-xs uppercase tracking-widest text-primary">Provide Mandatory Reason for Out of Range</Label>
+                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Client visit, working from temporary location, GPS deviation..." className="rounded-2xl min-h-[100px]" />
+              </div>
+              <DialogFooter>
+                  <Button variant="outline" className="rounded-full font-bold uppercase text-[10px]" onClick={() => { setIsOutOfRangeReasonDialogOpen(false); setOutOfRangeReason(""); }}>Cancel</Button>
+                  <Button onClick={handleOutOfRangeSubmit} className="rounded-full font-bold uppercase text-[10px]">Confirm Precision Point</Button>
+              </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        <AlertDialog open={isSetHomeLocationDialogOpen} onOpenChange={(open) => {
+            setIsSetHomeLocationDialogOpen(open);
+            if (!open) window.location.reload();
+        }}>
+          <AlertDialogContent className="rounded-3xl">
+              <AlertDialogHeader>
+                  <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Pin Exact WFH Location?</AlertDialogTitle>
+                  <AlertDialogDescription className="font-medium text-muted-foreground text-sm">
+                      You haven't set a home location yet. Would you like to use your current precise coordinates as your WFH address?
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]" onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleConfirmSetHomeLocation} className="rounded-full font-bold uppercase text-[10px]">Yes, Set High-Accuracy Point</AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </Card>
+    </>
   );
 }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -77,6 +76,7 @@ export default function ProfilePage() {
     const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = React.useState(false);
     const [capturedLocation, setCapturedLocation] = React.useState<Location | null>(null);
     const [selectedAddress, setSelectedAddress] = React.useState<string>("Getting address...");
+    const [isVerifyingLocation, setIsVerifyingLocation] = React.useState(false);
 
     const userDocRef = useMemoFirebase(
         () => (user ? doc(firestore, "users", user.uid) : null),
@@ -163,6 +163,7 @@ export default function ProfilePage() {
     const handleLocationAction = () => {
         if (!userDocRef) return;
 
+        setIsVerifyingLocation(true);
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
@@ -170,6 +171,7 @@ export default function ProfilePage() {
 
                 const hasHomeLocation = (employee as any)?.homeLatitude && (employee as any)?.homeLongitude;
                 
+                setIsVerifyingLocation(false);
                 if (hasHomeLocation && !isAdminOrHR) {
                     setIsRequestChangeOpen(true);
                 } else {
@@ -177,6 +179,7 @@ export default function ProfilePage() {
                 }
             },
             (error) => {
+                setIsVerifyingLocation(false);
                 toast({
                     variant: 'destructive',
                     title: 'Location Error',
@@ -255,6 +258,20 @@ export default function ProfilePage() {
 
     return (
         <>
+            {isVerifyingLocation && (
+                <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md">
+                    <div className="relative">
+                        <div className="h-24 w-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                        <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary animate-pulse" />
+                    </div>
+                    <h2 className="mt-6 text-xl font-black uppercase tracking-tighter text-primary">Verifying Location</h2>
+                    <p className="text-sm text-muted-foreground font-medium">Communicating with GPS satellites...</p>
+                    <div className="mt-8 w-48 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary animate-progress-loading" />
+                    </div>
+                </div>
+            )}
+
             <PageHeader title="My Profile" description="View and manage your personal information." />
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
