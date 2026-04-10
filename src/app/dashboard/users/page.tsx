@@ -1,8 +1,6 @@
-
 "use client";
 
 import * as React from "react";
-import { use } from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,12 +31,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, ChevronDown, UserPlus } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -47,13 +44,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
-type EmploymentType = 'Intern' | 'Employee';
 
 const userSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -83,9 +75,7 @@ const userSchema = z.object({
     path: ["confirmPassword"],
 });
 
-
 type UserFormValues = z.infer<typeof userSchema>;
-
 type UserData = UserFormValues & { id: string };
 
 export default function UsersPage() {
@@ -98,7 +88,6 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = React.useState<UserData | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
-  const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
   const { data: users, isLoading } = useCollection<UserData>(usersQuery);
@@ -175,27 +164,19 @@ export default function UsersPage() {
         toast({ variant: "destructive", title: "Cannot delete yourself." });
         return;
     }
-     if (currentUserRole === 'CEO/Admin' && userToDelete.id === currentUser.uid) {
-        toast({ variant: "destructive", title: "Permission Denied", description: "You cannot delete your own CEO account." });
-        return;
-    }
-     if (currentUserRole !== 'CEO/Admin' && userToDelete.role === 'CEO/Admin') {
-        toast({ variant: "destructive", title: "Permission Denied", description: "Only the CEO can manage the CEO account." });
-        return;
-    }
-     if (!canModify(userToDelete.role)) {
+    
+    if (!canModify(userToDelete.role)) {
         toast({ variant: "destructive", title: "Permission Denied", description: "You do not have permission to delete this user." });
         return;
     }
 
     const batch = writeBatch(firestore);
-    const userDocRef = doc(firestore, 'users', userToDelete.id);
-    batch.delete(userDocRef);
+    const userRef = doc(firestore, 'users', userToDelete.id);
+    batch.delete(userRef);
     
-    batch.delete(doc(firestore, 'roles_ceo', userToDelete.id));
-    batch.delete(doc(firestore, 'roles_admin', userToDelete.id));
-    batch.delete(doc(firestore, 'roles_hr_agent', userToDelete.id));
-    batch.delete(doc(firestore, 'roles_team_lead', userToDelete.id));
+    batch.delete(doc(firestore, 'system_roles_admin', userToDelete.id));
+    batch.delete(doc(firestore, 'system_roles_hr', userToDelete.id));
+    batch.delete(doc(firestore, 'system_roles_teamlead', userToDelete.id));
     
     await batch.commit().then(() => {
         toast({ title: "User Deleted", description: "The user has been removed." });
@@ -215,31 +196,22 @@ export default function UsersPage() {
             }
             
             const batch = writeBatch(firestore);
-            const userDocRef = doc(firestore, 'users', editingUser.id);
+            const userRef = doc(firestore, 'users', editingUser.id);
             const { password, confirmPassword, email, ...updateData } = values;
 
-            Object.keys(updateData).forEach(key => {
-                const k = key as keyof typeof updateData;
-                if (updateData[k] === undefined) {
-                    delete updateData[k];
-                }
-            });
-
-            batch.update(userDocRef, updateData);
+            batch.update(userRef, updateData);
 
             if (editingUser.role !== values.role) {
-                batch.delete(doc(firestore, 'roles_ceo', editingUser.id));
-                batch.delete(doc(firestore, 'roles_admin', editingUser.id));
-                batch.delete(doc(firestore, 'roles_hr_agent', editingUser.id));
-                batch.delete(doc(firestore, 'roles_team_lead', editingUser.id));
+                batch.delete(doc(firestore, 'system_roles_admin', editingUser.id));
+                batch.delete(doc(firestore, 'system_roles_hr', editingUser.id));
+                batch.delete(doc(firestore, 'system_roles_teamlead', editingUser.id));
                 
                 if (values.role === 'CEO/Admin') {
-                    batch.set(doc(firestore, 'roles_ceo', editingUser.id), { employeeId: editingUser.id });
-                    batch.set(doc(firestore, 'roles_admin', editingUser.id), { employeeId: editingUser.id });
+                    batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
                 } else if (values.role === 'HR Manager') {
-                    batch.set(doc(firestore, 'roles_hr_agent', editingUser.id), { employeeId: editingUser.id });
+                    batch.set(doc(firestore, 'system_roles_hr', editingUser.id), { employeeId: editingUser.id });
                 } else if (values.role === 'Team Lead') {
-                    batch.set(doc(firestore, 'roles_team_lead', editingUser.id), { employeeId: editingUser.id });
+                    batch.set(doc(firestore, 'system_roles_teamlead', editingUser.id), { employeeId: editingUser.id });
                 }
             }
             
@@ -247,42 +219,28 @@ export default function UsersPage() {
             toast({ title: "User Updated" });
 
         } else {
-            if (!values.password) {
-              form.setError("password", { type: "manual", message: "Password is required for new users." });
-              return;
-            }
-            
-            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password!);
             const newUserId = userCredential.user.uid;
 
-            const userDocRef = doc(firestore, 'users', newUserId);
+            const userRef = doc(firestore, 'users', newUserId);
             const { password, confirmPassword, ...userData } = values;
             
-            const newUserPayload: { [key: string]: any } = {
+            const newUserPayload = {
               id: newUserId,
               employeeId: newUserId,
               hireDate: new Date().toISOString(),
               ...userData,
-              homeLocationRangeKm: values.homeLocationRangeKm === 0 ? 0 : (values.homeLocationRangeKm || 5),
-              isWfhAllowed: values.isWfhAllowed || false,
             };
 
-            Object.keys(newUserPayload).forEach(key => {
-                if (newUserPayload[key] === undefined) {
-                    delete newUserPayload[key];
-                }
-            });
-            
             const batch = writeBatch(firestore);
-            batch.set(userDocRef, newUserPayload);
+            batch.set(userRef, newUserPayload);
 
             if (values.role === 'CEO/Admin') {
-                batch.set(doc(firestore, 'roles_ceo', newUserId), { employeeId: newUserId });
-                batch.set(doc(firestore, 'roles_admin', newUserId), { employeeId: newUserId });
+                batch.set(doc(firestore, 'system_roles_admin', newUserId), { employeeId: newUserId });
             } else if (values.role === 'HR Manager') {
-                batch.set(doc(firestore, 'roles_hr_agent', newUserId), { employeeId: newUserId });
+                batch.set(doc(firestore, 'system_roles_hr', newUserId), { employeeId: newUserId });
             } else if (values.role === 'Team Lead') {
-                batch.set(doc(firestore, 'roles_team_lead', newUserId), { employeeId: newUserId });
+                batch.set(doc(firestore, 'system_roles_teamlead', newUserId), { employeeId: newUserId });
             }
 
             await batch.commit();
@@ -304,10 +262,7 @@ export default function UsersPage() {
 
   return (
     <>
-      <PageHeader
-        title="Manage Users"
-        description="View, add, and manage all users in the system."
-      >
+      <PageHeader title="Manage Users" description="View, add, and manage all users in the system.">
         <div className="flex gap-2">
           <Dialog open={isDialogOpen} onOpenChange={(open) => !open && resetDialog()}>
             <DialogTrigger asChild>
@@ -339,25 +294,16 @@ export default function UsersPage() {
                       <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                              <Input 
-                                  type="email" 
-                                  {...field} 
-                                  placeholder="john.doe@example.com"
-                                  readOnly={!!editingUser}
-                                  disabled={!!editingUser}
-                                  className={editingUser ? "cursor-not-allowed bg-muted/50" : ""}
-                              />
+                              <Input type="email" {...field} placeholder="john.doe@example.com" disabled={!!editingUser} />
                           </FormControl>
                           <FormMessage />
                       </FormItem>
                   )} />
                   <FormField control={form.control} name="phoneNumber" render={({ field }) => (
                       <FormItem>
-                          <FormLabel>Phone Number (WhatsApp Nudge)</FormLabel>
-                          <FormControl>
-                              <Input {...field} placeholder="+916381808782" />
-                          </FormControl>
-                          <FormDescription>Include country code without spaces.</FormDescription>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl><Input {...field} placeholder="+91..." /></FormControl>
+                          <FormDescription>Include country code.</FormDescription>
                           <FormMessage />
                       </FormItem>
                   )} />
@@ -372,28 +318,18 @@ export default function UsersPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="employmentType" render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Employment Type</FormLabel>
+                            <FormLabel>Type</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="Intern">Intern</SelectItem>
-                                    <SelectItem value="Employee">Employee</SelectItem>
-                                </SelectContent>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent>
                             </Select>
-                            <FormMessage />
                         </FormItem>
                     )} />
                     <FormField control={form.control} name="role" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Role</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={editingUser?.id === currentUser?.uid || !canModify(field.value)}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a role" />
-                                    </SelectTrigger>
-                                </FormControl>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="Member">Member</SelectItem>
                                     <SelectItem value="Team Lead">Team Lead</SelectItem>
@@ -401,51 +337,35 @@ export default function UsersPage() {
                                     {currentUserRole === 'CEO/Admin' && <SelectItem value="CEO/Admin">CEO/Admin</SelectItem>}
                                 </SelectContent>
                             </Select>
-                            <FormMessage />
                         </FormItem>
                     )} />
                   </div>
-                  <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
+                  {!editingUser && (
+                    <>
+                      <FormField control={form.control} name="password" render={({ field }) => (
                           <FormItem>
-                              <FormLabel>Password {editingUser ? '(Optional)' : ''}</FormLabel>
+                              <FormLabel>Password</FormLabel>
                               <div className="relative">
-                                  <FormControl>
-                                      <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                                  </FormControl>
-                                  <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
-                                      {showPassword ? <EyeOff /> : <Eye />}
-                                  </Button>
+                                  <FormControl><Input type={showPassword ? "text" : "password"} {...field} /></FormControl>
+                                  <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff /> : <Eye />}</Button>
                               </div>
                               <FormMessage />
                           </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
+                      )} />
+                      <FormField control={form.control} name="confirmPassword" render={({ field }) => (
                           <FormItem>
                               <FormLabel>Confirm Password</FormLabel>
                               <div className="relative">
-                              <FormControl>
-                                  <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                              </FormControl>
-                               <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                                      {showConfirmPassword ? <EyeOff /> : <Eye />}
-                                  </Button>
+                                  <FormControl><Input type={showConfirmPassword ? "text" : "password"} {...field} /></FormControl>
+                                  <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-full px-3" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>{showConfirmPassword ? <EyeOff /> : <Eye />}</Button>
                               </div>
                               <FormMessage />
                           </FormItem>
-                      )}
-                  />
+                      )} />
+                    </>
+                  )}
                   <DialogFooter className="pt-4">
-                    <DialogClose asChild><Button type="button" variant="outline" onClick={resetDialog}>Cancel</Button></DialogClose>
-                    <Button type="submit" disabled={form.formState.isSubmitting}>
-                      {form.formState.isSubmitting ? 'Saving...' : 'Save User'}
-                    </Button>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>Save User</Button>
                   </DialogFooter>
                 </form>
               </Form>
@@ -454,10 +374,7 @@ export default function UsersPage() {
             </DialogContent>
           </Dialog>
           <Button asChild variant="outline" disabled={!canAddUser}>
-            <Link href="/dashboard/users/bulk">
-              <UserPlus className="mr-2 h-4 w-4" />
-              Bulk Create
-            </Link>
+            <Link href="/dashboard/users/bulk"><UserPlus className="mr-2 h-4 w-4" /> Bulk Create</Link>
           </Button>
         </div>
       </PageHeader>
@@ -478,35 +395,18 @@ export default function UsersPage() {
             ) : users?.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
-                <TableCell><Badge variant="secondary">{user.employmentType || "Intern"}</Badge></TableCell>
+                <TableCell><Badge variant="secondary">{user.employmentType}</Badge></TableCell>
                 <TableCell>{user.jobTitle}</TableCell>
                 <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                    </DropdownMenuTrigger>
+                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                       <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/users/${user.id}`}>
-                            <Eye className="mr-2 h-4 w-4" /> View Details
-                          </Link>
-                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEditUser(user)} disabled={!canModify(user.role)}>
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDeleteUser(user)} 
-                        disabled={
-                            user.id === currentUser?.uid ||
-                            (currentUserRole !== 'CEO/Admin' && user.role === 'CEO/Admin')
-                        } 
-                        className="text-destructive"
-                       >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
+                       <DropdownMenuItem asChild><Link href={`/dashboard/users/${user.id}`}><Eye className="mr-2 h-4 w-4" /> View Details</Link></DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditUser(user)} disabled={!canModify(user.role)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDeleteUser(user)} disabled={user.id === currentUser?.uid || !canModify(user.role)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
