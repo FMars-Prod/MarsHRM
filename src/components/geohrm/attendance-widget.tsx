@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -82,6 +83,7 @@ export function AttendanceWidget() {
   const [distance, setDistance] = useState<number | null>(null);
   const [isVerifyingLocation, setIsVerifyingLocation] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const { user } = useUser();
   const firestore = useFirestore();
@@ -429,6 +431,8 @@ export function AttendanceWidget() {
       setHasClockedOutToday(true);
       setCurrentUserLocation(null);
       setDistance(null);
+      // Redirect to report page after clock out
+      router.push('/dashboard/reports');
   }
 
   const handleClockOut = () => {

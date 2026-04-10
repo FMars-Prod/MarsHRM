@@ -72,8 +72,8 @@ export default function DashboardLayout({
   const pendingLeaveCount = leaveRequests?.length || 0;
 
   const allAnnouncementsQuery = useMemoFirebase(
-    () => collection(firestore, 'announcements'),
-    [firestore]
+    () => user ? collection(firestore, 'announcements') : null,
+    [firestore, user]
   );
   const { data: allAnnouncements } = useCollection<Announcement>(allAnnouncementsQuery);
   
@@ -84,9 +84,9 @@ export default function DashboardLayout({
   const { data: readAnnouncements } = useCollection<{id: string}>(readAnnouncementsQuery);
 
   const locationRequestsQuery = useMemoFirebase(() => {
-    if (!isPrivileged) return null;
+    if (!isPrivileged || !user) return null;
     return query(collection(firestore, "location_change_requests"), where("status", "==", "pending"));
-  }, [firestore, isPrivileged]);
+  }, [firestore, isPrivileged, user]);
   const { data: locationRequests } = useCollection<LocationRequest>(locationRequestsQuery);
   const pendingLocationRequestsCount = locationRequests?.length || 0;
 
@@ -99,8 +99,8 @@ export default function DashboardLayout({
   }, [allAnnouncements, readAnnouncements]);
 
   const eventsQuery = useMemoFirebase(
-    () => collection(firestore, 'events'),
-    [firestore]
+    () => user ? collection(firestore, 'events') : null,
+    [firestore, user]
   );
   const { data: events } = useCollection<EventItem>(eventsQuery);
   const todaysEventsCount = useMemo(() => {

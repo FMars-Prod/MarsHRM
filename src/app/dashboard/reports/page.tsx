@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -13,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useAuth } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,6 +40,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useRouter } from "next/navigation";
 
 const formatIST = (date: Date) => {
     return new Intl.DateTimeFormat('en-GB', {
@@ -369,6 +371,8 @@ const technicalReportSchema = z.object({
 
 export default function ReportsPage() {
   const { user } = useFirebase();
+  const auth = useAuth();
+  const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -389,7 +393,7 @@ export default function ReportsPage() {
 
   const isBusinessUser = currentReportType === 'Business';
 
-  const usersQuery = useMemoFirebase(() => isAdmin ? query(collection(firestore, "users")) : null, [firestore, isAdmin]);
+  const usersQuery = useMemoFirebase(() => (isAdmin && user) ? query(collection(firestore, "users")) : null, [firestore, isAdmin, user]);
   const { data: usersData, isLoading: areUsersLoading } = useCollection<any>(usersQuery);
 
   const reportUserId = isAdmin ? selectedUser?.id : user?.uid;
@@ -487,8 +491,14 @@ export default function ReportsPage() {
         setSubmitProgress(70);
         await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
         setSubmitProgress(100);
-        toast({ title: "Report Submitted" });
-        setIsAddDialogOpen(false);
+        toast({ title: "Report Submitted Successfully", description: "Logging out..." });
+        
+        // Log out after report submission
+        setTimeout(async () => {
+            await auth.signOut();
+            router.push('/login');
+        }, 1500);
+        
     } catch (err: any) {
         setSubmitProgress(0);
         toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
@@ -586,7 +596,7 @@ export default function ReportsPage() {
                     <div className="p-6 border-t bg-white/80 backdrop-blur-md space-y-4">
                         <DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col">
                             <Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button>
-                            <Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">Finalize & Submit</Button>
+                            <Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">Submit Report & Logout</Button>
                         </DialogFooter>
                     </div>
                 </form>

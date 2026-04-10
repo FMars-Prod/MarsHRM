@@ -83,8 +83,8 @@ export default function EventsPage() {
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
   const eventsQuery = useMemoFirebase(
-      () => query(collection(firestore, "events"), orderBy("date", "desc")),
-      [firestore]
+      () => user ? query(collection(firestore, "events"), orderBy("date", "desc")) : null,
+      [firestore, user]
   );
   const { data: events, isLoading } = useCollection<EventItem>(eventsQuery);
 

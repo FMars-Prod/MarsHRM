@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -10,7 +11,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { PartyPopper, HelpCircle, Gift, Users, Award, Cake, CalendarClock } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where, orderBy, Timestamp } from "firebase/firestore";
 import { startOfToday, endOfDay, format, addDays } from "date-fns";
 import { Button } from "../ui/button";
@@ -35,19 +36,21 @@ type EventItem = {
 
 export function EventsWidget() {
   const firestore = useFirestore();
+  const { user } = useUser();
 
   const todayStart = React.useMemo(() => startOfToday(), []);
   const todayEnd = React.useMemo(() => endOfDay(todayStart), [todayStart]);
   
   const todaysEventsQuery = useMemoFirebase(() => 
-    query(
+    user ? query(
         collection(firestore, "events"), 
         where("date", ">=", todayStart),
         where("date", "<=", todayEnd),
         orderBy("date", "asc")
-    ), [firestore, todayStart, todayEnd]);
+    ) : null, [firestore, todayStart, todayEnd, user]);
   
   const upcomingEventsQuery = useMemoFirebase(() => {
+    if (!user) return null;
     const tomorrow = addDays(todayStart, 1);
     const thirtyDaysFromNow = addDays(todayStart, 30);
     return query(
@@ -56,7 +59,7 @@ export function EventsWidget() {
         where("date", "<=", thirtyDaysFromNow),
         orderBy("date", "asc")
     );
-  }, [firestore, todayStart]);
+  }, [firestore, todayStart, user]);
   
   const { data: todaysEvents, isLoading: todaysLoading } = useCollection<EventItem>(todaysEventsQuery);
   const { data: upcomingEvents, isLoading: upcomingLoading } = useCollection<EventItem>(upcomingEventsQuery);
