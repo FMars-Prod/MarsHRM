@@ -14,7 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useStorage, useDoc } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useStorage } from "@/firebase";
+import { useDoc } from "@/firebase/firestore/use-doc";
 import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,7 +29,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,8 +41,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-// --- Helpers ---
 
 const formatIST = (date: Date) => {
     return new Intl.DateTimeFormat('en-GB', {
@@ -326,8 +325,6 @@ const TechnicalReportDetails = ({ report }: { report: any }) => (
   </Card>
 );
 
-// --- Schemas ---
-
 const businessReportSchema = z.object({
   currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("USD"),
   outreachColdCalls: z.coerce.number().min(0).default(0),
@@ -378,8 +375,6 @@ const technicalReportSchema = z.object({
   declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Certification required." }) }),
   signature: z.string().min(1, "Signature is required."),
 });
-
-// --- Main Page Component ---
 
 export default function ReportsPage() {
   const { user } = useFirebase();
@@ -457,8 +452,6 @@ export default function ReportsPage() {
 
   const submissionConstraints = React.useMemo(() => {
     const now = new Date();
-    
-    // 6:30 PM IST deadline enforcement
     const istTimeStr = new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Kolkata',
         hour: '2-digit',
@@ -468,7 +461,6 @@ export default function ReportsPage() {
     
     const [istHour, istMinute] = istTimeStr.split(':').map(Number);
     const isDeadlinePassed = (istHour > 18) || (istHour === 18 && istMinute >= 30);
-    
     const hasSubmittedToday = reports?.some(r => isSameDay(r.date.toDate(), now)) || false;
     
     return { 
@@ -481,17 +473,14 @@ export default function ReportsPage() {
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const file = e.target.files?.[0];
     if (!file || !user || !currentUserData) return;
-    
     if (file.size > 5 * 1024 * 1024) {
         toast({ variant: 'destructive', title: 'File too large', description: 'Maximum file size is 5MB.' });
         return;
     }
-
     const dateStr = format(new Date(), 'yyyy-MM-dd');
     const fileName = `${currentUserData.firstName}_${currentUserData.lastName}_${dateStr}_${fieldName}_${Date.now()}`;
     const storageRef = ref(storage, `audio_reports/${user.uid}/${fileName}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
-
     uploadTask.on('state_changed', 
         (snapshot) => setUploadProgress(prev => ({ ...prev, [fieldName]: (snapshot.bytesTransferred / snapshot.totalBytes) * 100 })),
         (error) => toast({ variant: 'destructive', title: 'Upload Failed', description: error.message }),
@@ -517,13 +506,9 @@ export default function ReportsPage() {
   };
 
   const onSubmit = async (values: any) => {
-    if (!user || !currentUserData) {
-        toast({ variant: 'destructive', title: 'Session Error', description: 'User data not loaded.' });
-        return;
-    }
+    if (!user || !currentUserData) return;
     setSubmitProgress(10);
     const outreach = Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0);
-    
     const payload = {
       ...values,
       outreachTotal: isBusinessUser ? outreach : undefined,
@@ -535,16 +520,15 @@ export default function ReportsPage() {
       date: new Date(),
       reportType: currentReportType,
     };
-    
     try {
         setSubmitProgress(70);
         await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
         setSubmitProgress(100);
-        toast({ title: "Report Submitted", description: "Your daily report has been saved successfully." });
+        toast({ title: "Report Submitted" });
         setIsAddDialogOpen(false);
     } catch (err: any) {
         setSubmitProgress(0);
-        toast({ variant: 'destructive', title: 'Submission Failed', description: err.message || 'Could not save report.' });
+        toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
     }
   };
 
@@ -557,167 +541,14 @@ export default function ReportsPage() {
     const email = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
     const total = cold + linkedin + email;
     const leads = Number(useWatch({ control: form.control, name: "newLeadsGenerated" }) || 0);
-    
     const rate = (total > 0 && leads >= 0) ? Math.max(0, (leads / total) * 100) : 0;
     const rateColor = rate < 5 ? 'text-red-600' : rate < 15 ? 'text-orange-600' : 'text-green-600';
-
     return (
         <div className="space-y-8">
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/20 rounded-2xl border border-border/50">
-                        <FormField control={form.control} name="outreachColdCalls" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="outreachLinkedIn" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="outreachEmails" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Emails</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end px-2">
-                        <div className="p-4 bg-white rounded-2xl border shadow-sm">
-                            <Label className="text-[10px] uppercase font-black text-muted-foreground">Total Outreach Volume</Label>
-                            <p className="text-2xl font-black text-primary tracking-tighter">{total}</p>
-                        </div>
-                        <FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">New Leads Generated</FormLabel><FormControl><Input type="number" {...field} className="rounded-2xl h-12 text-lg font-bold" /></FormControl></FormItem>)} />
-                        <div className="p-4 bg-white rounded-2xl border shadow-sm">
-                            <Label className="text-[10px] uppercase font-black text-muted-foreground">Conversion Rate</Label>
-                            <p className={cn("text-2xl font-black tracking-tighter", rateColor)}>{rate.toFixed(2)}%</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed">
-                        <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Active Potential Clients</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="followUpCount" render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs uppercase font-bold">Number of Follow-ups</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value?.toString() || "0"}>
-                                    <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {Array.from({ length: 21 }).map((_, i) => (<SelectItem key={i} value={i.toString()}>{i}</SelectItem>))}
-                                    </SelectContent>
-                                </Select>
-                            </FormItem>
-                        )} />
-                    </div>
-
-                    {Number(followUpCount) > 0 && (
-                        <div className="space-y-3 p-4 bg-muted/10 rounded-2xl border border-dashed">
-                            <p className="text-[10px] uppercase font-black text-muted-foreground mb-2">Enter Follow-up Client Names:</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {Array.from({ length: Number(followUpCount) }).map((_, i) => (
-                                    <FormField key={i} control={form.control} name={`followUpClients.${i}`} render={({ field }) => (
-                                        <FormControl><Input {...field} placeholder={`Client Name ${i + 1}`} className="rounded-xl h-10 text-xs bg-white" /></FormControl>
-                                    )} />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField control={form.control} name="currency" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs uppercase font-bold">Default Report Currency</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || "USD"}>
-                                <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="INR">INR (₹)</SelectItem></SelectContent>
-                            </Select>
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">NET Revenue Collected Today</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="committedNetRevenue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Committed NET Revenue</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pipeline Business Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Revenue Variance (Optional)</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="p-4 bg-muted/10 rounded-2xl border border-dashed mb-4">
-                        <FormField control={form.control} name="quotationsReleased" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-xs uppercase font-bold text-primary">No. of Quotations Released Today</FormLabel>
-                                <FormControl><Input type="number" {...field} className="rounded-full font-bold" /></FormControl>
-                            </FormItem>
-                        )} />
-                    </div>
-
-                    <div className="space-y-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Meetings/Demos Secured Today:</p>
-                        {meetings.map((field, index) => (
-                            <div key={field.id} className="p-5 bg-white/50 border rounded-2xl relative group space-y-4 transition-all hover:shadow-md">
-                                <Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)}><X className="size-4" /></Button>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial No. {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <FormField control={form.control} name={`meetingsSecured.${index}.currency`} render={({ field }) => (
-                                            <FormItem className="col-span-1"><FormLabel className="text-[10px] uppercase font-bold">Cur</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value || "USD"}>
-                                                    <FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl>
-                                                    <SelectContent><SelectItem value="USD">$</SelectItem><SelectItem value="EUR">€</SelectItem><SelectItem value="GBP">£</SelectItem><SelectItem value="INR">₹</SelectItem></SelectContent>
-                                                </Select>
-                                            </FormItem>
-                                        )} />
-                                        <FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem className="col-span-2"><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                                    </div>
-                                </div>
-                                <FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} />
-                            </div>
-                        ))}
-                        <Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", currency: "USD", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed">
-                        <FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Client Win / Today's Highlight</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="strategicLearning" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Strategic Tactical Learning</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                        <div className="space-y-2">
-                            <Label className="text-xs uppercase font-bold text-green-700">Best Call Evidence (Max 5MB)</Label>
-                            <div className="flex items-center gap-2">
-                                <Input type="file" accept="audio/*" onChange={e => handleAudioUpload(e, 'bestCallRecording')} className="rounded-full text-xs" />
-                                {uploadProgress['bestCallRecording'] < 100 && uploadProgress['bestCallRecording'] > 0 && <span className="text-[10px] font-bold">{Math.round(uploadProgress['bestCallRecording'])}%</span>}
-                                {form.getValues('bestCallRecording') && <CheckCircle2 className="size-5 text-green-600" />}
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-xs uppercase font-bold text-red-700">Worst Call Evidence (Max 5MB)</Label>
-                            <div className="flex items-center gap-2">
-                                <Input type="file" accept="audio/*" onChange={e => handleAudioUpload(e, 'worstCallRecording')} className="rounded-full text-xs" />
-                                {uploadProgress['worstCallRecording'] < 100 && uploadProgress['worstCallRecording'] > 0 && <span className="text-[10px] font-bold">{Math.round(uploadProgress['worstCallRecording'])}%</span>}
-                                {form.getValues('worstCallRecording') && <CheckCircle2 className="size-5 text-red-600" />}
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><CalendarClock className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Meetings Booked for Tomorrow</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">T+1 Critical Path Action</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} />
-                    </div>
-                    <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pending Deliverables / Follow-ups</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs uppercase font-bold text-primary">Intervention Trigger Required?</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || "None"}>
-                                <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    <SelectItem value="None">None (Standard)</SelectItem>
-                                    <SelectItem value="Coaching">Coaching Needed</SelectItem>
-                                    <SelectItem value="Technical Support">Technical Support Needed</SelectItem>
-                                    <SelectItem value="Client meeting">Client Meeting Support</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </FormItem>
-                    )} />
-                    {intervention !== 'None' && <FormField control={form.control} name="interventionReason" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Reason for Support Trigger</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl bg-orange-50/30 border-orange-100" /></FormControl></FormItem>)} />}
-                </CardContent>
-            </Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader><CardContent className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/20 rounded-2xl border border-border/50"><FormField control={form.control} name="outreachColdCalls" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="outreachLinkedIn" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="outreachEmails" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Emails</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /></div><div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end px-2"><div className="p-4 bg-white rounded-2xl border shadow-sm"><Label className="text-[10px] uppercase font-black text-muted-foreground">Total Outreach Volume</Label><p className="text-2xl font-black text-primary tracking-tighter">{total}</p></div><FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">New Leads Generated</FormLabel><FormControl><Input type="number" {...field} className="rounded-2xl h-12 text-lg font-bold" /></FormControl></FormItem>)} /><div className="p-4 bg-white rounded-2xl border shadow-sm"><Label className="text-[10px] uppercase font-black text-muted-foreground">Conversion Rate</Label><p className={cn("text-2xl font-black tracking-tighter", rateColor)}>{rate.toFixed(2)}%</p></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed"><FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Active Potential Clients</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="followUpCount" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Number of Follow-ups</FormLabel><Select onValueChange={field.onChange} value={field.value?.toString() || "0"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent>{Array.from({ length: 21 }).map((_, i) => (<SelectItem key={i} value={i.toString()}>{i}</SelectItem>))}</SelectContent></Select></FormItem>)} /></div>{Number(followUpCount) > 0 && (<div className="space-y-3 p-4 bg-muted/10 rounded-2xl border border-dashed"><p className="text-[10px] uppercase font-black text-muted-foreground mb-2">Enter Follow-up Client Names:</p><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{Array.from({ length: Number(followUpCount) }).map((_, i) => (<FormField key={i} control={form.control} name={`followUpClients.${i}`} render={({ field }) => (<FormControl><Input {...field} placeholder={`Client Name ${i + 1}`} className="rounded-xl h-10 text-xs bg-white" /></FormControl>)} />))}</div></div>)}</CardContent></Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">2️⃣ Revenue & Financial Impact</CardTitle></CardHeader><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormField control={form.control} name="currency" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Default Report Currency</FormLabel><Select onValueChange={field.onChange} value={field.value || "USD"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="INR">INR (₹)</SelectItem></SelectContent></Select></FormItem>)} /><FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">NET Revenue Collected Today</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="committedNetRevenue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Committed NET Revenue</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pipeline Business Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Revenue Variance (Optional)</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /></CardContent></Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader><CardContent className="space-y-6"><div className="p-4 bg-muted/10 rounded-2xl border border-dashed mb-4"><FormField control={form.control} name="quotationsReleased" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold text-primary">No. of Quotations Released Today</FormLabel><FormControl><Input type="number" {...field} className="rounded-full font-bold" /></FormControl></FormItem>)} /></div><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Meetings/Demos Secured Today:</p>{meetings.map((field, index) => (<div key={field.id} className="p-5 bg-white/50 border rounded-2xl relative group space-y-4 transition-all hover:shadow-md"><Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)}><X className="size-4" /></Button><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial No. {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} /><div className="grid grid-cols-3 gap-2"><FormField control={form.control} name={`meetingsSecured.${index}.currency`} render={({ field }) => (<FormItem className="col-span-1"><FormLabel className="text-[10px] uppercase font-bold">Cur</FormLabel><Select onValueChange={field.onChange} value={field.value || "USD"}><FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">$</SelectItem><SelectItem value="EUR">€</SelectItem><SelectItem value="GBP">£</SelectItem><SelectItem value="INR">₹</SelectItem></SelectContent></Select></FormItem>)} /><FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem className="col-span-2"><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>)} /></div></div><FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} /></div>))}<Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", currency: "USD", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed"><FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Client Win / Today's Highlight</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /><FormField control={form.control} name="strategicLearning" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Strategic Tactical Learning</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t"><div className="space-y-2"><Label className="text-xs uppercase font-bold text-green-700">Best Call Evidence (Max 5MB)</Label><div className="flex items-center gap-2"><Input type="file" accept="audio/*" onChange={e => handleAudioUpload(e, 'bestCallRecording')} className="rounded-full text-xs" />{form.getValues('bestCallRecording') && <CheckCircle2 className="size-5 text-green-600" />}</div></div><div className="space-y-2"><Label className="text-xs uppercase font-bold text-red-700">Worst Call Evidence (Max 5MB)</Label><div className="flex items-center gap-2"><Input type="file" accept="audio/*" onChange={e => handleAudioUpload(e, 'worstCallRecording')} className="rounded-full text-xs" />{form.getValues('worstCallRecording') && <CheckCircle2 className="size-5 text-red-600" />}</div></div></div></CardContent></Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><CalendarClock className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader><CardContent className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Meetings Booked for Tomorrow</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">T+1 Critical Path Action</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} /></div><FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pending Deliverables / Follow-ups</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} /><FormField control={form.control} name="interventionTrigger" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold text-primary">Intervention Trigger Required?</FormLabel><Select onValueChange={field.onChange} value={field.value || "None"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="None">None (Standard)</SelectItem><SelectItem value="Coaching">Coaching Needed</SelectItem><SelectItem value="Technical Support">Technical Support Needed</SelectItem><SelectItem value="Client meeting">Client Meeting Support</SelectItem></SelectContent></Select></FormItem>)} />{intervention !== 'None' && <FormField control={form.control} name="interventionReason" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Reason for Support Trigger</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl bg-orange-50/30 border-orange-100" /></FormControl></FormItem>)} />}</CardContent></Card>
         </div>
     );
   };
@@ -725,82 +556,16 @@ export default function ReportsPage() {
   const TechnicalFormFields = () => {
     const { fields: tasks, append: appendTask, remove: removeTask } = useFieldArray({ control: form.control, name: "tasksAssigned" });
     const { fields: modules, append: appendModule, remove: removeModule } = useFieldArray({ control: form.control, name: "completedTasks" });
-    
     const ChipInput = ({ name, label, icon: Icon, placeholder }: { name: string, label: string, icon: any, placeholder: string }) => {
         const { fields, append, remove } = useFieldArray({ control: form.control, name });
         const [val, setVal] = React.useState("");
         const add = () => { if (val.trim()) { append({ value: val.trim() }); setVal(""); } };
         return (
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader className="py-3 px-4"><CardTitle className="text-[10px] font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Icon className="size-3" />{label}</CardTitle></CardHeader>
-                <CardContent className="space-y-3 px-4 pb-4">
-                    <div className="flex gap-2"><Input value={val} onChange={e => setVal(e.target.value)} placeholder={placeholder} className="rounded-full h-9 w-9 flex-1 text-xs" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}/><Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0" onClick={add}><Plus className="size-4" /></Button></div>
-                    <div className="flex flex-wrap gap-2 mt-2">{fields.map((f, i) => (<Badge key={f.id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 group bg-muted/50 border-none transition-all hover:bg-muted"><span className="text-[10px] font-bold">{(f as any).value}</span><button type="button" onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive opacity-50 group-hover:opacity-100"><X className="size-3" /></button></Badge>))}</div>
-                </CardContent>
-            </Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader className="py-3 px-4"><CardTitle className="text-[10px] font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Icon className="size-3" />{label}</CardTitle></CardHeader><CardContent className="space-y-3 px-4 pb-4"><div className="flex gap-2"><Input value={val} onChange={e => setVal(e.target.value)} placeholder={placeholder} className="rounded-full h-9 flex-1 text-xs" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}/><Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0" onClick={add}><Plus className="size-4" /></Button></div><div className="flex flex-wrap gap-2 mt-2">{fields.map((f, i) => (<Badge key={f.id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 group bg-muted/50 border-none transition-all hover:bg-muted"><span className="text-[10px] font-bold">{(f as any).value}</span><button type="button" onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive opacity-50 group-hover:opacity-100"><X className="size-3" /></button></Badge>))}</div></CardContent></Card>
         );
     };
-
     return (
-        <div className="space-y-8">
-            <div className="space-y-1 p-6 bg-muted/10 rounded-2xl border border-dashed text-center">
-                <p className="text-sm italic text-muted-foreground leading-relaxed">Dear Sir / Ma’am,</p>
-                <p className="font-bold text-lg tracking-tight">Here is my daily work summary for today:</p>
-            </div>
-            
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                    <FormField control={form.control} name="logInTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Actual Login Time</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="logOutTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Actual Logout Time</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader className="py-3 px-4 border-b bg-muted/5"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><ListTodo className="size-4" /> Tasks Assigned for the Day</CardTitle></CardHeader>
-                <CardContent className="space-y-4 pt-4">
-                    {tasks.map((f, i) => (
-                        <div key={f.id} className="flex gap-2">
-                            <FormField control={form.control} name={`tasksAssigned.${i}.value`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input {...field} placeholder={`Specific Task ${i + 1}`} className="rounded-xl h-10 text-sm" /></FormControl></FormItem>)} />
-                            <Button type="button" variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-destructive" onClick={() => removeTask(i)}><Trash2 className="size-4" /></Button>
-                        </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => appendTask({ value: "" })} className="w-full border-dashed rounded-xl h-10 text-[10px] font-black uppercase tracking-widest"><Plus className="size-3 mr-2" /> Add Task Item</Button>
-                </CardContent>
-            </Card>
-
-            <div className="space-y-4">
-                <p className="font-black text-[10px] text-primary uppercase tracking-[0.2em] flex items-center gap-2 px-2"><Brain className="size-4" /> Tasks Completed Today:</p>
-                {modules.map((f, i) => (
-                    <Card key={f.id} className="relative group bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-2xl transition-all hover:shadow-md">
-                        <CardContent className="pt-6 space-y-4 px-6 pb-6">
-                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeModule(i)}><X className="size-4" /></Button>
-                            <FormField control={form.control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Module / Component Name</FormLabel><FormControl><Input {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)}/>
-                            <FormField control={form.control} name={`completedTasks.${i}.workDone`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Work Details / Functionality Implemented</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)}/>
-                        </CardContent>
-                    </Card>
-                ))}
-                <Button type="button" variant="outline" onClick={() => appendModule({ moduleName: "", workDone: "" })} className="w-full border-dashed rounded-2xl h-14 bg-white/50 text-xs font-black uppercase tracking-[0.1em]"><Plus className="size-4 mr-2" /> ADD COMPLETED MODULE RECORD</Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ChipInput name="repoLinks" label="Repository / Documentation Links" icon={LinkIcon} placeholder="https://github.com/..." />
-                <div className="grid grid-cols-1 gap-6">
-                    <ChipInput name="workInProgress" label="Work in Progress (Current)" icon={Clock} placeholder="Ongoing module..." />
-                    <ChipInput name="pendingTasks" label="Pending Tasks (Backlog)" icon={Clock} placeholder="Blocked or upcoming..." />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ChipInput name="whatILearned" label="Key Technical Learnings" icon={Brain} placeholder="Learned about..." />
-                <ChipInput name="challengesFaced" label="Technical Challenges Faced" icon={Info} placeholder="Fixed a bug in..." />
-            </div>
-            
-            <ChipInput name="nextSteps" label="Immediate Next Steps (Tomorrow)" icon={Plus} placeholder="Implement API for..." />
-            
-            <div className="pt-8 border-t border-dashed space-y-4 px-2">
-                <p className="text-sm italic font-medium text-muted-foreground">Thank you.</p>
-            </div>
-        </div>
+        <div className="space-y-8"><div className="space-y-1 p-6 bg-muted/10 rounded-2xl border border-dashed text-center"><p className="text-sm italic text-muted-foreground leading-relaxed">Dear Sir / Ma’am,</p><p className="font-bold text-lg tracking-tight">Here is my daily work summary for today:</p></div><Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden"><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6"><FormField control={form.control} name="logInTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Actual Login Time</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="logOutTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Actual Logout Time</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>)} /></CardContent></Card><Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader className="py-3 px-4 border-b bg-muted/5"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><ListTodo className="size-4" /> Tasks Assigned for the Day</CardTitle></CardHeader><CardContent className="space-y-4 pt-4">{tasks.map((f, i) => (<div key={f.id} className="flex gap-2"><FormField control={form.control} name={`tasksAssigned.${i}.value`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input {...field} placeholder={`Specific Task ${i + 1}`} className="rounded-xl h-10 text-sm" /></FormControl></FormItem>)} /><Button type="button" variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-destructive" onClick={() => removeTask(i)}><Trash2 className="size-4" /></Button></div>))}<Button type="button" variant="outline" size="sm" onClick={() => appendTask({ value: "" })} className="w-full border-dashed rounded-xl h-10 text-[10px] font-black uppercase tracking-widest"><Plus className="size-3 mr-2" /> Add Task Item</Button></CardContent></Card><div className="space-y-4"><p className="font-black text-[10px] text-primary uppercase tracking-[0.2em] flex items-center gap-2 px-2"><Brain className="size-4" /> Tasks Completed Today:</p>{modules.map((f, i) => (<Card key={f.id} className="relative group bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-2xl transition-all hover:shadow-md"><CardContent className="pt-6 space-y-4 px-6 pb-6"><Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeModule(i)}><X className="size-4" /></Button><FormField control={form.control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Module / Component Name</FormLabel><FormControl><Input {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)}/><FormField control={form.control} name={`completedTasks.${i}.workDone`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Work Details / Functionality Implemented</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)}/></CardContent></Card>))}<Button type="button" variant="outline" onClick={() => appendModule({ moduleName: "", workDone: "" })} className="w-full border-dashed rounded-2xl h-14 bg-white/50 text-xs font-black uppercase tracking-[0.1em]"><Plus className="size-4 mr-2" /> ADD COMPLETED MODULE RECORD</Button></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><ChipInput name="repoLinks" label="Repository / Documentation Links" icon={LinkIcon} placeholder="https://github.com/..." /><div className="grid grid-cols-1 gap-6"><ChipInput name="workInProgress" label="Work in Progress (Current)" icon={Clock} placeholder="Ongoing module..." /><ChipInput name="pendingTasks" label="Pending Tasks (Backlog)" icon={Clock} placeholder="Blocked or upcoming..." /></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><ChipInput name="whatILearned" label="Key Technical Learnings" icon={Brain} placeholder="Learned about..." /><ChipInput name="challengesFaced" label="Technical Challenges Faced" icon={Info} placeholder="Fixed a bug in..." /></div><ChipInput name="nextSteps" label="Immediate Next Steps (Tomorrow)" icon={Plus} placeholder="Implement API for..." /><div className="pt-8 border-t border-dashed space-y-4 px-2"><p className="text-sm italic font-medium text-muted-foreground">Thank you.</p></div></div>
     );
   };
 
@@ -808,28 +573,14 @@ export default function ReportsPage() {
     <>
       <PageHeader title={isAdmin ? "Organization Reports" : "My Daily Submissions"} description={isAdmin ? "Review submissions from Interns and Employees." : "Standardized professional reporting."}>
         {!isAdmin && (
-            <Button 
-                onClick={() => setIsAddDialogOpen(true)} 
-                disabled={!submissionConstraints.canSubmit} 
-                className={cn(
-                    "rounded-full h-11 px-6 shadow-lg transition-all active:scale-95", 
-                    !submissionConstraints.canSubmit ? "bg-muted text-muted-foreground border-none cursor-not-allowed opacity-50" : "bg-primary hover:bg-primary/90"
-                )}
-            >
-                <PlusCircle className="mr-2 h-4 w-4"/> 
-                {submissionConstraints.hasSubmittedToday ? "Submission Complete" : "Add Daily Report"}
+            <Button onClick={() => setIsAddDialogOpen(true)} disabled={!submissionConstraints.canSubmit} className={cn("rounded-full h-11 px-6 shadow-lg transition-all active:scale-95", !submissionConstraints.canSubmit ? "bg-muted text-muted-foreground border-none cursor-not-allowed opacity-50" : "bg-primary hover:bg-primary/90")}>
+                <PlusCircle className="mr-2 h-4 w-4"/> {submissionConstraints.hasSubmittedToday ? "Submission Complete" : "Add Daily Report"}
             </Button>
         )}
       </PageHeader>
       
       {!isAdmin && submissionConstraints.isDeadlinePassed && !submissionConstraints.hasSubmittedToday && (
-        <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Report Restriction Policy</AlertTitle>
-            <AlertDescription>
-                The 6:30 PM IST submission deadline has passed. You can no longer submit a report for today.
-            </AlertDescription>
-        </Alert>
+        <Alert variant="destructive" className="mb-6"><AlertCircle className="h-4 w-4" /><AlertTitle>Report Restriction Policy</AlertTitle><AlertDescription>The 6:30 PM IST submission deadline has passed. You can no longer submit a report for today.</AlertDescription></Alert>
       )}
       
       {isAdmin ? (
@@ -838,22 +589,13 @@ export default function ReportsPage() {
           <div className="border rounded-2xl overflow-hidden shadow-sm bg-white/50 ring-1 ring-border/50"><Table><TableHeader className="bg-muted/30"><TableRow className="hover:bg-transparent border-border/50"><TableHead className="font-black uppercase tracking-tighter text-[10px]">Name</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px]">Job Title</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px] text-right">Action</TableHead></TableRow></TableHeader><TableBody>{areUsersLoading ? (<TableRow><TableCell colSpan={3} className="h-32 text-center text-muted-foreground animate-pulse font-medium">Scanning employee database...</TableCell></TableRow>) : filteredUsers?.length === 0 ? (<TableRow><TableCell colSpan={3} className="h-32 text-center text-muted-foreground italic font-normal">No team members match your search.</TableCell></TableRow>) : filteredUsers?.map(u => (<TableRow key={u.id} className="cursor-pointer hover:bg-white/80 transition-colors border-border/50" onClick={() => setSelectedUser(u)}><TableCell className="font-bold py-4">{u.firstName} {u.lastName}</TableCell><TableCell className="py-4 text-muted-foreground font-medium">{u.jobTitle}</TableCell><TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-xs uppercase tracking-tighter h-8 px-4 bg-white">Open Reports</Button></TableCell></TableRow>))}</TableBody></Table></div>
         </>
       ) : (
-        <div className="space-y-4">{areReportsLoading ? (<div className="h-48 flex items-center justify-center text-muted-foreground animate-pulse font-medium">Loading history...</div>) : reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full space-y-3">{reports.map(r => (
-                <AccordionItem value={r.id} key={r.id} className="border-none">
-                    <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white/80 shadow-sm bg-white/50 ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none data-[state=open]:ring-primary/20">
-                        <div className="flex-1 text-left flex items-center justify-between">
-                            <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
-                            <div className="mr-4 text-right hidden sm:block"><p className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Status</p><p className="text-xs font-mono font-bold text-green-600">✅ Submitted</p></div>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white/30 space-y-6 ring-1 ring-border/50 shadow-lg mt-[-1px]">
-                        {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}
-                    </AccordionContent>
-                </AccordionItem>
-              ))}</Accordion>) : <div className="h-64 flex flex-col items-center justify-center text-muted-foreground p-10 bg-muted/10 rounded-3xl border border-dashed"><FileText className="size-10 mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-xs opacity-50">No reports found.</p></div>}</div>
+        <div className="space-y-4">{areReportsLoading ? (<div className="h-48 flex items-center justify-center text-muted-foreground animate-pulse font-medium">Loading history...</div>) : reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full space-y-3">{reports.map(r => (<AccordionItem value={r.id} key={r.id} className="border-none"><AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white/80 shadow-sm bg-white/50 ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none data-[state=open]:ring-primary/20"><div className="flex-1 text-left flex items-center justify-between"><div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div><div className="mr-4 text-right hidden sm:block"><p className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Status</p><p className="text-xs font-mono font-bold text-green-600">✅ Submitted</p></div></div></AccordionTrigger><AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white/30 space-y-6 ring-1 ring-border/50 shadow-lg mt-[-1px]">{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent></AccordionItem>))}</Accordion>) : <div className="h-64 flex flex-col items-center justify-center text-muted-foreground p-10 bg-muted/10 rounded-3xl border border-dashed"><FileText className="size-10 mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-xs opacity-50">No reports found.</p></div>}</div>
       )}
 
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+          setIsAddDialogOpen(open);
+          if (!open) window.location.reload();
+      }}>
         <DialogContent className="max-w-5xl w-[95vw] h-[92vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl border-none ring-1 ring-border/50">
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 bg-secondary/30">
@@ -890,30 +632,14 @@ export default function ReportsPage() {
 
       <Sheet open={!!selectedUser} onOpenChange={isOpen => !isOpen && setSelectedUser(null)}>
         <SheetContent className="sm:max-w-4xl w-full flex flex-col p-0 border-none ring-1 ring-border/50 shadow-2xl rounded-l-3xl">
-            <SheetHeader className="p-8 border-b bg-muted/5">
-                <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">{selectedUser?.firstName}'s Submissions</SheetTitle>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{selectedUser?.jobTitle}</p>
-            </SheetHeader>
+            <SheetHeader className="p-8 border-b bg-muted/5"><SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">{selectedUser?.firstName}'s Submissions</SheetTitle><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{selectedUser?.jobTitle}</p></SheetHeader>
             <ScrollArea className="flex-1 p-8 bg-secondary/10">
                 {reports && reports.length > 0 ? (
                     <Accordion type="single" collapsible className="w-full space-y-4">
                         {reports.map(r => (
                             <AccordionItem value={r.id} key={r.id} className="border-none">
-                                <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none">
-                                    <div className="flex-1 text-left flex items-center justify-between">
-                                        <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
-                                        <Badge variant="secondary" className="mr-4 text-[10px] font-black uppercase">✅ SUBMITTED</Badge>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]">
-                                    <div className="flex justify-end gap-2 mb-4">
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild><Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Delete</Button></AlertDialogTrigger>
-                                            <AlertDialogContent className="rounded-3xl p-8"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently remove the record and any audio evidence.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
-                                    {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}
-                                </AccordionContent>
+                                <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none"><div className="flex-1 text-left flex items-center justify-between"><div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div><Badge variant="secondary" className="mr-4 text-[10px] font-black uppercase">✅ SUBMITTED</Badge></div></AccordionTrigger>
+                                <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]"><div className="flex justify-end gap-2 mb-4"><AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Delete</Button></AlertDialogTrigger><AlertDialogContent className="rounded-3xl p-8"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently remove the record and any audio evidence.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent>
                             </AccordionItem>
                         ))}
                     </Accordion>

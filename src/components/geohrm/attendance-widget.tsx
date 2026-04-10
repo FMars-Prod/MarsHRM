@@ -118,7 +118,7 @@ export function AttendanceWidget() {
   const [outOfRangeInfo, setOutOfRangeInfo] = useState('');
   
   const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = useState(false);
-  const [capturedLocation, setCapturedLocation] = useState<Location | null>(null);
+  const [capturedLocation, setCapturedLocation] = setCapturedLocation(null);
 
   useEffect(() => {
     if (officeLocation) {
@@ -345,8 +345,6 @@ export function AttendanceWidget() {
                 }
             }
 
-            // Privileged roles (Admin/HR) can WFH even if flag is not explicitly set, 
-            // but they still need to have their home coordinates set once.
             if (isWfhAllowed || isAdmin) {
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
@@ -357,7 +355,6 @@ export function AttendanceWidget() {
                         return;
                     }
                 } else if (isAdmin) {
-                    // Admins get redirected to set their home point if missing
                     setCapturedLocation(userLocation);
                     setIsSetHomeLocationDialogOpen(true);
                     return;
@@ -589,7 +586,10 @@ export function AttendanceWidget() {
             High-Accuracy Attendance
             </CardTitle>
             {isAdmin && (
-                <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+                <Dialog open={isSettingsDialogOpen} onOpenChange={(open) => {
+                    setIsSettingsDialogOpen(open);
+                    if (!open) window.location.reload();
+                }}>
                     <DialogTrigger asChild>
                         <Button variant="ghost" size="icon">
                             <Settings className="size-5" />
@@ -838,7 +838,7 @@ export function AttendanceWidget() {
                     {status === 'break' ? <Clock className="mr-2 h-4 w-4" /> : <Coffee className="mr-2 h-4 w-4" />}
                     {status === 'break' ? 'End Break' : 'Start Break'}
                 </Button>
-                <AlertDialog>
+                <AlertDialog onOpenChange={(open) => { if (!open) window.location.reload(); }}>
                     <AlertDialogTrigger asChild>
                         <Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8">
                             Finish Day
@@ -859,7 +859,10 @@ export function AttendanceWidget() {
         )}
       </CardFooter>
 
-      <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
+      <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={(open) => {
+          setIsOutOfRangeReasonDialogOpen(open);
+          if (!open) window.location.reload();
+      }}>
         <DialogContent className="rounded-3xl">
             <DialogHeader>
                 <DialogTitle className="text-xl font-black uppercase tracking-tighter">Precise Verification Required</DialogTitle>
@@ -876,7 +879,10 @@ export function AttendanceWidget() {
         </DialogContent>
       </Dialog>
       
-      <AlertDialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
+      <AlertDialog open={isSetHomeLocationDialogOpen} onOpenChange={(open) => {
+          setIsSetHomeLocationDialogOpen(open);
+          if (!open) window.location.reload();
+      }}>
         <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader>
                 <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Pin Exact WFH Location?</AlertDialogTitle>

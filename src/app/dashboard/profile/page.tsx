@@ -170,7 +170,6 @@ export default function ProfilePage() {
 
                 const hasHomeLocation = (employee as any)?.homeLatitude && (employee as any)?.homeLongitude;
                 
-                // Admin and HR can bypass the request process and set their location directly
                 if (hasHomeLocation && !isAdminOrHR) {
                     setIsRequestChangeOpen(true);
                 } else {
@@ -181,7 +180,7 @@ export default function ProfilePage() {
                 toast({
                     variant: 'destructive',
                     title: 'Location Error',
-                    description: `Could not get your location: ${error.message}. Please enable location services in your browser.`
+                    description: `Could not get your location: ${error.message}.`
                 });
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -193,7 +192,7 @@ export default function ProfilePage() {
         updateDocumentNonBlocking(userDocRef, {
             homeLatitude: capturedLocation.latitude,
             homeLongitude: capturedLocation.longitude,
-            isWfhAllowed: isAdminOrHR ? true : (employee as any)?.isWfhAllowed // Ensure Admin/HR is always allowed if they set it
+            isWfhAllowed: isAdminOrHR ? true : (employee as any)?.isWfhAllowed
         });
         toast({
             title: "Home Location Saved",
@@ -210,7 +209,7 @@ export default function ProfilePage() {
 
     const handleSubmitChangeRequest = () => {
         if (!user || !userDocRef || !changeReason || !capturedLocation) {
-            toast({ variant: 'destructive', title: 'Reason Required', description: 'Please explain why you need to change your location.'});
+            toast({ variant: 'destructive', title: 'Reason Required' });
             return;
         }
 
@@ -226,7 +225,7 @@ export default function ProfilePage() {
         
         addDocumentNonBlocking(collection(firestore, 'location_change_requests'), requestPayload);
 
-        toast({ title: 'Request Submitted', description: `New location: ${selectedAddress}` });
+        toast({ title: 'Request Submitted' });
         setIsReasonDialogOpen(false);
         setChangeReason("");
         setCapturedLocation(null);
@@ -238,13 +237,7 @@ export default function ProfilePage() {
             <div className="flex h-full w-full items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative h-16 w-48 animate-pulse">
-                        <Image
-                          src="https://fortumars.com/fortumarslogo.png"
-                          alt="FortuMars Logo"
-                          fill
-                          style={{ objectFit: 'contain' }}
-                          priority
-                        />
+                        <Image src="https://fortumars.com/fortumarslogo.png" alt="FortuMars Logo" fill style={{ objectFit: 'contain' }} priority />
                     </div>
                     <p className="text-muted-foreground">Loading Profile...</p>
                 </div>
@@ -262,10 +255,7 @@ export default function ProfilePage() {
 
     return (
         <>
-            <PageHeader
-                title="My Profile"
-                description="View and manage your personal information."
-            />
+            <PageHeader title="My Profile" description="View and manage your personal information." />
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
                     <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
@@ -278,29 +268,24 @@ export default function ProfilePage() {
                                     {(employee as any).firstName?.charAt(0)}{(employee as any).lastName?.charAt(0)}
                                 </AvatarFallback>
                                )}
-                               <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
+                               <Dialog open={isAvatarDialogOpen} onOpenChange={(open) => {
+                                   setIsAvatarDialogOpen(open);
+                                   if (!open) window.location.reload();
+                               }}>
                                     <DialogTrigger asChild>
                                         <button className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Smile className="h-8 w-8 text-white" />
                                         </button>
                                     </DialogTrigger>
                                     <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Choose Your Avatar</DialogTitle>
-                                        </DialogHeader>
+                                        <DialogHeader><DialogTitle>Choose Your Avatar</DialogTitle></DialogHeader>
                                         <div className="max-h-[50vh] overflow-y-auto">
                                             {Object.entries(emojiCategories).map(([category, emojis]) => (
                                                 <div key={category}>
                                                     <h3 className="font-semibold text-lg sticky top-0 bg-background py-2">{category}</h3>
                                                     <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
                                                         {emojis.map(emoji => (
-                                                            <button 
-                                                                key={emoji} 
-                                                                onClick={() => handleAvatarUpdate(emoji)}
-                                                                className="text-3xl p-2 rounded-lg hover:bg-accent"
-                                                            >
-                                                                {emoji}
-                                                            </button>
+                                                            <button key={emoji} onClick={() => handleAvatarUpdate(emoji)} className="text-3xl p-2 rounded-lg hover:bg-accent">{emoji}</button>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -314,100 +299,28 @@ export default function ProfilePage() {
                                 <CardDescription>{(employee as any).jobTitle}</CardDescription>
                                 <div className="flex flex-wrap justify-center gap-2 mt-2">
                                     <Badge variant="outline" className="font-semibold">{employmentType}</Badge>
-                                    {isWfh && (
-                                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none font-semibold px-3 py-1 gap-1">
-                                            <Home className="h-3 w-3" />
-                                            Work From Home
-                                        </Badge>
-                                    )}
+                                    {isWfh && (<Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none font-semibold px-3 py-1 gap-1"><Home className="h-3 w-3" />Work From Home</Badge>)}
                                 </div>
                              </div>
                         </CardHeader>
                         <CardContent>
-                            <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="w-full rounded-full">
-                                        <Edit className="mr-2 h-4 w-4"/> Edit Profile
-                                    </Button>
-                                </DialogTrigger>
+                            <Dialog open={isProfileDialogOpen} onOpenChange={(open) => {
+                                setIsProfileDialogOpen(open);
+                                if (!open) window.location.reload();
+                            }}>
+                                <DialogTrigger asChild><Button className="w-full rounded-full"><Edit className="mr-2 h-4 w-4"/> Edit Profile</Button></DialogTrigger>
                                 <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Edit Profile</DialogTitle>
-                                        <DialogDescription>
-                                            Make changes to your profile here. Click save when you're done.
-                                        </DialogDescription>
-                                    </DialogHeader>
+                                    <DialogHeader><DialogTitle>Edit Profile</DialogTitle><DialogDescription>Make changes to your profile here.</DialogDescription></DialogHeader>
                                     <Form {...form}>
                                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <FormField
-                                                    control={form.control}
-                                                    name="firstName"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>First Name</FormLabel>
-                                                            <FormControl>
-                                                                <Input placeholder="John" {...field} />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={form.control}
-                                                    name="lastName"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>Last Name</FormLabel>
-                                                            <FormControl>
-                                                                <Input placeholder="Doe" {...field} />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
+                                                <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name</FormLabel><FormControl><Input placeholder="John" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                                <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name</FormLabel><FormControl><Input placeholder="Doe" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                             </div>
-                                             <FormItem>
-                                                <FormLabel>Email</FormLabel>
-                                                <FormControl>
-                                                    <Input type="email" placeholder="john.doe@example.com" value={(employee as any)?.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            <FormField
-                                                control={form.control}
-                                                name="password"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>New Password (optional)</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="password" placeholder="••••••••" {...field} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={form.control}
-                                                name="confirmPassword"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Confirm New Password</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="password" placeholder="••••••••" {...field} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <DialogFooter>
-                                                <DialogClose asChild>
-                                                    <Button type="button" variant="outline">Cancel</Button>
-                                                </DialogClose>
-                                                <Button type="submit" disabled={isSubmitting}>
-                                                    {isSubmitting ? "Saving..." : "Save Changes"}
-                                                </Button>
-                                            </DialogFooter>
+                                             <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" value={(employee as any)?.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" /></FormControl></FormItem>
+                                            <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel>New Password (optional)</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name="confirmPassword" render={({ field }) => (<FormItem><FormLabel>Confirm New Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <DialogFooter><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Changes"}</Button></DialogFooter>
                                         </form>
                                     </Form>
                                 </DialogContent>
@@ -417,172 +330,75 @@ export default function ProfilePage() {
                 </div>
                 <div className="lg:col-span-2 space-y-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                     <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="font-headline">Personal Information</CardTitle>
-                            <CardDescription>Details about your employment.</CardDescription>
-                        </CardHeader>
+                        <CardHeader><CardTitle className="font-headline">Personal Information</CardTitle><CardDescription>Details about your employment.</CardDescription></CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">First Name</p>
-                                    <p className="font-semibold">{(employee as any).firstName}</p>
-                                </div>
-                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Last Name</p>
-                                    <p className="font-semibold">{(employee as any).lastName}</p>
-                                </div>
-                            </div>
-                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Email</p>
-                                <p className="font-semibold">{(employee as any).email}</p>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Department</p>
-                                    <p className="font-semibold">{(employee as any).department}</p>
-                                </div>
-                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Job Title</p>
-                                    <p className="font-semibold">{(employee as any).jobTitle}</p>
-                                </div>
-                            </div>
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Hire Date</p>
-                                    <p className="font-semibold">{new Date((employee as any).hireDate).toLocaleDateString()}</p>
-                                </div>
-                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Role</p>
-                                    <p className="font-semibold">{(employee as any).role}</p>
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Employment Type</p>
-                                <p className="font-semibold">{employmentType}</p>
-                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><p className="text-sm font-medium text-muted-foreground">First Name</p><p className="font-semibold">{(employee as any).firstName}</p></div><div><p className="text-sm font-medium text-muted-foreground">Last Name</p><p className="font-semibold">{(employee as any).lastName}</p></div></div>
+                             <div><p className="text-sm font-medium text-muted-foreground">Email</p><p className="font-semibold">{(employee as any).email}</p></div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><p className="text-sm font-medium text-muted-foreground">Department</p><p className="font-semibold">{(employee as any).department}</p></div><div><p className="text-sm font-medium text-muted-foreground">Job Title</p><p className="font-semibold">{(employee as any).jobTitle}</p></div></div>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><p className="text-sm font-medium text-muted-foreground">Hire Date</p><p className="font-semibold">{new Date((employee as any).hireDate).toLocaleDateString()}</p></div><div><p className="text-sm font-medium text-muted-foreground">Role</p><p className="font-semibold">{(employee as any).role}</p></div></div>
+                            <div><p className="text-sm font-medium text-muted-foreground">Employment Type</p><p className="font-semibold">{employmentType}</p></div>
                         </CardContent>
                     </Card>
                     <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="font-headline">Work From Home</CardTitle>
-                            <CardDescription>Manage your home location for remote work clock-ins.</CardDescription>
-                        </CardHeader>
+                        <CardHeader><CardTitle className="font-headline">Work From Home</CardTitle><CardDescription>Manage your home location.</CardDescription></CardHeader>
                         <CardContent className="space-y-4">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Saved Home Location</p>
-                                {(employee as any)?.homeLatitude && (employee as any)?.homeLongitude ? (
-                                    <p className="font-semibold">{`Lat: ${(employee as any).homeLatitude.toFixed(4)}, Lon: ${(employee as any).homeLongitude.toFixed(4)}`}</p>
-                                ) : (
-                                    <p className="font-semibold text-muted-foreground">Not set</p>
-                                )}
-                            </div>
-                            <Button onClick={handleLocationAction} disabled={!isAdminOrHR && (hasPendingRequest || !(employee as any)?.isWfhAllowed)} className="rounded-full">
-                                <MapPin className="mr-2 h-4 w-4" />
-                                {isAdminOrHR ? 'Update Home Location (Direct)' : ((employee as any)?.homeLatitude ? 'Request Location Change' : 'Set Home Location')}
-                            </Button>
-                             {hasPendingRequest && !isAdminOrHR && (
-                                <p className="text-sm text-yellow-600 mt-2">
-                                    You have a pending location change request.
-                                </p>
-                            )}
-                             {!(employee as any)?.isWfhAllowed && !isAdminOrHR && (
-                                <p className="text-sm text-muted-foreground mt-2">
-                                    Work From Home is not enabled for your account. Please contact an administrator.
-                                </p>
-                            )}
-                            {isAdminOrHR && (
-                                <p className="text-xs text-muted-foreground mt-2 italic">
-                                    Admin/HR privilege enabled: You can set your coordinates directly multiple times.
-                                </p>
-                            )}
+                            <div><p className="text-sm font-medium text-muted-foreground">Saved Home Location</p>{(employee as any)?.homeLatitude && (employee as any)?.homeLongitude ? (<p className="font-semibold">{`Lat: ${(employee as any).homeLatitude.toFixed(4)}, Lon: ${(employee as any).homeLongitude.toFixed(4)}`}</p>) : (<p className="font-semibold text-muted-foreground">Not set</p>)}</div>
+                            <Button onClick={handleLocationAction} disabled={!isAdminOrHR && (hasPendingRequest || !(employee as any)?.isWfhAllowed)} className="rounded-full"><MapPin className="mr-2 h-4 w-4" />{isAdminOrHR ? 'Update Home Location (Direct)' : ((employee as any)?.homeLatitude ? 'Request Location Change' : 'Set Home Location')}</Button>
+                             {hasPendingRequest && !isAdminOrHR && (<p className="text-sm text-yellow-600 mt-2">You have a pending location change request.</p>)}
+                             {!(employee as any)?.isWfhAllowed && !isAdminOrHR && (<p className="text-sm text-muted-foreground mt-2">Work From Home is not enabled.</p>)}
                         </CardContent>
                     </Card>
                 </div>
             </div>
 
-            <Dialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
+            <Dialog open={isSetHomeLocationDialogOpen} onOpenChange={(open) => {
+                setIsSetHomeLocationDialogOpen(open);
+                if (!open) window.location.reload();
+            }}>
                 <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>{isAdminOrHR ? 'Set/Update Home Location' : 'Set Home Location'}</DialogTitle>
-                        <DialogDescription>
-                            Your current location is pinned below. Drag the pin, click the map, or use search to adjust it.
-                        </DialogDescription>
-                    </DialogHeader>
+                    <DialogHeader><DialogTitle>{isAdminOrHR ? 'Set/Update Home Location' : 'Set Home Location'}</DialogTitle></DialogHeader>
                     {capturedLocation && (
                         <div className="space-y-2">
                             <div className="aspect-video w-full rounded-md overflow-hidden border">
-                                <InteractiveMap
-                                    initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }}
-                                    onLocationSelect={({ lat, lng, address }) => {
-                                        setCapturedLocation({ latitude: lat, longitude: lng });
-                                        setSelectedAddress(address);
-                                    }}
-                                />
+                                <InteractiveMap initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }} onLocationSelect={({ lat, lng, address }) => { setCapturedLocation({ latitude: lat, longitude: lng }); setSelectedAddress(address); }} />
                             </div>
                             <p className="text-xs text-muted-foreground p-2 bg-muted rounded-md">{selectedAddress}</p>
                         </div>
                     )}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => { setIsSetHomeLocationDialogOpen(false); setCapturedLocation(null); }}>Cancel</Button>
-                        <Button onClick={handleConfirmSetHomeLocation}>Save and Set Location</Button>
-                    </DialogFooter>
+                    <DialogFooter><Button variant="outline" onClick={() => setIsSetHomeLocationDialogOpen(false)}>Cancel</Button><Button onClick={handleConfirmSetHomeLocation}>Save and Set Location</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
             
-            <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
+            <Dialog open={isRequestChangeOpen} onOpenChange={(open) => {
+                setIsRequestChangeOpen(open);
+                if (!open) window.location.reload();
+            }}>
                  <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] p-0">
-                    <DialogHeader className="p-6 pb-4 border-b">
-                        <DialogTitle>Step 1: Select New Location</DialogTitle>
-                        <DialogDescription>
-                            Use the map to pinpoint your new home location for approval.
-                        </DialogDescription>
-                    </DialogHeader>
+                    <DialogHeader className="p-6 pb-4 border-b"><DialogTitle>Step 1: Select New Location</DialogTitle></DialogHeader>
                     <ScrollArea className="flex-1">
                        <div className="p-6">
                             {capturedLocation && (
                                 <div className="space-y-2">
                                     <div className="aspect-video w-full rounded-md overflow-hidden border">
-                                        <InteractiveMap
-                                            initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }}
-                                            onLocationSelect={({ lat, lng, address }) => {
-                                                setCapturedLocation({ latitude: lat, longitude: lng });
-                                                setSelectedAddress(address);
-                                            }}
-                                        />
+                                        <InteractiveMap initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }} onLocationSelect={({ lat, lng, address }) => { setCapturedLocation({ latitude: lat, longitude: lng }); setSelectedAddress(address); }} />
                                     </div>
                                     <p className="text-xs text-muted-foreground p-2 bg-muted rounded-md">{selectedAddress}</p>
                                 </div>
                             )}
                         </div>
                     </ScrollArea>
-                    <DialogFooter className="p-6 pt-4 border-t">
-                        <Button variant="outline" onClick={() => { setIsRequestChangeOpen(false); setCapturedLocation(null); }}>Cancel</Button>
-                        <Button onClick={handleLocationConfirmed}>Confirm & Continue</Button>
-                    </DialogFooter>
+                    <DialogFooter className="p-6 pt-4 border-t"><Button variant="outline" onClick={() => setIsRequestChangeOpen(false)}>Cancel</Button><Button onClick={handleLocationConfirmed}>Confirm & Continue</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isReasonDialogOpen} onOpenChange={setIsReasonDialogOpen}>
+            <Dialog open={isReasonDialogOpen} onOpenChange={(open) => {
+                setIsReasonDialogOpen(open);
+                if (!open) window.location.reload();
+            }}>
                 <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>Step 2: Reason for Change</DialogTitle>
-                        <DialogDescription>
-                            Please provide a brief reason for this location change request.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <Label htmlFor="reason">Reason</Label>
-                        <Textarea 
-                            id="reason" 
-                            value={changeReason}
-                            onChange={(e) => setChangeReason(e.target.value)}
-                            placeholder="e.g., I have moved to a new address." 
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => { setIsReasonDialogOpen(false); setChangeReason(""); }}>Cancel</Button>
-                        <Button onClick={handleSubmitChangeRequest}>Submit Request</Button>
-                    </DialogFooter>
+                    <DialogHeader><DialogTitle>Step 2: Reason for Change</DialogTitle></DialogHeader>
+                    <div className="grid gap-4 py-4"><Label htmlFor="reason">Reason</Label><Textarea id="reason" value={changeReason} onChange={(e) => setChangeReason(e.target.value)} placeholder="e.g., I have moved to a new address." /></div>
+                    <DialogFooter><Button variant="outline" onClick={() => setIsReasonDialogOpen(false)}>Cancel</Button><Button onClick={handleSubmitChangeRequest}>Submit Request</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
         </>
