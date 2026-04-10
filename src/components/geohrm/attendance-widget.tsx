@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle, LogIn } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle, LogIn, LocateFixed } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -57,7 +57,7 @@ interface Location {
 }
 
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
-  if (!loc1 || !loc2) return Infinity;
+  if (!loc1 || !loc2 || isNaN(loc1.latitude) || isNaN(loc1.longitude) || isNaN(loc2.latitude) || isNaN(loc2.longitude)) return Infinity;
   const R = 6371; // Radius of the Earth in km
   const dLat = (loc2.latitude - loc1.latitude) * (Math.PI / 180);
   const dLon = (loc2.longitude - loc1.longitude) * (Math.PI / 180);
@@ -483,7 +483,7 @@ export function AttendanceWidget() {
       const range = parseFloat(newMaxDistance);
       const lunchDuration = parseInt(newLunchDuration);
 
-      if (isNaN(lat) || iNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
+      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
           toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
           return;
       }
@@ -501,6 +501,18 @@ export function AttendanceWidget() {
         toast({ title: "Settings Updated", description: "The office settings have been saved." });
         setIsSettingsDialogOpen(false);
       }
+  }
+
+  const handleCaptureOfficeLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+          (position) => {
+              setNewLatitude(position.coords.latitude.toString());
+              setNewLongitude(position.coords.longitude.toString());
+              toast({ title: "Location Captured", description: "Coordinates updated to your current position." });
+          },
+          (error) => toast({ variant: "destructive", title: "Capture Failed", description: error.message }),
+          { enableHighAccuracy: true }
+      );
   }
   
   const handleOutOfRangeSubmit = () => {
@@ -588,13 +600,21 @@ export function AttendanceWidget() {
                         </DialogHeader>
                         <div className="flex-1 overflow-y-auto -mx-6 px-6">
                             <div className="grid gap-4 py-4 pr-2">
-                               <div className="grid gap-2">
-                                    <Label htmlFor="latitude">Office Latitude</Label>
-                                    <Input id="latitude" value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} placeholder="e.g., 37.7749" />
-                               </div>
-                               <div className="grid gap-2">
-                                    <Label htmlFor="longitude">Office Longitude</Label>
-                                    <Input id="longitude" value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} placeholder="e.g., -122.4194" />
+                               <div className="p-4 bg-muted/30 rounded-xl space-y-3">
+                                    <Label className="text-xs font-black uppercase text-primary">Precision Setup</Label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="latitude">Office Latitude</Label>
+                                            <Input id="latitude" value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} placeholder="e.g., 37.7749" />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="longitude">Office Longitude</Label>
+                                            <Input id="longitude" value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} placeholder="e.g., -122.4194" />
+                                        </div>
+                                    </div>
+                                    <Button variant="secondary" className="w-full h-10 font-bold uppercase text-[10px]" onClick={handleCaptureOfficeLocation}>
+                                        <LocateFixed className="mr-2 h-4 w-4" /> Pin Current Office Coordinates
+                                    </Button>
                                </div>
                                <div className="grid gap-2">
                                     <Label htmlFor="range">Clock-in Range (km)</Label>
@@ -689,9 +709,7 @@ export function AttendanceWidget() {
                 )}
             </div>
             
-            {/* Milestone Indicators with Gradients and Coordinates */}
             <div className="w-full max-w-2xl grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-                {/* Log In Indicator */}
                 <div className={cn(
                     "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
                     status !== 'out' ? "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 shadow-inner" : "bg-white/50 border-border/50"
@@ -708,7 +726,6 @@ export function AttendanceWidget() {
                     </div>
                 </div>
 
-                {/* L-Out Indicator */}
                 <div className={cn(
                     "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
                     status === 'break' || todaysAttendance?.locationLunchOutLatitude ? "bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 border-yellow-200" : "bg-white/50 border-border/50"
@@ -725,7 +742,6 @@ export function AttendanceWidget() {
                     </div>
                 </div>
 
-                {/* L-In Indicator */}
                 <div className={cn(
                     "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
                     todaysAttendance?.locationLunchInLatitude ? "bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-blue-200" : "bg-white/50 border-border/50"
@@ -742,7 +758,6 @@ export function AttendanceWidget() {
                     </div>
                 </div>
 
-                {/* Log-out Indicator */}
                 <div className={cn(
                     "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
                     hasClockedOutToday ? "bg-gradient-to-br from-purple-500/20 to-purple-500/5 border-purple-200" : "bg-white/50 border-border/50"
@@ -784,7 +799,7 @@ export function AttendanceWidget() {
                 <MapPin className="size-3" />
                 <span className="font-medium">{`Current Lat: ${currentUserLocation.latitude.toFixed(4)}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
                 {distance !== null && (
-                  <span className="text-primary font-bold">({distance.toFixed(2)} km)</span>
+                  <span className="text-primary font-bold">({distance.toFixed(2)} km from office)</span>
                 )}
               </div>
             )}
