@@ -150,8 +150,8 @@ export default function UsersPage() {
       role: userToEdit.role || "Member",
       password: "",
       confirmPassword: "",
-      homeLatitude: (userToEdit as any).homeLatitude || undefined,
-      homeLongitude: (userToEdit as any).homeLongitude || undefined,
+      homeLatitude: (userToEdit as any).homeLatitude ?? undefined,
+      homeLongitude: (userToEdit as any).homeLongitude ?? undefined,
       homeLocationRangeKm: (userToEdit as any).homeLocationRangeKm === 0 ? 0 : (userToEdit as any).homeLocationRangeKm || 5,
       isWfhAllowed: (userToEdit as any).isWfhAllowed || false,
     });
@@ -189,6 +189,17 @@ export default function UsersPage() {
     if (!firestore || !auth) return;
     
     try {
+        // Function to remove undefined values from payload
+        const cleanPayload = (obj: any) => {
+            const result: any = {};
+            Object.keys(obj).forEach(key => {
+                if (obj[key] !== undefined) {
+                    result[key] = obj[key];
+                }
+            });
+            return result;
+        };
+
         if (editingUser) {
             if (!canModify(editingUser.role) || !canModify(values.role)) {
                  toast({ variant: "destructive", title: "Permission Denied" });
@@ -199,7 +210,10 @@ export default function UsersPage() {
             const userRef = doc(firestore, 'users', editingUser.id);
             const { password, confirmPassword, email, ...updateData } = values;
 
-            batch.update(userRef, updateData);
+            // Remove undefined values to prevent Firestore WriteBatch.update error
+            const safeUpdateData = cleanPayload(updateData);
+
+            batch.update(userRef, safeUpdateData);
 
             if (editingUser.role !== values.role) {
                 batch.delete(doc(firestore, 'system_roles_admin', editingUser.id));
@@ -225,11 +239,14 @@ export default function UsersPage() {
             const userRef = doc(firestore, 'users', newUserId);
             const { password, confirmPassword, ...userData } = values;
             
+            // Filter undefined values
+            const safeUserData = cleanPayload(userData);
+
             const newUserPayload = {
               id: newUserId,
               employeeId: newUserId,
               hireDate: new Date().toISOString(),
-              ...userData,
+              ...safeUserData,
             };
 
             const batch = writeBatch(firestore);
