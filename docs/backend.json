@@ -1,79 +1,57 @@
-
 {
   "entities": {
     "Employee": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Employee",
       "type": "object",
-      "description": "Represents an employee within the organization.",
+      "description": "Represents an employee within the GeoHRM system, including their personal details, contact information, and HR-related data.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the employee."
+          "description": "Unique identifier for the Employee entity."
         },
         "firstName": {
           "type": "string",
-          "description": "First name of the employee."
+          "description": "The first name of the employee."
         },
         "lastName": {
           "type": "string",
-          "description": "Last name of the employee."
+          "description": "The last name of the employee."
         },
         "email": {
           "type": "string",
-          "description": "Email address of the employee.",
+          "description": "The primary email address of the employee, used for communication and identification. (format: email)",
           "format": "email"
-        },
-        "phoneNumber": {
-          "type": "string",
-          "description": "Contact phone number for WhatsApp nudges."
-        },
-        "jobTitle": {
-          "type": "string",
-          "description": "The employee's job title."
-        },
-        "department": {
-          "type": "string",
-          "description": "The department the employee belongs to."
-        },
-        "employmentType": {
-          "type": "string",
-          "enum": ["Intern", "Employee"],
-          "description": "The type of employment."
         },
         "dateOfBirth": {
           "type": "string",
-          "description": "Date of birth of the employee.",
-          "format": "date-time"
+          "description": "The employee's date of birth. (format: date)",
+          "format": "date"
         },
         "hireDate": {
           "type": "string",
-          "description": "Date when the employee was hired.",
-          "format": "date-time"
+          "description": "The date the employee was hired. (format: date)",
+          "format": "date"
         },
-        "teamId": {
+        "employeeIdNumber": {
           "type": "string",
-          "description": "Reference to the Team entity. (Relationship: Team 1:N Employee). Null if employee is not part of a team"
+          "description": "An internal, HR-assigned identification number for the employee."
         },
-        "avatar": {
+        "contactNumber": {
           "type": "string",
-          "description": "A single emoji character to be used as the user's avatar."
+          "description": "The employee's primary contact phone number."
         },
-        "homeLatitude": {
-          "type": "number",
-          "description": "The latitude of the employee's home address for WFH."
+        "address": {
+          "type": "string",
+          "description": "The employee's residential address."
         },
-        "homeLongitude": {
-          "type": "number",
-          "description": "The longitude of the employee's home address for WFH."
+        "roleId": {
+          "type": "string",
+          "description": "Reference to the Role assigned to the employee. (Relationship: Role 1:N Employee)"
         },
-        "homeLocationRangeKm": {
-          "type": "number",
-          "description": "The permissible clock-in radius in kilometers for WFH."
-        },
-        "isWfhAllowed": {
-          "type": "boolean",
-          "description": "Whether the employee is allowed to work from home."
+        "teamLeadId": {
+          "type": "string",
+          "description": "Reference to the Employee who is this employee's direct team lead. Nullable for top-level employees. (Relationship: Employee 1:N Employee)"
         }
       },
       "required": [
@@ -81,303 +59,562 @@
         "firstName",
         "lastName",
         "email",
-        "jobTitle",
-        "department",
-        "dateOfBirth",
-        "hireDate"
+        "hireDate",
+        "employeeIdNumber",
+        "roleId"
       ]
     },
-    "Team": {
+    "Role": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Team",
+      "title": "Role",
       "type": "object",
-      "description": "Represents a team within the organization.",
+      "description": "Defines a user role within the GeoHRM system, dictating permissions and access levels.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the team."
+          "description": "Unique identifier for the Role entity."
         },
         "name": {
           "type": "string",
-          "description": "The name of the team."
+          "description": "The descriptive name of the role (e.g., Member, Team Lead, HR Manager, CEO/Admin)."
         },
-        "teamLeadId": {
+        "description": {
           "type": "string",
-          "description": "The ID of the employee who is the team lead."
-        },
-        "memberIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "A list of employee IDs who are members of this team."
+          "description": "A detailed explanation of the role's responsibilities and typical permissions."
         }
       },
-      "required": ["id", "name", "teamLeadId", "memberIds"]
+      "required": [
+        "id",
+        "name",
+        "description"
+      ]
     },
-    "Attendance": {
+    "Location": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Attendance",
+      "title": "Location",
       "type": "object",
-      "description": "Represents an employee's attendance record for a single day.",
+      "description": "Represents a pre-approved physical location for attendance clock-ins, defined by geographical coordinates and a geofence radius.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the attendance record (e.g., YYYY-MM-DD)."
+          "description": "Unique identifier for the Location entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "A human-readable name for the location (e.g., Main Office, Branch A)."
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical street address of the location."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "The geographical latitude of the location's center point."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "The geographical longitude of the location's center point."
+        },
+        "radius": {
+          "type": "number",
+          "description": "The radius in meters defining the geofence around the latitude/longitude for attendance verification."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional description or notes about the location."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "address",
+        "latitude",
+        "longitude",
+        "radius"
+      ]
+    },
+    "AttendanceRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AttendanceRecord",
+      "type": "object",
+      "description": "Records an employee's daily attendance, including check-in/out times, GPS coordinates, break information, and any admin overrides.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AttendanceRecord entity."
         },
         "employeeId": {
           "type": "string",
-          "description": "Reference to the Employee entity. (Relationship: Employee 1:N Attendance)"
+          "description": "Reference to the Employee whose attendance this record belongs to. (Relationship: Employee 1:N AttendanceRecord)"
         },
         "checkInTime": {
           "type": "string",
-          "description": "ISO string for when the employee checked in.",
+          "description": "The timestamp when the employee checked in. (format: date-time)",
           "format": "date-time"
         },
         "checkOutTime": {
           "type": "string",
-          "description": "ISO string for when the employee checked out.",
+          "description": "The timestamp when the employee checked out. Null if still clocked in. (format: date-time)",
           "format": "date-time"
         },
-        "lunchOutTime": {
-          "type": "string",
-          "description": "ISO string for when the lunch break started.",
-          "format": "date-time"
-        },
-        "lunchInTime": {
-          "type": "string",
-          "description": "ISO string for when the lunch break ended.",
-          "format": "date-time"
-        },
-        "totalBreakDuration": {
+        "checkInLatitude": {
           "type": "number",
-          "description": "Total break time in seconds."
+          "description": "The geographical latitude recorded at check-in."
+        },
+        "checkInLongitude": {
+          "type": "number",
+          "description": "The geographical longitude recorded at check-in."
+        },
+        "checkOutLatitude": {
+          "type": "number",
+          "description": "The geographical latitude recorded at check-out."
+        },
+        "checkOutLongitude": {
+          "type": "number",
+          "description": "The geographical longitude recorded at check-out."
+        },
+        "approvedLocationId": {
+          "type": "string",
+          "description": "Reference to the approved Location associated with this attendance record. (Relationship: Location 1:N AttendanceRecord)"
+        },
+        "isWithinApprovedLocation": {
+          "type": "boolean",
+          "description": "Indicates if the check-in GPS coordinates were within the approved location's geofence."
+        },
+        "mislocationReason": {
+          "type": "string",
+          "description": "A reason provided if the check-in was outside the approved location."
         },
         "status": {
           "type": "string",
-          "enum": ["present", "late", "absent", "on_leave"],
-          "description": "The status of the attendance for the day."
+          "description": "The current status of the attendance record (e.g., 'Present', 'Approved Override', 'Pending Approval')."
         },
-        "locationCheckInLatitude": { "type": "number" },
-        "locationCheckInLongitude": { "type": "number" },
-        "locationCheckOutLatitude": { "type": "number" },
-        "locationCheckOutLongitude": { "type": "number" },
-        "locationLunchOutLatitude": { "type": "number", "description": "Location when starting break/lunch." },
-        "locationLunchOutLongitude": { "type": "number", "description": "Location when starting break/lunch." },
-        "locationLunchInLatitude": { "type": "number", "description": "Location when returning from break/lunch." },
-        "locationLunchInLongitude": { "type": "number", "description": "Location when returning from break/lunch." },
-        "checkInNotes": {
-            "type": "string",
-            "description": "Notes or reason provided by the employee for clocking in, especially if out of range."
+        "adminOverrideReason": {
+          "type": "string",
+          "description": "The mandatory reason provided by an administrator for any manual adjustments."
         },
-        "checkOutNotes": {
-            "type": "string",
-            "description": "Notes or reason provided by the employee for clocking out, especially if out of range."
+        "adminOverrideByEmployeeId": {
+          "type": "string",
+          "description": "Reference to the Employee who performed the administrative override. (Relationship: Employee 1:N AttendanceRecord)"
         },
-        "isOutOfRange": {
-          "type": "boolean",
-          "description": "Whether the employee clocked in outside the designated radius."
+        "adminOverrideTimestamp": {
+          "type": "string",
+          "description": "The timestamp when the administrative override occurred. (format: date-time)",
+          "format": "date-time"
         }
       },
       "required": [
         "id",
         "employeeId",
         "checkInTime",
+        "checkInLatitude",
+        "checkInLongitude",
+        "approvedLocationId",
+        "isWithinApprovedLocation",
         "status"
+      ]
+    },
+    "BreakRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BreakRecord",
+      "type": "object",
+      "description": "Details individual breaks taken by an employee during an attendance session.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the BreakRecord entity."
+        },
+        "attendanceRecordId": {
+          "type": "string",
+          "description": "Reference to the AttendanceRecord this break belongs to. (Relationship: AttendanceRecord 1:N BreakRecord)"
+        },
+        "breakStartTime": {
+          "type": "string",
+          "description": "The timestamp when the break started. (format: date-time)",
+          "format": "date-time"
+        },
+        "breakEndTime": {
+          "type": "string",
+          "description": "The timestamp when the break ended. Null if the break is ongoing. (format: date-time)",
+          "format": "date-time"
+        },
+        "breakType": {
+          "type": "string",
+          "description": "The type of break (e.g., 'Lunch', 'Personal')."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional description or notes about the break."
+        }
+      },
+      "required": [
+        "id",
+        "attendanceRecordId",
+        "breakStartTime",
+        "breakType"
+      ]
+    },
+    "AttendanceApprovalRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AttendanceApprovalRequest",
+      "type": "object",
+      "description": "Manages requests from employees to check-in or log attendance from non-standard or 'range out' locations, requiring admin or HR approval.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AttendanceApprovalRequest entity."
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "Reference to the Employee making the request. (Relationship: Employee 1:N AttendanceApprovalRequest)"
+        },
+        "requestedCheckInTime": {
+          "type": "string",
+          "description": "The proposed check-in timestamp for which approval is sought. (format: date-time)",
+          "format": "date-time"
+        },
+        "requestedLatitude": {
+          "type": "number",
+          "description": "The geographical latitude from which the employee intends to check in."
+        },
+        "requestedLongitude": {
+          "type": "number",
+          "description": "The geographical longitude from which the employee intends to check in."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The employee's reason for requesting approval to check in from this specific location/time."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the approval request (e.g., 'Pending', 'Approved', 'Rejected')."
+        },
+        "requestTimestamp": {
+          "type": "string",
+          "description": "The timestamp when the approval request was submitted. (format: date-time)",
+          "format": "date-time"
+        },
+        "approverEmployeeId": {
+          "type": "string",
+          "description": "Reference to the Employee who approved or rejected the request. Null if pending. (Relationship: Employee 1:N AttendanceApprovalRequest)"
+        },
+        "approvalTimestamp": {
+          "type": "string",
+          "description": "The timestamp when the request was approved or rejected. Null if pending. (format: date-time)",
+          "format": "date-time"
+        },
+        "approvalNotes": {
+          "type": "string",
+          "description": "Any notes or reasons provided by the approver for their decision."
+        }
+      },
+      "required": [
+        "id",
+        "employeeId",
+        "requestedCheckInTime",
+        "requestedLatitude",
+        "requestedLongitude",
+        "reason",
+        "status",
+        "requestTimestamp"
+      ]
+    },
+    "LeaveType": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LeaveType",
+      "type": "object",
+      "description": "Defines different categories of leave that employees can request, along with associated policies.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LeaveType entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the leave type (e.g., 'Sick Leave', 'Annual Leave')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the leave type and its rules."
+        },
+        "maxDaysPerYear": {
+          "type": "number",
+          "description": "The maximum number of days allowed for this leave type per year. Null if unlimited."
+        },
+        "isPaid": {
+          "type": "boolean",
+          "description": "Indicates whether this leave type is paid."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "isPaid"
       ]
     },
     "LeaveRequest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "LeaveRequest",
       "type": "object",
-      "description": "Represents an employee's request for leave.",
+      "description": "Records an employee's request for leave, including dates, reason, and current approval status within the hierarchical workflow.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the leave request."
+          "description": "Unique identifier for the LeaveRequest entity."
         },
         "employeeId": {
           "type": "string",
-          "description": "Reference to the Employee entity. (Relationship: Employee 1:N LeaveRequest)"
+          "description": "Reference to the Employee who submitted the leave request. (Relationship: Employee 1:N LeaveRequest)"
+        },
+        "leaveTypeId": {
+          "type": "string",
+          "description": "Reference to the LeaveType being requested. (Relationship: LeaveType 1:N LeaveRequest)"
         },
         "startDate": {
           "type": "string",
-          "description": "Start date of the leave period.",
-          "format": "date-time"
+          "description": "The start date of the requested leave. (format: date)",
+          "format": "date"
         },
         "endDate": {
           "type": "string",
-          "description": "End date of the leave period.",
-          "format": "date-time"
-        },
-        "leaveType": {
-          "type": "string",
-          "description": "Type of leave requested (e.g., vacation, sick leave)."
+          "description": "The end date of the requested leave. (format: date)",
+          "format": "date"
         },
         "reason": {
           "type": "string",
-          "description": "Reason for the leave request."
+          "description": "The employee's reason for requesting leave."
         },
         "status": {
           "type": "string",
-          "description": "Status of the leave request (e.g., pending, approved, rejected)."
+          "description": "The current status of the leave request (e.g., 'Pending Team Lead Approval', 'Approved', 'Rejected')."
         },
-        "approvedByTeamLeadId": {
+        "requestedDate": {
           "type": "string",
-          "description": "Reference to the TeamLead entity who approved the request. Null if not yet approved by team lead. (Relationship: TeamLead 1:N LeaveRequest)"
+          "description": "The timestamp when the leave request was submitted. (format: date-time)",
+          "format": "date-time"
         },
-        "approvedByHRId": {
-          "type": "string",
-          "description": "Reference to the HRAgent entity who approved the request. Null if not yet approved by HR. (Relationship: HRAgent 1:N LeaveRequest)"
+        "totalDays": {
+          "type": "number",
+          "description": "The calculated total number of leave days requested."
         }
       },
       "required": [
         "id",
         "employeeId",
+        "leaveTypeId",
         "startDate",
         "endDate",
-        "leaveType",
         "reason",
-        "status"
+        "status",
+        "requestedDate",
+        "totalDays"
+      ]
+    },
+    "LeaveApproval": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LeaveApproval",
+      "type": "object",
+      "description": "Records each step of the hierarchical approval process for a LeaveRequest.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LeaveApproval entity."
+        },
+        "leaveRequestId": {
+          "type": "string",
+          "description": "Reference to the LeaveRequest being approved. (Relationship: LeaveRequest 1:N LeaveApproval)"
+        },
+        "approverEmployeeId": {
+          "type": "string",
+          "description": "Reference to the Employee who acted as the approver for this step. (Relationship: Employee 1:N LeaveApproval)"
+        },
+        "approverRole": {
+          "type": "string",
+          "description": "The role of the approver (e.g., 'Team Lead', 'HR Manager', 'CEO/Admin')."
+        },
+        "status": {
+          "type": "string",
+          "description": "The outcome of this approval step ('Approved', 'Rejected', 'Pending')."
+        },
+        "approvalDate": {
+          "type": "string",
+          "description": "The timestamp when this approval step was acted upon. (format: date-time)",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Any notes or comments provided by the approver."
+        }
+      },
+      "required": [
+        "id",
+        "leaveRequestId",
+        "approverEmployeeId",
+        "approverRole",
+        "status",
+        "approvalDate"
+      ]
+    },
+    "EmployeeLeaveBalance": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EmployeeLeaveBalance",
+      "type": "object",
+      "description": "Tracks the current leave balance for an employee for a specific leave type and year.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the EmployeeLeaveBalance entity."
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "Reference to the Employee. (Relationship: Employee 1:N EmployeeLeaveBalance)"
+        },
+        "leaveTypeId": {
+          "type": "string",
+          "description": "Reference to the LeaveType this balance applies to. (Relationship: LeaveType 1:N EmployeeLeaveBalance)"
+        },
+        "balanceDays": {
+          "type": "number",
+          "description": "The remaining number of leave days for the employee for this leave type and year."
+        },
+        "accruedDays": {
+          "type": "number",
+          "description": "The number of leave days accrued by the employee for this leave type in the current year."
+        },
+        "year": {
+          "type": "number",
+          "description": "The calendar year for which this leave balance applies."
+        }
+      },
+      "required": [
+        "id",
+        "employeeId",
+        "leaveTypeId",
+        "balanceDays",
+        "accruedDays",
+        "year"
+      ]
+    },
+    "IssueCategory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "IssueCategory",
+      "type": "object",
+      "description": "Defines different categories for issue reports, helping to organize and direct reported issues.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the IssueCategory entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the issue category (e.g., 'IT Support', 'Facility Maintenance')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of what types of issues fall under this category."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
       ]
     },
     "IssueReport": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "IssueReport",
       "type": "object",
-      "description": "Represents an issue or problem reported by an employee.",
+      "description": "Records non-emergency issues reported by staff, including their status and assignment details.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the issue report."
+          "description": "Unique identifier for the IssueReport entity."
         },
-        "employeeId": {
+        "reporterEmployeeId": {
           "type": "string",
-          "description": "Reference to the Employee entity who submitted the report. (Relationship: Employee 1:N IssueReport)"
+          "description": "Reference to the Employee who submitted the issue report. (Relationship: Employee 1:N IssueReport)"
         },
-        "submittedBy": {
+        "issueCategoryId": {
           "type": "string",
-          "description": "Name of the employee who submitted the report."
-        },
-        "submissionDate": {
-          "type": "string",
-          "description": "Date when the issue report was submitted.",
-          "format": "date-time"
+          "description": "Reference to the IssueCategory this report belongs to. (Relationship: IssueCategory 1:N IssueReport)"
         },
         "title": {
           "type": "string",
-          "description": "Title of the issue."
-        },
-        "issueType": {
-          "type": "string",
-          "description": "Type of issue reported (e.g., IT, facilities, HR)."
+          "description": "A concise title for the issue."
         },
         "description": {
           "type": "string",
-          "description": "Detailed description of the issue."
+          "description": "A detailed description of the reported issue."
+        },
+        "reportDate": {
+          "type": "string",
+          "description": "The timestamp when the issue was reported. (format: date-time)",
+          "format": "date-time"
         },
         "status": {
           "type": "string",
-          "description": "Current status of the issue (e.g., open, assigned, in progress, resolved)."
+          "description": "The current status of the issue (e.g., 'New', 'Assigned', 'Resolved')."
         },
-        "assignedToAdminId": {
+        "assignedToEmployeeId": {
           "type": "string",
-          "description": "Reference to the Admin/HR user assigned to resolve the issue. (Relationship: Admin 1:N IssueReport)"
+          "description": "Reference to the Employee assigned to resolve the issue. Null if unassigned. (Relationship: Employee 1:N IssueReport)"
         },
         "resolutionNotes": {
           "type": "string",
-          "description": "Notes on the resolution of the issue."
+          "description": "Notes documenting the resolution steps or outcome of the issue."
         },
-        "resolutionDate": {
+        "lastUpdatedDate": {
           "type": "string",
-          "description": "Date when the issue was resolved.",
+          "description": "The timestamp of the last update to the issue report. (format: date-time)",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "employeeId",
-        "submittedBy",
-        "submissionDate",
+        "reporterEmployeeId",
+        "issueCategoryId",
         "title",
-        "issueType",
         "description",
+        "reportDate",
         "status"
       ]
-    },
-    "Report": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Report",
-      "type": "object",
-      "description": "Represents a structured daily work report submitted by an employee. Can be of type 'Business' or 'Technical'.",
-      "properties": {
-        "id": { "type": "string" },
-        "employeeId": { "type": "string" },
-        "employeeName": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "reportType": { "type": "string", "enum": ["Business", "Technical"] },
-        "signature": { "type": "string" },
-        "currency": { "type": "string", "enum": ["USD", "EUR", "GBP", "INR"] },
-        "outreachColdCalls": { "type": "number" },
-        "outreachLinkedIn": { "type": "number" },
-        "outreachEmails": { "type": "number" },
-        "outreachTotal": { "type": "number" },
-        "newLeadsGenerated": { "type": "number" },
-        "potentialClients": { "type": "number" },
-        "followUpsCompleted": { "type": "string" },
-        "netRevenueCollected": { "type": "number" },
-        "committedNetRevenue": { "type": "number" },
-        "pipelineValue": { "type": "number" },
-        "revenueVariance": { "type": "number" },
-        "meetingsSecured": { "type": "array", "items": { "type": "object", "properties": { "clientName": { "type": "string" }, "quotationValue": { "type": "number" }, "context": { "type": "string" } } } },
-        "clientWinHighlight": { "type": "string" },
-        "strategicLearning": { "type": "string" },
-        "meetingsBookedTomorrow": { "type": "number" },
-        "criticalPathTomorrow": { "type": "string" },
-        "pendingDeliverables": { "type": "string" },
-        "interventionTrigger": { "type": "string", "enum": ["None", "Coaching", "Technical Support", "Client meeting"] },
-        "interventionReason": { "type": "string" },
-        "bestCallRecording": { "type": "string" },
-        "worstCallRecording": { "type": "string" },
-        "logInTime": { "type": "string", "format": "time" },
-        "logOutTime": { "type": "string", "format": "time" },
-        "tasksAssigned": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
-        "completedTasks": { "type": "array", "items": { "type": "object", "properties": { "moduleName": { "type": "string" }, "workDone": { "type": "string" } } } },
-        "repoLinks": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
-        "workInProgress": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
-        "pendingTasks": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
-        "whatILearned": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
-        "challengesFaced": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } },
-        "nextSteps": { "type": "array", "items": { "type": "object", "properties": { "value": { "type": "string" } } } }
-      },
-      "required": ["id", "employeeId", "date", "reportType", "signature"]
     },
     "Announcement": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Announcement",
       "type": "object",
-      "description": "Represents a company-wide announcement or news item.",
+      "description": "Stores company-wide announcements, news, and updates for display on an announcement board.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the announcement."
+          "description": "Unique identifier for the Announcement entity."
         },
         "title": {
           "type": "string",
-          "description": "Title of the announcement."
+          "description": "The title of the announcement."
         },
         "content": {
           "type": "string",
-          "description": "Content of the announcement."
+          "description": "The main body content of the announcement."
         },
         "publishDate": {
           "type": "string",
-          "description": "Date when the announcement was published.",
+          "description": "The date and time when the announcement was published. (format: date-time)",
           "format": "date-time"
         },
-        "authorId": {
+        "expiryDate": {
           "type": "string",
-          "description": "Reference to the Admin/HR user who created the announcement. (Relationship: Admin 1:N Announcement)"
+          "description": "The date and time when the announcement should no longer be displayed. Null if no expiry. (format: date-time)",
+          "format": "date-time"
+        },
+        "authorEmployeeId": {
+          "type": "string",
+          "description": "Reference to the Employee who authored the announcement. (Relationship: Employee 1:N Announcement)"
+        },
+        "audience": {
+          "type": "string",
+          "description": "Specifies the intended audience for the announcement (e.g., 'All Employees', 'Team Leads')."
         }
       },
       "required": [
@@ -385,317 +622,141 @@
         "title",
         "content",
         "publishDate",
-        "authorId"
+        "authorEmployeeId",
+        "audience"
       ]
-    },
-    "Event": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Event",
-      "type": "object",
-      "description": "Represents a company event like a birthday or work anniversary.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "event": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "likes": { "type": "number" },
-        "likedBy": { "type": "array", "items": { "type": "string" } },
-        "icon": { "type": "string" },
-        "color": { "type": "string" },
-        "time": { "type": "string" }
-      },
-      "required": ["id", "name", "event", "date", "likes", "likedBy", "icon", "color"]
     },
     "Policy": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Policy",
       "type": "object",
-      "description": "Represents a company policy document.",
+      "description": "Represents a company policy document requiring employee acknowledgment, for HR compliance.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the policy."
+          "description": "Unique identifier for the Policy entity."
         },
         "title": {
           "type": "string",
-          "description": "Title of the policy document."
+          "description": "The title of the company policy (e.g., 'HR Manual', 'IT Policy')."
         },
-        "content": {
+        "contentUrl": {
           "type": "string",
-          "description": "Content of the policy document (e.g., URL, text)."
+          "description": "A URL pointing to the actual policy document or content. (format: uri)",
+          "format": "uri"
         },
-        "effectiveDate": {
+        "version": {
           "type": "string",
-          "description": "Date when the policy became effective.",
-          "format": "date-time"
+          "description": "The version identifier of the policy (e.g., '1.0', '2023-Q4')."
+        },
+        "publishDate": {
+          "type": "string",
+          "description": "The date when this version of the policy was published. (format: date)",
+          "format": "date"
+        },
+        "requiredAcknowledgment": {
+          "type": "boolean",
+          "description": "Indicates whether employees are required to digitally acknowledge reading this policy."
         }
       },
       "required": [
         "id",
         "title",
-        "content",
-        "effectiveDate"
+        "contentUrl",
+        "version",
+        "publishDate",
+        "requiredAcknowledgment"
       ]
     },
     "PolicyAcknowledgment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "PolicyAcknowledgment",
       "type": "object",
-      "description": "Tracks employee acknowledgments of company policies.",
+      "description": "Records an employee's digital acknowledgment of having read and understood a specific company policy.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the policy acknowledgment."
+          "description": "Unique identifier for the PolicyAcknowledgment entity."
         },
         "employeeId": {
           "type": "string",
-          "description": "Reference to the Employee entity. (Relationship: Employee 1:N PolicyAcknowledgment)"
+          "description": "Reference to the Employee who acknowledged the policy. (Relationship: Employee 1:N PolicyAcknowledgment)"
         },
         "policyId": {
           "type": "string",
-          "description": "Reference to the Policy entity. (Relationship: Policy 1:N PolicyAcknowledgment)"
+          "description": "Reference to the Policy that was acknowledged. (Relationship: Policy 1:N PolicyAcknowledgment)"
         },
         "acknowledgmentDate": {
           "type": "string",
-          "description": "Date when the employee acknowledged the policy.",
+          "description": "The date and time when the employee acknowledged the policy. (format: date-time)",
           "format": "date-time"
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "The IP address from which the acknowledgment was made, for audit purposes."
         }
       },
       "required": [
         "id",
         "employeeId",
         "policyId",
-        "acknowledgmentDate"
+        "acknowledgmentDate",
+        "ipAddress"
       ]
     },
     "AuditLog": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "AuditLog",
       "type": "object",
-      "description": "Tracks all user actions for auditing and security purposes.",
+      "description": "Records all significant user actions and system events for security, compliance, and debugging purposes.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the audit log entry."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User entity who performed the action. (Relationship: User 1:N AuditLog)"
+          "description": "Unique identifier for the AuditLog entity."
         },
         "timestamp": {
           "type": "string",
-          "description": "Timestamp of the action.",
+          "description": "The date and time when the audited action occurred. (format: date-time)",
           "format": "date-time"
         },
-        "action": {
+        "employeeId": {
           "type": "string",
-          "description": "Description of the action performed."
+          "description": "Reference to the Employee who performed the action. Null for system-level actions. (Relationship: Employee 1:N AuditLog)"
+        },
+        "actionType": {
+          "type": "string",
+          "description": "The type of action performed (e.g., 'CREATE', 'UPDATE', 'DELETE', 'ATTENDANCE_EDIT', 'LEAVE_APPROVE')."
         },
         "entityType": {
           "type": "string",
-          "description": "The type of entity affected by the action (e.g., Employee, Attendance)."
+          "description": "The type of data entity that was affected (e.g., 'Employee', 'AttendanceRecord', 'Policy')."
         },
         "entityId": {
           "type": "string",
-          "description": "The ID of the entity affected by the action."
+          "description": "The unique identifier of the specific entity instance that was affected."
         },
-        "details": {
+        "description": {
           "type": "string",
-          "description": "Additional details about the action (e.g., changes made)."
+          "description": "A human-readable description of the action, including context."
+        },
+        "changes": {
+          "type": "string",
+          "description": "A JSON string or summary describing the specific data changes made (e.g., '{\"oldValue\": \"...\", \"newValue\": \"...\"}')."
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "The IP address from which the action was initiated."
         }
       },
       "required": [
         "id",
-        "userId",
         "timestamp",
-        "action",
+        "actionType",
         "entityType",
-        "entityId"
+        "entityId",
+        "description",
+        "ipAddress"
       ]
-    },
-    "TeamLead": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "TeamLead",
-      "type": "object",
-      "description": "Represents a team lead within the organization.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the team lead."
-        },
-        "employeeId": {
-          "type": "string",
-          "description": "Reference to the Employee entity. (Relationship: Employee 1:1 TeamLead)"
-        }
-      },
-      "required": [
-        "id",
-        "employeeId"
-      ]
-    },
-    "HRAgent": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "HRAgent",
-      "type": "object",
-      "description": "Represents a HR agent within the organization.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the HR agent."
-        },
-        "employeeId": {
-          "type": "string",
-          "description": "Reference to the Employee entity. (Relationship: Employee 1:1 HRAgent)"
-        }
-      },
-      "required": [
-        "id",
-        "employeeId"
-      ]
-    },
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the system. Authentication details managed externally.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
-        "employeeId": {
-          "type": "string",
-          "description": "Reference to the Employee entity. (Relationship: Employee 1:1 User)"
-        },
-        "role": {
-          "type": "string",
-          "description": "Role of the user within the system (e.g., Member, Team Lead, HR Manager, CEO/Admin)."
-        },
-        "employmentType": {
-          "type": "string",
-          "enum": ["Intern", "Employee"],
-          "description": "The type of employment."
-        }
-      },
-      "required": [
-        "id",
-        "employeeId",
-        "role"
-      ]
-    },
-    "Setting": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Setting",
-      "type": "object",
-      "description": "Represents a company-wide setting.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the setting (e.g., 'location')."
-        },
-        "latitude": {
-          "type": "number",
-          "description": "The latitude for the office location."
-        },
-        "longitude": {
-          "type": "number",
-          "description": "The longitude for the office location."
-        },
-        "maxDistanceKm": {
-          "type": "number",
-          "description": "The maximum distance in kilometers for an employee to be able to clock in."
-        },
-        "shiftStartTime": {
-          "type": "string",
-          "description": "The official start time of the work shift (e.g., '09:00')."
-        },
-        "shiftEndTime": {
-          "type": "string",
-          "description": "The official end time of the work shift (e.g., '17:00')."
-        },
-        "lunchBreakStartTime": {
-          "type": "string",
-          "description": "The official start time of the lunch break (e.g., '13:00')."
-        },
-        "lunchBreakDurationMinutes": {
-          "type": "number",
-          "description": "The duration of the lunch break in minutes."
-        }
-      }
-    },
-    "Payslip": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Payslip",
-      "type": "object",
-      "description": "Represents an employee's payslip for a specific period.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the payslip." },
-        "employeeId": { "type": "string", "description": "Reference to the Employee entity." },
-        "month": { "type": "number", "description": "The month of the payslip (1-12)." },
-        "year": { "type": "number", "description": "The year of the payslip." },
-        "issueDate": { "type": "string", "format": "date-time", "description": "Date when the payslip was issued." },
-        "grossSalary": { "type": "number", "description": "The gross salary for the period." },
-        "deductions": { "type": "number", "description": "Total deductions for the period." },
-        "netSalary": { "type": "number", "description": "The net salary paid." },
-        "downloadUrl": { "type": "string", "description": "A public URL to download the payslip PDF." }
-      },
-      "required": ["id", "employeeId", "month", "year", "issueDate", "netSalary", "downloadUrl"]
-    },
-    "LocationChangeRequest": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LocationChangeRequest",
-      "type": "object",
-      "description": "Represents an employee's request to change their designated Work From Home location.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the request."
-        },
-        "employeeId": {
-          "type": "string",
-          "description": "ID of the employee making the request."
-        },
-        "employeeName": {
-            "type": "string",
-            "description": "Name of the employee making the request."
-        },
-        "requestDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the request was submitted."
-        },
-        "newLatitude": {
-          "type": "number",
-          "description": "The proposed new latitude for the home location."
-        },
-        "newLongitude": {
-          "type": "number",
-          "description": "The proposed new longitude for the home location."
-        },
-        "reason": {
-          "type": "string",
-          "description": "The reason provided by the employee for the change."
-        },
-        "status": {
-          "type": "string",
-          "enum": ["pending", "approved", "rejected"],
-          "description": "The current status of the request."
-        },
-        "approvedBy": {
-          "type": "string",
-          "description": "The ID of the admin who processed the request."
-        },
-        "rejectionReason": {
-            "type": "string",
-            "description": "Reason for rejection, if applicable."
-        },
-        "processedDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when the request was approved or rejected."
-        }
-      },
-      "required": ["id", "employeeId", "employeeName", "requestDate", "newLatitude", "newLongitude", "reason", "status"]
     }
   },
   "auth": {
@@ -707,93 +768,251 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
+        "path": "/system_roles_admin/{employeeId}",
         "definition": {
-          "entityName": "User",
+          "entityName": "Employee",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/backend/entities/Employee"
           },
-          "description": "Stores user profiles. The 'role' field determines the user's global role.",
+          "description": "Dedicated collection for database role-based access control (DBAC) indicating an employee is an Admin. Documents here are typically empty, with authorization based purely on document existence for a given employeeId (UID)."
+        }
+      },
+      {
+        "path": "/system_roles_hr/{employeeId}",
+        "definition": {
+          "entityName": "Employee",
+          "schema": {
+            "$ref": "#/backend/entities/Employee"
+          },
+          "description": "Dedicated collection for database role-based access control (DBAC) indicating an employee is an HR Manager. Authorization based on document existence for a given employeeId (UID)."
+        }
+      },
+      {
+        "path": "/system_roles_teamlead/{employeeId}",
+        "definition": {
+          "entityName": "Employee",
+          "schema": {
+            "$ref": "#/backend/entities/Employee"
+          },
+          "description": "Dedicated collection for database role-based access control (DBAC) indicating an employee is a Team Lead. Authorization based on document existence for a given employeeId (UID)."
+        }
+      },
+      {
+        "path": "/employees/{employeeId}",
+        "definition": {
+          "entityName": "Employee",
+          "schema": {
+            "$ref": "#/backend/entities/Employee"
+          },
+          "description": "Stores individual employee profiles. The `employeeId` corresponds to `request.auth.uid`. Includes `teamLeadId` and `roleId` fields for denormalized authorization context in subcollections.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier of the user."
+              "name": "employeeId",
+              "description": "The unique ID of the employee, typically matching the Firebase Authentication UID."
             }
           ]
         }
       },
       {
-        "path": "/teams/{teamId}",
+        "path": "/roles/{roleId}",
         "definition": {
-          "entityName": "Team",
+          "entityName": "Role",
           "schema": {
-            "$ref": "#/backend/entities/Team"
+            "$ref": "#/backend/entities/Role"
           },
-          "description": "Stores team information.",
+          "description": "Defines system-wide roles and their descriptions. Generally read-only for employees, writable by Admin only.",
           "params": [
             {
-              "name": "teamId",
-              "description": "The unique identifier of the team."
+              "name": "roleId",
+              "description": "The unique ID of the system role."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/attendances/{attendanceId}",
+        "path": "/locations/{locationId}",
         "definition": {
-          "entityName": "Attendance",
+          "entityName": "Location",
           "schema": {
-            "$ref": "#/backend/entities/Attendance"
+            "$ref": "#/backend/entities/Location"
           },
-          "description": "Stores daily attendance records for each user. The document ID is the date in YYYY-MM-DD format.",
+          "description": "Stores pre-approved physical locations for attendance clock-ins. Read-only for employees, writable by Admin/HR.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier of the user."
+              "name": "locationId",
+              "description": "The unique ID of the approved location."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/employees/{employeeId}/attendanceRecords/{attendanceRecordId}",
+        "definition": {
+          "entityName": "AttendanceRecord",
+          "schema": {
+            "$ref": "#/backend/entities/AttendanceRecord"
+          },
+          "description": "Records an employee's daily attendance. Includes denormalized `employeeTeamLeadId` to enable Team Lead access without `get()` calls. Employee can create/read/update their own; Team Lead can read their reports'; HR/Admin can manage all.",
+          "params": [
+            {
+              "name": "employeeId",
+              "description": "The unique ID of the employee, typically matching the Firebase Authentication UID."
             },
             {
-              "name": "attendanceId",
-              "description": "The date of the attendance record in YYYY-MM-DD format."
+              "name": "attendanceRecordId",
+              "description": "The unique ID for a specific attendance record."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/leave_requests/{leaveRequestId}",
+        "path": "/employees/{employeeId}/attendanceRecords/{attendanceRecordId}/breakRecords/{breakRecordId}",
+        "definition": {
+          "entityName": "BreakRecord",
+          "schema": {
+            "$ref": "#/backend/entities/BreakRecord"
+          },
+          "description": "Details individual breaks taken during an attendance session. Includes denormalized `employeeTeamLeadId` for inherited Team Lead access without `get()` calls to parent `attendanceRecord` or `employee`.",
+          "params": [
+            {
+              "name": "employeeId",
+              "description": "The unique ID of the employee who owns the parent attendance record."
+            },
+            {
+              "name": "attendanceRecordId",
+              "description": "The unique ID of the parent attendance record."
+            },
+            {
+              "name": "breakRecordId",
+              "description": "The unique ID for a specific break record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/attendanceApprovalRequests/{approvalRequestId}",
+        "definition": {
+          "entityName": "AttendanceApprovalRequest",
+          "schema": {
+            "$ref": "#/backend/entities/AttendanceApprovalRequest"
+          },
+          "description": "Centralized collection for employee requests to log attendance from non-standard locations. Employees can create/read their own; Admin/HR can read/update all requests. Includes `employeeId` for requester and `approverEmployeeId` for resolution.",
+          "params": [
+            {
+              "name": "approvalRequestId",
+              "description": "The unique ID of the attendance approval request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/leaveTypes/{leaveTypeId}",
+        "definition": {
+          "entityName": "LeaveType",
+          "schema": {
+            "$ref": "#/backend/entities/LeaveType"
+          },
+          "description": "Defines different categories of leave. Generally read-only for employees, writable by Admin/HR.",
+          "params": [
+            {
+              "name": "leaveTypeId",
+              "description": "The unique ID of the leave type."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/employees/{employeeId}/leaveRequests/{leaveRequestId}",
         "definition": {
           "entityName": "LeaveRequest",
           "schema": {
             "$ref": "#/backend/entities/LeaveRequest"
           },
-          "description": "Stores leave requests for each user.",
+          "description": "Records an employee's request for leave. Includes denormalized `requestingEmployeeTeamLeadId` to facilitate hierarchical approval process by Team Leads without `get()` calls.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier of the user."
+              "name": "employeeId",
+              "description": "The unique ID of the employee making the leave request."
             },
             {
               "name": "leaveRequestId",
-              "description": "The unique identifier of the leave request."
+              "description": "The unique ID for a specific leave request."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/reports/{reportId}",
+        "path": "/employees/{employeeId}/leaveRequests/{leaveRequestId}/leaveApprovals/{leaveApprovalId}",
         "definition": {
-          "entityName": "Report",
+          "entityName": "LeaveApproval",
           "schema": {
-            "$ref": "#/backend/entities/Report"
+            "$ref": "#/backend/entities/LeaveApproval"
           },
-          "description": "Stores daily work reports for each user.",
+          "description": "Records each step of the hierarchical approval process for a LeaveRequest. Includes denormalized `requestingEmployeeTeamLeadId` and `approverRole` to support rule checks without `get()` calls to parent documents.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier of the user."
+              "name": "employeeId",
+              "description": "The unique ID of the employee associated with the parent leave request."
             },
             {
-              "name": "reportId",
-              "description": "The unique identifier of the report."
+              "name": "leaveRequestId",
+              "description": "The unique ID of the parent leave request."
+            },
+            {
+              "name": "leaveApprovalId",
+              "description": "The unique ID for a specific leave approval step."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/employees/{employeeId}/leaveBalances/{leaveTypeId}_{year}",
+        "definition": {
+          "entityName": "EmployeeLeaveBalance",
+          "schema": {
+            "$ref": "#/backend/entities/EmployeeLeaveBalance"
+          },
+          "description": "Tracks an employee's current leave balance for a specific leave type and year. Composite ID `leaveTypeId_year` for efficient querying. Employee can read their own balance; HR/Admin can read/write all.",
+          "params": [
+            {
+              "name": "employeeId",
+              "description": "The unique ID of the employee."
+            },
+            {
+              "name": "leaveTypeId_year",
+              "description": "A composite ID representing the leave type and calendar year (e.g., 'sick_2023')."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/issueCategories/{categoryId}",
+        "definition": {
+          "entityName": "IssueCategory",
+          "schema": {
+            "$ref": "#/backend/entities/IssueCategory"
+          },
+          "description": "Defines different categories for issue reports. Generally read-only for employees, writable by Admin only.",
+          "params": [
+            {
+              "name": "categoryId",
+              "description": "The unique ID of the issue category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/issueReports/{issueReportId}",
+        "definition": {
+          "entityName": "IssueReport",
+          "schema": {
+            "$ref": "#/backend/entities/IssueReport"
+          },
+          "description": "Centralized collection for staff issue reports. Employees can create/read their own; Admin/HR can view, assign, and update the status of all. Includes `reporterEmployeeId` and `assignedToEmployeeId` for authorization.",
+          "params": [
+            {
+              "name": "issueReportId",
+              "description": "The unique ID of the issue report."
             }
           ]
         }
@@ -805,27 +1024,11 @@
           "schema": {
             "$ref": "#/backend/entities/Announcement"
           },
-          "description": "Stores company-wide announcements.",
+          "description": "Stores company-wide announcements. Publicly readable by authenticated employees, writable by Admin/HR.",
           "params": [
             {
               "name": "announcementId",
-              "description": "The unique identifier of the announcement."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/events/{eventId}",
-        "definition": {
-          "entityName": "Event",
-          "schema": {
-            "$ref": "#/backend/entities/Event"
-          },
-          "description": "Stores company-wide events like birthdays and work anniversaries.",
-          "params": [
-            {
-              "name": "eventId",
-              "description": "The unique identifier of the event."
+              "description": "The unique ID of the announcement."
             }
           ]
         }
@@ -837,179 +1040,52 @@
           "schema": {
             "$ref": "#/backend/entities/Policy"
           },
-          "description": "Stores company policies.",
+          "description": "Represents company policy documents. Publicly readable by authenticated employees, writable by Admin/HR.",
           "params": [
             {
               "name": "policyId",
-              "description": "The unique identifier of the policy."
+              "description": "The unique ID of the policy."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/policy_acknowledgments/{acknowledgmentId}",
+        "path": "/employees/{employeeId}/policyAcknowledgments/{policyAcknowledgmentId}",
         "definition": {
           "entityName": "PolicyAcknowledgment",
           "schema": {
             "$ref": "#/backend/entities/PolicyAcknowledgment"
           },
-          "description": "Tracks policy acknowledgments by each employee.",
+          "description": "Records an employee's digital acknowledgment of a policy. Employee can create/read their own; HR/Admin can read all.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier of the user."
+              "name": "employeeId",
+              "description": "The unique ID of the employee."
             },
             {
-              "name": "acknowledgmentId",
-              "description": "The unique identifier of the policy acknowledgment."
+              "name": "policyAcknowledgmentId",
+              "description": "The unique ID for a specific policy acknowledgment."
             }
           ]
         }
       },
       {
-        "path": "/issue_reports/{issueReportId}",
-        "definition": {
-          "entityName": "IssueReport",
-          "schema": {
-            "$ref": "#/backend/entities/IssueReport"
-          },
-          "description": "Stores issue reports submitted by employees.",
-          "params": [
-            {
-              "name": "issueReportId",
-              "description": "The unique identifier of the issue report."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_team_lead/{userId}",
-        "definition": {
-          "entityName": "TeamLead",
-          "schema": {
-            "$ref": "#/backend/entities/TeamLead"
-          },
-          "description": "Indicates a user has the Team Lead role (existence over content).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_hr_agent/{userId}",
-        "definition": {
-          "entityName": "HRAgent",
-          "schema": {
-            "$ref": "#/backend/entities/HRAgent"
-          },
-          "description": "Indicates a user has the HR Agent role (existence over content).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "Admin",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Indicates a user has the Admin role (existence over content).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_ceo/{userId}",
-        "definition": {
-          "entityName": "CEO",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Indicates a user has the CEO role (existence over content).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/audit_logs/{auditLogId}",
+        "path": "/auditLogs/{auditLogId}",
         "definition": {
           "entityName": "AuditLog",
           "schema": {
             "$ref": "#/backend/entities/AuditLog"
           },
-          "description": "Logs all user actions for auditing purposes. Access restricted to admin roles.",
+          "description": "Records all significant user actions and system events. This collection is typically write-only from trusted backend services (e.g., Cloud Functions) and read-only by Admin/HR, ensuring immutability and integrity. Includes `employeeId` for the actor and `entityId` for the affected resource.",
           "params": [
             {
               "name": "auditLogId",
-              "description": "The unique identifier of the audit log entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/settings/{settingId}",
-        "definition": {
-          "entityName": "Setting",
-          "schema": {
-            "$ref": "#/backend/entities/Setting"
-          },
-          "description": "Stores company-wide settings, such as office location.",
-          "params": [
-            {
-              "name": "settingId",
-              "description": "The unique identifier for the setting (e.g., 'location')."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/payslips/{payslipId}",
-        "definition": {
-          "entityName": "Payslip",
-          "schema": {
-            "$ref": "#/backend/entities/Payslip"
-          },
-          "description": "Stores payslip records for each user. Each document contains an 'employeeId' field.",
-          "params": [
-            {
-              "name": "payslipId",
-              "description": "The unique identifier of the payslip."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/location_change_requests/{requestId}",
-        "definition": {
-          "entityName": "LocationChangeRequest",
-          "schema": {
-            "$ref": "#/backend/entities/LocationChangeRequest"
-          },
-          "description": "Stores employee requests to change their WFH location.",
-          "params": [
-            {
-              "name": "requestId",
-              "description": "The unique identifier of the location change request."
+              "description": "The unique ID for an audit log entry."
             }
           ]
         }
       }
-    ]
+    ],
+    "reasoning": "The Firestore data structure for GeoHRM is designed with a strong emphasis on Authorization Independence, Structural Segregation, and Access Modeling, as per the core design principles. The primary goal is to facilitate simple, robust, and easily debuggable security rules by minimizing `get()` calls and enabling secure `list` operations (QAPs).\n\n**Authorization Independence via Denormalization:**\nThis is achieved by denormalizing crucial authorization context directly into documents where it's needed. For instance, `AttendanceRecord`, `BreakRecord`, `LeaveRequest`, and `LeaveApproval` documents, which are nested under `/employees/{employeeId}`, will include the `requestingEmployeeTeamLeadId` (the `teamLeadId` of the employee who owns the record/request). This allows a Team Lead to check if `request.auth.uid == resource.data.requestingEmployeeTeamLeadId` directly on the document being accessed, rather than needing to perform a `get()` call to the parent `/employees/{employeeId}` document to determine the owner's team lead. Similarly, `employeeId` is present in all relevant subcollection documents where an employee is the primary owner, simplifying ownership checks.\n\n**Structural Segregation for Homogeneous Security Posture:**\nCollections are designed so that all documents within a given collection share the same security requirements. For example:\n*   `/system_roles_admin/{employeeId}`: Contains only UIDs of administrators, allowing rules to easily check for admin privilege via `exists()` without inspecting document content.\n*   `/employees/{employeeId}/attendanceRecords/{attendanceRecordId}`: Contains only an individual employee's attendance records, accessible by the employee, their team lead, HR, or Admin. This ensures that a single set of rules can govern all documents in this subcollection.\n*   Global configuration data (e.g., `/roles`, `/locations`, `/leaveTypes`, `/issueCategories`, `/policies`, `/announcements`) is placed in root collections that typically have read-only access for most employees and write access for Admin/HR.\n*   Requests that require cross-role interaction (e.g., `AttendanceApprovalRequest`, `IssueReport`) are centralized in root collections to allow for efficient queries by approvers (HR/Admin) and filtered queries by requesters.\n\n**Support for QAPs (Queries, not Filters):**\nThe structure supports QAPs by ensuring that any `list` operation can be secured by rules that match the query constraints. For example:\n*   An employee can `list` their own attendance records (`/employees/{employeeId}/attendanceRecords`) because `employeeId` is part of the path, and rules can verify `employeeId == request.auth.uid`.\n*   An Admin/HR can `list` all `AttendanceApprovalRequest` documents because they have global read access to the `/attendanceApprovalRequests` collection.\n*   A Team Lead can `list` their direct reports' `LeaveRequest` documents because each `LeaveRequest` document includes the `requestingEmployeeTeamLeadId`, allowing a query like `db.collection('employees').where('requestingEmployeeTeamLeadId', '==', request.auth.uid)` to be secured by the rules which permit reads if `request.auth.uid == resource.data.requestingEmployeeTeamLeadId`.\n\nThis design minimizes complex rule logic and `get()` calls, making rules easier to write, understand, and debug, while ensuring high performance and security."
   }
 }

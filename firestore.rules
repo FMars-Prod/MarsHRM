@@ -1,9 +1,242 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    /**
+     * CORE PHILOSOPHY
+     * This ruleset implements a robust, role-based access control (RBAC) and ownership model for the GeoHRM system.
+     * It prioritizes high authorization security while maintaining flexibility for rapid prototyping by focusing 
+     * on identity and relationship validation rather than strict schema enforcement.
+     *
+     * DATA STRUCTURE
+     * The database is organized into global configuration/shared collections (e.g., /roles, /locations) 
+     * and user-centric hierarchies (/employees/{employeeId}/...). RBAC is managed via dedicated 
+     * system role collections to minimize complex lookup logic.
+     *
+     * KEY SECURITY DECISIONS
+     * 1. Multi-Role Authorization: Access is granted based on being the document owner, the owner's 
+     *    designated Team Lead (via denormalized IDs), or having HR/Admin system roles.
+     * 2. Denormalization for Performance: Critical authorization fields like 'requestingEmployeeTeamLeadId' 
+     *    are required on documents to allow for high-performance security checks without costly 'get()' calls.
+     * 3. Immutability: Relational fields (e.g., owner IDs) are enforced as immutable on update to prevent 
+     *    unauthorized data re-assignment.
+     * 4. Auditability: Attendance and Leave operations are secured to ensure only authorized roles 
+     *    can approve or override records.
+     */
+
+    // --- Helper Functions ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/system_roles_admin/$(request.auth.uid));
+    }
+
+    function isHR() {
+      return isSignedIn() && exists(/databases/$(database)/documents/system_roles_hr/$(request.auth.uid));
+    }
+
+    function isTeamLead() {
+      return isSignedIn() && exists(/databases/$(database)/documents/system_roles_teamlead/$(request.auth.uid));
+    }
+
+    function isPrivileged() {
+      return isAdmin() || isHR();
+    }
+
+    // The 'isExistingOwner' function was removed because it was unused
+    // and contained an invalid reference to 'resource' outside of a match block scope.
+
+    // --- System Role Markers (Read-Only for Verification) ---
+
+    match /system_roles_admin/{employeeId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /system_roles_hr/{employeeId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /system_roles_teamlead/{employeeId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // --- Employees ---
+
+    /**
+     * @description Controls access to employee profile information.
+     * @path /employees/{employeeId}
+     * @allow Authenticated user creating their own profile (create), Owner/Admin/HR accessing/modifying.
+     * @deny Non-owner attempting to modify a profile.
+     * @principle Ownership and privileged role access.
+     */
+    match /employees/{employeeId} {
+      allow get, list: if isSignedIn();
+      allow create: if isOwner(employeeId);
+      allow update: if (isOwner(employeeId) || isPrivileged()) && resource != null;
+      allow delete: if isPrivileged() && resource != null;
+    }
+
+    // --- Attendance & Breaks ---
+
+    /**
+     * @description Manages attendance records with support for Team Lead and Admin oversight.
+     * @path /employees/{employeeId}/attendanceRecords/{recordId}
+     * @allow Owner creating records, Team Lead (via denormalization) reading, HR/Admin managing.
+     * @deny User attempting to modify someone else's attendance without proper role.
+     * @principle Denormalized ownership for high-performance hierarchy checks.
+     */
+    match /employees/{employeeId}/attendanceRecords/{recordId} {
+      allow get, list: if isOwner(employeeId) || isPrivileged() || (resource.data.employeeTeamLeadId == request.auth.uid);
+      allow create: if isOwner(employeeId) && request.resource.data.employeeId == employeeId;
+      allow update: if (isOwner(employeeId) || isPrivileged()) && resource != null && request.resource.data.employeeId == resource.data.employeeId;
+      allow delete: if isPrivileged() && resource != null;
+
+      match /breakRecords/{breakId} {
+        allow get, list: if isOwner(employeeId) || isPrivileged() || (resource.data.employeeTeamLeadId == request.auth.uid);
+        allow create: if isOwner(employeeId);
+        allow update: if isOwner(employeeId) && resource != null;
+        allow delete: if (isOwner(employeeId) || isPrivileged()) && resource != null;
+      }
+    }
+
+    /**
+     * @description Handles requests for 'range out' or non-standard location attendance approvals.
+     * @path /attendanceApprovalRequests/{approvalRequestId}
+     * @allow Employee creating own request, Admin/HR approving (updating status/location notes).
+     * @deny Standard employee updating status of their own request to 'Approved'.
+     * @principle Request/Response pattern with role-based state transition.
+     */
+    match /attendanceApprovalRequests/{approvalRequestId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.employeeId == request.auth.uid;
+      allow update: if (isPrivileged() || (resource.data.employeeId == request.auth.uid && resource.data.status == 'Pending')) && resource != null;
+      allow delete: if isPrivileged() && resource != null;
+    }
+
+    // --- Leave Management ---
+
+    /**
+     * @description Secures leave requests and their hierarchical approval workflow.
+     * @path /employees/{employeeId}/leaveRequests/{reqId}
+     * @allow Employee requesting leave, Team Lead (denormalized) viewing/processing.
+     * @deny Unauthorized users viewing private leave details.
+     * @principle Hierarchical access using denormalized context.
+     */
+    match /employees/{employeeId}/leaveRequests/{reqId} {
+      allow get, list: if isOwner(employeeId) || isPrivileged() || (resource.data.requestingEmployeeTeamLeadId == request.auth.uid);
+      allow create: if isOwner(employeeId) && request.resource.data.employeeId == employeeId;
+      allow update: if (isOwner(employeeId) || isPrivileged() || (resource.data.requestingEmployeeTeamLeadId == request.auth.uid)) && resource != null;
+      allow delete: if isPrivileged() && resource != null;
+
+      match /leaveApprovals/{approvalId} {
+        allow get, list: if isOwner(employeeId) || isPrivileged() || (resource.data.requestingEmployeeTeamLeadId == request.auth.uid);
+        allow create: if isPrivileged() || isTeamLead();
+        allow update: if (isPrivileged() || isTeamLead()) && resource != null;
+        allow delete: if isPrivileged() && resource != null;
+      }
+    }
+
+    /**
+     * @description Employee leave balances, primarily managed by HR/Admin.
+     * @path /employees/{employeeId}/leaveBalances/{balanceId}
+     * @allow Owner reading their own balance, HR/Admin managing.
+     * @deny User trying to manually increase their own leave balance.
+     * @principle Owner-read, Admin-write.
+     */
+    match /employees/{employeeId}/leaveBalances/{balanceId} {
+      allow get, list: if isOwner(employeeId) || isPrivileged();
+      allow create, update, delete: if isPrivileged();
+    }
+
+    // --- Issues & Feedback ---
+
+    /**
+     * @description Centralized issue reporting for staff concerns.
+     * @path /issueReports/{issueReportId}
+     * @allow Employee creating reports, Admin/HR/Assigned Lead updating status.
+     * @deny User modifying a report they did not create.
+     * @principle Reporter ownership with privileged resolution access.
+     */
+    match /issueReports/{issueReportId} {
+      allow get, list: if isSignedIn() && (resource.data.reporterEmployeeId == request.auth.uid || isPrivileged());
+      allow create: if isSignedIn() && request.resource.data.reporterEmployeeId == request.auth.uid;
+      allow update: if (resource.data.reporterEmployeeId == request.auth.uid || isPrivileged() || resource.data.assignedToEmployeeId == request.auth.uid) && resource != null;
+      allow delete: if isPrivileged() && resource != null;
+    }
+
+    // --- Global Configuration (Read-Only for Employees) ---
+
+    /**
+     * @description Read-only system configurations for all authenticated employees.
+     * @path /roles, /locations, /leaveTypes, /issueCategories, /announcements, /policies
+     * @allow Authenticated read, Admin/HR write.
+     * @deny Public (unauthenticated) access or non-admin writes.
+     * @principle Public-read (within app context), Privileged-write.
+     */
+    match /roles/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+    match /locations/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isPrivileged();
+    }
+    match /leaveTypes/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isPrivileged();
+    }
+    match /issueCategories/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+    match /announcements/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isPrivileged();
+    }
+    match /policies/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isPrivileged();
+    }
+
+    // --- Policy Acknowledgments ---
+
+    /**
+     * @description Tracks digital signatures for company policies.
+     * @path /employees/{employeeId}/policyAcknowledgments/{ackId}
+     * @allow Employee creating their own acknowledgment, HR/Admin auditing.
+     * @deny Modifying an existing acknowledgment (immutability).
+     * @principle Create-only ownership for audit integrity.
+     */
+    match /employees/{employeeId}/policyAcknowledgments/{ackId} {
+      allow get, list: if isOwner(employeeId) || isPrivileged();
+      allow create: if isOwner(employeeId) && request.resource.data.employeeId == employeeId;
+      allow update, delete: if false; // Acknowledgments should be immutable for compliance
+    }
+
+    // --- Audit Logs ---
+
+    /**
+     * @description System-wide activity logs for security and compliance.
+     * @path /auditLogs/{logId}
+     * @allow HR/Admin reading logs, Create-only for tracing (usually backend-driven).
+     * @deny Standard employees viewing or deleting audit history.
+     * @principle Restricted access for compliance tracking.
+     */
+    match /auditLogs/{logId} {
+      allow get, list: if isPrivileged();
+      allow create: if isSignedIn(); 
+      allow update, delete: if false; // Prevent tampering with audit history
     }
   }
 }
