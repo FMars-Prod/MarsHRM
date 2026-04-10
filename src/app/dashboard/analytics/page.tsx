@@ -46,6 +46,8 @@ type AttendanceRecord = {
   employeeName?: string;
   checkInTime?: Timestamp;
   checkOutTime?: Timestamp;
+  lunchOutTime?: Timestamp;
+  lunchInTime?: Timestamp;
   totalBreakDuration?: number;
   status: 'present' | 'late' | 'absent' | 'on_leave' | 'holiday' | 'non_compliance';
   checkInNotes?: string;
@@ -71,6 +73,15 @@ type EditableAttendance = {
 }
 
 type FilterMode = "day" | "month" | "range" | "all";
+
+const statusColors: Record<string, string> = {
+    present: 'text-green-600 border-green-600/50 bg-green-50',
+    late: 'text-yellow-600 border-yellow-600/50 bg-yellow-50',
+    absent: 'text-red-600 border-red-600/50 bg-red-50',
+    on_leave: 'text-blue-600 border-blue-600/50 bg-blue-50',
+    holiday: 'text-slate-600 border-slate-600/50 bg-slate-50',
+    non_compliance: 'text-orange-600 border-orange-600/50 bg-orange-50',
+};
 
 const AnalyticsPage = () => {
   const { user: currentUser } = useUser();
@@ -271,7 +282,7 @@ const AnalyticsPage = () => {
         toast({ variant: 'destructive', title: 'No data to export' });
         return;
     }
-    const headers = ['Employee', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Status', 'Notes'];
+    const headers = ['Employee', 'Date', 'Status', 'Log In', 'L-Out', 'L-In', 'Log Out', 'Duration (Work/Break)', 'Notes'];
     const csvRows = [
         headers.join(','),
         ...mergedData.map(rec => {
@@ -280,9 +291,24 @@ const AnalyticsPage = () => {
                 workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
             }
             const isPresent = rec.status === 'present' || rec.status === 'late';
-            const timeInOut = isPresent && rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"` : "N/A";
+            
+            const logIn = rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--';
+            const lunchOut = (rec as any).lunchOutTime ? format((rec as any).lunchOutTime.toDate(), 'p') : '--:--';
+            const lunchIn = (rec as any).lunchInTime ? format((rec as any).lunchInTime.toDate(), 'p') : '--:--';
+            const logOut = rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+
             const durationWorkBreak = !isPresent ? "N/A" : `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
-            const row = [ `"${rec.employeeName}"`, rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "PP")}"` : "N/A", timeInOut, durationWorkBreak, `"${rec.status}"`, `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"` ];
+            const row = [ 
+                `"${rec.employeeName}"`, 
+                rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "PP")}"` : "N/A", 
+                `"${rec.status}"`,
+                `"${logIn}"`,
+                `"${lunchOut}"`,
+                `"${lunchIn}"`,
+                `"${logOut}"`,
+                durationWorkBreak, 
+                `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"` 
+            ];
             return row.join(',');
         })
     ];
@@ -355,20 +381,68 @@ const AnalyticsPage = () => {
             <CardContent>
                 <div className="overflow-x-auto rounded-lg border">
                     <Table>
-                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Time (In/Out)</TableHead><TableHead>Status</TableHead><TableHead className="text-center">In Map</TableHead><TableHead className="text-center">L-Out</TableHead><TableHead className="text-center">L-In</TableHead><TableHead className="text-center">Out Map</TableHead><TableHead>Notes</TableHead></TableRow></TableHeader>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Log In</TableHead>
+                                <TableHead>L-Out</TableHead>
+                                <TableHead>L-In</TableHead>
+                                <TableHead>Log Out</TableHead>
+                                <TableHead>Notes</TableHead>
+                            </TableRow>
+                        </TableHeader>
                         <TableBody>
-                            {mergedData?.map((rec) => (
-                                <TableRow key={rec.id}>
-                                    <TableCell className="font-medium">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
-                                    <TableCell>{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--'} / {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--'}</TableCell>
-                                    <TableCell><Badge variant="outline">{rec.status}</Badge></TableCell>
-                                    <TableCell className="text-center">{rec.locationCheckInLatitude ? <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank"><MapPin className="h-4 w-4 mx-auto text-primary"/></Link> : '-'}</TableCell>
-                                    <TableCell className="text-center">{rec.locationLunchOutLatitude ? <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationLunchOutLatitude},${rec.locationLunchOutLongitude}`} target="_blank"><MapPin className="h-4 w-4 mx-auto text-yellow-600"/></Link> : '-'}</TableCell>
-                                    <TableCell className="text-center">{rec.locationLunchInLatitude ? <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationLunchInLatitude},${rec.locationLunchInLongitude}`} target="_blank"><MapPin className="h-4 w-4 mx-auto text-blue-600"/></Link> : '-'}</TableCell>
-                                    <TableCell className="text-center">{rec.locationCheckOutLatitude ? <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckOutLatitude},${rec.locationCheckOutLongitude}`} target="_blank"><MapPin className="h-4 w-4 mx-auto text-purple-600"/></Link> : '-'}</TableCell>
-                                    <TableCell><TooltipProvider><Tooltip><TooltipTrigger><StickyNote className="h-4 w-4 text-muted-foreground"/></TooltipTrigger><TooltipContent><p className="max-w-xs">{rec.checkInNotes || rec.checkOutNotes || "No notes"}</p></TooltipContent></Tooltip></TooltipProvider></TableCell>
-                                </TableRow>
-                            ))}
+                            {mergedData?.map((rec) => {
+                                const statusDetail = statusColors[rec.status] || 'text-muted-foreground border-muted';
+                                return (
+                                    <TableRow key={rec.id}>
+                                        <TableCell className="font-medium whitespace-nowrap">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                                        <TableCell><Badge variant="outline" className={cn("capitalize font-bold px-2 py-0.5", statusDetail)}>{rec.status.replace('_', ' ')}</Badge></TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-mono">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</span>
+                                                {rec.locationCheckInLatitude && (
+                                                    <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
+                                                        <MapPin className="h-3 w-3 text-primary transition-transform hover:scale-125"/>
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-mono">{(rec as any).lunchOutTime ? format((rec as any).lunchOutTime.toDate(), 'p') : '--:--'}</span>
+                                                {rec.locationLunchOutLatitude && (
+                                                    <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationLunchOutLatitude},${rec.locationLunchOutLongitude}`} target="_blank">
+                                                        <MapPin className="h-3 w-3 text-yellow-600 transition-transform hover:scale-125"/>
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-mono">{(rec as any).lunchInTime ? format((rec as any).lunchInTime.toDate(), 'p') : '--:--'}</span>
+                                                {rec.locationLunchInLatitude && (
+                                                    <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationLunchInLatitude},${rec.locationLunchInLongitude}`} target="_blank">
+                                                        <MapPin className="h-3 w-3 text-blue-600 transition-transform hover:scale-125"/>
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-mono">{rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</span>
+                                                {rec.locationCheckOutLatitude && (
+                                                    <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckOutLatitude},${rec.locationCheckOutLongitude}`} target="_blank">
+                                                        <MapPin className="h-3 w-3 text-purple-600 transition-transform hover:scale-125"/>
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell><TooltipProvider><Tooltip><TooltipTrigger><StickyNote className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors"/></TooltipTrigger><TooltipContent><p className="max-w-xs">{rec.checkInNotes || rec.checkOutNotes || "No notes"}</p></TooltipContent></Tooltip></TooltipProvider></TableCell>
+                                    </TableRow>
+                                )
+                            })}
                         </TableBody>
                     </Table>
                 </div>

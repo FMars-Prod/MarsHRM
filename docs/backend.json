@@ -139,6 +139,16 @@
           "description": "ISO string for when the employee checked out.",
           "format": "date-time"
         },
+        "lunchOutTime": {
+          "type": "string",
+          "description": "ISO string for when the lunch break started.",
+          "format": "date-time"
+        },
+        "lunchInTime": {
+          "type": "string",
+          "description": "ISO string for when the lunch break ended.",
+          "format": "date-time"
+        },
         "totalBreakDuration": {
           "type": "number",
           "description": "Total break time in seconds."
@@ -304,7 +314,7 @@
         "id": { "type": "string" },
         "employeeId": { "type": "string" },
         "employeeName": { "type": "string" },
-        "date": { "type": "string", format: "date-time" },
+        "date": { "type": "string", "format": "date-time" },
         "reportType": { "type": "string", "enum": ["Business", "Technical"] },
         "signature": { "type": "string" },
         "currency": { "type": "string", "enum": ["USD", "EUR", "GBP", "INR"] },

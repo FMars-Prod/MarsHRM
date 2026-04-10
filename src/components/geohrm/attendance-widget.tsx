@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -210,6 +211,7 @@ export function AttendanceWidget() {
           if (status === 'lunch') {
               payload.locationLunchInLatitude = userLocation.latitude;
               payload.locationLunchInLongitude = userLocation.longitude;
+              payload.lunchInTime = serverTimestamp();
           }
 
           if (reason) {
@@ -262,6 +264,7 @@ export function AttendanceWidget() {
                   updateDocumentNonBlocking(getTodaysAttendanceRef, {
                       locationLunchOutLatitude: userLocation.latitude,
                       locationLunchOutLongitude: userLocation.longitude,
+                      lunchOutTime: serverTimestamp(),
                   });
               }
               setStatus("lunch");
@@ -799,7 +802,7 @@ export function AttendanceWidget() {
                       <Utensils className={cn("size-5", status === 'lunch' ? "text-yellow-600" : "text-muted-foreground/50")} />
                       <div className="text-center">
                           <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-Out</p>
-                          <p className="text-sm font-bold">{milestones?.lOut ? format(milestones.lOut, 'p') : '--:--'}</p>
+                          <p className="text-sm font-bold">{todaysAttendance?.lunchOutTime ? format(todaysAttendance.lunchOutTime.toDate(), 'p') : '--:--'}</p>
                           {todaysAttendance?.locationLunchOutLatitude && (
                               <p className="text-[10px] text-yellow-600/60 font-mono mt-1">
                                   {formatCapturedLocation(todaysAttendance.locationLunchOutLatitude, todaysAttendance.locationLunchOutLongitude)}
@@ -815,7 +818,7 @@ export function AttendanceWidget() {
                       <Clock className={cn("size-5", todaysAttendance?.locationLunchInLatitude ? "text-blue-600" : "text-muted-foreground/50")} />
                       <div className="text-center">
                           <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-In</p>
-                          <p className="text-sm font-bold">{milestones?.lIn ? format(milestones.lIn, 'p') : '--:--'}</p>
+                          <p className="text-sm font-bold">{todaysAttendance?.lunchInTime ? format(todaysAttendance.lunchInTime.toDate(), 'p') : '--:--'}</p>
                           {todaysAttendance?.locationLunchInLatitude && (
                               <p className="text-[10px] text-blue-600/60 font-mono mt-1">
                                   {formatCapturedLocation(todaysAttendance.locationLunchInLatitude, todaysAttendance.locationLunchInLongitude)}
@@ -831,7 +834,7 @@ export function AttendanceWidget() {
                       <LogOut className={cn("size-5", hasClockedOutToday ? "text-purple-600" : "text-muted-foreground/50")} />
                       <div className="text-center">
                           <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log-out</p>
-                          <p className="text-sm font-bold">{milestones?.logout ? format(milestones.logout, 'p') : '--:--'}</p>
+                          <p className="text-sm font-bold">{todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'}</p>
                           {todaysAttendance?.locationCheckOutLatitude && (
                               <p className="text-[10px] text-purple-600/60 font-mono mt-1">
                                   {formatCapturedLocation(todaysAttendance.locationCheckOutLatitude, todaysAttendance.locationCheckOutLongitude)}
