@@ -500,7 +500,7 @@ const AnalyticsPage = () => {
 
   return (
     <>
-      <PageHeader title="Employee Analytics" description="Analyze performance and attendance for team members." className="animate-fade-in-up" />
+      <PageHeader title="Employee Analytics" description="Precise attendance verification and location mapping." className="animate-fade-in-up" />
 
       <div className="flex flex-wrap items-center gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         <div className="w-full sm:w-auto sm:min-w-64">
@@ -681,7 +681,7 @@ const AnalyticsPage = () => {
                 <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                     <CardHeader className="flex flex-row items-start justify-between space-y-0">
                         <div>
-                            <CardTitle>Attendance & Leave Log</CardTitle>
+                            <CardTitle>Precise Attendance & Leave Log</CardTitle>
                             <CardDescription>{filterMode === 'all' ? "Full history." : `Activity for ${getFilterPeriodText()}.`}</CardDescription>
                         </div>
                     </CardHeader>
@@ -695,10 +695,10 @@ const AnalyticsPage = () => {
                                             <TableHead>Time (In/Out)</TableHead>
                                             <TableHead>Duration (Work/Break)</TableHead>
                                             <TableHead>Status</TableHead>
-                                            <TableHead className="text-center">In</TableHead>
+                                            <TableHead className="text-center">In Map</TableHead>
                                             <TableHead className="text-center">L-Out</TableHead>
                                             <TableHead className="text-center">L-In</TableHead>
-                                            <TableHead className="text-center">Out</TableHead>
+                                            <TableHead className="text-center">Out Map</TableHead>
                                             <TableHead>Notes</TableHead>
                                             {isAdmin && ENABLE_MANUAL_EDIT && <TableHead className="text-right">Actions</TableHead>}
                                         </TableRow>
@@ -774,16 +774,19 @@ const AnalyticsPage = () => {
                                                     </div>
                                                 </TableCell>
                                                 
-                                                {/* 4 Point Location Columns */}
+                                                {/* 4 Point Location Columns with Google Maps Verification */}
                                                 <TableCell className="text-center">
                                                   {rec.locationCheckInLatitude && rec.locationCheckInLongitude ? (
                                                     <Tooltip>
                                                       <TooltipTrigger asChild>
                                                         <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" rel="noopener noreferrer">
-                                                            <MapPin className="h-5 w-5 text-green-600 hover:text-green-700 transition-colors mx-auto" />
+                                                            <MapPin className="h-5 w-5 text-primary hover:text-primary/80 transition-colors mx-auto" />
                                                         </Link>
                                                       </TooltipTrigger>
-                                                      <TooltipContent><p>Login Location</p></TooltipContent>
+                                                      <TooltipContent>
+                                                        <p className="font-bold">Login Verified</p>
+                                                        <p className="text-[10px]">{rec.locationCheckInLatitude.toFixed(6)}, {rec.locationCheckInLongitude.toFixed(6)}</p>
+                                                      </TooltipContent>
                                                     </Tooltip>
                                                   ) : <span>-</span>}
                                                 </TableCell>
@@ -796,7 +799,10 @@ const AnalyticsPage = () => {
                                                             <MapPin className="h-5 w-5 text-yellow-600 hover:text-yellow-700 transition-colors mx-auto" />
                                                         </Link>
                                                       </TooltipTrigger>
-                                                      <TooltipContent><p>Lunch Out Location</p></TooltipContent>
+                                                      <TooltipContent>
+                                                        <p className="font-bold">Lunch Out Verified</p>
+                                                        <p className="text-[10px]">{rec.locationLunchOutLatitude.toFixed(6)}, {rec.locationLunchOutLongitude.toFixed(6)}</p>
+                                                      </TooltipContent>
                                                     </Tooltip>
                                                   ) : <span>-</span>}
                                                 </TableCell>
@@ -809,7 +815,10 @@ const AnalyticsPage = () => {
                                                             <MapPin className="h-5 w-5 text-blue-600 hover:text-blue-700 transition-colors mx-auto" />
                                                         </Link>
                                                       </TooltipTrigger>
-                                                      <TooltipContent><p>Lunch In Location</p></TooltipContent>
+                                                      <TooltipContent>
+                                                        <p className="font-bold">Lunch Return Verified</p>
+                                                        <p className="text-[10px]">{rec.locationLunchInLatitude.toFixed(6)}, {rec.locationLunchInLongitude.toFixed(6)}</p>
+                                                      </TooltipContent>
                                                     </Tooltip>
                                                   ) : <span>-</span>}
                                                 </TableCell>
@@ -819,10 +828,13 @@ const AnalyticsPage = () => {
                                                     <Tooltip>
                                                       <TooltipTrigger asChild>
                                                         <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckOutLatitude},${rec.locationCheckOutLongitude}`} target="_blank" rel="noopener noreferrer">
-                                                            <MapPin className="h-5 w-5 text-red-600 hover:text-red-700 transition-colors mx-auto" />
+                                                            <MapPin className="h-5 w-5 text-purple-600 hover:text-purple-700 transition-colors mx-auto" />
                                                         </Link>
                                                       </TooltipTrigger>
-                                                      <TooltipContent><p>Logout Location</p></TooltipContent>
+                                                      <TooltipContent>
+                                                        <p className="font-bold">Logout Verified</p>
+                                                        <p className="text-[10px]">{rec.locationCheckOutLatitude.toFixed(6)}, {rec.locationCheckOutLongitude.toFixed(6)}</p>
+                                                      </TooltipContent>
                                                     </Tooltip>
                                                   ) : <span>-</span>}
                                                 </TableCell>
