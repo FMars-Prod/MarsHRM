@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -10,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle, LogIn, LocateFixed, ClipboardCheck } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle, LogIn, LocateFixed } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -34,7 +35,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useCollection } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, serverTimestamp, Timestamp, collection, query, where, orderBy, limit } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
@@ -116,21 +117,6 @@ export function AttendanceWidget() {
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
   const [outOfRangeAction, setOutOfRangeAction] = useState<(() => void) | null>(null);
   const [outOfRangeInfo, setOutOfRangeInfo] = useState('');
-  
-  const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = useState(false);
-  const [capturedLocation, setCapturedLocation] = useState<Location | null>(null);
-
-  const pendingRequestQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(
-      collection(firestore, "attendanceApprovalRequests"),
-      where("employeeId", "==", user.uid),
-      orderBy("requestTimestamp", "desc"),
-      limit(1)
-    );
-  }, [user, firestore]);
-  const { data: latestRequests } = useCollection(pendingRequestQuery);
-  const latestRequest = latestRequests?.[0];
 
   useEffect(() => {
     if (officeLocation) {
@@ -326,7 +312,7 @@ export function AttendanceWidget() {
     return () => clearInterval(breakInterval);
   }, [status]);
   
-  const proceedWithClockIn = (userLocation: Location, dist: number, reason?: string, isOutOfRange: boolean = false) => {
+  const proceedWithClockIn = (userLocation: Location, dist: number, reason?: string) => {
       setCurrentUserLocation(userLocation);
       const now = new Date();
       const clockInTime = serverTimestamp();
@@ -349,7 +335,6 @@ export function AttendanceWidget() {
               locationCheckInLatitude: userLocation.latitude,
               locationCheckInLongitude: userLocation.longitude,
               checkInNotes: reason,
-              isOutOfRange: isOutOfRange,
           };
           setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
       }
@@ -384,7 +369,7 @@ export function AttendanceWidget() {
             if (officeLocation) {
                 const officeDist = getDistanceInKm(userLocation, officeLocation);
                 if (officeDist <= maxDistanceKm) {
-                    proceedWithClockIn(userLocation, officeDist, "Office", false);
+                    proceedWithClockIn(userLocation, officeDist, "Office");
                     return;
                 }
             }
@@ -395,22 +380,9 @@ export function AttendanceWidget() {
                     const homeDist = getDistanceInKm(userLocation, homeLocation);
 
                     if (homeDist <= homeRange) {
-                        proceedWithClockIn(userLocation, homeDist, "Work From Home", false);
+                        proceedWithClockIn(userLocation, homeDist, "Work From Home");
                         return;
                     }
-                } else if (isAdmin) {
-                    setCapturedLocation(userLocation);
-                    setIsSetHomeLocationDialogOpen(true);
-                    return;
-                }
-            }
-            
-            // Check for approved requests
-            if (latestRequest && latestRequest.status === 'Approved' && isSameDay(latestRequest.requestTimestamp.toDate(), new Date())) {
-                const reqDist = getDistanceInKm(userLocation, { latitude: latestRequest.requestedLatitude, longitude: latestRequest.requestedLongitude });
-                if (reqDist < 0.5) { // Within 500m of approved spot
-                    proceedWithClockIn(userLocation, reqDist, `Approved Remote: ${latestRequest.reason}`, true);
-                    return;
                 }
             }
 
@@ -429,7 +401,7 @@ export function AttendanceWidget() {
             setOutOfRangeInfo(infoMsg);
             
             setDistance(officeDist);
-            setCapturedLocation(userLocation);
+            setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, officeDist, outOfRangeReason));
             setIsOutOfRangeReasonDialogOpen(true);
         },
         () => {
@@ -438,29 +410,6 @@ export function AttendanceWidget() {
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  };
-  
-  const handleRequestApproval = () => {
-      if (!user || !capturedLocation || !outOfRangeReason) {
-          toast({ variant: 'destructive', title: 'Reason Required', description: 'Please provide a reason for the approval request.' });
-          return;
-      }
-
-      const requestPayload = {
-          employeeId: user.uid,
-          employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
-          requestedCheckInTime: format(new Date(), 'PPpp'),
-          requestedLatitude: capturedLocation.latitude,
-          requestedLongitude: capturedLocation.longitude,
-          reason: outOfRangeReason,
-          status: 'Pending',
-          requestTimestamp: serverTimestamp(),
-      };
-
-      addDocumentNonBlocking(collection(firestore, "attendanceApprovalRequests"), requestPayload);
-      toast({ title: "Request Submitted", description: "Waiting for Admin/HR approval." });
-      setIsOutOfRangeReasonDialogOpen(false);
-      setOutOfRangeReason("");
   };
 
   const proceedWithClockOut = (userLocation: Location, reason?: string) => {
@@ -540,27 +489,6 @@ export function AttendanceWidget() {
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
-  
-  const handleConfirmSetHomeLocation = () => {
-    if (!userDocRef || !capturedLocation) return;
-
-    updateDocumentNonBlocking(userDocRef, {
-        homeLatitude: capturedLocation.latitude,
-        homeLongitude: capturedLocation.longitude,
-        isWfhAllowed: isAdmin ? true : (userData as any)?.isWfhAllowed
-    });
-
-    proceedWithClockIn(capturedLocation, 0, "Work From Home (Initial Location Set)", false);
-    
-    toast({
-        title: "Home Location Saved",
-        description: "Your current location has been set as your home address for WFH.",
-    });
-
-    setCapturedLocation(null);
-    setIsSetHomeLocationDialogOpen(false);
-  };
-
 
   const handleSaveSettings = async () => {
       const lat = parseFloat(newLatitude);
@@ -721,7 +649,7 @@ export function AttendanceWidget() {
                                           </div>
                                       </div>
                                       <Button variant="secondary" className="w-full h-10 font-bold uppercase text-[10px]" onClick={handleCaptureOfficeLocation}>
-                                          <LocateFixed className="mr-2 h-4 w-4" /> Pin Current Office Coordinates
+                                          Pin Current Office Coordinates
                                       </Button>
                                 </div>
                                 <div className="grid gap-2">
@@ -818,13 +746,6 @@ export function AttendanceWidget() {
                   <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-bold px-3 py-1">
                       Logged In At: {format(lastClockInTime, 'p')}
                   </Badge>
-                  )}
-                  {latestRequest && status === 'out' && (
-                      <div className="mt-2">
-                          {latestRequest.status === 'Pending' && <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 animate-pulse"><Clock className="size-3 mr-1"/> Range Approval Pending</Badge>}
-                          {latestRequest.status === 'Approved' && <Badge variant="secondary" className="bg-green-100 text-green-700"><ClipboardCheck className="size-3 mr-1"/> Range Approval Granted</Badge>}
-                          {latestRequest.status === 'Rejected' && <Badge variant="secondary" className="bg-red-100 text-red-700"><AlertCircle className="size-3 mr-1"/> Range Approval Rejected</Badge>}
-                      </div>
                   )}
               </div>
               
@@ -1006,37 +927,19 @@ export function AttendanceWidget() {
         }}>
           <DialogContent className="rounded-3xl">
               <DialogHeader>
-                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Precise Verification Required</DialogTitle>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Location Out of Range</DialogTitle>
                   <DialogDescription className="font-medium text-muted-foreground">{outOfRangeInfo}</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                  <Label htmlFor="reason" className="font-bold text-xs uppercase tracking-widest text-primary">Provide Mandatory Reason for Out of Range</Label>
+                  <Label htmlFor="reason" className="font-bold text-xs uppercase tracking-widest text-primary">Provide Mandatory Reason for Action</Label>
                   <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Client visit, working from temporary location, GPS deviation..." className="rounded-2xl min-h-[100px]" />
               </div>
               <DialogFooter className="flex-col sm:flex-row gap-2">
                   <Button variant="outline" className="rounded-full font-bold uppercase text-[10px]" onClick={() => { setIsOutOfRangeReasonDialogOpen(false); setOutOfRangeReason(""); }}>Cancel</Button>
-                  <Button onClick={handleRequestApproval} className="rounded-full font-bold uppercase text-[10px] bg-primary text-white">Submit Approval Request</Button>
+                  <Button onClick={handleOutOfRangeSubmit} className="rounded-full font-bold uppercase text-[10px] bg-primary text-white">Confirm and Proceed</Button>
               </DialogFooter>
           </DialogContent>
         </Dialog>
-        
-        <AlertDialog open={isSetHomeLocationDialogOpen} onOpenChange={(open) => {
-            setIsSetHomeLocationDialogOpen(open);
-            if (!open) window.location.reload();
-        }}>
-          <AlertDialogContent className="rounded-3xl">
-              <AlertDialogHeader>
-                  <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Pin Exact WFH Location?</AlertDialogTitle>
-                  <AlertDialogDescription className="font-medium text-muted-foreground text-sm">
-                      You haven't set a home location yet. Would you like to use your current precise coordinates as your WFH address?
-                  </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                  <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]" onClick={() => setCapturedLocation(null)}>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleConfirmSetHomeLocation} className="rounded-full font-bold uppercase text-[10px]">Yes, Set High-Accuracy Point</AlertDialogAction>
-              </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </Card>
     </>
   );

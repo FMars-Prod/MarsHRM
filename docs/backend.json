@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Employee": {
@@ -252,71 +253,6 @@
         "attendanceRecordId",
         "breakStartTime",
         "breakType"
-      ]
-    },
-    "AttendanceApprovalRequest": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AttendanceApprovalRequest",
-      "type": "object",
-      "description": "Manages requests from employees to check-in or log attendance from non-standard or 'range out' locations, requiring admin or HR approval.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the AttendanceApprovalRequest entity."
-        },
-        "employeeId": {
-          "type": "string",
-          "description": "Reference to the Employee making the request. (Relationship: Employee 1:N AttendanceApprovalRequest)"
-        },
-        "requestedCheckInTime": {
-          "type": "string",
-          "description": "The proposed check-in timestamp for which approval is sought. (format: date-time)",
-          "format": "date-time"
-        },
-        "requestedLatitude": {
-          "type": "number",
-          "description": "The geographical latitude from which the employee intends to check in."
-        },
-        "requestedLongitude": {
-          "type": "number",
-          "description": "The geographical longitude from which the employee intends to check in."
-        },
-        "reason": {
-          "type": "string",
-          "description": "The employee's reason for requesting approval to check in from this specific location/time."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the approval request (e.g., 'Pending', 'Approved', 'Rejected')."
-        },
-        "requestTimestamp": {
-          "type": "string",
-          "description": "The timestamp when the approval request was submitted. (format: date-time)",
-          "format": "date-time"
-        },
-        "approverEmployeeId": {
-          "type": "string",
-          "description": "Reference to the Employee who approved or rejected the request. Null if pending. (Relationship: Employee 1:N AttendanceApprovalRequest)"
-        },
-        "approvalTimestamp": {
-          "type": "string",
-          "description": "The timestamp when the request was approved or rejected. Null if pending. (format: date-time)",
-          "format": "date-time"
-        },
-        "approvalNotes": {
-          "type": "string",
-          "description": "Any notes or reasons provided by the approver for their decision."
-        }
-      },
-      "required": [
-        "id",
-        "employeeId",
-        "requestedCheckInTime",
-        "requestedLatitude",
-        "requestedLongitude",
-        "reason",
-        "status",
-        "requestTimestamp"
       ]
     },
     "LeaveType": {
@@ -885,22 +821,6 @@
             {
               "name": "breakRecordId",
               "description": "The unique ID for a specific break record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/attendanceApprovalRequests/{approvalRequestId}",
-        "definition": {
-          "entityName": "AttendanceApprovalRequest",
-          "schema": {
-            "$ref": "#/backend/entities/AttendanceApprovalRequest"
-          },
-          "description": "Centralized collection for employee requests to log attendance from non-standard locations. Employees can create/read their own; Admin/HR can read/update all requests. Includes `employeeId` for requester and `approverEmployeeId` for resolution.",
-          "params": [
-            {
-              "name": "approvalRequestId",
-              "description": "The unique ID of the attendance approval request."
             }
           ]
         }
