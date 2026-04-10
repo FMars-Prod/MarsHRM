@@ -9,7 +9,7 @@ import { useAuth, useUser } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
-import { Edit, Smile, MapPin, Home } from "lucide-react";
+import { Edit, Smile, MapPin, Home, LocateFixed } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,6 @@ import { cn } from "@/lib/utils";
 import { updateDocumentNonBlocking, addDocumentNonBlocking, useCollection } from "@/firebase";
 import Image from 'next/image';
 import { Textarea } from "@/components/ui/textarea";
-import { mapsApiKey } from "@/firebase/config";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { InteractiveMap } from "@/components/geohrm/interactive-map";
 import { Badge } from "@/components/ui/badge";
@@ -85,11 +84,8 @@ export default function ProfilePage() {
     );
     const { data: employee, isLoading: isEmployeeLoading } = useDoc(userDocRef);
     
-    const officeLocationDocRef = useMemoFirebase(
-        () => doc(firestore, "settings", "location"),
-        [firestore]
-    );
-    const { data: officeLocation } = useDoc<Location>(officeLocationDocRef);
+    const userRole = (employee as any)?.role;
+    const isAdminOrHR = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
     const pendingLocationRequestQuery = useMemoFirebase(
         () => user ? query(
@@ -132,7 +128,6 @@ export default function ProfilePage() {
         }
 
         try {
-            // Update Firestore document
             if (userDocRef) {
                 updateDocumentNonBlocking(userDocRef, {
                     firstName: data.firstName,
@@ -140,12 +135,10 @@ export default function ProfilePage() {
                 });
             }
 
-            // Update Auth display name
             await updateProfile(auth.currentUser, {
                 displayName: `${data.firstName} ${data.lastName}`,
             });
 
-            // Update password if provided
             if (data.password) {
                 await updatePassword(auth.currentUser, data.password);
             }
@@ -176,7 +169,9 @@ export default function ProfilePage() {
                 setCapturedLocation({ latitude, longitude });
 
                 const hasHomeLocation = (employee as any)?.homeLatitude && (employee as any)?.homeLongitude;
-                if (hasHomeLocation) {
+                
+                // Admin and HR can bypass the request process and set their location directly
+                if (hasHomeLocation && !isAdminOrHR) {
                     setIsRequestChangeOpen(true);
                 } else {
                     setIsSetHomeLocationDialogOpen(true);
@@ -198,6 +193,7 @@ export default function ProfilePage() {
         updateDocumentNonBlocking(userDocRef, {
             homeLatitude: capturedLocation.latitude,
             homeLongitude: capturedLocation.longitude,
+            isWfhAllowed: isAdminOrHR ? true : (employee as any)?.isWfhAllowed // Ensure Admin/HR is always allowed if they set it
         });
         toast({
             title: "Home Location Saved",
@@ -480,18 +476,23 @@ export default function ProfilePage() {
                                     <p className="font-semibold text-muted-foreground">Not set</p>
                                 )}
                             </div>
-                            <Button onClick={handleLocationAction} disabled={hasPendingRequest || !(employee as any)?.isWfhAllowed} className="rounded-full">
+                            <Button onClick={handleLocationAction} disabled={!isAdminOrHR && (hasPendingRequest || !(employee as any)?.isWfhAllowed)} className="rounded-full">
                                 <MapPin className="mr-2 h-4 w-4" />
-                                {(employee as any)?.homeLatitude ? 'Request Location Change' : 'Set Home Location'}
+                                {isAdminOrHR ? 'Update Home Location (Direct)' : ((employee as any)?.homeLatitude ? 'Request Location Change' : 'Set Home Location')}
                             </Button>
-                             {hasPendingRequest && (
+                             {hasPendingRequest && !isAdminOrHR && (
                                 <p className="text-sm text-yellow-600 mt-2">
                                     You have a pending location change request.
                                 </p>
                             )}
-                             {!(employee as any)?.isWfhAllowed && (
+                             {!(employee as any)?.isWfhAllowed && !isAdminOrHR && (
                                 <p className="text-sm text-muted-foreground mt-2">
                                     Work From Home is not enabled for your account. Please contact an administrator.
+                                </p>
+                            )}
+                            {isAdminOrHR && (
+                                <p className="text-xs text-muted-foreground mt-2 italic">
+                                    Admin/HR privilege enabled: You can set your coordinates directly multiple times.
                                 </p>
                             )}
                         </CardContent>
@@ -502,7 +503,7 @@ export default function ProfilePage() {
             <Dialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
-                        <DialogTitle>Set Home Location</DialogTitle>
+                        <DialogTitle>{isAdminOrHR ? 'Set/Update Home Location' : 'Set Home Location'}</DialogTitle>
                         <DialogDescription>
                             Your current location is pinned below. Drag the pin, click the map, or use search to adjust it.
                         </DialogDescription>

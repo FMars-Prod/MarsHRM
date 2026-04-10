@@ -345,7 +345,9 @@ export function AttendanceWidget() {
                 }
             }
 
-            if (isWfhAllowed) {
+            // Privileged roles (Admin/HR) can WFH even if flag is not explicitly set, 
+            // but they still need to have their home coordinates set once.
+            if (isWfhAllowed || isAdmin) {
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
                     const homeDist = getDistanceInKm(userLocation, homeLocation);
@@ -354,7 +356,8 @@ export function AttendanceWidget() {
                         proceedWithClockIn(userLocation, homeDist, "Work From Home", false);
                         return;
                     }
-                } else {
+                } else if (isAdmin) {
+                    // Admins get redirected to set their home point if missing
                     setCapturedLocation(userLocation);
                     setIsSetHomeLocationDialogOpen(true);
                     return;
@@ -364,7 +367,7 @@ export function AttendanceWidget() {
             const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
 
             let infoMsg = '';
-            if (isWfhAllowed && homeLat && homeLon) {
+            if ((isWfhAllowed || isAdmin) && homeLat && homeLon) {
                  const homeLocation = { latitude: homeLat, longitude: homeLon };
                  const homeDist = getDistanceInKm(userLocation, homeLocation);
                  infoMsg = `You are outside your designated locations. You are ${officeDist.toFixed(2)} km from the office (max ${maxDistanceKm} km) and ${homeDist.toFixed(2)} km from home (max ${homeRange} km).`
@@ -424,7 +427,7 @@ export function AttendanceWidget() {
                 }
             }
             
-            if (isWfhAllowed) {
+            if (isWfhAllowed || isAdmin) {
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
                     const homeDist = getDistanceInKm(userLocation, homeLocation);
@@ -438,7 +441,7 @@ export function AttendanceWidget() {
             const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
 
             let infoMsg = '';
-            if (isWfhAllowed && homeLat && homeLon) {
+            if ((isWfhAllowed || isAdmin) && homeLat && homeLon) {
                  const homeLocation = { latitude: homeLat, longitude: homeLon };
                  const homeDist = getDistanceInKm(userLocation, homeLocation);
                  infoMsg = `You are outside your designated locations. You are ${officeDist.toFixed(2)} km from the office (max ${maxDistanceKm} km) and ${homeDist.toFixed(2)} km from home (max ${homeRange} km).`
@@ -463,6 +466,7 @@ export function AttendanceWidget() {
     updateDocumentNonBlocking(userDocRef, {
         homeLatitude: capturedLocation.latitude,
         homeLongitude: capturedLocation.longitude,
+        isWfhAllowed: isAdmin ? true : (userData as any)?.isWfhAllowed
     });
 
     proceedWithClockIn(capturedLocation, 0, "Work From Home (Initial Location Set)", false);
@@ -660,12 +664,12 @@ export function AttendanceWidget() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col items-center justify-center gap-6 text-center pb-8">
-        {isLocationLoading && !isWfhAllowed ? (
+        {isLocationLoading && !isWfhAllowed && !isAdmin ? (
              <div className="flex flex-col items-center gap-4 text-muted-foreground">
                 <Building2 className="h-10 w-10 animate-pulse" />
                 <p>Loading Location...</p>
             </div>
-        ) : (officeLocation || isWfhAllowed) ? (
+        ) : (officeLocation || isWfhAllowed || isAdmin) ? (
           <>
             {upcomingMilestone && status === 'in' && (
                 <div className="absolute top-0 left-0 right-0 p-2 bg-primary/10 border-b border-primary/20 animate-pulse flex items-center justify-center gap-2">
@@ -816,7 +820,7 @@ export function AttendanceWidget() {
             <Button
                 onClick={handleClockIn}
                 className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 bg-primary text-white"
-                disabled={!isWfhAllowed && !officeLocation}
+                disabled={!isWfhAllowed && !officeLocation && !isAdmin}
             >
                 <Clock className="mr-2 h-5 w-5" /> Start Shift
             </Button>
