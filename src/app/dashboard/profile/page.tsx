@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -285,10 +286,7 @@ export default function ProfilePage() {
                                     {(employee as any).firstName?.charAt(0)}{(employee as any).lastName?.charAt(0)}
                                 </AvatarFallback>
                                )}
-                               <Dialog open={isAvatarDialogOpen} onOpenChange={(open) => {
-                                   setIsAvatarDialogOpen(open);
-                                   if (!open) window.location.reload();
-                               }}>
+                               <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
                                     <DialogTrigger asChild>
                                         <button className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Smile className="h-8 w-8 text-white" />
@@ -321,10 +319,7 @@ export default function ProfilePage() {
                              </div>
                         </CardHeader>
                         <CardContent>
-                            <Dialog open={isProfileDialogOpen} onOpenChange={(open) => {
-                                setIsProfileDialogOpen(open);
-                                if (!open) window.location.reload();
-                            }}>
+                            <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                                 <DialogTrigger asChild><Button className="w-full rounded-full"><Edit className="mr-2 h-4 w-4"/> Edit Profile</Button></DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader><DialogTitle>Edit Profile</DialogTitle><DialogDescription>Make changes to your profile here.</DialogDescription></DialogHeader>
@@ -368,10 +363,7 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            <Dialog open={isSetHomeLocationDialogOpen} onOpenChange={(open) => {
-                setIsSetHomeLocationDialogOpen(open);
-                if (!open) window.location.reload();
-            }}>
+            <Dialog open={isSetHomeLocationDialogOpen} onOpenChange={setIsSetHomeLocationDialogOpen}>
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader><DialogTitle>{isAdminOrHR ? 'Set/Update Home Location' : 'Set Home Location'}</DialogTitle></DialogHeader>
                     {capturedLocation && (
@@ -386,10 +378,7 @@ export default function ProfilePage() {
                 </DialogContent>
             </Dialog>
             
-            <Dialog open={isRequestChangeOpen} onOpenChange={(open) => {
-                setIsRequestChangeOpen(open);
-                if (!open) window.location.reload();
-            }}>
+            <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
                  <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] p-0">
                     <DialogHeader className="p-6 pb-4 border-b"><DialogTitle>Step 1: Select New Location</DialogTitle></DialogHeader>
                     <ScrollArea className="flex-1">
@@ -408,10 +397,7 @@ export default function ProfilePage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isReasonDialogOpen} onOpenChange={(open) => {
-                setIsReasonDialogOpen(open);
-                if (!open) window.location.reload();
-            }}>
+            <Dialog open={isReasonDialogOpen} onOpenChange={setIsReasonDialogOpen}>
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader><DialogTitle>Step 2: Reason for Change</DialogTitle></DialogHeader>
                     <div className="grid gap-4 py-4"><Label htmlFor="reason">Reason</Label><Textarea id="reason" value={changeReason} onChange={(e) => setChangeReason(e.target.value)} placeholder="e.g., I have moved to a new address." /></div>

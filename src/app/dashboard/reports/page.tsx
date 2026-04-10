@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, Target, CalendarClock, Brain, ListTodo, Link as LinkIcon, X, Plus, Clock, FileText, AlertCircle, CheckCircle2, Mic } from "lucide-react";
+import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, Target, CalendarClock, Brain, ListTodo, Link as LinkIcon, X, Plus, Clock, FileText, AlertCircle, CheckCircle2, Mic, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -41,6 +41,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const formatIST = (date: Date) => {
     return new Intl.DateTimeFormat('en-GB', {
@@ -379,7 +380,7 @@ export default function ReportsPage() {
   const [selectedUser, setSelectedUser] = React.useState<any | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
-  const [submitProgress, setSubmitProgress] = React.useState(0);
+  const [isVerifyingLocation, setIsVerifyingLocation] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
@@ -437,7 +438,6 @@ export default function ReportsPage() {
             logOutTime: todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'HH:mm') : format(now, 'HH:mm'),
         })
       });
-      setSubmitProgress(0);
   }, [form, currentUserData, isBusinessUser, todaysAttendance]);
 
   React.useEffect(() => { if (isAddDialogOpen && currentUserData) resetForm(); }, [isAddDialogOpen, resetForm, currentUserData]);
@@ -474,43 +474,59 @@ export default function ReportsPage() {
 
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
-    setSubmitProgress(10);
-    const outreach = Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0);
-    const payload = {
-      ...values,
-      outreachTotal: isBusinessUser ? outreach : undefined,
-      employeeId: user.uid,
-      employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
-      employeeDepartment: currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL'),
-      employeeJobTitle: currentUserData.jobTitle,
-      employeeEmploymentType: currentUserData.employmentType || "Intern",
-      date: new Date(),
-      reportType: currentReportType,
-    };
-    try {
-        setSubmitProgress(70);
-        await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
-        
-        // Finalize Attendance (Clock Out) if not already done
-        const todayId = format(new Date(), 'yyyy-MM-dd');
-        const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
-        setDocumentNonBlocking(attRef, {
-            checkOutTime: serverTimestamp(),
-        }, { merge: true });
+    
+    setIsVerifyingLocation(true);
+    
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const { latitude, longitude } = position.coords;
+            const outreach = Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0);
+            
+            const payload = {
+              ...values,
+              outreachTotal: isBusinessUser ? outreach : undefined,
+              employeeId: user.uid,
+              employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
+              employeeDepartment: currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL'),
+              employeeJobTitle: currentUserData.jobTitle,
+              employeeEmploymentType: currentUserData.employmentType || "Intern",
+              date: new Date(),
+              reportType: currentReportType,
+            };
 
-        setSubmitProgress(100);
-        toast({ title: "Report Submitted Successfully", description: "Logging out..." });
-        
-        // Log out after report submission
-        setTimeout(async () => {
-            await auth.signOut();
-            router.push('/login');
-        }, 1500);
-        
-    } catch (err: any) {
-        setSubmitProgress(0);
-        toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-    }
+            try {
+                // 1. Save Report
+                await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
+                
+                // 2. Finalize Attendance (Clock Out)
+                const todayId = format(new Date(), 'yyyy-MM-dd');
+                const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
+                setDocumentNonBlocking(attRef, {
+                    checkOutTime: serverTimestamp(),
+                    locationCheckOutLatitude: latitude,
+                    locationCheckOutLongitude: longitude,
+                }, { merge: true });
+
+                setIsVerifyingLocation(false);
+                toast({ title: "Work Session Complete", description: "Report saved and clock-out confirmed. Logging out..." });
+                
+                // 3. Logout
+                setTimeout(async () => {
+                    await auth.signOut();
+                    router.push('/login');
+                }, 1500);
+                
+            } catch (err: any) {
+                setIsVerifyingLocation(false);
+                toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+            }
+        },
+        (error) => {
+            setIsVerifyingLocation(false);
+            toast({ variant: 'destructive', title: 'GPS Verification Failed', description: "Required for final clock-out. Please enable location." });
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const filteredUsers = usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -553,6 +569,20 @@ export default function ReportsPage() {
 
   return (
     <>
+      {isVerifyingLocation && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md">
+            <div className="relative">
+                <div className="h-24 w-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary animate-pulse" />
+            </div>
+            <h2 className="mt-6 text-xl font-black uppercase tracking-tighter text-primary">Finalizing Shift</h2>
+            <p className="text-sm text-muted-foreground font-medium">Verifying end-of-day location...</p>
+            <div className="mt-8 w-48 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-primary animate-progress-loading" />
+            </div>
+        </div>
+      )}
+
       <PageHeader title={isAdmin ? "Organization Reports" : "My Daily Submissions"} description={isAdmin ? "Review submissions from Interns and Employees." : "Standardized professional reporting."}>
         {!isAdmin && (
             <Button onClick={() => setIsAddDialogOpen(true)} disabled={!submissionConstraints.canSubmit} className={cn("rounded-full h-11 px-6 shadow-lg transition-all active:scale-95", !submissionConstraints.canSubmit ? "bg-muted text-muted-foreground border-none cursor-not-allowed opacity-50" : "bg-primary hover:bg-primary/90")}>
@@ -574,10 +604,7 @@ export default function ReportsPage() {
         <div className="space-y-4">{areReportsLoading ? (<div className="h-48 flex items-center justify-center text-muted-foreground animate-pulse font-medium">Loading history...</div>) : reports && reports.length > 0 ? (<Accordion type="single" collapsible className="w-full space-y-3">{reports.map(r => (<AccordionItem value={r.id} key={r.id} className="border-none"><AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white/80 shadow-sm bg-white/50 ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none data-[state=open]:ring-primary/20"><div className="flex-1 text-left flex items-center justify-between"><div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div><div className="mr-4 text-right hidden sm:block"><p className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Status</p><p className="text-xs font-mono font-bold text-green-600">✅ Submitted</p></div></div></AccordionTrigger><AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white/30 space-y-6 ring-1 ring-border/50 shadow-lg mt-[-1px]">{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent></AccordionItem>))}</Accordion>) : <div className="h-64 flex flex-col items-center justify-center text-muted-foreground p-10 bg-muted/10 rounded-3xl border border-dashed"><FileText className="size-10 mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-xs opacity-50">No reports found.</p></div>}</div>
       )}
 
-      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          setIsAddDialogOpen(open);
-          if (!open) window.location.reload();
-      }}>
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-5xl w-[95vw] h-[92vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl border-none ring-1 ring-border/50">
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 bg-secondary/30">
@@ -621,7 +648,23 @@ export default function ReportsPage() {
                         {reports.map(r => (
                             <AccordionItem value={r.id} key={r.id} className="border-none">
                                 <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none"><div className="flex-1 text-left flex items-center justify-between"><div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div><Badge variant="secondary" className="mr-4 text-[10px] font-black uppercase">✅ SUBMITTED</Badge></div></AccordionTrigger>
-                                <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]"><div className="flex justify-end gap-2 mb-4"><AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Delete</Button></AlertDialogTrigger><AlertDialogContent className="rounded-3xl p-8"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently remove the record.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent>
+                                <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]"><div className="flex justify-end gap-2 mb-4"><AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8">
+                                            <Trash2 className="h-3 w-3 mr-2" />Delete
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="rounded-3xl p-8">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle>
+                                            <AlertDialogDescription>This will permanently remove the record.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel>
+                                            <AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog></div>{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent>
                             </AccordionItem>
                         ))}
                     </Accordion>

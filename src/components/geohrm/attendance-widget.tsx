@@ -414,84 +414,9 @@ export function AttendanceWidget() {
     );
   };
 
-  const proceedWithClockOut = (userLocation: Location, reason?: string) => {
-      if (getTodaysAttendanceRef) {
-          const payload: any = {
-              checkOutTime: serverTimestamp(),
-              totalBreakDuration: totalBreakTime,
-              locationCheckOutLatitude: userLocation.latitude,
-              locationCheckOutLongitude: userLocation.longitude,
-          };
-          if (reason) {
-            payload.checkOutNotes = reason;
-          }
-          setDocumentNonBlocking(getTodaysAttendanceRef, payload, { merge: true });
-      }
-      setStatus("out");
-      setHasClockedOutToday(true);
-      setCurrentUserLocation(null);
-      setDistance(null);
-      // Redirect to report page after clock out
+  const handleClockOutRedirect = () => {
+      // Just redirect to reports page. The actual clock-out happens upon report submission.
       router.push('/dashboard/reports');
-  }
-
-  const handleClockOut = () => {
-    if (!user) {
-      toast({ variant: "destructive", title: "Cannot Clock Out" });
-      return;
-    }
-
-    setIsVerifyingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-            const homeLat = (userData as any)?.homeLatitude;
-            const homeLon = (userData as any)?.homeLongitude;
-            const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
-            
-            setIsVerifyingLocation(false);
-            if (officeLocation) {
-                const officeDist = getDistanceInKm(userLocation, officeLocation);
-                if (officeDist <= maxDistanceKm) {
-                    proceedWithClockOut(userLocation, "Office");
-                    return;
-                }
-            }
-            
-            if (isWfhAllowed || isAdmin) {
-                if (homeLat && homeLon) {
-                    const homeLocation = { latitude: homeLat, longitude: homeLon };
-                    const homeDist = getDistanceInKm(userLocation, homeLocation);
-                    if (homeDist <= homeRange) {
-                        proceedWithClockOut(userLocation, "Work From Home");
-                        return;
-                    }
-                }
-            }
-
-            const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
-
-            let infoMsg = '';
-            if ((isWfhAllowed || isAdmin) && homeLat && homeLon) {
-                 const homeLocation = { latitude: homeLat, longitude: homeLon };
-                 const homeDist = getDistanceInKm(userLocation, homeLocation);
-                 infoMsg = `You are outside your designated locations. You are ${officeDist.toFixed(2)} km from the office (max ${maxDistanceKm} km) and ${homeDist.toFixed(2)} km from home (max ${homeRange} km).`
-            } else if (officeLocation) {
-                infoMsg = `You are ${officeDist.toFixed(2)} km from the office. The allowed clock-out radius is ${maxDistanceKm} km.`
-            } else {
-                infoMsg = 'You are not within any designated clock-out area.'
-            }
-            setOutOfRangeInfo(infoMsg);
-            
-            setOutOfRangeAction(() => () => proceedWithClockOut(userLocation, outOfRangeReason));
-            setIsOutOfRangeReasonDialogOpen(true);
-        },
-        () => {
-            setIsVerifyingLocation(false);
-            toast({ variant: "destructive", title: "Location Error", description: "Could not get location to clock out."});
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
   };
 
   const handleSaveSettings = async () => {
@@ -622,10 +547,7 @@ export function AttendanceWidget() {
               High-Accuracy Attendance
               </CardTitle>
               {isAdmin && (
-                  <Dialog open={isSettingsDialogOpen} onOpenChange={(open) => {
-                      setIsSettingsDialogOpen(open);
-                      if (!open) window.location.reload();
-                  }}>
+                  <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
                       <DialogTrigger asChild>
                           <Button variant="ghost" size="icon">
                               <Settings className="size-5" />
@@ -904,7 +826,7 @@ export function AttendanceWidget() {
                       </Button>
                   )}
 
-                  <AlertDialog onOpenChange={(open) => { if (!open) window.location.reload(); }}>
+                  <AlertDialog>
                       <AlertDialogTrigger asChild>
                           <Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8">
                               Finish Day
@@ -917,7 +839,7 @@ export function AttendanceWidget() {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                               <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Continue Working</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleClockOut} className="rounded-full font-bold uppercase text-[10px]">Go to Reports</AlertDialogAction>
+                              <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px]">Go to Reports</AlertDialogAction>
                           </AlertDialogFooter>
                       </AlertDialogContent>
                   </AlertDialog>
@@ -925,10 +847,7 @@ export function AttendanceWidget() {
           )}
         </CardFooter>
 
-        <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={(open) => {
-            setIsOutOfRangeReasonDialogOpen(open);
-            if (!open) window.location.reload();
-        }}>
+        <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
           <DialogContent className="rounded-3xl">
               <DialogHeader>
                   <DialogTitle className="text-xl font-black uppercase tracking-tighter">Location Out of Range</DialogTitle>
