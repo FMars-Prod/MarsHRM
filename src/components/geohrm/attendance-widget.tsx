@@ -582,7 +582,7 @@ export function AttendanceWidget() {
     <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm relative overflow-hidden">
       <CardHeader>
         <div className="flex items-start justify-between">
-            <CardTitle className="font-headline flex items-center gap-2">
+            <CardTitle className="font-headline flex items-center gap-2 text-primary">
             <Clock className="size-5" />
             Geolocation Attendance
             </CardTitle>
@@ -703,14 +703,14 @@ export function AttendanceWidget() {
                 )}
             </div>
             
-            {/* Milestone Indicators */}
+            {/* Milestone Indicators with Gradients */}
             <div className="w-full max-w-2xl grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                 {/* Log In Indicator */}
                 <div className={cn(
                     "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                    status !== 'out' ? "bg-gradient-to-br from-green-500/20 to-green-500/5 border-green-200" : "bg-white/50 border-border/50"
+                    status !== 'out' ? "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 shadow-inner" : "bg-white/50 border-border/50"
                 )}>
-                    <LogIn className={cn("size-5", status !== 'out' ? "text-green-600" : "text-muted-foreground/50")} />
+                    <LogIn className={cn("size-5", status !== 'out' ? "text-primary" : "text-muted-foreground/50")} />
                     <div className="text-center">
                         <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log In</p>
                         <p className="text-sm font-bold">{lastClockInTime ? format(lastClockInTime, 'p') : '--:--'}</p>
