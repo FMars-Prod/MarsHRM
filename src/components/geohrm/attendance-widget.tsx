@@ -78,7 +78,7 @@ export function AttendanceWidget() {
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
   const [currentUserLocation, setCurrentUserLocation] = useState<Location | null>(null);
-  const [distance, setDistance] = useState<number | null>(null);
+  const [distance, setDistance] = setDistance(null);
   const { toast } = useToast();
 
   const { user } = useUser();
@@ -110,7 +110,6 @@ export function AttendanceWidget() {
   const [newShiftEnd, setNewShiftEnd] = useState("");
   const [newLunchStart, setNewLunchStart] = useState("");
   const [newLunchDuration, setNewLunchDuration] = useState("");
-  const [autoLunchTriggered, setAutoLunchTriggered] = useState(false);
   
   const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
@@ -164,7 +163,6 @@ export function AttendanceWidget() {
             setTotalBreakTime(todaysAttendance.totalBreakDuration || 0);
           }
         }
-        setAutoLunchTriggered((todaysAttendance as any).autoLunchBreakStarted || false);
     } else {
         setStatus("out");
         setHasClockedOutToday(false);
@@ -172,7 +170,6 @@ export function AttendanceWidget() {
         setBreakTimer(0);
         setTotalBreakTime(0);
         setLastClockInTime(null);
-        setAutoLunchTriggered(false);
     }
   }, [todaysAttendance]);
 
@@ -197,7 +194,7 @@ export function AttendanceWidget() {
     }
   }
 
-  const proceedWithLunchClockIn = (userLocation: Location, dist: number, reason?: string) => {
+  const proceedWithBreakEnd = (userLocation: Location, dist: number, reason?: string) => {
       const updatedBreakTime = totalBreakTime + breakTimer;
       if (getTodaysAttendanceRef) {
           const payload: any = {
@@ -206,7 +203,7 @@ export function AttendanceWidget() {
               locationLunchInLongitude: userLocation.longitude,
           };
           if (reason) {
-              const newNote = `Post-Lunch Clock-In (${format(new Date(), 'p')}): ${reason}`;
+              const newNote = `Break Return (${format(new Date(), 'p')}): ${reason}`;
               const existingNotes = (todaysAttendance as any)?.checkInNotes || "";
               payload.checkInNotes = existingNotes ? `${existingNotes}\n${newNote}` : newNote;
           }
@@ -218,7 +215,7 @@ export function AttendanceWidget() {
       setStatus("in");
       setCurrentUserLocation(userLocation);
       setDistance(dist);
-      toast({ title: "Clocked In from Lunch", description: `Location recorded, ${dist.toFixed(2)} km from office.` });
+      toast({ title: "Clocked In from Break", description: `Location recorded, ${dist.toFixed(2)} km from office.` });
   }
 
   const handleBreak = () => {
@@ -230,10 +227,10 @@ export function AttendanceWidget() {
               const dist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : 0;
               
               if (officeLocation && dist > maxDistanceKm) {
-                  setOutOfRangeAction(() => () => proceedWithLunchClockIn(userLocation, dist, outOfRangeReason));
+                  setOutOfRangeAction(() => () => proceedWithBreakEnd(userLocation, dist, outOfRangeReason));
                   setIsOutOfRangeReasonDialogOpen(true);
               } else {
-                  proceedWithLunchClockIn(userLocation, dist);
+                  proceedWithBreakEnd(userLocation, dist);
               }
             },
             () => toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."}),
@@ -270,29 +267,11 @@ export function AttendanceWidget() {
             handleAutoClockOut();
         } else {
             setTimer((prev) => prev + 1);
-
-            const now = new Date();
-            if (officeLocation?.lunchBreakStartTime && !autoLunchTriggered) {
-                const [hours, minutes] = officeLocation.lunchBreakStartTime.split(':');
-                const lunchTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes), 0);
-
-                if (now >= lunchTime) {
-                    if (getTodaysAttendanceRef) {
-                        updateDocumentNonBlocking(getTodaysAttendanceRef, { autoLunchBreakStarted: true });
-                    }
-                    setAutoLunchTriggered(true);
-                    handleBreak(); 
-                    toast({
-                        title: "Lunch Time!",
-                        description: "You have been automatically signed out for lunch. Please sign back in when you return.",
-                    });
-                }
-            }
         }
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [status, lastClockInTime, officeLocation, autoLunchTriggered, getTodaysAttendanceRef]);
+  }, [status, lastClockInTime]);
 
 
   useEffect(() => {
@@ -572,9 +551,9 @@ export function AttendanceWidget() {
   const upcomingMilestone = useMemo(() => {
     if (!milestones) return null;
     const now = new Date();
-    if (milestones.lOut && now < milestones.lOut && differenceInMinutes(milestones.lOut, now) < 30) return { type: 'L-Out', time: milestones.lOut };
-    if (milestones.lIn && now < milestones.lIn && differenceInMinutes(milestones.lIn, now) < 15) return { type: 'L-In', time: milestones.lIn };
-    if (milestones.logout && now < milestones.logout && differenceInMinutes(milestones.logout, now) < 30) return { type: 'Log-out', time: milestones.logout };
+    if (milestones.lOut && now < milestones.lOut && differenceInMinutes(milestones.lOut, now) < 30) return { type: 'Lunch Start', time: milestones.lOut };
+    if (milestones.lIn && now < milestones.lIn && differenceInMinutes(milestones.lIn, now) < 15) return { type: 'Lunch Return', time: milestones.lIn };
+    if (milestones.logout && now < milestones.logout && differenceInMinutes(milestones.logout, now) < 30) return { type: 'Shift End', time: milestones.logout };
     return null;
   }, [milestones]);
 
@@ -687,7 +666,7 @@ export function AttendanceWidget() {
                 hasClockedOutToday
                   ? "Daily Session Complete"
                   : status === 'break'
-                    ? (autoLunchTriggered ? "Lunch Break Active" : "On Break")
+                    ? "Break Active (Manual)"
                     : isLate() ? "Late Attendance" : `Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
               }
             </div>
@@ -698,7 +677,7 @@ export function AttendanceWidget() {
                 </div>
                 {lastClockInTime && status !== "out" && (
                 <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-bold px-3 py-1">
-                    Log In: {format(lastClockInTime, 'p')}
+                    Logged In At: {format(lastClockInTime, 'p')}
                 </Badge>
                 )}
             </div>
@@ -732,9 +711,9 @@ export function AttendanceWidget() {
                 {/* L-In Indicator */}
                 <div className={cn(
                     "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                    status === 'in' && autoLunchTriggered ? "bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-blue-200" : "bg-white/50 border-border/50"
+                    "bg-white/50 border-border/50"
                 )}>
-                    <Clock className={cn("size-5", status === 'in' && autoLunchTriggered ? "text-blue-600" : "text-muted-foreground/50")} />
+                    <Clock className="size-5 text-muted-foreground/50" />
                     <div className="text-center">
                         <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-In</p>
                         <p className="text-sm font-bold">{milestones?.lIn ? format(milestones.lIn, 'p') : '--:--'}</p>
@@ -810,8 +789,8 @@ export function AttendanceWidget() {
                         status !== "break" ? "bg-white border-primary/20 text-primary hover:bg-primary/5" : "bg-primary text-white"
                     )}
                 >
-                    {status === 'break' && autoLunchTriggered ? <Clock className="mr-2 h-4 w-4" /> : <Coffee className="mr-2 h-4 w-4" />}
-                    {status === 'break' ? (autoLunchTriggered ? 'End Lunch' : 'End Break') : 'Start Break'}
+                    {status === 'break' ? <Clock className="mr-2 h-4 w-4" /> : <Coffee className="mr-2 h-4 w-4" />}
+                    {status === 'break' ? 'End Break' : 'Start Break'}
                 </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
