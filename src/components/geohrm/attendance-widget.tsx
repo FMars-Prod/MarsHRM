@@ -415,9 +415,39 @@ export function AttendanceWidget() {
   };
 
   const handleClockOutRedirect = () => {
-      // Just redirect to reports page. The actual clock-out happens upon report submission.
-      router.push('/dashboard/reports');
+      if (isAdmin) {
+          handleDirectClockOut();
+      } else {
+          router.push('/dashboard/reports');
+      }
   };
+
+  const handleDirectClockOut = () => {
+      setIsVerifyingLocation(true);
+      navigator.geolocation.getCurrentPosition(
+          (position) => {
+              const { latitude, longitude } = position.coords;
+              const todayId = format(new Date(), 'yyyy-MM-dd');
+              const attRef = doc(firestore, `users/${user!.uid}/attendances`, todayId);
+              
+              setDocumentNonBlocking(attRef, {
+                  checkOutTime: serverTimestamp(),
+                  locationCheckOutLatitude: latitude,
+                  locationCheckOutLongitude: longitude,
+              }, { merge: true });
+
+              setIsVerifyingLocation(false);
+              toast({ title: "Shift Finished", description: "Your end-of-day location has been recorded." });
+              setStatus("out");
+              setHasClockedOutToday(true);
+          },
+          (error) => {
+              setIsVerifyingLocation(false);
+              toast({ variant: 'destructive', title: 'Location Error', description: "Failed to verify end-of-day location." });
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+      );
+  }
 
   const handleSaveSettings = async () => {
       const lat = parseFloat(newLatitude);
@@ -835,11 +865,17 @@ export function AttendanceWidget() {
                       <AlertDialogContent className="rounded-3xl">
                           <AlertDialogHeader>
                               <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Ready to Clock Out?</AlertDialogTitle>
-                              <AlertDialogDescription className="font-medium text-muted-foreground">This will finalize your attendance records for today. Please complete your report next.</AlertDialogDescription>
+                              <AlertDialogDescription className="font-medium text-muted-foreground">
+                                  {isAdmin 
+                                    ? "This will finalize your attendance record for today." 
+                                    : "This will finalize your attendance records for today. Please complete your report next."}
+                              </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                               <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Continue Working</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px]">Go to Reports</AlertDialogAction>
+                              <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px]">
+                                  {isAdmin ? "Confirm Clock Out" : "Go to Reports"}
+                              </AlertDialogAction>
                           </AlertDialogFooter>
                       </AlertDialogContent>
                   </AlertDialog>

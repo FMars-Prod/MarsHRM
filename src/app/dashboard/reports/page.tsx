@@ -472,6 +472,16 @@ export default function ReportsPage() {
     }
   };
 
+  const cleanPayload = (obj: any) => {
+    const result: any = {};
+    Object.keys(obj).forEach(key => {
+        if (obj[key] !== undefined) {
+            result[key] = obj[key];
+        }
+    });
+    return result;
+  };
+
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
     
@@ -482,7 +492,7 @@ export default function ReportsPage() {
             const { latitude, longitude } = position.coords;
             const outreach = Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0);
             
-            const payload = {
+            const payload = cleanPayload({
               ...values,
               outreachTotal: isBusinessUser ? outreach : undefined,
               employeeId: user.uid,
@@ -492,7 +502,7 @@ export default function ReportsPage() {
               employeeEmploymentType: currentUserData.employmentType || "Intern",
               date: new Date(),
               reportType: currentReportType,
-            };
+            });
 
             try {
                 // 1. Save Report
