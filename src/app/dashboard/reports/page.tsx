@@ -388,7 +388,16 @@ export default function ReportsPage() {
 
   const currentReportType = React.useMemo(() => {
     const title = (currentUserData?.jobTitle || '').toUpperCase();
-    if (title.includes("TECHNICAL")) return 'Technical';
+    if (
+        title.includes("TECHNICAL") || 
+        title.includes("DEVELOPER") || 
+        title.includes("ENGINEER") || 
+        title.includes("QA") || 
+        title.includes("TECH") ||
+        title.includes("FRONTEND") ||
+        title.includes("BACKEND") ||
+        title.includes("FULLSTACK")
+    ) return 'Technical';
     return 'Business';
   }, [currentUserData?.jobTitle]);
 
@@ -490,23 +499,61 @@ export default function ReportsPage() {
     navigator.geolocation.getCurrentPosition(
         async (position) => {
             const { latitude, longitude } = position.coords;
-            const outreach = Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0);
             
-            const payload = cleanPayload({
-              ...values,
-              outreachTotal: isBusinessUser ? outreach : undefined,
-              employeeId: user.uid,
-              employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
-              employeeDepartment: currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL'),
-              employeeJobTitle: currentUserData.jobTitle,
-              employeeEmploymentType: currentUserData.employmentType || "Intern",
-              date: new Date(),
-              reportType: currentReportType,
-            });
+            const commonPayload = {
+                signature: values.signature,
+                declaration: values.declaration,
+                employeeId: user.uid,
+                employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
+                employeeDepartment: currentUserData.department || (isBusinessUser ? 'BUSINESS' : 'TECHNICAL'),
+                employeeJobTitle: currentUserData.jobTitle,
+                employeeEmploymentType: currentUserData.employmentType || "Intern",
+                date: new Date(),
+                reportType: currentReportType,
+            };
+
+            const dataPayload = isBusinessUser ? {
+                currency: values.currency,
+                outreachColdCalls: values.outreachColdCalls,
+                outreachLinkedIn: values.outreachLinkedIn,
+                outreachEmails: values.outreachEmails,
+                outreachTotal: Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0),
+                newLeadsGenerated: values.newLeadsGenerated,
+                potentialClients: values.potentialClients,
+                followUpCount: values.followUpCount,
+                followUpClients: values.followUpClients,
+                quotationsReleased: values.quotationsReleased,
+                netRevenueCollected: values.netRevenueCollected,
+                committedNetRevenue: values.committedNetRevenue,
+                pipelineValue: values.pipelineValue,
+                revenueVariance: values.revenueVariance,
+                meetingsSecured: values.meetingsSecured,
+                clientWinHighlight: values.clientWinHighlight,
+                strategicLearning: values.strategicLearning,
+                meetingsBookedTomorrow: values.meetingsBookedTomorrow,
+                criticalPathTomorrow: values.criticalPathTomorrow,
+                pendingDeliverables: values.pendingDeliverables,
+                interventionTrigger: values.interventionTrigger,
+                interventionReason: values.interventionReason,
+                callRecordingLinks: values.callRecordingLinks,
+            } : {
+                logInTime: values.logInTime,
+                logOutTime: values.logOutTime,
+                tasksAssigned: values.tasksAssigned,
+                completedTasks: values.completedTasks,
+                repoLinks: values.repoLinks,
+                workInProgress: values.workInProgress,
+                pendingTasks: values.pendingTasks,
+                whatILearned: values.whatILearned,
+                challengesFaced: values.challengesFaced,
+                nextSteps: values.nextSteps,
+            };
+
+            const finalPayload = cleanPayload({ ...commonPayload, ...dataPayload });
 
             try {
                 // 1. Save Report
-                await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
+                await addDoc(collection(firestore, `users/${user.uid}/reports`), finalPayload);
                 
                 // 2. Finalize Attendance (Clock Out)
                 const todayId = format(new Date(), 'yyyy-MM-dd');
@@ -658,23 +705,24 @@ export default function ReportsPage() {
                         {reports.map(r => (
                             <AccordionItem value={r.id} key={r.id} className="border-none">
                                 <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none"><div className="flex-1 text-left flex items-center justify-between"><div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div><Badge variant="secondary" className="mr-4 text-[10px] font-black uppercase">✅ SUBMITTED</Badge></div></AccordionTrigger>
-                                <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]"><div className="flex justify-end gap-2 mb-4"><AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8">
-                                            <Trash2 className="h-3 w-3 mr-2" />Delete
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="rounded-3xl p-8">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle>
-                                            <AlertDialogDescription>This will permanently remove the record.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel>
-                                            <AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog></div>{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent>
+                                <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]"><div className="flex justify-end gap-2 mb-4">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8">
+                                                <Trash2 className="h-3 w-3 mr-2" />Delete
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="rounded-3xl p-8">
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle>
+                                                <AlertDialogDescription>This will permanently remove the record.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel>
+                                                <AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => handleDeleteReport(r)}>Confirm Purge</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog></div>{r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : <TechnicalReportDetails report={r} />}</AccordionContent>
                             </AccordionItem>
                         ))}
                     </Accordion>
