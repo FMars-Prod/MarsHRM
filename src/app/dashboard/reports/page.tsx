@@ -13,10 +13,9 @@ import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, Target, C
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { format, isSameDay } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useAuth, setDocumentNonBlocking } from "@/firebase";
-import { useDoc } from "@/firebase/firestore/use-doc";
-import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { format, isSameDay, differenceInSeconds } from "date-fns";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useAuth, setDocumentNonBlocking, useDoc } from "@/firebase";
+import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,8 +26,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -558,11 +555,21 @@ export default function ReportsPage() {
                 // 2. Finalize Attendance (Clock Out)
                 const todayId = format(new Date(), 'yyyy-MM-dd');
                 const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
-                setDocumentNonBlocking(attRef, {
+                
+                const attendanceUpdates: any = {
                     checkOutTime: serverTimestamp(),
                     locationCheckOutLatitude: latitude,
                     locationCheckOutLongitude: longitude,
-                }, { merge: true });
+                };
+
+                // Handle hanging break if user forgot to end it
+                if (todaysAttendance?.locationLunchOutLatitude && !todaysAttendance?.locationLunchInLatitude) {
+                    attendanceUpdates.locationLunchInLatitude = latitude;
+                    attendanceUpdates.locationLunchInLongitude = longitude;
+                    attendanceUpdates.lunchInTime = serverTimestamp();
+                }
+
+                setDocumentNonBlocking(attRef, attendanceUpdates, { merge: true });
 
                 setIsVerifyingLocation(false);
                 toast({ title: "Work Session Complete", description: "Report saved and clock-out confirmed. Logging out..." });
