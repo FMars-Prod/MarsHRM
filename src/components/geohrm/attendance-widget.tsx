@@ -94,7 +94,7 @@ export function AttendanceWidget() {
   );
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
-  const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
+  const isAdminOrCEO = userRole === 'CEO/Admin' || userRole === 'HR Manager';
   const isWfhAllowed = (userData as any)?.isWfhAllowed;
 
   const officeLocationDocRef = useMemoFirebase(
@@ -376,7 +376,7 @@ export function AttendanceWidget() {
                 }
             }
 
-            if (isWfhAllowed || isAdmin) {
+            if (isWfhAllowed || isAdminOrCEO) {
                 if (homeLat && homeLon) {
                     const homeLocation = { latitude: homeLat, longitude: homeLon };
                     const homeDist = getDistanceInKm(userLocation, homeLocation);
@@ -391,7 +391,7 @@ export function AttendanceWidget() {
             const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
 
             let infoMsg = '';
-            if ((isWfhAllowed || isAdmin) && homeLat && homeLon) {
+            if ((isWfhAllowed || isAdminOrCEO) && homeLat && homeLon) {
                  const homeLocation = { latitude: homeLat, longitude: homeLon };
                  const homeDist = getDistanceInKm(userLocation, homeLocation);
                  infoMsg = `You are outside your designated locations. You are ${officeDist.toFixed(2)} km from the office (max ${maxDistanceKm} km) and ${homeDist.toFixed(2)} km from home (max ${homeRange} km).`
@@ -415,7 +415,7 @@ export function AttendanceWidget() {
   };
 
   const handleClockOutRedirect = () => {
-      if (isAdmin) {
+      if (isAdminOrCEO) {
           handleDirectClockOut();
       } else {
           router.push('/dashboard/reports');
@@ -507,7 +507,7 @@ export function AttendanceWidget() {
 
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const seconds = Math.floor(totalSeconds % 60);
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   };
@@ -576,7 +576,7 @@ export function AttendanceWidget() {
               <Clock className="size-5" />
               High-Accuracy Attendance
               </CardTitle>
-              {isAdmin && (
+              {isAdminOrCEO && (
                   <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
                       <DialogTrigger asChild>
                           <Button variant="ghost" size="icon">
@@ -652,12 +652,12 @@ export function AttendanceWidget() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col items-center justify-center gap-6 text-center pb-8">
-          {isLocationLoading && !isWfhAllowed && !isAdmin ? (
+          {isLocationLoading && !isWfhAllowed && !isAdminOrCEO ? (
               <div className="flex flex-col items-center gap-4 text-muted-foreground">
                   <Building2 className="h-10 w-10 animate-pulse" />
                   <p>Loading Location...</p>
               </div>
-          ) : (officeLocation || isWfhAllowed || isAdmin) ? (
+          ) : (officeLocation || isWfhAllowed || isAdminOrCEO) ? (
             <>
               {upcomingMilestone && (status === 'in' || status === 'lunch' || status === 'short_break') && (
                   <div className="absolute top-0 left-0 right-0 p-2 bg-primary/10 border-b border-primary/20 animate-pulse flex items-center justify-center gap-2">
@@ -812,7 +812,7 @@ export function AttendanceWidget() {
               <Button
                   onClick={handleClockIn}
                   className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 bg-primary text-white"
-                  disabled={!isWfhAllowed && !officeLocation && !isAdmin}
+                  disabled={!isWfhAllowed && !officeLocation && !isAdminOrCEO}
               >
                   <Clock className="mr-2 h-5 w-5" /> Start Shift
               </Button>
@@ -866,15 +866,15 @@ export function AttendanceWidget() {
                           <AlertDialogHeader>
                               <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Ready to Clock Out?</AlertDialogTitle>
                               <AlertDialogDescription className="font-medium text-muted-foreground">
-                                  {isAdmin 
-                                    ? "This will finalize your attendance record for today." 
-                                    : "This will finalize your attendance records for today. Please complete your report next."}
+                                  {isAdminOrCEO 
+                                    ? "This will finalize your high-precision attendance record for today immediately." 
+                                    : "This will capture your final GPS coordinates and redirect you to the Reports page to finish your shift."}
                               </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                               <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Continue Working</AlertDialogCancel>
                               <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px]">
-                                  {isAdmin ? "Confirm Clock Out" : "Go to Reports"}
+                                  {isAdminOrCEO ? "Confirm Clock Out" : "Go to Reports"}
                               </AlertDialogAction>
                           </AlertDialogFooter>
                       </AlertDialogContent>
