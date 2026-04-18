@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -92,10 +91,7 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
     const totalOutreach = cold + linkedin + email;
     const leads = Number(report.newLeadsGenerated || 0);
     
-    // Formula Correction: Cap at 100% to represent conversion efficiency
-    const rawRate = (totalOutreach > 0) ? (leads / totalOutreach) * 100 : 0;
-    const displayRate = Math.min(100, Math.max(0, rawRate));
-    
+    const displayRate = (totalOutreach > 0) ? Math.min(100, (leads / totalOutreach) * 100) : 0;
     const rateColor = displayRate < 5 ? 'text-red-600' : displayRate < 15 ? 'text-orange-600' : 'text-green-600';
     const mainSym = getCurrencySymbol(report.currency || 'USD');
 
@@ -610,18 +606,13 @@ export default function ReportsPage() {
     const { fields: meetings, append: appendMeeting, remove: removeMeeting } = useFieldArray({ control: form.control, name: "meetingsSecured" });
     const { fields: links, append: appendLink, remove: removeLink } = useFieldArray({ control: form.control, name: "callRecordingLinks" });
     
-    // Efficiency Calculation Update
     const cold = Number(useWatch({ control: form.control, name: "outreachColdCalls" }) || 0);
     const linkedin = Number(useWatch({ control: form.control, name: "outreachLinkedIn" }) || 0);
     const email = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
     const total = cold + linkedin + email;
     const leads = Number(useWatch({ control: form.control, name: "newLeadsGenerated" }) || 0);
     
-    // Formula: (Leads / Total Effort) * 100
-    // Capped at 100% to represent conversion of trials to leads correctly
-    const rawRate = (total > 0 && leads >= 0) ? (leads / total) * 100 : 0;
-    const rate = Math.min(100, Math.max(0, rawRate));
-    
+    const rate = (total > 0) ? Math.min(100, (leads / total) * 100) : 0;
     const rateColor = rate < 5 ? 'text-red-600' : rate < 15 ? 'text-orange-600' : 'text-green-600';
 
     return (

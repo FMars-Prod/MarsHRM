@@ -189,7 +189,6 @@ export default function UsersPage() {
     if (!firestore || !auth) return;
     
     try {
-        // Function to remove undefined values from payload
         const cleanPayload = (obj: any) => {
             const result: any = {};
             Object.keys(obj).forEach(key => {
@@ -210,7 +209,6 @@ export default function UsersPage() {
             const userRef = doc(firestore, 'users', editingUser.id);
             const { password, confirmPassword, email, ...updateData } = values;
 
-            // Remove undefined values to prevent Firestore WriteBatch.update error
             const safeUpdateData = cleanPayload(updateData);
 
             batch.update(userRef, safeUpdateData);
@@ -239,7 +237,6 @@ export default function UsersPage() {
             const userRef = doc(firestore, 'users', newUserId);
             const { password, confirmPassword, ...userData } = values;
             
-            // Filter undefined values
             const safeUserData = cleanPayload(userData);
 
             const newUserPayload = {
