@@ -11,7 +11,8 @@ import {
   DialogDescription, 
   DialogFooter, 
   DialogHeader, 
-  DialogTitle 
+  DialogTitle,
+  DialogTrigger
 } from "@/components/ui/dialog";
 import { 
   AlertDialog,
@@ -30,9 +31,9 @@ import { PlusCircle, Search, Trash2, Info, Download, Mail, TrendingUp, Target, C
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { format, isSameDay, differenceInSeconds } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useFirebase, useAuth, setDocumentNonBlocking, useDoc } from "@/firebase";
-import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -89,9 +90,9 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
     const linkedin = Number(report.outreachLinkedIn || 0);
     const email = Number(report.outreachEmails || 0);
     const totalOutreach = cold + linkedin + email;
-    const leads = Number(report.newLeadsGenerated || 0);
+    const potential = Number(report.potentialClients || 0);
     
-    const displayRate = (totalOutreach > 0) ? Math.min(100, (leads / totalOutreach) * 100) : 0;
+    const displayRate = (totalOutreach > 0) ? (potential / totalOutreach) * 100 : 0;
     const rateColor = displayRate < 5 ? 'text-red-600' : displayRate < 15 ? 'text-orange-600' : 'text-green-600';
     const mainSym = getCurrencySymbol(report.currency || 'USD');
 
@@ -102,7 +103,7 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                 <CardContent className="space-y-6 pt-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-white/50 rounded-xl border border-border/50 shadow-inner">
                         <ReportDetailItem label="Total Outreach" value={totalOutreach} />
-                        <ReportDetailItem label="Potential Clients" value={report.potentialClients} />
+                        <ReportDetailItem label="New Leads" value={report.newLeadsGenerated || 0} />
                         <ReportDetailItem label="Pipeline Value" value={`${mainSym}${report.pipelineValue?.toLocaleString() ?? 0}`} />
                         <ReportDetailItem label="Intervention" value={report.interventionTrigger || "None"} />
                     </div>
@@ -111,12 +112,12 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                         <ReportDetailItem label="Cold Calls" value={cold} />
                         <ReportDetailItem label="LinkedIn" value={linkedin} />
                         <ReportDetailItem label="Emails" value={email} />
-                        <ReportDetailItem label="New Leads" value={leads} />
+                        <ReportDetailItem label="Potential Clients" value={potential} />
                     </div>
 
                     <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl">
                         <div className="space-y-1">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Efficiency Conversion Rate</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Efficiency Conversion Rate (Potential/Outreach)</p>
                             <p className={cn("text-2xl font-black tracking-tighter", rateColor)}>{displayRate.toFixed(2)}%</p>
                         </div>
                         <div className="text-right">
@@ -610,9 +611,9 @@ export default function ReportsPage() {
     const linkedin = Number(useWatch({ control: form.control, name: "outreachLinkedIn" }) || 0);
     const email = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
     const total = cold + linkedin + email;
-    const leads = Number(useWatch({ control: form.control, name: "newLeadsGenerated" }) || 0);
+    const potential = Number(useWatch({ control: form.control, name: "potentialClients" }) || 0);
     
-    const rate = (total > 0) ? Math.min(100, (leads / total) * 100) : 0;
+    const rate = (total > 0) ? (potential / total) * 100 : 0;
     const rateColor = rate < 5 ? 'text-red-600' : rate < 15 ? 'text-orange-600' : 'text-green-600';
 
     return (
@@ -636,17 +637,17 @@ export default function ReportsPage() {
                             <Label className="text-[10px] uppercase font-black text-muted-foreground">Total Outreach Volume</Label>
                             <p className="text-2xl font-black text-primary tracking-tighter">{total}</p>
                         </div>
-                        <FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">New Leads Generated</FormLabel><FormControl><Input type="number" {...field} className="rounded-2xl h-12 text-lg font-bold" /></FormControl></FormItem>
+                        <FormField control={form.control} name="potentialClients" render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Potential Clients Secured</FormLabel><FormControl><Input type="number" {...field} className="rounded-2xl h-12 text-lg font-bold" /></FormControl></FormItem>
                         )} />
                         <div className="p-4 bg-white rounded-2xl border shadow-sm">
-                            <Label className="text-[10px] uppercase font-black text-muted-foreground">Conversion Rate (Efficiency)</Label>
+                            <Label className="text-[10px] uppercase font-black text-muted-foreground">Efficiency Rate (Potential/Outreach)</Label>
                             <p className={cn("text-2xl font-black tracking-tighter", rateColor)}>{rate.toFixed(2)}%</p>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed">
-                        <FormField control={form.control} name="potentialClients" render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs uppercase font-bold">Active Potential Clients</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>
+                        <FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (
+                            <FormItem><FormLabel className="text-xs uppercase font-bold">New Leads Generated</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>
                         )} />
                         <FormField control={form.control} name="followUpCount" render={({ field }) => (
                             <FormItem><FormLabel className="text-xs uppercase font-bold">Number of Follow-ups</FormLabel><Select onValueChange={field.onChange} value={field.value?.toString() || "0"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent>{Array.from({ length: 21 }).map((_, i) => (<SelectItem key={i} value={i.toString()}>{i}</SelectItem>))}</SelectContent></Select></FormItem>
