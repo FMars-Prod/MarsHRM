@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown, MoreHorizontal, Trash2 } from "lucide-react";
+import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown, MoreHorizontal, Trash2, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import * as React from "react";
@@ -56,7 +56,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBl
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, startOfToday, getDaysInMonth, getYear, getMonth, getDate } from "date-fns";
+import { format, startOfToday, getDaysInMonth, getYear, getMonth, getDate, isBefore } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import type { WithId } from "@/firebase/firestore/use-collection";
 
@@ -213,6 +213,7 @@ export default function LeavePage() {
   
   const [rejectionReason, setRejectionReason] = React.useState("");
   const [requestToReject, setRequestToReject] = React.useState<LeaveRequestWithId | null>(null);
+  const [showMissed, setShowMissed] = React.useState(false);
   
   const currentYear = getYear(new Date());
   const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
@@ -270,10 +271,20 @@ export default function LeavePage() {
 
 
   const { data: leaveRequests, isLoading: requestsLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
+  
+  const displayLeaveRequests = React.useMemo(() => {
+    if (!leaveRequests) return [];
+    const today = startOfToday();
+    return leaveRequests.filter(request => {
+      const startDate = request.startDate?.toDate ? request.startDate.toDate() : new Date(request.startDate);
+      const isPast = isBefore(startDate, today);
+      if (showMissed) return isPast; // If showMissed is ON, only show past ones
+      return !isPast; // If showMissed is OFF, only show future/current ones
+    });
+  }, [leaveRequests, showMissed]);
+
   const isLoading = usersLoading || requestsLoading;
   
-  const allLeaveRequests = leaveRequests || [];
-
   const handleRequestStatus = (requestId: string, newStatus: LeaveStatus, approverId: string, approvalField: string) => {
     const requestDocRef = doc(firestore, 'leave_requests', requestId);
     updateDocumentNonBlocking(requestDocRef, { 
@@ -375,64 +386,77 @@ export default function LeavePage() {
         description="Request time off and track approvals."
         className="animate-fade-in-up"
       >
-        {userRole === 'Member' && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2" />
-                New Request
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Leave Request</DialogTitle>
-                <DialogDescription>Submit your time off details.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-x-4 gap-y-2">
-                  <Label htmlFor="leaveType" className="text-left sm:text-right">Type</Label>
-                  <Select onValueChange={setLeaveType}>
-                      <SelectTrigger className="col-span-1 sm:col-span-3">
-                          <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="Vacation">Vacation</SelectItem>
-                          <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                          <SelectItem value="Personal">Personal</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
-                  <Label className="text-left sm:text-right pt-2">Start</Label>
-                  <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
-                    <Select onValueChange={setStartYear} value={startYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                    <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                    <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+        <div className="flex gap-2">
+          {isUserAdmin && (
+            <Button 
+              variant={showMissed ? "secondary" : "outline"} 
+              size="sm"
+              onClick={() => setShowMissed(!showMissed)}
+              className="gap-2"
+            >
+              {showMissed ? <History className="size-4" /> : <Clock className="size-4" />}
+              {showMissed ? "Viewing Missed" : "Missed Leaves"}
+            </Button>
+          )}
+          {userRole === 'Member' && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <PlusCircle className="mr-2 size-4" />
+                  New Request
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Leave Request</DialogTitle>
+                  <DialogDescription>Submit your time off details.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-x-4 gap-y-2">
+                    <Label htmlFor="leaveType" className="text-left sm:text-right">Type</Label>
+                    <Select onValueChange={setLeaveType}>
+                        <SelectTrigger className="col-span-1 sm:col-span-3">
+                            <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Vacation">Vacation</SelectItem>
+                            <SelectItem value="Sick Leave">Sick Leave</SelectItem>
+                            <SelectItem value="Personal">Personal</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                    <Label className="text-left sm:text-right pt-2">Start</Label>
+                    <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
+                      <Select onValueChange={setStartYear} value={startYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                      <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                      <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                    <Label className="text-left sm:text-right pt-2">End</Label>
+                    <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
+                      <Select onValueChange={setEndYear} value={endYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                      <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                      <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
+                    <Label htmlFor="reason" className="text-left sm:text-right pt-2">Reason</Label>
+                    <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} className="col-span-1 sm:col-span-3" />
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
-                  <Label className="text-left sm:text-right pt-2">End</Label>
-                  <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
-                    <Select onValueChange={setEndYear} value={endYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                    <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                    <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
-                  </div>
-                </div>
-
-                 <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
-                  <Label htmlFor="reason" className="text-left sm:text-right pt-2">Reason</Label>
-                  <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} className="col-span-1 sm:col-span-3" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleCreateRequest} disabled={isRequesting}>Submit</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
+                <DialogFooter>
+                  <Button onClick={handleCreateRequest} disabled={isRequesting}>Submit</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </PageHeader>
       <Sheet open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}>
         <div className="border rounded-lg overflow-x-auto animate-fade-in-up" style={{ animationDelay: '100ms' }}>
@@ -449,7 +473,9 @@ export default function LeavePage() {
             <TableBody>
               {isLoading ? (
                   <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading...</TableCell></TableRow>
-              ) : allLeaveRequests.map((request) => (
+              ) : displayLeaveRequests.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">{showMissed ? "No missed records found." : "No upcoming leave records found."}</TableCell></TableRow>
+              ) : displayLeaveRequests.map((request) => (
                   <TableRow key={request.id} className="bg-gradient-to-br from-primary/5 to-transparent">
                     {(userRole !== 'Member') && <TableCell className="font-medium">{request.employeeName}</TableCell>}
                     <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
@@ -473,6 +499,30 @@ export default function LeavePage() {
                           )}
                           {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && request.status === 'Pending HR Approval' && (
                               <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>Final Approve</DropdownMenuItem>
+                          )}
+                          {isUserAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete Request
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the leave request.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteRequest(request.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
