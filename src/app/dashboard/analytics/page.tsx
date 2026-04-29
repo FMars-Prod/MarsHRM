@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -8,8 +9,8 @@ import { collection, doc, query, where, orderBy, Timestamp, getDocs } from 'fire
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isBefore } from 'date-fns';
-import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Share2, FileText, Sun, ShieldAlert, LogOut, LogIn } from 'lucide-react';
+import { format, subDays, differenceInSeconds, startOfDay, endOfDay, parse, startOfMonth, endOfMonth, eachDayOfInterval, min, max, isBefore, startOfWeek, endOfWeek } from 'date-fns';
+import { Clock, Briefcase, CalendarOff, AlertTriangle, Download, Calendar as CalendarIcon, Edit, StickyNote, MapPin, RotateCcw, Share2, FileText, Sun, ShieldAlert, LogOut, LogIn, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,17 +20,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import Image from 'next/image';
 import { type DateRange } from "react-day-picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
-import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { setDocumentNonBlocking } from '@/firebase';
 
 type User = {
   id: string;
@@ -62,16 +61,7 @@ type AttendanceRecord = {
   isOutOfRange?: boolean;
 };
 
-type EditableAttendance = {
-    status: 'present' | 'late' | 'absent' | 'on_leave';
-    checkInTime: string;
-    checkOutTime: string;
-    totalBreakDuration: string;
-    checkInNotes: string;
-    checkOutNotes: string;
-}
-
-type FilterMode = "day" | "month" | "range" | "all";
+type FilterMode = "day" | "month" | "range" | "this_week" | "prev_week" | "all";
 
 const statusColors: Record<string, string> = {
     present: 'text-green-600 border-green-600/50 bg-green-50',
@@ -96,8 +86,7 @@ const AnalyticsPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingDate, setEditingDate] = React.useState<Date | null>(null);
   const [editingEmployeeId, setEditingEmployeeId] = React.useState<string | null>(null);
-  const [editingEmployeeName, setEditingEmployeeName] = React.useState("");
-  const [editableAttendance, setEditableAttendance] = React.useState<EditableAttendance>({
+  const [editableAttendance, setEditableAttendance] = React.useState({
       status: 'present',
       checkInTime: '',
       checkOutTime: '',
@@ -125,6 +114,7 @@ const AnalyticsPage = () => {
   const { start, end } = React.useMemo(() => {
     let start: Date | null = null;
     let end: Date | null = null;
+    const now = new Date();
     switch (filterMode) {
       case 'day':
         start = date ? startOfDay(date) : null;
@@ -133,6 +123,15 @@ const AnalyticsPage = () => {
       case 'month':
         start = month ? startOfMonth(month) : null;
         end = month ? endOfMonth(month) : null;
+        break;
+      case 'this_week':
+        start = startOfWeek(now, { weekStartsOn: 1 });
+        end = endOfWeek(now, { weekStartsOn: 1 });
+        break;
+      case 'prev_week':
+        const prev = subDays(now, 7);
+        start = startOfWeek(prev, { weekStartsOn: 1 });
+        end = endOfWeek(prev, { weekStartsOn: 1 });
         break;
       case 'range':
         start = range?.from ? startOfDay(range.from) : null;
@@ -265,86 +264,40 @@ const AnalyticsPage = () => {
     return `${hours}h ${minutes}m`;
   };
   
-  const getFilterPeriodText = () => {
-    if (filterMode === 'day' && date) return format(date, 'MMM d, yyyy');
-    if (filterMode === 'month' && month) return format(month, 'MMMM yyyy');
-    if (filterMode === 'range' && range?.from) {
-        if (range.to) return `${format(range.from, "LLL dd")} - ${format(range.to, "LLL dd, y")}`;
-        return format(range.from, "LLL dd, y");
-    }
-    if (filterMode === 'all') return 'All time';
-    return 'Selected period';
-  }
-
-  const handleExport = () => {
+  const handleExportPdf = () => {
     if (!mergedData || mergedData.length === 0) {
         toast({ variant: 'destructive', title: 'No data to export' });
         return;
     }
-    const headers = ['Employee', 'Date', 'Status', 'Log In', 'L-Out', 'L-In', 'Log Out', 'Duration (Work/Break)', 'Notes'];
-    const csvRows = [
-        headers.join(','),
-        ...mergedData.map(rec => {
-            let workDuration = 0;
-            if (rec.checkInTime && rec.checkOutTime) {
-                workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
-            }
-            const isPresent = rec.status === 'present' || rec.status === 'late';
-            
-            const logIn = rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--';
-            const lunchOut = (rec as any).lunchOutTime ? format((rec as any).lunchOutTime.toDate(), 'p') : '--:--';
-            const lunchIn = (rec as any).lunchInTime ? format((rec as any).lunchInTime.toDate(), 'p') : '--:--';
-            const logOut = rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
+    const doc = new jsPDF();
+    const now = format(new Date(), 'PPP');
+    
+    doc.setFontSize(18);
+    doc.text("MarsHRM - Employee Attendance Report", 105, 20, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(`Employee: ${selectedUser?.firstName} ${selectedUser?.lastName}`, 14, 30);
+    doc.text(`Generated on: ${now}`, 14, 35);
+    
+    const body = mergedData.map(rec => [
+        format(rec.checkInTime?.toDate() || new Date(rec.id), 'MMM d, yyyy'),
+        rec.status.replace('_', ' '),
+        rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--',
+        (rec as any).lunchOutTime ? format((rec as any).lunchOutTime.toDate(), 'p') : '--:--',
+        (rec as any).lunchInTime ? format((rec as any).lunchInTime.toDate(), 'p') : '--:--',
+        rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--',
+        rec.totalBreakDuration ? formatDuration(rec.totalBreakDuration) : '0h 0m'
+    ]);
 
-            const durationWorkBreak = !isPresent ? "N/A" : `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
-            const row = [ 
-                `"${rec.employeeName}"`, 
-                rec.checkInTime ? `"${format(rec.checkInTime.toDate(), "PP")}"` : "N/A", 
-                `"${rec.status}"`,
-                `"${logIn}"`,
-                `"${lunchOut}"`,
-                `"${lunchIn}"`,
-                `"${logOut}"`,
-                durationWorkBreak, 
-                `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"` 
-            ];
-            return row.join(',');
-        })
-    ];
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `AttendanceReport_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    link.click();
-  }
+    autoTable(doc, {
+        startY: 45,
+        head: [['Date', 'Status', 'In', 'L-Out', 'L-In', 'Out', 'Break']],
+        body: body,
+        theme: 'striped',
+        headStyles: { fillColor: [138, 43, 226] }
+    });
 
-  const handleEditClick = (rec: AttendanceRecord) => {
-      const recDate = rec.checkInTime ? rec.checkInTime.toDate() : new Date(rec.id);
-      setEditingDate(recDate);
-      setEditingEmployeeId(rec.employeeId);
-      setEditingEmployeeName(rec.employeeName || "Employee");
-      setEditableAttendance({
-          status: (['holiday', 'on_leave', 'non_compliance'].includes(rec.status) ? 'absent' : rec.status) as any,
-          checkInTime: rec.checkInTime && rec.status !== 'holiday' && rec.status !== 'on_leave' ? format(rec.checkInTime.toDate(), 'HH:mm') : '',
-          checkOutTime: rec.checkOutTime && rec.status !== 'holiday' && rec.status !== 'on_leave' ? format(rec.checkOutTime.toDate(), 'HH:mm') : '',
-          totalBreakDuration: ((rec.totalBreakDuration || 0) / 60).toString(),
-          checkInNotes: rec.checkInNotes || '',
-          checkOutNotes: rec.checkOutNotes || '',
-      });
-      setIsEditDialogOpen(true);
-  }
-
-  const handleAttendanceUpdate = () => {
-      if (!editingEmployeeId || !editingDate) return;
-      const attendanceId = format(editingDate, 'yyyy-MM-dd');
-      const attendanceRef = doc(firestore, `users/${editingEmployeeId}/attendances/${attendanceId}`);
-      const checkInDateTime = editableAttendance.checkInTime ? parse(editableAttendance.checkInTime, 'HH:mm', editingDate) : null;
-      const checkOutDateTime = editableAttendance.checkOutTime ? parse(editableAttendance.checkOutTime, 'HH:mm', editingDate) : null;
-      const payload: any = { id: attendanceId, employeeId: editingEmployeeId, status: editableAttendance.status, checkInTime: checkInDateTime ? Timestamp.fromDate(checkInDateTime) : null, checkOutTime: checkOutDateTime ? Timestamp.fromDate(checkOutDateTime) : null, totalBreakDuration: parseInt(editableAttendance.totalBreakDuration) * 60 || 0, checkInNotes: editableAttendance.checkInNotes, checkOutNotes: editableAttendance.checkOutNotes };
-      setDocumentNonBlocking(attendanceRef, payload, { merge: true });
-      toast({ title: "Attendance Updated" });
-      setIsEditDialogOpen(false);
-  }
+    doc.save(`Attendance_${selectedUser?.firstName}_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  };
 
   return (
     <>
@@ -357,9 +310,34 @@ const AnalyticsPage = () => {
             </Select>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant={filterMode === 'day' ? 'default' : 'outline'} onClick={() => { setDate(new Date()); setFilterMode('day'); }}>Today</Button>
-          <Button variant={filterMode === 'month' ? 'default' : 'outline'} onClick={() => { setMonth(new Date()); setFilterMode('month'); }}>This Month</Button>
-          <Button variant="outline" onClick={handleExport}>Export CSV</Button>
+          <Button variant={filterMode === 'day' ? 'default' : 'outline'} size="sm" onClick={() => { setDate(new Date()); setFilterMode('day'); }}>Today</Button>
+          <Button variant={filterMode === 'this_week' ? 'default' : 'outline'} size="sm" onClick={() => setFilterMode('this_week')}>This Week</Button>
+          <Button variant={filterMode === 'prev_week' ? 'default' : 'outline'} size="sm" onClick={() => setFilterMode('prev_week')}>Prev Week</Button>
+          <Popover>
+            <PopoverTrigger asChild>
+                <Button variant={filterMode === 'range' ? 'default' : 'outline'} size="sm">
+                    <CalendarIcon className="mr-2 h-4 w-4" /> Range
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="range" selected={range} onSelect={(r) => { setRange(r); setFilterMode('range'); }} initialFocus />
+            </PopoverContent>
+          </Popover>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm"><FileDown className="mr-2 h-4 w-4" /> Export</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                     const headers = ['Date', 'Status', 'In', 'Out', 'Break'];
+                     const csv = [headers.join(','), ...mergedData!.map(r => [format(r.checkInTime?.toDate() || new Date(r.id), 'yyyy-MM-dd'), r.status, r.checkInTime ? format(r.checkInTime.toDate(), 'HH:mm') : '', r.checkOutTime ? format(r.checkOutTime.toDate(), 'HH:mm') : '', r.totalBreakDuration || 0].join(','))].join('\n');
+                     const blob = new Blob([csv], { type: 'text/csv' });
+                     const url = URL.createObjectURL(blob);
+                     const a = document.createElement('a'); a.href = url; a.download = 'attendance.csv'; a.click();
+                }}>CSV Spreadsheet</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPdf}>Professional PDF</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -449,21 +427,6 @@ const AnalyticsPage = () => {
         </Card>
       </div>
       )}
-
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-          setIsEditDialogOpen(open);
-          if (!open) window.location.reload();
-      }}>
-          <DialogContent>
-              <DialogHeader><DialogTitle>Edit Attendance</DialogTitle></DialogHeader>
-              <div className="grid gap-4 py-4">
-                  <div className="grid gap-2"><Label>Status</Label><Select value={editableAttendance.status} onValueChange={(v) => setEditableAttendance(p => ({...p, status: v as any}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="present">Present</SelectItem><SelectItem value="late">Late</SelectItem><SelectItem value="absent">Absent</SelectItem><SelectItem value="on_leave">On Leave</SelectItem></SelectContent></Select></div>
-                  <div className="grid grid-cols-2 gap-4"><div className="grid gap-2"><Label>Check In</Label><Input type="time" value={editableAttendance.checkInTime} onChange={e => setEditableAttendance(p => ({...p, checkInTime: e.target.value}))}/></div><div className="grid gap-2"><Label>Check Out</Label><Input type="time" value={editableAttendance.checkOutTime} onChange={e => setEditableAttendance(p => ({...p, checkOutTime: e.target.value}))}/></div></div>
-                  <div className="grid gap-2"><Label>Remarks</Label><Textarea value={editableAttendance.checkInNotes} onChange={e => setEditableAttendance(p => ({...p, checkInNotes: e.target.value}))} /></div>
-              </div>
-              <DialogFooter><Button onClick={handleAttendanceUpdate}>Save Changes</Button></DialogFooter>
-          </DialogContent>
-      </Dialog>
     </>
   );
 };

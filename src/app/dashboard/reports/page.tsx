@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -657,7 +658,9 @@ export default function ReportsPage() {
                         <div className="space-y-3 p-4 bg-muted/10 rounded-2xl border border-dashed">
                             <p className="text-[10px] uppercase font-black text-muted-foreground mb-2">Enter Follow-up Client Names:</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{Array.from({ length: Number(followUpCount) }).map((_, i) => (
-                                <FormField key={i} control={form.control} name={`followUpClients.${i}`} render={({ field }) => (<FormControl><Input {...field} placeholder={`Client Name ${i + 1}`} className="rounded-xl h-10 text-xs bg-white" /></FormControl>)} />
+                                <FormField key={i} control={form.control} name={`followUpClients.${i}`} render={({ field }) => (
+                                    <FormControl><Input {...field} placeholder={`Client Name ${i + 1}`} className="rounded-xl h-10 text-xs bg-white" /></FormControl>
+                                )} />
                             ))}</div>
                         </div>
                     )}

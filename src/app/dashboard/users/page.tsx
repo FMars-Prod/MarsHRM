@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch } from "firebase/firestore";
@@ -44,6 +45,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 
 type Role = 'Member' | 'Team Lead' | 'HR Manager' | 'CEO/Admin';
 
@@ -63,7 +65,7 @@ const userSchema = z.object({
   homeLocationRangeKm: z.coerce.number().min(0, "Range cannot be negative.").optional(),
   isWfhAllowed: z.boolean().optional(),
 }).refine(data => {
-    if (data.password && data.password.length < 6) {
+    if (data.password && data.password.length > 0 && data.password.length < 6) {
         return false;
     }
     return true;
@@ -295,7 +297,7 @@ export default function UsersPage() {
               <ScrollArea className="max-h-[70vh] -mx-6">
               <div className="px-6">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
                   <div className="grid grid-cols-2 gap-4">
                       <FormField control={form.control} name="firstName" render={({ field }) => (
                           <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} placeholder="John" /></FormControl><FormMessage /></FormItem>
@@ -354,6 +356,29 @@ export default function UsersPage() {
                         </FormItem>
                     )} />
                   </div>
+
+                  <div className="p-4 bg-muted/20 rounded-xl space-y-4 border border-border/50">
+                    <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 bg-white">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base">Allow Work From Home</FormLabel>
+                                <FormDescription>Enables location-based clock-in from residential coordinates.</FormDescription>
+                            </div>
+                            <FormControl>
+                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                        </FormItem>
+                    )} />
+                    <div className="grid grid-cols-2 gap-4">
+                         <FormField control={form.control} name="homeLocationRangeKm" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>WFH Radius (km)</FormLabel>
+                                <FormControl><Input type="number" {...field} /></FormControl>
+                            </FormItem>
+                        )} />
+                    </div>
+                  </div>
+
                   {!editingUser && (
                     <>
                       <FormField control={form.control} name="password" render={({ field }) => (
@@ -398,6 +423,7 @@ export default function UsersPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>WFH Access</TableHead>
               <TableHead>Job Title</TableHead>
               <TableHead>Role</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -405,11 +431,18 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center h-24">Loading users...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center h-24">Loading users...</TableCell></TableRow>
             ) : users?.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                 <TableCell><Badge variant="secondary">{user.employmentType}</Badge></TableCell>
+                <TableCell>
+                    {user.isWfhAllowed ? (
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none gap-1"><Home className="size-3" /> Enabled</Badge>
+                    ) : (
+                        <Badge variant="outline" className="text-muted-foreground">Office Only</Badge>
+                    )}
+                </TableCell>
                 <TableCell>{user.jobTitle}</TableCell>
                 <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
                 <TableCell className="text-right">
