@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -59,7 +60,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, startOfToday, getDaysInMonth, getYear, getMonth, getDate, isBefore } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import type { WithId } from "@/firebase/firestore/use-collection";
-
+import { Checkbox } from "@/components/ui/checkbox";
 
 type LeaveStatus = 'Pending' | 'Pending HR Approval' | 'Approved' | 'Rejected' | 'Rejected by Team Lead' | 'Rejected by HR';
 
@@ -93,7 +94,6 @@ type Team = {
     memberIds: string[];
 }
 
-
 const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; users: WithId<UserData>[] | null; }) => {
   const teamLeadApprover = users?.find(u => u.id === request.approvedByTeamLeadId);
   const hrApprover = users?.find(u => u.id === request.approvedByHRId);
@@ -109,7 +109,6 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
   const isPendingLead = request.status === 'Pending';
   const isPendingHR = request.status === 'Pending HR Approval';
 
-  // Logic to check if lead stage was skipped
   const leadSkipped = !request.approvedByTeamLeadId && isApprovedByLead;
 
   return (
@@ -182,7 +181,6 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
   );
 }
 
-
 const statusVariantMap: { [key in LeaveStatus]: string } = {
     'Approved': 'bg-green-500/20 text-green-700 border-transparent',
     'Pending': 'bg-yellow-500/20 text-yellow-700 border-transparent',
@@ -191,7 +189,6 @@ const statusVariantMap: { [key in LeaveStatus]: string } = {
     'Rejected by HR': 'bg-red-500/20 text-red-700 border-transparent',
     'Rejected': 'bg-red-500/20 text-red-700 border-transparent'
 };
-
 
 export default function LeavePage() {
   const { user } = useUser();
@@ -214,6 +211,7 @@ export default function LeavePage() {
   const [rejectionReason, setRejectionReason] = React.useState("");
   const [requestToReject, setRequestToReject] = React.useState<LeaveRequestWithId | null>(null);
   const [showMissed, setShowMissed] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   
   const currentYear = getYear(new Date());
   const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
@@ -269,7 +267,6 @@ export default function LeavePage() {
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
 
-
   const { data: leaveRequests, isLoading: requestsLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
   
   const displayLeaveRequests = React.useMemo(() => {
@@ -278,12 +275,16 @@ export default function LeavePage() {
     return leaveRequests.filter(request => {
       const startDate = request.startDate?.toDate ? request.startDate.toDate() : new Date(request.startDate);
       const isPast = isBefore(startDate, today);
-      if (showMissed) return isPast; // If showMissed is ON, only show past ones
-      return !isPast; // If showMissed is OFF, only show future/current ones
+      if (showMissed) return isPast;
+      return !isPast;
     });
   }, [leaveRequests, showMissed]);
 
   const isLoading = usersLoading || requestsLoading;
+
+  React.useEffect(() => {
+    setSelectedIds([]);
+  }, [showMissed, leaveRequests]);
   
   const handleRequestStatus = (requestId: string, newStatus: LeaveStatus, approverId: string, approvalField: string) => {
     const requestDocRef = doc(firestore, 'leave_requests', requestId);
@@ -298,6 +299,30 @@ export default function LeavePage() {
     deleteDocumentNonBlocking(doc(firestore, 'leave_requests', requestId));
     toast({ title: 'Leave Request Deleted' });
   }
+
+  const handleBulkDelete = () => {
+    selectedIds.forEach(id => {
+      deleteDocumentNonBlocking(doc(firestore, 'leave_requests', id));
+    });
+    setSelectedIds([]);
+    toast({ title: `${selectedIds.length} Requests Deleted` });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(displayLeaveRequests.map(r => r.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(item => item !== id));
+    }
+  };
 
   const handleRejectionSubmit = () => {
     if (!requestToReject || !rejectionReason) {
@@ -329,7 +354,6 @@ export default function LeavePage() {
     setRejectionReason("");
   }
 
-
   const handleCreateRequest = () => {
     if (!user || !userData || !leaveType || !reason || !startDay || !startMonth || !startYear || !endDay || !endMonth || !endYear) {
         toast({ variant: "destructive", title: "Missing Info" });
@@ -351,7 +375,6 @@ export default function LeavePage() {
     const isUserTeamLead = userRole === 'Team Lead';
     const isManagement = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
-    // DIRECT ROUTING IF NO LEAD
     const initialStatus: LeaveStatus = (isUserTeamLead || !hasTeamLead || isManagement) ? 'Pending HR Approval' : 'Pending';
 
     const newRequest: LeaveRequest = {
@@ -378,7 +401,6 @@ export default function LeavePage() {
 
   const formatDate = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'PP') : '';
 
-
   return (
     <>
       <PageHeader
@@ -387,6 +409,26 @@ export default function LeavePage() {
         className="animate-fade-in-up"
       >
         <div className="flex gap-2">
+          {isUserAdmin && selectedIds.length > 0 && (
+              <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="gap-2">
+                          <Trash2 className="size-4" />
+                          Delete ({selectedIds.length})
+                      </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Bulk Delete Requests</AlertDialogTitle>
+                          <AlertDialogDescription>Are you sure you want to delete {selectedIds.length} selected leave requests?</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete All</AlertDialogAction>
+                      </AlertDialogFooter>
+                  </AlertDialogContent>
+              </AlertDialog>
+          )}
           {isUserAdmin && (
             <Button 
               variant={showMissed ? "secondary" : "outline"} 
@@ -463,6 +505,14 @@ export default function LeavePage() {
           <Table>
             <TableHeader>
               <TableRow>
+                {isUserAdmin && (
+                  <TableHead className="w-[50px]">
+                    <Checkbox 
+                      checked={selectedIds.length === displayLeaveRequests.length && displayLeaveRequests.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 {(userRole !== 'Member') && <TableHead>Employee</TableHead>}
                 <TableHead>Dates</TableHead>
                 <TableHead>Type</TableHead>
@@ -472,11 +522,19 @@ export default function LeavePage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-24 text-center">Loading...</TableCell></TableRow>
               ) : displayLeaveRequests.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">{showMissed ? "No missed records found." : "No upcoming leave records found."}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-24 text-center text-muted-foreground">{showMissed ? "No missed records found." : "No upcoming leave records found."}</TableCell></TableRow>
               ) : displayLeaveRequests.map((request) => (
                   <TableRow key={request.id} className="bg-gradient-to-br from-primary/5 to-transparent">
+                    {isUserAdmin && (
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedIds.includes(request.id)}
+                          onCheckedChange={(checked) => handleSelectRow(request.id, !!checked)}
+                        />
+                      </TableCell>
+                    )}
                     {(userRole !== 'Member') && <TableCell className="font-medium">{request.employeeName}</TableCell>}
                     <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
                     <TableCell>{request.leaveType}</TableCell>
