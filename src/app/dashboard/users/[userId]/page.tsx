@@ -109,7 +109,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
       return weeklyAttendanceData.map(rec => {
           let workHours = 0;
           if (rec.checkInTime && rec.checkOutTime) {
-              const workSeconds = differenceInSeconds(rec.checkInTime.toDate(), rec.checkOutTime.toDate());
+              const workSeconds = differenceInSeconds(rec.checkInTime.toDate(), rec.checkInTime.toDate());
               workHours = (workSeconds - (rec.totalBreakDuration || 0)) / 3600;
           }
           const breakHours = (rec.totalBreakDuration || 0) / 3600;
@@ -130,18 +130,23 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
 
   if (isUserLoading || isAttendanceLoading || isReportsLoading) {
     return (
-        <div className="flex h-full w-full items-center justify-center p-10">
-            <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                <div className="relative h-16 w-48 animate-pulse">
+        <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-purple-500 via-purple-800 to-indigo-950 p-10">
+            <div className="flex flex-col items-center gap-6">
+                <div className="relative h-20 w-56 animate-pulse drop-shadow-2xl">
                   <Image
                     src="https://fortumars.com/fortumarslogo.png"
                     alt="FortuMars Logo"
                     fill
-                    style={{ objectFit: 'contain' }}
+                    style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
                     priority
                   />
                 </div>
-                <p>Loading User Profile...</p>
+                <div className="space-y-2 text-center">
+                    <h2 className="text-white/90 text-lg font-black uppercase tracking-[0.2em]">Analyzing Data</h2>
+                    <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden mx-auto">
+                        <div className="h-full bg-white animate-progress-loading" />
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -164,7 +169,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
               <AvatarFallback>{(user as any).firstName?.[0]}{(user as any).lastName?.[0]}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-2xl">{(user as any).firstName} ${(user as any).lastName}</CardTitle>
+              <CardTitle className="text-2xl">{(user as any).firstName} {(user as any).lastName}</CardTitle>
               <CardDescription>{(user as any).jobTitle} - {(user as any).department}</CardDescription>
             </div>
           </CardHeader>

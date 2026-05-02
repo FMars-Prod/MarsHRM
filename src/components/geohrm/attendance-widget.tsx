@@ -506,10 +506,10 @@ export function AttendanceWidget() {
   }
 
   const formatTime = (totalSeconds: number) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = Math.floor(totalSeconds % 60);
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
   const isLate = () => {
@@ -556,15 +556,15 @@ export function AttendanceWidget() {
   return (
     <>
       {isVerifyingLocation && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/80 to-indigo-950/90 backdrop-blur-xl">
             <div className="relative">
-                <div className="h-24 w-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-                <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary animate-pulse" />
+                <div className="h-32 w-32 rounded-full border-4 border-white/10 border-t-purple-400 animate-spin" />
+                <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-10 text-purple-300 animate-pulse" />
             </div>
-            <h2 className="mt-6 text-xl font-black uppercase tracking-tighter text-primary">Verifying Precision Point</h2>
-            <p className="text-sm text-muted-foreground font-medium">Communicating with GPS satellites...</p>
-            <div className="mt-8 w-48 h-1.5 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary animate-progress-loading" />
+            <h2 className="mt-8 text-2xl font-black uppercase tracking-[0.3em] text-white">Verifying Point</h2>
+            <p className="mt-2 text-sm text-purple-200/60 font-medium">Synchronizing with high-precision GPS satellites...</p>
+            <div className="mt-10 w-64 h-1.5 bg-white/10 rounded-full overflow-hidden shadow-inner">
+                <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 animate-progress-loading" />
             </div>
         </div>
       )}

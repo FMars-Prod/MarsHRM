@@ -238,12 +238,17 @@ export default function ProfilePage() {
 
     if (isUserLoading || isEmployeeLoading) {
         return (
-            <div className="flex h-full w-full items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="relative h-16 w-48 animate-pulse">
-                        <Image src="https://fortumars.com/fortumarslogo.png" alt="FortuMars Logo" fill style={{ objectFit: 'contain' }} priority />
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-purple-500 via-purple-800 to-indigo-950 p-10">
+                <div className="flex flex-col items-center gap-6">
+                    <div className="relative h-20 w-56 animate-pulse drop-shadow-2xl">
+                        <Image src="https://fortumars.com/fortumarslogo.png" alt="FortuMars Logo" fill style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }} priority />
                     </div>
-                    <p className="text-muted-foreground">Loading Profile...</p>
+                    <div className="space-y-2 text-center">
+                        <h2 className="text-white/90 text-lg font-black uppercase tracking-[0.2em]">Preparing Profile</h2>
+                        <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden mx-auto">
+                            <div className="h-full bg-white animate-progress-loading" />
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -260,15 +265,15 @@ export default function ProfilePage() {
     return (
         <>
             {isVerifyingLocation && (
-                <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md">
+                <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/80 to-indigo-950/90 backdrop-blur-xl">
                     <div className="relative">
-                        <div className="h-24 w-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-                        <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-primary animate-pulse" />
+                        <div className="h-32 w-32 rounded-full border-4 border-white/10 border-t-purple-400 animate-spin" />
+                        <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-10 text-purple-300 animate-pulse" />
                     </div>
-                    <h2 className="mt-6 text-xl font-black uppercase tracking-tighter text-primary">Verifying Location</h2>
-                    <p className="text-sm text-muted-foreground font-medium">Communicating with GPS satellites...</p>
-                    <div className="mt-8 w-48 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-primary animate-progress-loading" />
+                    <h2 className="mt-8 text-2xl font-black uppercase tracking-[0.3em] text-white">Verifying Point</h2>
+                    <p className="mt-2 text-sm text-purple-200/60 font-medium">Synchronizing with high-precision GPS satellites...</p>
+                    <div className="mt-10 w-64 h-1.5 bg-white/10 rounded-full overflow-hidden shadow-inner">
+                        <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 animate-progress-loading" />
                     </div>
                 </div>
             )}

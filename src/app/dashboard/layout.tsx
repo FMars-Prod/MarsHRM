@@ -116,18 +116,23 @@ export default function DashboardLayout({
 
   if (isUserLoading || !user || isUserDocLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative h-16 w-48 animate-pulse">
+      <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-purple-500 via-purple-800 to-indigo-950">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative h-20 w-56 animate-pulse drop-shadow-2xl">
             <Image
               src="https://fortumars.com/fortumarslogo.png"
               alt="FortuMars Logo"
               fill
-              style={{ objectFit: 'contain' }}
+              style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
               priority
             />
           </div>
-          <p className="text-muted-foreground">Loading MarsHRM...</p>
+          <div className="space-y-2 text-center">
+            <h2 className="text-white/90 text-lg font-black uppercase tracking-[0.2em] animate-fade-in-up">Initializing MarsHRM</h2>
+            <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden mx-auto">
+                <div className="h-full bg-white animate-progress-loading" />
+            </div>
+          </div>
         </div>
       </div>
     );
