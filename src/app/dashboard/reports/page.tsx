@@ -89,7 +89,7 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
     const cold = Number(report.outreachColdCalls || 0);
     const linkedin = Number(report.outreachLinkedIn || 0);
     const email = Number(report.outreachEmails || 0);
-    const totalOutreach = cold + linkedin + email;
+    const totalOutreach = Math.max(0, cold + linkedin + email);
     const potential = Number(report.potentialClients || 0);
     
     const displayRate = (totalOutreach > 0) ? (potential / totalOutreach) * 100 : 0;
@@ -327,27 +327,27 @@ const TechnicalReportDetails = ({ report }: { report: any }) => (
 
 const businessReportSchema = z.object({
   currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("USD"),
-  outreachColdCalls: z.coerce.number().min(0).default(0),
-  outreachLinkedIn: z.coerce.number().min(0).default(0),
-  outreachEmails: z.coerce.number().min(0).default(0),
-  newLeadsGenerated: z.coerce.number().min(0).default(0),
-  potentialClients: z.coerce.number().min(0).default(0),
-  followUpCount: z.coerce.number().min(0).default(0),
+  outreachColdCalls: z.coerce.number().min(0, "Strictly non-negative").default(0),
+  outreachLinkedIn: z.coerce.number().min(0, "Strictly non-negative").default(0),
+  outreachEmails: z.coerce.number().min(0, "Strictly non-negative").default(0),
+  newLeadsGenerated: z.coerce.number().min(0, "Strictly non-negative").default(0),
+  potentialClients: z.coerce.number().min(0, "Strictly non-negative").default(0),
+  followUpCount: z.coerce.number().min(0, "Strictly non-negative").default(0),
   followUpClients: z.array(z.string().min(0)).optional().default([]),
-  quotationsReleased: z.coerce.number().min(0).default(0),
-  netRevenueCollected: z.coerce.number().min(0).default(0),
-  committedNetRevenue: z.coerce.number().min(0).default(0),
-  pipelineValue: z.coerce.number().min(0).default(0),
+  quotationsReleased: z.coerce.number().min(0, "Strictly non-negative").default(0),
+  netRevenueCollected: z.coerce.number().min(0, "Strictly non-negative").default(0),
+  committedNetRevenue: z.coerce.number().min(0, "Strictly non-negative").default(0),
+  pipelineValue: z.coerce.number().min(0, "Strictly non-negative").default(0),
   revenueVariance: z.coerce.number().default(0),
   meetingsSecured: z.array(z.object({ 
     clientName: z.string().optional(), 
     currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("USD"),
-    quotationValue: z.coerce.number().min(0).default(0),
+    quotationValue: z.coerce.number().min(0, "Strictly non-negative").default(0),
     context: z.string().optional()
   })).optional().default([]),
   clientWinHighlight: z.string().optional().default(""),
   strategicLearning: z.string().optional().default(""),
-  meetingsBookedTomorrow: z.coerce.number().min(0).default(0),
+  meetingsBookedTomorrow: z.coerce.number().min(0, "Strictly non-negative").default(0),
   criticalPathTomorrow: z.string().optional().default(""),
   pendingDeliverables: z.string().optional().default(""),
   interventionTrigger: z.enum(["None", "Coaching", "Technical Support", "Client meeting"]).default("None"),
@@ -376,7 +376,7 @@ const technicalReportSchema = z.object({
 });
 
 export default function ReportsPage() {
-  const { user } = useFirebase();
+  const { user } = useUser();
   const auth = useAuth();
   const router = useRouter();
   const firestore = useFirestore();
@@ -520,23 +520,23 @@ export default function ReportsPage() {
 
             const dataPayload = isBusinessUser ? {
                 currency: values.currency,
-                outreachColdCalls: values.outreachColdCalls,
-                outreachLinkedIn: values.outreachLinkedIn,
-                outreachEmails: values.outreachEmails,
-                outreachTotal: Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0),
-                newLeadsGenerated: values.newLeadsGenerated,
-                potentialClients: values.potentialClients,
-                followUpCount: values.followUpCount,
+                outreachColdCalls: Math.max(0, values.outreachColdCalls),
+                outreachLinkedIn: Math.max(0, values.outreachLinkedIn),
+                outreachEmails: Math.max(0, values.outreachEmails),
+                outreachTotal: Math.max(0, Number(values.outreachColdCalls || 0) + Number(values.outreachLinkedIn || 0) + Number(values.outreachEmails || 0)),
+                newLeadsGenerated: Math.max(0, values.newLeadsGenerated),
+                potentialClients: Math.max(0, values.potentialClients),
+                followUpCount: Math.max(0, values.followUpCount),
                 followUpClients: values.followUpClients,
-                quotationsReleased: values.quotationsReleased,
-                netRevenueCollected: values.netRevenueCollected,
-                committedNetRevenue: values.committedNetRevenue,
-                pipelineValue: values.pipelineValue,
+                quotationsReleased: Math.max(0, values.quotationsReleased),
+                netRevenueCollected: Math.max(0, values.netRevenueCollected),
+                committedNetRevenue: Math.max(0, values.committedNetRevenue),
+                pipelineValue: Math.max(0, values.pipelineValue),
                 revenueVariance: values.revenueVariance,
                 meetingsSecured: values.meetingsSecured,
                 clientWinHighlight: values.clientWinHighlight,
                 strategicLearning: values.strategicLearning,
-                meetingsBookedTomorrow: values.meetingsBookedTomorrow,
+                meetingsBookedTomorrow: Math.max(0, values.meetingsBookedTomorrow),
                 criticalPathTomorrow: values.criticalPathTomorrow,
                 pendingDeliverables: values.pendingDeliverables,
                 interventionTrigger: values.interventionTrigger,
@@ -611,7 +611,7 @@ export default function ReportsPage() {
     const cold = Number(useWatch({ control: form.control, name: "outreachColdCalls" }) || 0);
     const linkedin = Number(useWatch({ control: form.control, name: "outreachLinkedIn" }) || 0);
     const email = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
-    const total = cold + linkedin + email;
+    const total = Math.max(0, cold + linkedin + email);
     const potential = Number(useWatch({ control: form.control, name: "potentialClients" }) || 0);
     
     const rate = (total > 0) ? (potential / total) * 100 : 0;
@@ -624,13 +624,13 @@ export default function ReportsPage() {
                 <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/20 rounded-2xl border border-border/50">
                         <FormField control={form.control} name="outreachColdCalls" render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-xs uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>
                         )} />
                         <FormField control={form.control} name="outreachLinkedIn" render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-xs uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>
                         )} />
                         <FormField control={form.control} name="outreachEmails" render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs uppercase font-bold">Emails</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-xs uppercase font-bold">Emails</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>
                         )} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end px-2">
@@ -639,7 +639,7 @@ export default function ReportsPage() {
                             <p className="text-2xl font-black text-primary tracking-tighter">{total}</p>
                         </div>
                         <FormField control={form.control} name="potentialClients" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Potential Clients Secured</FormLabel><FormControl><Input type="number" {...field} className="rounded-2xl h-12 text-lg font-bold" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Potential Clients Secured</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-2xl h-12 text-lg font-bold" /></FormControl></FormItem>
                         )} />
                         <div className="p-4 bg-white rounded-2xl border shadow-sm">
                             <Label className="text-[10px] uppercase font-black text-muted-foreground">Efficiency Rate (Potential/Outreach)</Label>
@@ -648,7 +648,7 @@ export default function ReportsPage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed">
                         <FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs uppercase font-bold">New Leads Generated</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-xs uppercase font-bold">New Leads Generated</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>
                         )} />
                         <FormField control={form.control} name="followUpCount" render={({ field }) => (
                             <FormItem><FormLabel className="text-xs uppercase font-bold">Number of Follow-ups</FormLabel><Select onValueChange={field.onChange} value={field.value?.toString() || "0"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent>{Array.from({ length: 21 }).map((_, i) => (<SelectItem key={i} value={i.toString()}>{i}</SelectItem>))}</SelectContent></Select></FormItem>
@@ -666,11 +666,11 @@ export default function ReportsPage() {
                     )}
                 </CardContent>
             </Card>
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">2️⃣ Revenue & Financial Impact</CardTitle></CardHeader><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormField control={form.control} name="currency" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Default Report Currency</FormLabel><Select onValueChange={field.onChange} value={field.value || "USD"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="INR">INR (₹)</SelectItem></SelectContent></Select></FormItem>)} /><FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">NET Revenue Collected Today</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="committedNetRevenue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Committed NET Revenue</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pipeline Business Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Revenue Variance (Optional)</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /></CardContent></Card>
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader><CardContent className="space-y-6"><div className="p-4 bg-muted/10 rounded-2xl border border-dashed mb-4"><FormField control={form.control} name="quotationsReleased" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold text-primary">No. of Quotations Released Today</FormLabel><FormControl><Input type="number" {...field} className="rounded-full font-bold" /></FormControl></FormItem>)} /></div><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Meetings/Demos Secured Today:</p>{meetings.map((field, index) => (<div key={field.id} className="p-5 bg-white/50 border rounded-2xl relative group space-y-4 transition-all hover:shadow-md"><Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)}><X className="size-4" /></Button><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial No. {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} /><div className="grid grid-cols-3 gap-2"><FormField control={form.control} name={`meetingsSecured.${index}.currency`} render={({ field }) => (<FormItem className="col-span-1"><FormLabel className="text-[10px] uppercase font-bold">Cur</FormLabel><Select onValueChange={field.onChange} value={field.value || "USD"}><FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">$</SelectItem><SelectItem value="EUR">€</SelectItem><SelectItem value="GBP">£</SelectItem><SelectItem value="INR">₹</SelectItem></SelectContent></Select></FormItem>)} /><FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem className="col-span-2"><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>)} /></div></div><FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} /></div>))}<Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", currency: "USD", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed"><FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Client Win / Today's Highlight</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /><FormField control={form.control} name="strategicLearning" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Strategic Tactical Learning</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /></div><div className="pt-4 border-t border-dashed space-y-4"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Call Recording Drive Links:</p>{links.map((field, index) => (<div key={field.id} className="flex gap-2"><FormField control={form.control} name={`callRecordingLinks.${index}.value`} render={({ field }) => (
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">2️⃣ Revenue & Financial Impact</CardTitle></CardHeader><CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormField control={form.control} name="currency" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Default Report Currency</FormLabel><Select onValueChange={field.onChange} value={field.value || "USD"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="INR">INR (₹)</SelectItem></SelectContent></Select></FormItem>)} /><FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">NET Revenue Collected Today</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="committedNetRevenue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Committed NET Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pipeline Business Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Revenue Variance (Optional)</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /></CardContent></Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader><CardContent className="space-y-6"><div className="p-4 bg-muted/10 rounded-2xl border border-dashed mb-4"><FormField control={form.control} name="quotationsReleased" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold text-primary">No. of Quotations Released Today</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full font-bold" /></FormControl></FormItem>)} /></div><div className="space-y-4"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Meetings/Demos Secured Today:</p>{meetings.map((field, index) => (<div key={field.id} className="p-5 bg-white/50 border rounded-2xl relative group space-y-4 transition-all hover:shadow-md"><Button type="button" variant="ghost" size="icon" className="absolute -top-2 -right-2 rounded-full bg-red-50 border border-red-100 text-red-600 opacity-0 group-hover:opacity-100 h-8 w-8" onClick={() => removeMeeting(index)}><X className="size-4" /></Button><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormField control={form.control} name={`meetingsSecured.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Serial No. {index + 1}: Client Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} /><div className="grid grid-cols-3 gap-2"><FormField control={form.control} name={`meetingsSecured.${index}.currency`} render={({ field }) => (<FormItem className="col-span-1"><FormLabel className="text-[10px] uppercase font-bold">Cur</FormLabel><Select onValueChange={field.onChange} value={field.value || "USD"}><FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="USD">$</SelectItem><SelectItem value="EUR">€</SelectItem><SelectItem value="GBP">£</SelectItem><SelectItem value="INR">₹</SelectItem></SelectContent></Select></FormItem>)} /><FormField control={form.control} name={`meetingsSecured.${index}.quotationValue`} render={({ field }) => (<FormItem className="col-span-2"><FormLabel className="text-[10px] uppercase font-bold">Quotation / Deal Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl" /></FormControl></FormItem>)} /></div></div><FormField control={form.control} name={`meetingsSecured.${index}.context`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Engagement Context</FormLabel><FormControl><Textarea {...field} className="min-h-[60px] rounded-xl" /></FormControl></FormItem>)} /></div>))}<Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12 bg-white/50 text-xs font-bold" onClick={() => appendMeeting({ clientName: "", currency: "USD", quotationValue: 0, context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed"><FormField control={form.control} name="clientWinHighlight" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Client Win / Today's Highlight</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /><FormField control={form.control} name="strategicLearning" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Strategic Tactical Learning</FormLabel><FormControl><Textarea {...field} className="min-h-[100px] rounded-xl" /></FormControl></FormItem>)} /></div><div className="pt-4 border-t border-dashed space-y-4"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Call Recording Drive Links:</p>{links.map((field, index) => (<div key={field.id} className="flex gap-2"><FormField control={form.control} name={`callRecordingLinks.${index}.value`} render={({ field }) => (
                             <FormItem className="flex-1"><FormControl><Input {...field} placeholder="https://drive.google.com/..." className="rounded-xl h-10 text-xs" /></FormControl><FormMessage /></FormItem>
                         )}/><Button type="button" variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-destructive" onClick={() => removeLink(index)}><Trash2 className="size-4" /></Button></div>))}<Button type="button" variant="outline" size="sm" onClick={() => appendLink({ value: "" })} className="w-full border-dashed rounded-xl h-10 text-[10px] font-black uppercase tracking-widest"><Plus className="size-3 mr-2" /> Add Drive Link</Button></div></CardContent></Card>
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><CalendarClock className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader><CardContent className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Meetings Booked for Tomorrow</FormLabel><FormControl><Input type="number" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">T+1 Critical Path Action</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} /></div><FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pending Deliverables / Follow-ups</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} /><FormField control={form.control} name="interventionTrigger" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold text-primary">Intervention Trigger Required?</FormLabel><Select onValueChange={field.onChange} value={field.value || "None"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="None">None (Standard)</SelectItem><SelectItem value="Coaching">Coaching Needed</SelectItem><SelectItem value="Technical Support">Technical Support Needed</SelectItem><SelectItem value="Client meeting">Client Meeting Support</SelectItem></SelectContent></Select></FormItem>)} />{intervention !== 'None' && <FormField control={form.control} name="interventionReason" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Reason for Support Trigger</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl bg-orange-50/30 border-orange-100" /></FormControl></FormItem>)} />}</CardContent></Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm"><CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><CalendarClock className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader><CardContent className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Meetings Booked for Tomorrow</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} /><FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">T+1 Critical Path Action</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} /></div><FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pending Deliverables / Follow-ups</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} /><FormField control={form.control} name="interventionTrigger" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold text-primary">Intervention Trigger Required?</FormLabel><Select onValueChange={field.onChange} value={field.value || "None"}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="None">None (Standard)</SelectItem><SelectItem value="Coaching">Coaching Needed</SelectItem><SelectItem value="Technical Support">Technical Support Needed</SelectItem><SelectItem value="Client meeting">Client Meeting Support</SelectItem></SelectContent></Select></FormItem>)} />{intervention !== 'None' && <FormField control={form.control} name="interventionReason" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Reason for Support Trigger</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl bg-orange-50/30 border-orange-100" /></FormControl></FormItem>)} />}</CardContent></Card>
         </div>
     );
   };

@@ -129,7 +129,7 @@ export function AttendanceWidget() {
         setNewLunchStart(officeLocation.lunchBreakStartTime || "13:30");
         setNewLunchDuration((officeLocation.lunchBreakDurationMinutes || 60).toString());
     }
-  }, [officeLocation])
+  }, [officeLocation]);
 
   const getTodaysAttendanceRef = useMemoFirebase(() => {
       if (!user) return null;
