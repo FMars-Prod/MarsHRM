@@ -386,7 +386,6 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isVerifyingLocation, setIsVerifyingLocation] = React.useState(false);
-  const [isTestMode, setIsTestMode] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
@@ -473,9 +472,9 @@ export default function ReportsPage() {
     return { 
         isDeadlinePassed, 
         hasSubmittedToday, 
-        canSubmit: !hasSubmittedToday && (!isDeadlinePassed || isTestMode)
+        canSubmit: !hasSubmittedToday && !isDeadlinePassed
     };
-  }, [reports, isTestMode]);
+  }, [reports]);
 
   const handleDeleteReport = async (report: any) => {
     if (!isAdmin || !reportUserId) return;
@@ -724,11 +723,6 @@ export default function ReportsPage() {
                     <p className="text-sm">The 6:30 PM IST submission deadline has passed. You can no longer submit a report for today.</p>
                 </div>
             </div>
-            {!isTestMode && (
-                <Button variant="outline" size="sm" className="bg-white/50 border-red-200 text-red-700 hover:bg-red-100" onClick={() => setIsTestMode(true)}>
-                    Enable Test Mode
-                </Button>
-            )}
         </div>
       )}
       
