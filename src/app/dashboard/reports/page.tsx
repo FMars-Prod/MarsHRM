@@ -27,15 +27,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker } from "lucide-react";
+import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker, Mic, Play, Pause, Loader2, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, setDocumentNonBlocking, useDoc } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, setDocumentNonBlocking, useDoc, useStorage } from "@/firebase";
 import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { useForm, useWatch, useFieldArray } from "react-hook-form";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -77,48 +78,66 @@ const ReportDetailItem = ({ label, value, children, className }: { label: string
 // --- High Fidelity Template Renderers ---
 
 const BusinessReportDetails = ({ report }: { report: any }) => {
-    const cold = Number(report.outreachColdCalls || 0);
-    const linkedin = Number(report.outreachLinkedIn || 0);
-    const email = Number(report.outreachEmails || 0);
-    const totalOutreach = Math.max(0, cold + linkedin + email);
-    const potential = Number(report.potentialClientsSecured || 0);
-    const displayRate = (totalOutreach > 0) ? (potential / totalOutreach) * 100 : 0;
-    const rateColor = displayRate < 5 ? 'text-red-600' : displayRate < 15 ? 'text-orange-600' : 'text-green-600';
     const mainSym = getCurrencySymbol(report.currency || 'USD');
 
     return (
         <div className="space-y-6">
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-3" /> Outreach & Conversion</CardTitle></CardHeader>
-                <CardContent className="space-y-6 pt-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-white/50 rounded-xl border border-border/50 shadow-inner">
-                        <ReportDetailItem label="Total Outreach" value={totalOutreach} />
-                        <ReportDetailItem label="Efficiency" value={`${displayRate.toFixed(2)}%`} className={rateColor} />
-                        <ReportDetailItem label="New Leads" value={report.newLeadsGenerated || 0} />
-                        <ReportDetailItem label="Follow-ups" value={report.followUpCount || 0} />
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-3" /> 1️⃣ Outreach Analytics</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6">
+                    <ReportDetailItem label="Total Outreach" value={report.outreachTotal || 0} />
+                    <ReportDetailItem label="Potential Clients" value={report.potentialClients || 0} />
+                    <ReportDetailItem label="Efficiency" value={`${report.outreachTotal > 0 ? ((report.potentialClients / report.outreachTotal) * 100).toFixed(2) : 0}%`} />
+                    <ReportDetailItem label="Follow-ups" value={report.followUpsCompleted || "0"} />
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-3" /> 2️⃣ Financial Impact</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 gap-6 pt-6">
+                    <ReportDetailItem label="Pipeline Value" value={`${mainSym}${report.pipelineValue?.toLocaleString() ?? 0}`} />
+                    <ReportDetailItem label="Currency" value={report.currency} />
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Briefcase className="size-3" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                    <ReportDetailItem label="Meetings Secured" value={report.meetingsSecured} />
+                    <ReportDetailItem label="Client Win Highlight" value={report.clientWinHighlight} />
+                    <ReportDetailItem label="Strategic Tactical Learning" value={report.strategicLearning} />
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Mic className="size-3" /> 4️⃣ Recording Audit</CardTitle></CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Best Call Recording</p>
+                            {report.bestCallRecording ? (
+                                <audio controls className="w-full h-8" src={report.bestCallRecording} />
+                            ) : <span className="text-xs text-muted-foreground italic">No recording uploaded</span>}
+                        </div>
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Worst Call Recording</p>
+                            {report.worstCallRecording ? (
+                                <audio controls className="w-full h-8" src={report.worstCallRecording} />
+                            ) : <span className="text-xs text-muted-foreground italic">No recording uploaded</span>}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">Revenue Impact</CardTitle></CardHeader>
-                <CardContent className="pt-4">
-                    <div className="border rounded-xl overflow-hidden bg-white/50">
-                        <Table>
-                            <TableBody>
-                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">Collected Revenue</TableCell><TableCell className="py-2 text-sm font-bold text-right">{mainSym}{report.netRevenueCollected?.toLocaleString() ?? 0}</TableCell></TableRow>
-                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">Committed Revenue</TableCell><TableCell className="py-2 text-sm font-bold text-right">{mainSym}{report.committedNetRevenue?.toLocaleString() ?? 0}</TableCell></TableRow>
-                                <TableRow className="border-none bg-red-50/30"><TableCell className="py-2 text-sm font-semibold">Variance</TableCell><TableCell className="py-2 text-sm font-bold text-right text-red-600">-{mainSym}{report.revenueVariance?.toLocaleString() ?? 0}</TableCell></TableRow>
-                            </TableBody>
-                        </Table>
-                    </div>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">5️⃣ T+1 Execution Planning</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                    <ReportDetailItem label="Meetings Booked (Tomorrow)" value={report.meetingsBookedTomorrow} />
+                    <ReportDetailItem label="Critical Path" value={report.criticalPathTomorrow} />
+                    <ReportDetailItem label="Pending Deliverables" value={report.pendingDeliverables} />
+                    <ReportDetailItem label="Intervention Trigger" value={report.interventionTrigger} className={report.interventionTrigger !== 'None (Standard)' ? 'text-red-600' : ''} />
                 </CardContent>
             </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-none ring-1 ring-border/50 bg-white/50"><CardHeader className="py-3"><CardTitle className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Client Highlights</CardTitle></CardHeader><CardContent className="space-y-4"><ReportDetailItem label="Today's Win" value={report.todayHighlight} /><ReportDetailItem label="Tactical Learning" value={report.tacticalLearning} /></CardContent></Card>
-                <Card className="border-none ring-1 ring-border/50 bg-white/50"><CardHeader className="py-3"><CardTitle className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">T+1 Execution</CardTitle></CardHeader><CardContent className="space-y-4"><ReportDetailItem label="Critical Path" value={report.tomorrowCriticalPath} /><ReportDetailItem label="Trigger" value={report.interventionTrigger} /></CardContent></Card>
-            </div>
         </div>
     );
 };
@@ -130,38 +149,16 @@ const DigitalMarketingReportDetails = ({ report }: { report: any }) => (
             <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-3" /> Marketing Pipeline Intelligence</CardTitle></CardHeader>
             <CardContent className="pt-4 space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Content</p>
-                        <div className="grid grid-cols-1 gap-1 text-center">
-                            <ReportDetailItem label="Approved" value={report.dmContentApproved || 0} />
-                            <ReportDetailItem label="Pending" value={report.dmContentPending || 0} />
-                            <ReportDetailItem label="Rejected" value={report.dmContentRejected || 0} />
+                    {['Content', 'Posts', 'Reels', 'Shoots'].map(group => (
+                        <div key={group} className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">{group}</p>
+                            <div className="grid grid-cols-1 gap-1 text-center">
+                                <ReportDetailItem label="Approved" value={report[`dm${group}Approved`] || 0} />
+                                <ReportDetailItem label="Pending" value={report[`dm${group}Pending`] || 0} />
+                                <ReportDetailItem label="Rejected" value={report[`dm${group}Rejected`] || 0} />
+                            </div>
                         </div>
-                    </div>
-                    <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Posts</p>
-                        <div className="grid grid-cols-1 gap-1 text-center">
-                            <ReportDetailItem label="Approved" value={report.dmPostApproved || 0} />
-                            <ReportDetailItem label="Pending" value={report.dmPostPending || 0} />
-                            <ReportDetailItem label="Rejected" value={report.dmPostRejected || 0} />
-                        </div>
-                    </div>
-                    <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Reels</p>
-                        <div className="grid grid-cols-1 gap-1 text-center">
-                            <ReportDetailItem label="Approved" value={report.dmReelsApproved || 0} />
-                            <ReportDetailItem label="Pending" value={report.dmReelsPending || 0} />
-                            <ReportDetailItem label="Rejected" value={report.dmReelsRejected || 0} />
-                        </div>
-                    </div>
-                    <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Shoots</p>
-                        <div className="grid grid-cols-1 gap-1 text-center">
-                            <ReportDetailItem label="Approved" value={report.dmShootsApproved || 0} />
-                            <ReportDetailItem label="Pending" value={report.dmShootsPending || 0} />
-                            <ReportDetailItem label="Rejected" value={report.dmShootsRejected || 0} />
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </CardContent>
         </Card>
@@ -214,25 +211,19 @@ const commonSchema = {
 
 const businessReportSchema = z.object({
   ...commonSchema,
+  outreachTotal: z.coerce.number().min(0).default(0),
+  potentialClients: z.coerce.number().min(0).default(0),
+  followUpsCompleted: z.string().default("0"),
   currency: z.enum(["USD", "EUR", "GBP", "INR", "AED"]).default("USD"),
-  outreachColdCalls: z.coerce.number().min(0).default(0),
-  outreachLinkedIn: z.coerce.number().min(0).default(0),
-  outreachEmails: z.coerce.number().min(0).default(0),
-  potentialClientsSecured: z.coerce.number().min(0).default(0),
-  newLeadsGenerated: z.coerce.number().min(0).default(0),
-  followUpCount: z.coerce.number().min(0).default(0),
-  netRevenueCollected: z.coerce.number().min(0).default(0),
-  committedNetRevenue: z.coerce.number().min(0).default(0),
-  pipelineBusinessValue: z.coerce.number().min(0).default(0),
-  revenueVariance: z.coerce.number().min(0).default(0),
-  quotationsReleased: z.coerce.number().min(0).default(0),
-  meetingsSecured: z.array(z.object({ clientName: z.string().optional(), context: z.string().optional() })).optional().default([]),
-  todayHighlight: z.string().optional(),
-  tacticalLearning: z.string().optional(),
-  recordingLinks: z.array(z.object({ url: z.string().url("Invalid link").or(z.literal("")) })).optional().default([]),
-  meetingsTomorrow: z.coerce.number().min(0).default(0),
-  tomorrowCriticalPath: z.string().optional(),
-  pendingDeliverables: z.string().optional(),
+  pipelineValue: z.coerce.number().min(0).default(0),
+  meetingsSecured: z.string().default(""),
+  clientWinHighlight: z.string().default(""),
+  strategicLearning: z.string().default(""),
+  bestCallRecording: z.string().optional(),
+  worstCallRecording: z.string().optional(),
+  meetingsBookedTomorrow: z.string().default("0"),
+  criticalPathTomorrow: z.string().default(""),
+  pendingDeliverables: z.string().default(""),
   interventionTrigger: z.enum(["None (Standard)", "Manager Input Required", "Resource Blocked", "Client Risk Detected"]).default("None (Standard)"),
 });
 
@@ -240,9 +231,9 @@ const digitalMarketingReportSchema = businessReportSchema.extend({
   dmContentApproved: z.coerce.number().min(0).default(0),
   dmContentPending: z.coerce.number().min(0).default(0),
   dmContentRejected: z.coerce.number().min(0).default(0),
-  dmPostApproved: z.coerce.number().min(0).default(0),
-  dmPostPending: z.coerce.number().min(0).default(0),
-  dmPostRejected: z.coerce.number().min(0).default(0),
+  dmPostsApproved: z.coerce.number().min(0).default(0),
+  dmPostsPending: z.coerce.number().min(0).default(0),
+  dmPostsRejected: z.coerce.number().min(0).default(0),
   dmReelsApproved: z.coerce.number().min(0).default(0),
   dmReelsPending: z.coerce.number().min(0).default(0),
   dmReelsRejected: z.coerce.number().min(0).default(0),
@@ -263,12 +254,14 @@ export default function ReportsPage() {
   const auth = useAuth();
   const router = useRouter();
   const firestore = useFirestore();
+  const storage = useStorage();
   const { toast } = useToast();
   
   const [selectedUser, setSelectedUser] = React.useState<any | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isVerifyingLocation, setIsVerifyingLocation] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState<string | null>(null);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
@@ -325,16 +318,17 @@ export default function ReportsPage() {
       } else if (currentTemplateId === 'Digital Marketing' || currentTemplateId === 'Business') {
           form.reset({
               ...baseValues,
-              currency: "USD", outreachColdCalls: 0, outreachLinkedIn: 0, outreachEmails: 0, potentialClientsSecured: 0, newLeadsGenerated: 0, followUpCount: 0,
-              netRevenueCollected: 0, committedNetRevenue: 0, pipelineBusinessValue: 0, revenueVariance: 0, quotationsReleased: 0, meetingsSecured: [],
-              todayHighlight: "", tacticalLearning: "", recordingLinks: [], meetingsTomorrow: 0, tomorrowCriticalPath: "", pendingDeliverables: "", interventionTrigger: "None (Standard)",
+              currency: "USD", outreachTotal: 0, potentialClients: 0, followUpsCompleted: "0", pipelineValue: 0,
+              meetingsSecured: "", clientWinHighlight: "", strategicLearning: "", bestCallRecording: "", worstCallRecording: "",
+              meetingsBookedTomorrow: "0", criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None (Standard)",
               ...(currentTemplateId === 'Digital Marketing' ? {
-                  dmContentApproved: 0, dmContentPending: 0, dmContentRejected: 0, dmPostApproved: 0, dmPostPending: 0, dmPostRejected: 0,
-                  dmReelsApproved: 0, dmReelsPending: 0, dmReelsRejected: 0, dmShootsApproved: 0, dmShootsPending: 0, dmShootsRejected: 0
+                  dmContentApproved: 0, dmContentPending: 0, dmContentRejected: 0,
+                  dmPostsApproved: 0, dmPostsPending: 0, dmPostsRejected: 0,
+                  dmReelsApproved: 0, dmReelsPending: 0, dmReelsRejected: 0,
+                  dmShootsApproved: 0, dmShootsPending: 0, dmShootsRejected: 0
               } : {})
           });
       } else {
-          // Dynamic fields for custom templates
           const customValues: any = { ...baseValues };
           if (customTemplateData?.definition?.sections) {
               customTemplateData.definition.sections.forEach((s: any) => {
@@ -352,6 +346,22 @@ export default function ReportsPage() {
     const hasSubmittedToday = reports?.some(r => isSameDay(r.date.toDate(), now)) || false;
     return { hasSubmittedToday, canSubmit: !hasSubmittedToday };
   }, [reports]);
+
+  const handleFileUpload = async (fieldName: string, file: File) => {
+    if (!user) return;
+    setIsUploading(fieldName);
+    try {
+        const fileRef = ref(storage, `reports/${user.uid}/${Date.now()}-${file.name}`);
+        const snapshot = await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(snapshot.ref);
+        form.setValue(fieldName, url);
+        toast({ title: "Upload Success", description: "Audio file attached to report." });
+    } catch (err: any) {
+        toast({ variant: 'destructive', title: "Upload Failed", description: err.message });
+    } finally {
+        setIsUploading(null);
+    }
+  };
 
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
@@ -378,97 +388,94 @@ export default function ReportsPage() {
     );
   };
 
-  // --- Dynamic UI Sub-components ---
-
   const BusinessFields = () => {
-    const { fields: meetings, append: appendMeeting, remove: removeMeeting } = useFieldArray({ control: form.control, name: "meetingsSecured" });
-    const cold = Number(useWatch({ control: form.control, name: "outreachColdCalls" }) || 0);
-    const linkedin = Number(useWatch({ control: form.control, name: "outreachLinkedIn" }) || 0);
-    const email = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
-    const total = cold + linkedin + email;
-    const secured = Number(useWatch({ control: form.control, name: "potentialClientsSecured" }) || 0);
+    const total = Number(useWatch({ control: form.control, name: "outreachTotal" }) || 0);
+    const secured = Number(useWatch({ control: form.control, name: "potentialClients" }) || 0);
     const efficiency = total > 0 ? (secured / total) * 100 : 0;
 
     return (
         <div className="space-y-8">
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach Analytics</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/20 rounded-2xl border border-border/50">
-                        <FormField control={form.control} name="outreachColdCalls" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="outreachLinkedIn" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="outreachEmails" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Emails</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FormField control={form.control} name="outreachTotal" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Outreach Total Volume</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Potential Clients Secured</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="followUpsCompleted" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Follow Ups Completed</FormLabel><FormControl><Input {...field} className="rounded-full" /></FormControl></FormItem>)} />
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
-                        <div className="space-y-1"><Label className="text-[10px] uppercase font-black text-muted-foreground">Total Volume</Label><p className="text-xl font-black text-primary">{total}</p></div>
-                        <FormField control={form.control} name="potentialClientsSecured" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Potential Secured</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)} />
-                        <div className="space-y-1"><Label className="text-[10px] uppercase font-black text-muted-foreground">Efficiency</Label><p className="text-xl font-black text-green-600">{efficiency.toFixed(2)}%</p></div>
-                        <FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">New Leads</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)} />
+                    <div className="flex justify-center p-3 bg-primary/5 rounded-xl border border-primary/20">
+                        <p className="text-xs font-black text-primary uppercase tracking-widest">Efficiency: {efficiency.toFixed(2)}%</p>
                     </div>
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 2️⃣ Financials & Engagements</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
-                    <FormField control={form.control} name="currency" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs uppercase font-bold">Report Currency</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent><SelectItem value="INR">INR (₹)</SelectItem><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="AED">AED (د.إ)</SelectItem></SelectContent></Select></FormItem>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField control={form.control} name="currency" render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Currency</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent><SelectItem value="INR">INR (₹)</SelectItem><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="AED">AED (د.إ)</SelectItem></SelectContent></Select></FormItem>
+                        )} />
+                        <FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Pipeline Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                    </div>
+                    <FormField control={form.control} name="meetingsSecured" render={({ field }) => (
+                      <FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Secured Today</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" placeholder="List clients and status..." /></FormControl></FormItem>
                     )} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">NET Revenue Collected</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="committedNetRevenue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Committed NET Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Briefcase className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Meetings/Demos Secured</Label>
-                        {meetings.map((f, i) => (
-                          <div key={f.id} className="p-4 border rounded-2xl space-y-3 relative bg-white/50">
-                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-red-500" onClick={() => removeMeeting(i)}>
-                              <X className="size-3" />
-                            </Button>
-                            <FormField control={form.control} name={`meetingsSecured.${i}.clientName`} render={({ field }) => (
-                              <FormItem><FormControl><Input placeholder="Client Name" {...field} /></FormControl></FormItem>
-                            )} />
-                            <FormField control={form.control} name={`meetingsSecured.${i}.context`} render={({ field }) => (
-                              <FormItem><FormControl><Textarea placeholder="Context / Objective" {...field} className="min-h-[60px]" /></FormControl></FormItem>
-                            )} />
-                          </div>
-                        ))}
-                        <Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12" onClick={() => appendMeeting({ clientName: "", context: "" })}>
-                          <Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD
-                        </Button>
-                    </div>
-                    <FormField control={form.control} name="todayHighlight" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs uppercase font-bold">Today's Highlight Win</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>
+                    <FormField control={form.control} name="clientWinHighlight" render={({ field }) => (
+                      <FormItem><FormLabel className="text-[10px] uppercase font-bold">Client Win Highlight</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>
+                    )} />
+                    <FormField control={form.control} name="strategicLearning" render={({ field }) => (
+                      <FormItem><FormLabel className="text-[10px] uppercase font-bold">Strategic Tactical Learning</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>
                     )} />
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><MapPin className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Mic className="size-4" /> 3️⃣ Call Recordings Upload</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    <div className="space-y-3">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Best Call of the Day</Label>
+                        <div className="flex items-center gap-3">
+                            <Input type="file" accept="audio/*" onChange={(e) => e.target.files?.[0] && handleFileUpload('bestCallRecording', e.target.files[0])} className="text-xs h-9 bg-white" disabled={isUploading === 'bestCallRecording'} />
+                            {isUploading === 'bestCallRecording' && <Loader2 className="size-4 animate-spin text-primary" />}
+                            {form.getValues('bestCallRecording') && <CheckCircle2 className="size-4 text-green-600" />}
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Worst Call of the Day</Label>
+                        <div className="flex items-center gap-3">
+                            <Input type="file" accept="audio/*" onChange={(e) => e.target.files?.[0] && handleFileUpload('worstCallRecording', e.target.files[0])} className="text-xs h-9 bg-white" disabled={isUploading === 'worstCallRecording'} />
+                            {isUploading === 'worstCallRecording' && <Loader2 className="size-4 animate-spin text-primary" />}
+                            {form.getValues('worstCallRecording') && <CheckCircle2 className="size-4 text-green-600" />}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
+                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><MapPin className="size-4" /> 4️⃣ Forward Execution Planning</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
-                    <FormField control={form.control} name="tomorrowCriticalPath" render={({ field }) => (
-                      <FormItem><FormLabel className="text-xs uppercase font-bold">T+1 Critical Path Action</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel><FormControl><Input {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Intervention Trigger</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="None (Standard)">None (Standard)</SelectItem>
+                                <SelectItem value="Manager Input Required">Manager Input Required</SelectItem>
+                                <SelectItem value="Resource Blocked">Resource Blocked</SelectItem>
+                                <SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem>
+                            </SelectContent></Select></FormItem>
+                        )} />
+                    </div>
+                    <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (
+                      <FormItem><FormLabel className="text-[10px] uppercase font-bold">Critical Path Action (Tomorrow)</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>
                     )} />
-                    <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs uppercase font-bold">Intervention Trigger Required?</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="None (Standard)">None (Standard)</SelectItem>
-                            <SelectItem value="Manager Input Required">Manager Input Required</SelectItem>
-                            <SelectItem value="Resource Blocked">Resource Blocked</SelectItem>
-                            <SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        </FormItem>
+                    <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (
+                      <FormItem><FormLabel className="text-[10px] uppercase font-bold">Pending Deliverables / Follow-ups</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>
                     )} />
                 </CardContent>
             </Card>
@@ -480,20 +487,15 @@ export default function ReportsPage() {
     <div className="space-y-8">
         <BusinessFields />
         <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm">
-            <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> Content & Production Audit</CardTitle></CardHeader>
-            <CardContent className="space-y-8">
+            <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> Marketing Pipeline Intelligence</CardTitle></CardHeader>
+            <CardContent className="pt-4 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {[
-                        { name: "Content", prefix: "dmContent" },
-                        { name: "Posts", prefix: "dmPost" },
-                        { name: "Reels", prefix: "dmReels" },
-                        { name: "Shoots", prefix: "dmShoots" }
-                    ].map(group => (
-                        <div key={group.name} className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
-                            <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><LayoutTemplate className="size-3"/> {group.name} Status</Label>
+                    {['Content', 'Posts', 'Reels', 'Shoots'].map(group => (
+                        <div key={group} className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
+                            <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><LayoutTemplate className="size-3"/> {group} Status</Label>
                             <div className="grid grid-cols-3 gap-2">
                                 {['Approved', 'Pending', 'Rejected'].map(status => (
-                                    <FormField key={status} control={form.control} name={`${group.prefix}${status}`} render={({ field }) => (
+                                    <FormField key={status} control={form.control} name={`dm${group}${status}`} render={({ field }) => (
                                         <FormItem><FormLabel className={cn("text-[9px] uppercase font-bold text-center", status === 'Approved' ? 'text-green-600' : status === 'Pending' ? 'text-yellow-600' : 'text-red-600')}>{status}</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>
                                     )} />
                                 ))}
@@ -507,7 +509,6 @@ export default function ReportsPage() {
   );
 
   const TechnicalFields = () => {
-    const { fields: modules, append: appendModule, remove: removeModule } = useFieldArray({ control: form.control, name: "completedTasks" });
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-2 gap-6">
@@ -520,16 +521,22 @@ export default function ReportsPage() {
             </div>
             <div className="space-y-4">
                 <p className="font-black text-[10px] text-primary uppercase tracking-[0.2em] flex items-center gap-2"><Brain className="size-4" /> Completed Modules:</p>
-                {modules.map((f, i) => (
-                    <Card key={f.id} className="relative group bg-white/50 border rounded-2xl overflow-hidden">
+                {form.getValues('completedTasks')?.map((_: any, i: number) => (
+                    <Card key={i} className="relative group bg-white/50 border rounded-2xl overflow-hidden">
                         <CardContent className="pt-6 space-y-4">
-                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full h-8 w-8 text-red-600 opacity-0 group-hover:opacity-100" onClick={() => removeModule(i)}><X className="size-4" /></Button>
+                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full h-8 w-8 text-red-600" onClick={() => {
+                                const current = form.getValues('completedTasks');
+                                form.setValue('completedTasks', current.filter((_:any, idx:number) => idx !== i));
+                            }}><X className="size-4" /></Button>
                             <FormField control={form.control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Module Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                             <FormField control={form.control} name={`completedTasks.${i}.workDone`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Functionality</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} />
                         </CardContent>
                     </Card>
                 ))}
-                <Button type="button" variant="outline" onClick={() => appendModule({ moduleName: "", workDone: "" })} className="w-full border-dashed rounded-2xl h-14 bg-white/50 text-xs font-black uppercase"><Plus className="size-4 mr-2" /> Add Module</Button>
+                <Button type="button" variant="outline" onClick={() => {
+                    const current = form.getValues('completedTasks') || [];
+                    form.setValue('completedTasks', [...current, { moduleName: "", workDone: "" }]);
+                }} className="w-full border-dashed rounded-2xl h-14 bg-white/50 text-xs font-black uppercase"><Plus className="size-4 mr-2" /> Add Module</Button>
             </div>
         </div>
     );
@@ -653,7 +660,7 @@ export default function ReportsPage() {
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-8">
                             <div className="space-y-6">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Template Metrics</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Tactical Analytics Template</Label>
                                 {currentTemplateId === 'Technical' ? <TechnicalFields /> : 
                                  currentTemplateId === 'Digital Marketing' ? <DigitalMarketingFields /> : 
                                  currentTemplateId === 'Business' ? <BusinessFields /> : 
@@ -668,7 +675,7 @@ export default function ReportsPage() {
                                 <FormField control={form.control} name="declaration" render={({ field }) => (
                                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20 shadow-sm">
                                         <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl>
-                                        <div className="space-y-1 leading-none"><FormLabel className="text-sm font-bold cursor-pointer">I certify that this strategic shift log is accurate and localized.</FormLabel></div>
+                                        <div className="space-y-1 leading-none"><FormLabel className="text-sm font-bold cursor-pointer">I certify that all provided information is accurate and complete.</FormLabel></div>
                                     </FormItem>
                                 )} />
                             </div>
@@ -677,7 +684,7 @@ export default function ReportsPage() {
                     <div className="p-6 border-t bg-white/80 backdrop-blur-md">
                         <DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col">
                             <Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button>
-                            <Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">Finalize Log & Logout</Button>
+                            <Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20" disabled={isUploading !== null}>Finalize Log & Logout</Button>
                         </DialogFooter>
                     </div>
                 </form>
