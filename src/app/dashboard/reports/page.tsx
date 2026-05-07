@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera } from "lucide-react";
+import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera, Link as LinkIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -79,8 +79,7 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
     const linkedin = Number(report.outreachLinkedIn || 0);
     const email = Number(report.outreachEmails || 0);
     const totalOutreach = Math.max(0, cold + linkedin + email);
-    const potential = Number(report.potentialClients || 0);
-    
+    const potential = Number(report.potentialClientsSecured || 0);
     const displayRate = (totalOutreach > 0) ? (potential / totalOutreach) * 100 : 0;
     const rateColor = displayRate < 5 ? 'text-red-600' : displayRate < 15 ? 'text-orange-600' : 'text-green-600';
     const mainSym = getCurrencySymbol(report.currency || 'USD');
@@ -92,9 +91,9 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                 <CardContent className="space-y-6 pt-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-white/50 rounded-xl border border-border/50 shadow-inner">
                         <ReportDetailItem label="Total Outreach" value={totalOutreach} />
+                        <ReportDetailItem label="Efficiency" value={`${displayRate.toFixed(2)}%`} className={rateColor} />
                         <ReportDetailItem label="New Leads" value={report.newLeadsGenerated || 0} />
-                        <ReportDetailItem label="Pipeline Value" value={`${mainSym}${report.pipelineValue?.toLocaleString() ?? 0}`} />
-                        <ReportDetailItem label="Conv. Rate" value={`${displayRate.toFixed(2)}%`} className={rateColor} />
+                        <ReportDetailItem label="Follow-ups" value={report.followUpCount || 0} />
                     </div>
                 </CardContent>
             </Card>
@@ -106,12 +105,18 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                         <Table>
                             <TableBody>
                                 <TableRow className="border-border/50"><TableCell className="py-2 text-sm">Collected Revenue</TableCell><TableCell className="py-2 text-sm font-bold text-right">{mainSym}{report.netRevenueCollected?.toLocaleString() ?? 0}</TableCell></TableRow>
+                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">Committed Revenue</TableCell><TableCell className="py-2 text-sm font-bold text-right">{mainSym}{report.committedNetRevenue?.toLocaleString() ?? 0}</TableCell></TableRow>
                                 <TableRow className="border-none bg-red-50/30"><TableCell className="py-2 text-sm font-semibold">Variance</TableCell><TableCell className="py-2 text-sm font-bold text-right text-red-600">-{mainSym}{report.revenueVariance?.toLocaleString() ?? 0}</TableCell></TableRow>
                             </TableBody>
                         </Table>
                     </div>
                 </CardContent>
             </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="border-none ring-1 ring-border/50 bg-white/50"><CardHeader className="py-3"><CardTitle className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Client Highlights</CardTitle></CardHeader><CardContent className="space-y-4"><ReportDetailItem label="Today's Win" value={report.todayHighlight} /><ReportDetailItem label="Tactical Learning" value={report.tacticalLearning} /></CardContent></Card>
+                <Card className="border-none ring-1 ring-border/50 bg-white/50"><CardHeader className="py-3"><CardTitle className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">T+1 Execution</CardTitle></CardHeader><CardContent className="space-y-4"><ReportDetailItem label="Critical Path" value={report.tomorrowCriticalPath} /><ReportDetailItem label="Trigger" value={report.interventionTrigger} /></CardContent></Card>
+            </div>
         </div>
     );
 };
@@ -120,39 +125,39 @@ const DigitalMarketingReportDetails = ({ report }: { report: any }) => (
     <div className="space-y-6">
         <BusinessReportDetails report={report} />
         <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
-            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-3" /> Content & Production Pipeline</CardTitle></CardHeader>
+            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-3" /> Marketing Pipeline Intelligence</CardTitle></CardHeader>
             <CardContent className="pt-4 space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
                         <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Content</p>
                         <div className="grid grid-cols-1 gap-1 text-center">
-                            <ReportDetailItem label="Appr" value={report.dmContentApproved || 0} />
-                            <ReportDetailItem label="Pend" value={report.dmContentPending || 0} />
-                            <ReportDetailItem label="Rej" value={report.dmContentRejected || 0} />
+                            <ReportDetailItem label="Approved" value={report.dmContentApproved || 0} />
+                            <ReportDetailItem label="Pending" value={report.dmContentPending || 0} />
+                            <ReportDetailItem label="Rejected" value={report.dmContentRejected || 0} />
                         </div>
                     </div>
                     <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
                         <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Posts</p>
                         <div className="grid grid-cols-1 gap-1 text-center">
-                            <ReportDetailItem label="Appr" value={report.dmPostApproved || 0} />
-                            <ReportDetailItem label="Pend" value={report.dmPostPending || 0} />
-                            <ReportDetailItem label="Rej" value={report.dmPostRejected || 0} />
+                            <ReportDetailItem label="Approved" value={report.dmPostApproved || 0} />
+                            <ReportDetailItem label="Pending" value={report.dmPostPending || 0} />
+                            <ReportDetailItem label="Rejected" value={report.dmPostRejected || 0} />
                         </div>
                     </div>
                     <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
                         <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Reels</p>
                         <div className="grid grid-cols-1 gap-1 text-center">
-                            <ReportDetailItem label="Appr" value={report.dmReelsApproved || 0} />
-                            <ReportDetailItem label="Pend" value={report.dmReelsPending || 0} />
-                            <ReportDetailItem label="Rej" value={report.dmReelsRejected || 0} />
+                            <ReportDetailItem label="Approved" value={report.dmReelsApproved || 0} />
+                            <ReportDetailItem label="Pending" value={report.dmReelsPending || 0} />
+                            <ReportDetailItem label="Rejected" value={report.dmReelsRejected || 0} />
                         </div>
                     </div>
                     <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
                         <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Shoots</p>
                         <div className="grid grid-cols-1 gap-1 text-center">
-                            <ReportDetailItem label="Appr" value={report.dmShootsApproved || 0} />
-                            <ReportDetailItem label="Pend" value={report.dmShootsPending || 0} />
-                            <ReportDetailItem label="Rej" value={report.dmShootsRejected || 0} />
+                            <ReportDetailItem label="Approved" value={report.dmShootsApproved || 0} />
+                            <ReportDetailItem label="Pending" value={report.dmShootsPending || 0} />
+                            <ReportDetailItem label="Rejected" value={report.dmShootsRejected || 0} />
                         </div>
                     </div>
                 </div>
@@ -195,18 +200,22 @@ const businessReportSchema = z.object({
   outreachColdCalls: z.coerce.number().min(0).default(0),
   outreachLinkedIn: z.coerce.number().min(0).default(0),
   outreachEmails: z.coerce.number().min(0).default(0),
+  potentialClientsSecured: z.coerce.number().min(0).default(0),
   newLeadsGenerated: z.coerce.number().min(0).default(0),
-  potentialClients: z.coerce.number().min(0).default(0),
   followUpCount: z.coerce.number().min(0).default(0),
   netRevenueCollected: z.coerce.number().min(0).default(0),
   committedNetRevenue: z.coerce.number().min(0).default(0),
-  pipelineValue: z.coerce.number().min(0).default(0),
+  pipelineBusinessValue: z.coerce.number().min(0).default(0),
   revenueVariance: z.coerce.number().min(0).default(0),
-  meetingsSecured: z.array(z.object({ 
-    clientName: z.string().optional(), 
-    quotationValue: z.coerce.number().min(0).default(0),
-    context: z.string().optional()
-  })).optional().default([]),
+  quotationsReleased: z.coerce.number().min(0).default(0),
+  meetingsSecured: z.array(z.object({ clientName: z.string().optional(), context: z.string().optional() })).optional().default([]),
+  todayHighlight: z.string().optional(),
+  tacticalLearning: z.string().optional(),
+  recordingLinks: z.array(z.object({ url: z.string().url("Invalid link").or(z.literal("")) })).optional().default([]),
+  meetingsTomorrow: z.coerce.number().min(0).default(0),
+  tomorrowCriticalPath: z.string().optional(),
+  pendingDeliverables: z.string().optional(),
+  interventionTrigger: z.enum(["None (Standard)", "Manager Input Required", "Resource Blocked", "Client Risk Detected"]).default("None (Standard)"),
 });
 
 const digitalMarketingReportSchema = businessReportSchema.extend({
@@ -228,10 +237,7 @@ const technicalReportSchema = z.object({
   ...commonSchema,
   logInTime: z.string().min(1, "Required"),
   logOutTime: z.string().min(1, "Required"),
-  completedTasks: z.array(z.object({ 
-    moduleName: z.string().min(1, "Required"), 
-    workDone: z.string().min(1, "Required") 
-  })).optional().default([]),
+  completedTasks: z.array(z.object({ moduleName: z.string().min(1, "Required"), workDone: z.string().min(1, "Required") })).optional().default([]),
 });
 
 export default function ReportsPage() {
@@ -300,8 +306,9 @@ export default function ReportsPage() {
             logInTime: todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'HH:mm') : "09:30",
             logOutTime: format(now, 'HH:mm'),
         } : {
-            currency: "USD", outreachColdCalls: 0, outreachLinkedIn: 0, outreachEmails: 0, newLeadsGenerated: 0, potentialClients: 0, followUpCount: 0,
-            netRevenueCollected: 0, committedNetRevenue: 0, pipelineValue: 0, revenueVariance: 0, meetingsSecured: [],
+            currency: "USD", outreachColdCalls: 0, outreachLinkedIn: 0, outreachEmails: 0, potentialClientsSecured: 0, newLeadsGenerated: 0, followUpCount: 0,
+            netRevenueCollected: 0, committedNetRevenue: 0, pipelineBusinessValue: 0, revenueVariance: 0, quotationsReleased: 0, meetingsSecured: [],
+            todayHighlight: "", tacticalLearning: "", recordingLinks: [], meetingsTomorrow: 0, tomorrowCriticalPath: "", pendingDeliverables: "", interventionTrigger: "None (Standard)",
             ...(currentReportType === 'Digital Marketing' ? {
                 dmContentApproved: 0, dmContentPending: 0, dmContentRejected: 0, dmPostApproved: 0, dmPostPending: 0, dmPostRejected: 0,
                 dmReelsApproved: 0, dmReelsPending: 0, dmReelsRejected: 0, dmShootsApproved: 0, dmShootsPending: 0, dmShootsRejected: 0
@@ -345,15 +352,19 @@ export default function ReportsPage() {
 
   const BusinessFields = () => {
     const { fields: meetings, append: appendMeeting, remove: removeMeeting } = useFieldArray({ control: form.control, name: "meetingsSecured" });
+    const { fields: links, append: appendLink, remove: removeLink } = useFieldArray({ control: form.control, name: "recordingLinks" });
+    
     const cold = Number(useWatch({ control: form.control, name: "outreachColdCalls" }) || 0);
     const linkedin = Number(useWatch({ control: form.control, name: "outreachLinkedIn" }) || 0);
     const email = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
     const total = cold + linkedin + email;
+    const secured = Number(useWatch({ control: form.control, name: "potentialClientsSecured" }) || 0);
+    const efficiency = total > 0 ? (secured / total) * 100 : 0;
 
     return (
         <div className="space-y-8">
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach & Pipeline</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-muted/20 rounded-2xl border border-border/50">
                         <FormField control={form.control} name="outreachColdCalls" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
@@ -361,25 +372,56 @@ export default function ReportsPage() {
                         <FormField control={form.control} name="outreachEmails" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Emails</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
-                        <div className="space-y-1"><Label className="text-[10px] uppercase font-black text-muted-foreground">Total Outreach</Label><p className="text-xl font-black text-primary">{total}</p></div>
-                        <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Potential Clients</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)} />
+                        <div className="space-y-1"><Label className="text-[10px] uppercase font-black text-muted-foreground">Total Volume</Label><p className="text-xl font-black text-primary">{total}</p></div>
+                        <FormField control={form.control} name="potentialClientsSecured" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Potential Secured</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)} />
+                        <div className="space-y-1"><Label className="text-[10px] uppercase font-black text-muted-foreground">Efficiency</Label><p className="text-xl font-black text-green-600">{efficiency.toFixed(2)}%</p></div>
                         <FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">New Leads</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)} />
                     </div>
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 2️⃣ Financial Tracking</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
                     <FormField control={form.control} name="currency" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs uppercase font-bold">Currency</FormLabel>
+                        <FormItem><FormLabel className="text-xs uppercase font-bold">Report Currency</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent><SelectItem value="INR">INR (₹)</SelectItem><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="AED">AED (د.إ)</SelectItem></SelectContent></Select></FormItem>
                     )} />
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Revenue Collected</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pipeline Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="netRevenueCollected" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">NET Revenue Collected</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="committedNetRevenue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Committed NET Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="pipelineBusinessValue" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pipeline Business Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Revenue Variance</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full text-red-600" /></FormControl></FormItem>)} />
                     </div>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
+                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Briefcase className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
+                <CardContent className="space-y-6">
+                    <FormField control={form.control} name="quotationsReleased" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Quotations Released</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                    <div className="space-y-4">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Meetings/Demos Secured</Label>
+                        {meetings.map((f, i) => (<div key={f.id} className="p-4 border rounded-2xl space-y-3 relative bg-white/50"><Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-red-500" onClick={() => removeMeeting(i)}><X className="size-3" /></Button><FormField control={form.control} name={`meetingsSecured.${i}.clientName`} render={({ field }) => (<FormItem><FormControl><Input placeholder="Client Name" {...field} /></FormControl></FormItem>)} /><FormField control={form.control} name={`meetingsSecured.${i}.context`} render={({ field }) => (<FormItem><FormControl><Textarea placeholder="Context / Objective" {...field} className="min-h-[60px]" /></FormControl></FormItem>)} /></div>))}
+                        <Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12" onClick={() => appendMeeting({ clientName: "", context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button>
+                    </div>
+                    <FormField control={form.control} name="todayHighlight" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Today's Highlight Win</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="tacticalLearning" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Strategic Tactical Learning</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>)} />
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
+                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><MapPin className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader>
+                <CardContent className="space-y-6">
+                    <FormField control={form.control} name="meetingsTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Meetings Booked for Tomorrow</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="tomorrowCriticalPath" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">T+1 Critical Path Action</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Pending Deliverables / Follow-ups</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs uppercase font-bold">Intervention Trigger Required?</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent><SelectItem value="None (Standard)">None (Standard)</SelectItem><SelectItem value="Manager Input Required">Manager Input Required</SelectItem><SelectItem value="Resource Blocked">Resource Blocked</SelectItem><SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem></SelectContent></Select></FormItem>
+                    )} />
                 </CardContent>
             </Card>
         </div>
@@ -390,39 +432,39 @@ export default function ReportsPage() {
     <div className="space-y-8">
         <BusinessFields />
         <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm">
-            <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 3️⃣ Content & Production Audit</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> Content & Production Audit</CardTitle></CardHeader>
             <CardContent className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
                         <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><LayoutTemplate className="size-3"/> Content Status</Label>
                         <div className="grid grid-cols-3 gap-2">
-                            <FormField control={form.control} name="dmContentApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600">Appr</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmContentPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600">Pend</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmContentRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600">Rej</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmContentApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600 text-center">Approved</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmContentPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600 text-center">Pending</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmContentRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600 text-center">Rejected</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
                         </div>
                     </div>
                     <div className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
                         <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><FileText className="size-3"/> Posts Status</Label>
                         <div className="grid grid-cols-3 gap-2">
-                            <FormField control={form.control} name="dmPostApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600">Appr</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmPostPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600">Pend</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmPostRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600">Rej</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmPostApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600 text-center">Approved</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmPostPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600 text-center">Pending</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmPostRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600 text-center">Rejected</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
                         </div>
                     </div>
                     <div className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
                         <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><Video className="size-3"/> Reels Status</Label>
                         <div className="grid grid-cols-3 gap-2">
-                            <FormField control={form.control} name="dmReelsApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600">Appr</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmReelsPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600">Pend</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmReelsRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600">Rej</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmReelsApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600 text-center">Approved</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmReelsPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600 text-center">Pending</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmReelsRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600 text-center">Rejected</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
                         </div>
                     </div>
                     <div className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
                         <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><Camera className="size-3"/> Shoots Status</Label>
                         <div className="grid grid-cols-3 gap-2">
-                            <FormField control={form.control} name="dmShootsApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600">Appr</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmShootsPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600">Pend</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmShootsRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600">Rej</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmShootsApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600 text-center">Approved</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmShootsPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600 text-center">Pending</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmShootsRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600 text-center">Rejected</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
                         </div>
                     </div>
                 </div>
