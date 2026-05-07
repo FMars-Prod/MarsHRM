@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -27,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker, Mic, Play, Pause, Loader2, Upload, DollarSign, PieChart } from "lucide-react";
+import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker, Mic, Play, Pause, Loader2, Upload, DollarSign, PieChart, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -136,6 +135,17 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                             ) : <span className="text-xs text-muted-foreground italic">No recording uploaded</span>}
                         </div>
                     </div>
+                    {report.allCallsDriveLink && (
+                        <div className="pt-4 border-t border-border/50">
+                            <ReportDetailItem label="Today's All Call Recording (Drive)" value={
+                                <a href={report.allCallsDriveLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1.5">
+                                    <LinkIcon className="size-3" />
+                                    View Archive
+                                    <ExternalLink className="size-2.5" />
+                                </a>
+                            } />
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -236,6 +246,7 @@ const businessReportSchema = z.object({
   strategicLearning: z.string().default(""),
   bestCallRecording: z.string().optional(),
   worstCallRecording: z.string().optional(),
+  allCallsDriveLink: z.string().optional(),
   meetingsBookedTomorrow: z.string().default("0"),
   criticalPathTomorrow: z.string().default(""),
   pendingDeliverables: z.string().default(""),
@@ -335,7 +346,7 @@ export default function ReportsPage() {
               ...baseValues,
               currency: "USD", coldCalls: 0, linkedinOutreach: 0, emailsSent: 0, potentialClients: 0, followUpsCompleted: "0", 
               collectedRevenue: 0, committedRevenue: 0, pipelineValue: 0, revenueVariance: 0,
-              meetingsSecured: "", clientWinHighlight: "", strategicLearning: "", bestCallRecording: "", worstCallRecording: "",
+              meetingsSecured: "", clientWinHighlight: "", strategicLearning: "", bestCallRecording: "", worstCallRecording: "", allCallsDriveLink: "",
               meetingsBookedTomorrow: "0", criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None (Standard)",
               ...(currentTemplateId === 'Digital Marketing' ? {
                   dmContentApproved: 0, dmContentPending: 0, dmContentRejected: 0,
@@ -432,7 +443,7 @@ export default function ReportsPage() {
                         <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Potential Clients Secured</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
                     </div>
                     <div className="flex justify-center p-3 bg-green-50 rounded-xl border border-green-200">
-                        <p className="text-xs font-black text-green-700 uppercase tracking-widest flex items-center gap-2"><CheckCircle2 className="size-3"/> Efficiency: {efficiency.toFixed(2)}% (Max 100%)</p>
+                        <p className="text-xs font-black text-green-700 uppercase tracking-widest flex items-center gap-2"><CheckCircle2 className="size-3"/> Efficiency: {efficiency.toFixed(2)}%</p>
                     </div>
                 </CardContent>
             </Card>
@@ -474,23 +485,33 @@ export default function ReportsPage() {
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Mic className="size-4" /> 4️⃣ Recording Audit (Upload MP3/WAV)</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                    <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Best Call of the Day</Label>
-                        <div className="flex items-center gap-3">
-                            <Input type="file" accept="audio/*" onChange={(e) => e.target.files?.[0] && handleFileUpload('bestCallRecording', e.target.files[0])} className="text-xs h-9 bg-white" disabled={isUploading === 'bestCallRecording'} />
-                            {isUploading === 'bestCallRecording' && <Loader2 className="size-4 animate-spin text-primary" />}
-                            {form.getValues('bestCallRecording') && <CheckCircle2 className="size-4 text-green-600" />}
+                <CardContent className="space-y-8 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Best Call of the Day</Label>
+                            <div className="flex items-center gap-3">
+                                <Input type="file" accept="audio/*" onChange={(e) => e.target.files?.[0] && handleFileUpload('bestCallRecording', e.target.files[0])} className="text-xs h-9 bg-white" disabled={isUploading === 'bestCallRecording'} />
+                                {isUploading === 'bestCallRecording' && <Loader2 className="size-4 animate-spin text-primary" />}
+                                {form.getValues('bestCallRecording') && <CheckCircle2 className="size-4 text-green-600" />}
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Worst Call of the Day</Label>
+                            <div className="flex items-center gap-3">
+                                <Input type="file" accept="audio/*" onChange={(e) => e.target.files?.[0] && handleFileUpload('worstCallRecording', e.target.files[0])} className="text-xs h-9 bg-white" disabled={isUploading === 'worstCallRecording'} />
+                                {isUploading === 'worstCallRecording' && <Loader2 className="size-4 animate-spin text-primary" />}
+                                {form.getValues('worstCallRecording') && <CheckCircle2 className="size-4 text-green-600" />}
+                            </div>
                         </div>
                     </div>
-                    <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Worst Call of the Day</Label>
-                        <div className="flex items-center gap-3">
-                            <Input type="file" accept="audio/*" onChange={(e) => e.target.files?.[0] && handleFileUpload('worstCallRecording', e.target.files[0])} className="text-xs h-9 bg-white" disabled={isUploading === 'worstCallRecording'} />
-                            {isUploading === 'worstCallRecording' && <Loader2 className="size-4 animate-spin text-primary" />}
-                            {form.getValues('worstCallRecording') && <CheckCircle2 className="size-4 text-green-600" />}
-                        </div>
-                    </div>
+                    <Separator />
+                    <FormField control={form.control} name="allCallsDriveLink" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel className="text-[10px] uppercase font-bold">Upload Today's All the Call Recording (Drive Link)</FormLabel>
+                          <FormControl><Input {...field} placeholder="https://drive.google.com/..." className="rounded-xl h-11" /></FormControl>
+                          <FormMessage />
+                      </FormItem>
+                    )} />
                 </CardContent>
             </Card>
 
