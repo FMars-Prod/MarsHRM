@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, Info, TrendingUp, Target, CalendarClock, Brain, ListTodo, Link as LinkIcon, X, Plus, Clock, FileText, AlertCircle, CheckCircle2, MapPin, LayoutTemplate, Briefcase, Code, ShieldCheck } from "lucide-react";
+import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -45,7 +45,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
 const formatIST = (date: Date) => {
@@ -75,17 +74,6 @@ const ReportDetailItem = ({ label, value, children, className }: { label: string
   </div>
 );
 
-const ChipDisplay = ({ items }: { items?: { value: string }[] }) => {
-    if (!items || !Array.isArray(items) || items.length === 0 || (items.length === 1 && !items[0].value)) return <span className="text-muted-foreground/50 italic font-normal text-sm">NIL</span>;
-    return (
-        <div className="flex flex-wrap gap-2 mt-1">
-            {items.map((item, i) => item.value ? (
-                <Badge key={i} variant="secondary" className="px-2 py-1 font-medium bg-muted/50 border-none">{item.value}</Badge>
-            ) : null)}
-        </div>
-    );
-};
-
 const BusinessReportDetails = ({ report }: { report: any }) => {
     const cold = Number(report.outreachColdCalls || 0);
     const linkedin = Number(report.outreachLinkedIn || 0);
@@ -100,50 +88,25 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
     return (
         <div className="space-y-6">
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-3" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-3" /> Outreach & Conversion</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-white/50 rounded-xl border border-border/50 shadow-inner">
                         <ReportDetailItem label="Total Outreach" value={totalOutreach} />
                         <ReportDetailItem label="New Leads" value={report.newLeadsGenerated || 0} />
                         <ReportDetailItem label="Pipeline Value" value={`${mainSym}${report.pipelineValue?.toLocaleString() ?? 0}`} />
-                        <ReportDetailItem label="Intervention" value={report.interventionTrigger || "None"} />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
-                        <ReportDetailItem label="Cold Calls" value={cold} />
-                        <ReportDetailItem label="LinkedIn" value={linkedin} />
-                        <ReportDetailItem label="Emails" value={email} />
-                        <ReportDetailItem label="Potential Clients" value={potential} />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl">
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Efficiency Conversion Rate (Potential/Outreach)</p>
-                            <p className={cn("text-2xl font-black tracking-tighter", rateColor)}>{displayRate.toFixed(2)}%</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Follow-ups</p>
-                            <p className="text-xl font-bold">{report.followUpCount || 0}</p>
-                        </div>
+                        <ReportDetailItem label="Conv. Rate" value={`${displayRate.toFixed(2)}%`} className={rateColor} />
                     </div>
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">Revenue Impact</CardTitle></CardHeader>
                 <CardContent className="pt-4">
                     <div className="border rounded-xl overflow-hidden bg-white/50">
                         <Table>
-                            <TableHeader className="bg-muted/30">
-                                <TableRow className="hover:bg-transparent border-none">
-                                    <TableHead className="h-8 text-[10px] uppercase font-bold">Financial Category</TableHead>
-                                    <TableHead className="h-8 text-[10px] uppercase font-bold text-right">Amount ({mainSym})</TableHead>
-                                </TableRow>
-                            </TableHeader>
                             <TableBody>
-                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">NET Revenue Collected</TableCell><TableCell className="py-2 text-sm font-bold text-right">{mainSym}{report.netRevenueCollected?.toLocaleString() ?? 0}</TableCell></TableRow>
-                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">Committed NET Revenue</TableCell><TableCell className="py-2 text-sm font-bold text-right">{mainSym}{report.committedNetRevenue?.toLocaleString() ?? 0}</TableCell></TableRow>
-                                <TableRow className="border-none bg-red-50/30"><TableCell className="py-2 text-sm font-semibold">Revenue Variance</TableCell><TableCell className="py-2 text-sm font-bold text-right text-red-600">-{mainSym}{report.revenueVariance?.toLocaleString() ?? 0}</TableCell></TableRow>
+                                <TableRow className="border-border/50"><TableCell className="py-2 text-sm">Collected Revenue</TableCell><TableCell className="py-2 text-sm font-bold text-right">{mainSym}{report.netRevenueCollected?.toLocaleString() ?? 0}</TableCell></TableRow>
+                                <TableRow className="border-none bg-red-50/30"><TableCell className="py-2 text-sm font-semibold">Variance</TableCell><TableCell className="py-2 text-sm font-bold text-right text-red-600">-{mainSym}{report.revenueVariance?.toLocaleString() ?? 0}</TableCell></TableRow>
                             </TableBody>
                         </Table>
                     </div>
@@ -157,30 +120,39 @@ const DigitalMarketingReportDetails = ({ report }: { report: any }) => (
     <div className="space-y-6">
         <BusinessReportDetails report={report} />
         <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
-            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-3" /> Marketing Pipeline Intelligence</CardTitle></CardHeader>
+            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-3" /> Content & Production Pipeline</CardTitle></CardHeader>
             <CardContent className="pt-4 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase">Content Pipeline</p>
-                        <div className="grid grid-cols-3 gap-2 text-center">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Content</p>
+                        <div className="grid grid-cols-1 gap-1 text-center">
                             <ReportDetailItem label="Appr" value={report.dmContentApproved || 0} />
                             <ReportDetailItem label="Pend" value={report.dmContentPending || 0} />
                             <ReportDetailItem label="Rej" value={report.dmContentRejected || 0} />
                         </div>
                     </div>
                     <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase">Posts Monitoring</p>
-                        <div className="grid grid-cols-3 gap-2 text-center">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Posts</p>
+                        <div className="grid grid-cols-1 gap-1 text-center">
                             <ReportDetailItem label="Appr" value={report.dmPostApproved || 0} />
                             <ReportDetailItem label="Pend" value={report.dmPostPending || 0} />
                             <ReportDetailItem label="Rej" value={report.dmPostRejected || 0} />
                         </div>
                     </div>
                     <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase">Reels & Shoots</p>
-                        <div className="grid grid-cols-2 gap-2 text-center">
-                            <ReportDetailItem label="Reels" value={report.dmReelsApproved || 0} />
-                            <ReportDetailItem label="Shoots" value={report.dmShootsApproved || 0} />
+                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Reels</p>
+                        <div className="grid grid-cols-1 gap-1 text-center">
+                            <ReportDetailItem label="Appr" value={report.dmReelsApproved || 0} />
+                            <ReportDetailItem label="Pend" value={report.dmReelsPending || 0} />
+                            <ReportDetailItem label="Rej" value={report.dmReelsRejected || 0} />
+                        </div>
+                    </div>
+                    <div className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">Shoots</p>
+                        <div className="grid grid-cols-1 gap-1 text-center">
+                            <ReportDetailItem label="Appr" value={report.dmShootsApproved || 0} />
+                            <ReportDetailItem label="Pend" value={report.dmShootsPending || 0} />
+                            <ReportDetailItem label="Rej" value={report.dmShootsRejected || 0} />
                         </div>
                     </div>
                 </div>
@@ -193,20 +165,19 @@ const TechnicalReportDetails = ({ report }: { report: any }) => (
   <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
     <CardContent className="space-y-6 pt-8 text-sm">
         <div className="grid grid-cols-2 gap-6 px-2">
-            <ReportDetailItem label="Login Time" value={report.logInTime || "NIL"} />
-            <ReportDetailItem label="Logout Time" value={report.logOutTime || "NIL"} />
+            <ReportDetailItem label="Login" value={report.logInTime || "N/A"} />
+            <ReportDetailItem label="Logout" value={report.logOutTime || "N/A"} />
         </div>
-        
         <div className="space-y-4">
             <p className="font-bold text-xs text-primary uppercase tracking-widest px-2">Tasks Completed Today:</p>
-            <div className="grid gap-4">
-                {Array.isArray(report.completedTasks) && report.completedTasks.length > 0 && report.completedTasks.some((t:any) => t.moduleName) ? report.completedTasks.map((task:any, i:number) => task.moduleName ? (
+            <div className="grid gap-3">
+                {Array.isArray(report.completedTasks) && report.completedTasks.map((task:any, i:number) => (
                     <div key={i} className="p-4 bg-white/80 rounded-2xl border border-border/50 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20" />
-                        <p className="font-bold text-sm text-foreground">{i + 1}. {task.moduleName}</p>
-                        <p className="text-sm text-muted-foreground mt-2 leading-relaxed whitespace-pre-wrap">{task.workDone || "NIL"}</p>
+                        <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
+                        <p className="font-bold text-sm">{task.moduleName}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{task.workDone}</p>
                     </div>
-                ) : null) : <div className="p-6 bg-muted/10 rounded-2xl border border-dashed text-center text-muted-foreground/50 italic">No tasks completed reported (NIL)</div>}
+                ))}
             </div>
         </div>
     </CardContent>
@@ -230,7 +201,7 @@ const businessReportSchema = z.object({
   netRevenueCollected: z.coerce.number().min(0).default(0),
   committedNetRevenue: z.coerce.number().min(0).default(0),
   pipelineValue: z.coerce.number().min(0).default(0),
-  revenueVariance: z.coerce.number().default(0),
+  revenueVariance: z.coerce.number().min(0).default(0),
   meetingsSecured: z.array(z.object({ 
     clientName: z.string().optional(), 
     quotationValue: z.coerce.number().min(0).default(0),
@@ -258,8 +229,8 @@ const technicalReportSchema = z.object({
   logInTime: z.string().min(1, "Required"),
   logOutTime: z.string().min(1, "Required"),
   completedTasks: z.array(z.object({ 
-    moduleName: z.string().min(0), 
-    workDone: z.string().min(0) 
+    moduleName: z.string().min(1, "Required"), 
+    workDone: z.string().min(1, "Required") 
   })).optional().default([]),
 });
 
@@ -284,22 +255,14 @@ export default function ReportsPage() {
 
   const currentReportType = React.useMemo(() => {
     const jobTitle = currentUserData?.jobTitle || '';
-    
-    // 1. Check Global Mapping First
     if (mappingData?.mappings?.[jobTitle] && mappingData.mappings[jobTitle] !== 'default') {
       return mappingData.mappings[jobTitle] as 'Technical' | 'Business' | 'Digital Marketing';
     }
-
-    // 2. Strict Job Title Fallback
-    const titleUpper = jobTitle.toUpperCase();
-    if (titleUpper === "DIGITAL MARKETING") return 'Digital Marketing';
-
-    // 3. Departmental Fallback
-    const dept = (currentUserData?.department || '').toUpperCase();
-    if (dept.includes("TECHNICAL") || dept.includes("DEVELOPMENT") || dept.includes("IT")) return 'Technical';
-    if (dept.includes("MARKETING") || dept.includes("SALES")) return 'Business';
-    
-    return 'Technical'; // Global Default
+    if (jobTitle.toLowerCase().includes("digital marketing")) return 'Digital Marketing';
+    const dept = (currentUserData?.department || '').toLowerCase();
+    if (dept.includes("technical") || dept.includes("development") || dept.includes("it")) return 'Technical';
+    if (dept.includes("marketing") || dept.includes("sales")) return 'Business';
+    return 'Technical';
   }, [currentUserData?.jobTitle, currentUserData?.department, mappingData]);
 
   const usersQuery = useMemoFirebase(() => (isAdmin && user) ? query(collection(firestore, "users")) : null, [firestore, isAdmin, user]);
@@ -328,9 +291,7 @@ export default function ReportsPage() {
   const resetForm = React.useCallback(() => {
       const now = new Date();
       const istTimestamp = formatIST(now);
-      const eType = currentUserData?.employmentType || "Intern";
-      const signatureStr = currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${eType} | ${istTimestamp}` : "";
-
+      const signatureStr = currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${currentUserData.employmentType || "Intern"} | ${istTimestamp}` : "";
       form.reset({
         signature: signatureStr,
         declaration: false,
@@ -363,24 +324,12 @@ export default function ReportsPage() {
     navigator.geolocation.getCurrentPosition(
         async (position) => {
             const { latitude, longitude } = position.coords;
-            const payload = {
-                ...values,
-                employeeId: user.uid,
-                employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`,
-                employeeDepartment: currentUserData.department || currentReportType.toUpperCase(),
-                employeeJobTitle: currentUserData.jobTitle,
-                date: new Date(),
-                reportType: currentReportType,
-            };
+            const payload = { ...values, employeeId: user.uid, employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`, employeeDepartment: currentUserData.department, date: new Date(), reportType: currentReportType };
             try {
                 await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
                 const todayId = format(new Date(), 'yyyy-MM-dd');
                 const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
-                setDocumentNonBlocking(attRef, {
-                    checkOutTime: serverTimestamp(),
-                    locationCheckOutLatitude: latitude,
-                    locationCheckOutLongitude: longitude,
-                }, { merge: true });
+                setDocumentNonBlocking(attRef, { checkOutTime: serverTimestamp(), locationCheckOutLatitude: latitude, locationCheckOutLongitude: longitude }, { merge: true });
                 setIsVerifyingLocation(false);
                 toast({ title: "Work Session Complete" });
                 setTimeout(async () => { await auth.signOut(); router.push('/login'); }, 1500);
@@ -400,8 +349,6 @@ export default function ReportsPage() {
     const linkedin = Number(useWatch({ control: form.control, name: "outreachLinkedIn" }) || 0);
     const email = Number(useWatch({ control: form.control, name: "outreachEmails" }) || 0);
     const total = cold + linkedin + email;
-    const potential = Number(useWatch({ control: form.control, name: "potentialClients" }) || 0);
-    const rate = total > 0 ? (potential / total) * 100 : 0;
 
     return (
         <div className="space-y-8">
@@ -416,7 +363,6 @@ export default function ReportsPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
                         <div className="space-y-1"><Label className="text-[10px] uppercase font-black text-muted-foreground">Total Outreach</Label><p className="text-xl font-black text-primary">{total}</p></div>
                         <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Potential Clients</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)} />
-                        <div className="space-y-1"><Label className="text-[10px] uppercase font-black text-muted-foreground">Conv. Rate</Label><p className="text-xl font-black text-primary">{rate.toFixed(1)}%</p></div>
                         <FormField control={form.control} name="newLeadsGenerated" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">New Leads</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl font-bold" /></FormControl></FormItem>)} />
                     </div>
                 </CardContent>
@@ -444,30 +390,39 @@ export default function ReportsPage() {
     <div className="space-y-8">
         <BusinessFields />
         <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm">
-            <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 3️⃣ Content & Production</CardTitle></CardHeader>
-            <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-3 p-4 bg-white/50 rounded-2xl border border-border/50">
-                        <Label className="text-[10px] uppercase font-black text-purple-700">Content Status</Label>
+            <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 3️⃣ Content & Production Audit</CardTitle></CardHeader>
+            <CardContent className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
+                        <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><LayoutTemplate className="size-3"/> Content Status</Label>
                         <div className="grid grid-cols-3 gap-2">
-                            <FormField control={form.control} name="dmContentApproved" render={({ field }) => (<FormItem><FormControl><Input type="number" min="0" placeholder="Appr" {...field} className="text-xs h-8 text-center" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmContentPending" render={({ field }) => (<FormItem><FormControl><Input type="number" min="0" placeholder="Pend" {...field} className="text-xs h-8 text-center" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmContentRejected" render={({ field }) => (<FormItem><FormControl><Input type="number" min="0" placeholder="Rej" {...field} className="text-xs h-8 text-center" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmContentApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600">Appr</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmContentPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600">Pend</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmContentRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600">Rej</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
                         </div>
                     </div>
-                    <div className="space-y-3 p-4 bg-white/50 rounded-2xl border border-border/50">
-                        <Label className="text-[10px] uppercase font-black text-purple-700">Posts Status</Label>
+                    <div className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
+                        <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><FileText className="size-3"/> Posts Status</Label>
                         <div className="grid grid-cols-3 gap-2">
-                            <FormField control={form.control} name="dmPostApproved" render={({ field }) => (<FormItem><FormControl><Input type="number" min="0" placeholder="Appr" {...field} className="text-xs h-8 text-center" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmPostPending" render={({ field }) => (<FormItem><FormControl><Input type="number" min="0" placeholder="Pend" {...field} className="text-xs h-8 text-center" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmPostRejected" render={({ field }) => (<FormItem><FormControl><Input type="number" min="0" placeholder="Rej" {...field} className="text-xs h-8 text-center" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmPostApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600">Appr</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmPostPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600">Pend</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmPostRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600">Rej</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
                         </div>
                     </div>
-                    <div className="space-y-3 p-4 bg-white/50 rounded-2xl border border-border/50">
-                        <Label className="text-[10px] uppercase font-black text-purple-700">Media Production</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <FormField control={form.control} name="dmReelsApproved" render={({ field }) => (<FormItem><FormControl><Input type="number" min="0" placeholder="Reels" {...field} className="text-xs h-8 text-center" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="dmShootsApproved" render={({ field }) => (<FormItem><FormControl><Input type="number" min="0" placeholder="Shoots" {...field} className="text-xs h-8 text-center" /></FormControl></FormItem>)} />
+                    <div className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
+                        <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><Video className="size-3"/> Reels Status</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                            <FormField control={form.control} name="dmReelsApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600">Appr</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmReelsPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600">Pend</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmReelsRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600">Rej</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                        </div>
+                    </div>
+                    <div className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
+                        <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><Camera className="size-3"/> Shoots Status</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                            <FormField control={form.control} name="dmShootsApproved" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-green-600">Appr</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmShootsPending" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-yellow-600">Pend</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="dmShootsRejected" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-bold text-red-600">Rej</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>)} />
                         </div>
                     </div>
                 </div>
@@ -516,7 +471,7 @@ export default function ReportsPage() {
         </div>
       )}
 
-      <PageHeader title={isAdmin ? "Organizational Fleet" : "My Submissions"} description="Strategic review of all department submissions.">
+      <PageHeader title={isAdmin ? "Organizational Strategic Log" : "My Strategic Submissions"} description="Comprehensive verification of organizational shifts.">
         {!isAdmin && (
             <Button onClick={() => setIsAddDialogOpen(true)} disabled={!submissionConstraints.canSubmit} className={cn("rounded-full h-11 px-6 shadow-lg", !submissionConstraints.canSubmit && "opacity-50 cursor-not-allowed")}>
                 <PlusCircle className="mr-2 h-4 w-4"/> {submissionConstraints.hasSubmittedToday ? "Submission Complete" : "Shift Completion Form"}
@@ -526,22 +481,22 @@ export default function ReportsPage() {
       
       {isAdmin ? (
         <>
-          <div className="relative mb-6"><Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Filter by name..." className="pl-10 h-12 rounded-2xl bg-white/50 border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
+          <div className="relative mb-6"><Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Search organizational fleet..." className="pl-10 h-12 rounded-2xl bg-white/50 border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
           <div className="border rounded-2xl overflow-hidden shadow-sm bg-white/50 ring-1 ring-border/50">
             <Table>
                 <TableHeader className="bg-muted/30">
                     <TableRow className="hover:bg-transparent border-border/50">
                         <TableHead className="font-black uppercase tracking-tighter text-[10px]">Employee</TableHead>
-                        <TableHead className="font-black uppercase tracking-tighter text-[10px]">Department</TableHead>
-                        <TableHead className="font-black uppercase tracking-tighter text-[10px] text-right">Action</TableHead>
+                        <TableHead className="font-black uppercase tracking-tighter text-[10px]">Strategic Log</TableHead>
+                        <TableHead className="font-black uppercase tracking-tighter text-[10px] text-right">Verification</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {areUsersLoading ? (<TableRow><TableCell colSpan={3} className="h-32 text-center animate-pulse">Scanning database...</TableCell></TableRow>) : usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+                    {areUsersLoading ? (<TableRow><TableCell colSpan={3} className="h-32 text-center animate-pulse">Syncing organizational matrix...</TableCell></TableRow>) : usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
                         <TableRow key={u.id} className="cursor-pointer hover:bg-white/80 transition-colors border-border/50" onClick={() => setSelectedUser(u)}>
                             <TableCell className="font-bold py-4">{u.firstName} {u.lastName}</TableCell>
-                            <TableCell className="py-4 text-muted-foreground font-medium uppercase text-xs">{u.department || 'N/A'}</TableCell>
-                            <TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-[10px] uppercase">Audit Reports</Button></TableCell>
+                            <TableCell className="py-4 text-muted-foreground font-medium uppercase text-xs">{u.jobTitle} • {u.department || 'GLOBAL'}</TableCell>
+                            <TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-[10px] uppercase">Review Logs</Button></TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -550,14 +505,14 @@ export default function ReportsPage() {
         </>
       ) : (
         <div className="space-y-4">
-            {areReportsLoading ? (<div className="h-48 flex items-center justify-center animate-pulse">Loading history...</div>) : reports && reports.length > 0 ? (
+            {areReportsLoading ? (<div className="h-48 flex items-center justify-center animate-pulse">Fetching history...</div>) : reports && reports.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-3">
                     {reports.map(r => (
                         <AccordionItem value={r.id} key={r.id} className="border-none">
                             <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white/50 ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none">
                                 <div className="flex-1 text-left flex items-center justify-between">
-                                    <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
-                                    <div className="mr-4 text-right hidden sm:block"><p className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Status</p><p className="text-xs font-mono font-bold text-green-600">✅ Submitted</p></div>
+                                    <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Strategy</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
+                                    <Badge variant="secondary" className="mr-4 text-[10px] font-black uppercase">✅ VERIFIED</Badge>
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white/30 space-y-6 ring-1 ring-border/50 shadow-lg mt-[-1px]">
@@ -566,7 +521,7 @@ export default function ReportsPage() {
                         </AccordionItem>
                     ))}
                 </Accordion>
-            ) : <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-muted/10 rounded-3xl border border-dashed"><FileText className="size-10 mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-[10px] opacity-50">No reports found.</p></div>}
+            ) : <div className="h-64 flex flex-col items-center justify-center text-muted-foreground bg-muted/10 rounded-3xl border border-dashed"><FileText className="size-10 mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-[10px] opacity-50">No submissions found.</p></div>}
         </div>
       )}
 
@@ -591,9 +546,7 @@ export default function ReportsPage() {
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Template Metrics</Label>
                                 {currentReportType === 'Technical' ? <TechnicalFields /> : currentReportType === 'Digital Marketing' ? <DigitalMarketingFields /> : <BusinessFields />}
                             </div>
-                            
                             <Separator />
-                            
                             <div className="space-y-6">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Digital Identity Verification</Label>
                                 <FormField control={form.control} name="signature" render={({ field }) => (
@@ -602,7 +555,7 @@ export default function ReportsPage() {
                                 <FormField control={form.control} name="declaration" render={({ field }) => (
                                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20 shadow-sm">
                                         <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl>
-                                        <div className="space-y-1 leading-none"><FormLabel className="text-sm font-bold cursor-pointer">I certify that this daily shift summary is accurate and true.</FormLabel></div>
+                                        <div className="space-y-1 leading-none"><FormLabel className="text-sm font-bold cursor-pointer">I certify that this strategic shift log is accurate and localized.</FormLabel></div>
                                     </FormItem>
                                 )} />
                             </div>
@@ -611,7 +564,7 @@ export default function ReportsPage() {
                     <div className="p-6 border-t bg-white/80 backdrop-blur-md">
                         <DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col">
                             <Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button>
-                            <Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">Submit Shift Log & Logout</Button>
+                            <Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">Finalize Log & Logout</Button>
                         </DialogFooter>
                     </div>
                 </form>
@@ -637,7 +590,7 @@ export default function ReportsPage() {
                             <AccordionItem value={r.id} key={r.id} className="border-none">
                                 <AccordionTrigger className="border rounded-2xl px-6 h-16 hover:no-underline hover:bg-white shadow-sm bg-white ring-1 ring-border/50 transition-all data-[state=open]:rounded-b-none">
                                     <div className="flex-1 text-left flex items-center justify-between">
-                                        <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Report</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
+                                        <div><p className="font-black text-primary uppercase tracking-tighter text-sm">{r.reportType} Summary</p><p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">{r.date ? formatIST(r.date.toDate()) : "NIL"}</p></div>
                                         <Badge variant="secondary" className="mr-4 text-[10px] font-black uppercase">✅ VERIFIED</Badge>
                                     </div>
                                 </AccordionTrigger>
@@ -645,9 +598,9 @@ export default function ReportsPage() {
                                     <div className="flex justify-end gap-2 mb-4">
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
-                                                <Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Delete Log</Button>
+                                                <Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Purge Log</Button>
                                             </AlertDialogTrigger>
-                                            <AlertDialogContent className="rounded-3xl"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently purge this record from the historical logs.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => deleteDoc(doc(firestore, `users/${reportUserId}/reports`, r.id))}>Confirm Purge</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                            <AlertDialogContent className="rounded-3xl"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently purge this record from the historical archives.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => deleteDoc(doc(firestore, `users/${reportUserId}/reports`, r.id))}>Purge Forever</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
                                         </AlertDialog>
                                     </div>
                                     {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : r.reportType === 'Digital Marketing' ? <DigitalMarketingReportDetails report={r} /> : <TechnicalReportDetails report={r} />}
@@ -655,7 +608,7 @@ export default function ReportsPage() {
                             </AccordionItem>
                         ))}
                     </Accordion>
-                ) : <div className="h-64 flex flex-col items-center justify-center text-muted-foreground"><p className="font-bold uppercase tracking-widest text-[10px] opacity-50">No submissions found for this member.</p></div>}
+                ) : <div className="h-64 flex flex-col items-center justify-center text-muted-foreground"><p className="font-bold uppercase tracking-widest text-[10px] opacity-50">No submissions available.</p></div>}
             </ScrollArea>
         </SheetContent>
       </Sheet>

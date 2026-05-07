@@ -10,8 +10,11 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LayoutTemplate, ShieldCheck, Briefcase, Megaphone, Info } from 'lucide-react';
+import { LayoutTemplate, Info, Download, Upload, Clock, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type UserData = {
   id: string;
@@ -20,6 +23,12 @@ type UserData = {
 
 type ReportMapping = {
   mappings: Record<string, string>;
+  timings?: {
+    shiftStart: string;
+    shiftEnd: string;
+    morningReportSlot: string;
+    eveningReportSlot: string;
+  };
 };
 
 export default function ReportTemplatesPage() {
@@ -29,31 +38,74 @@ export default function ReportTemplatesPage() {
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
 
-  const mappingDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
-  const { data: mappingData, isLoading: mappingLoading } = useDoc<ReportMapping>(mappingDocRef);
+  const configDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
+  const { data: configData, isLoading: configLoading } = useDoc<ReportMapping>(configDocRef);
+
+  const [timings, setTimings] = React.useState({
+    shiftStart: '09:30',
+    shiftEnd: '18:30',
+    morningReportSlot: '09:50',
+    eveningReportSlot: '18:50'
+  });
+
+  React.useEffect(() => {
+    if (configData?.timings) {
+        setTimings(configData.timings);
+    }
+  }, [configData]);
 
   const jobTitles = React.useMemo(() => {
     if (!users) return [];
     const titles = new Set<string>();
-    users.forEach(u => {
-      if (u.jobTitle) titles.add(u.jobTitle.trim());
-    });
+    users.forEach(u => { if (u.jobTitle) titles.add(u.jobTitle.trim()); });
     return Array.from(titles).sort();
   }, [users]);
 
   const handleUpdateMapping = (jobTitle: string, template: string) => {
-    const currentMappings = mappingData?.mappings || {};
+    const currentMappings = configData?.mappings || {};
     const newMappings = { ...currentMappings, [jobTitle]: template };
-    
-    setDocumentNonBlocking(mappingDocRef, { mappings: newMappings }, { merge: true });
+    setDocumentNonBlocking(configDocRef, { mappings: newMappings }, { merge: true });
     toast({ title: 'Mapping Updated', description: `Template for "${jobTitle}" set to ${template}.` });
+  };
+
+  const handleSaveTimings = () => {
+      setDocumentNonBlocking(configDocRef, { timings }, { merge: true });
+      toast({ title: 'Timings Updated', description: 'System notification slots have been synchronized.' });
+  };
+
+  const handleExport = () => {
+    const data = JSON.stringify(configData || { mappings: {}, timings }, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'marshrm_report_config.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'Config Exported' });
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        setDocumentNonBlocking(configDocRef, imported, { merge: true });
+        toast({ title: 'Config Imported', description: 'Organizational matrix updated successfully.' });
+      } catch (err) {
+        toast({ variant: 'destructive', title: 'Import Failed', description: 'Invalid JSON file format.' });
+      }
+    };
+    reader.readAsText(file);
   };
 
   const getTemplateBadge = (template?: string) => {
     switch (template) {
-      case 'Digital Marketing': return <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">Digital Marketing</Badge>;
-      case 'Technical': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">Technical</Badge>;
-      case 'Business': return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Business</Badge>;
+      case 'Digital Marketing': return <Badge className="bg-purple-100 text-purple-700 border-none">Digital Marketing</Badge>;
+      case 'Technical': return <Badge className="bg-blue-100 text-blue-700 border-none">Technical</Badge>;
+      case 'Business': return <Badge className="bg-green-100 text-green-700 border-none">Business</Badge>;
       default: return <Badge variant="outline" className="text-muted-foreground">Default Logic</Badge>;
     }
   };
@@ -62,46 +114,52 @@ export default function ReportTemplatesPage() {
     <div className="space-y-6">
       <PageHeader 
         title="Report Template Assignment" 
-        description="Globally assign shift reporting templates based on employee job titles."
-      />
+        description="Globally assign shift templates and control organizational notification timings."
+      >
+        <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport} className="rounded-full"><Download className="size-4 mr-2"/> Export Config</Button>
+            <div className="relative">
+                <Input type="file" className="hidden" id="import-config" accept=".json" onChange={handleImport} />
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => document.getElementById('import-config')?.click()}><Upload className="size-4 mr-2"/> Import Config</Button>
+            </div>
+        </div>
+      </PageHeader>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2 border-none ring-1 ring-border/50 shadow-sm bg-white/50 backdrop-blur-sm overflow-hidden">
-          <CardHeader className="bg-muted/10">
+          <CardHeader className="bg-muted/10 border-b">
             <CardTitle className="text-lg font-headline flex items-center gap-2">
               <LayoutTemplate className="size-5 text-primary" />
-              Organizational Mapping
+              Organizational Matrix
             </CardTitle>
-            <CardDescription>All detected job titles and their active templates.</CardDescription>
+            <CardDescription>Assign specific tactical forms to unique job roles.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-none">
                   <TableHead className="font-bold text-[10px] uppercase py-4">Job Title</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase py-4">Current Template</TableHead>
-                  <TableHead className="font-bold text-[10px] uppercase py-4 text-right">Change Assignment</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase py-4">Tactical Template</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase py-4 text-right">Assignment</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {usersLoading || mappingLoading ? (
-                  <TableRow><TableCell colSpan={3} className="h-32 text-center animate-pulse text-muted-foreground font-medium">Scanning organizational matrix...</TableCell></TableRow>
-                ) : jobTitles.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="h-32 text-center text-muted-foreground italic">No job titles detected in employee database.</TableCell></TableRow>
+                {usersLoading || configLoading ? (
+                  <TableRow><TableCell colSpan={3} className="h-32 text-center animate-pulse text-muted-foreground font-medium">Scanning organizational fleet...</TableCell></TableRow>
                 ) : jobTitles.map(title => (
                   <TableRow key={title} className="border-border/50">
                     <TableCell className="font-bold text-sm py-4">{title}</TableCell>
-                    <TableCell className="py-4">{getTemplateBadge(mappingData?.mappings?.[title])}</TableCell>
+                    <TableCell className="py-4">{getTemplateBadge(configData?.mappings?.[title])}</TableCell>
                     <TableCell className="text-right py-4">
                       <Select 
-                        value={mappingData?.mappings?.[title] || "default"} 
+                        value={configData?.mappings?.[title] || "default"} 
                         onValueChange={(val) => handleUpdateMapping(title, val)}
                       >
                         <SelectTrigger className="w-[180px] ml-auto h-9 text-xs font-bold rounded-full bg-white">
                           <SelectValue placeholder="Select Template" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="default">Default System Logic</SelectItem>
+                          <SelectItem value="default">System Default</SelectItem>
                           <SelectItem value="Business">Business Template</SelectItem>
                           <SelectItem value="Technical">Technical Template</SelectItem>
                           <SelectItem value="Digital Marketing">Digital Marketing Template</SelectItem>
@@ -117,29 +175,42 @@ export default function ReportTemplatesPage() {
 
         <div className="space-y-6">
           <Card className="border-none ring-1 ring-border/50 shadow-sm bg-gradient-to-br from-primary/5 to-transparent">
-            <CardHeader>
+            <CardHeader className="bg-muted/10 border-b">
               <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                <Info className="size-4" />
-                Assignment Rules
+                <Clock className="size-4" />
+                Timing Configuration
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-xs space-y-4 text-muted-foreground leading-relaxed">
-              <p>Templates assigned here take <strong>immediate precedence</strong> over system-default logic for all staff members matching the specific job title.</p>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <div className="size-1.5 rounded-full bg-primary shrink-0 mt-1" />
-                  <p><strong>Digital Marketing:</strong> Business Outreach + Content Production metrics.</p>
+            <CardContent className="pt-6 space-y-6">
+                <div className="space-y-4">
+                    <div className="grid gap-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Shift Submission Window</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1"><Label className="text-[9px]">Start</Label><Input type="time" value={timings.shiftStart} onChange={e => setTimings({...timings, shiftStart: e.target.value})} className="h-8 text-xs"/></div>
+                            <div className="space-y-1"><Label className="text-[9px]">End</Label><Input type="time" value={timings.shiftEnd} onChange={e => setTimings({...timings, shiftEnd: e.target.value})} className="h-8 text-xs"/></div>
+                        </div>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Automated Report Slots</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1"><Label className="text-[9px]">Morning</Label><Input type="time" value={timings.morningReportSlot} onChange={e => setTimings({...timings, morningReportSlot: e.target.value})} className="h-8 text-xs"/></div>
+                            <div className="space-y-1"><Label className="text-[9px]">Evening</Label><Input type="time" value={timings.eveningReportSlot} onChange={e => setTimings({...timings, eveningReportSlot: e.target.value})} className="h-8 text-xs"/></div>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex gap-2">
-                  <div className="size-1.5 rounded-full bg-primary shrink-0 mt-1" />
-                  <p><strong>Business:</strong> Sales Outreach, Lead Generation, and Revenue metrics.</p>
-                </div>
-                <div className="flex gap-2">
-                  <div className="size-1.5 rounded-full bg-primary shrink-0 mt-1" />
-                  <p><strong>Technical:</strong> Task logs, Module completion, and Repo links.</p>
-                </div>
+                <Button className="w-full rounded-full h-10 font-bold uppercase text-[10px]" onClick={handleSaveTimings}><Save className="size-4 mr-2"/> Apply Changes</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
+            <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Info className="size-4" /> Assignment Rules</CardTitle></CardHeader>
+            <CardContent className="text-[10px] space-y-4 text-muted-foreground leading-relaxed">
+              <p>Mappings set here override system-default logic. You can use <strong>Export/Import</strong> to synchronize settings between different environments.</p>
+              <div className="space-y-2 border-t pt-4">
+                  <div className="flex gap-2"><strong>Business:</strong> Sales, Outreach, and Revenue focus.</div>
+                  <div className="flex gap-2"><strong>Technical:</strong> Code logs and task functionality.</div>
+                  <div className="flex gap-2"><strong>Marketing:</strong> Mixed Business + Production (Content/Reels/Shoots).</div>
               </div>
-              <p className="pt-2 border-t border-dashed">Assigning a template ensures your team only sees the metrics relevant to their tactical operations.</p>
             </CardContent>
           </Card>
         </div>
