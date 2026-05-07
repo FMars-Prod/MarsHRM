@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker, Mic, Play, Pause, Loader2, Upload } from "lucide-react";
+import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker, Mic, Play, Pause, Loader2, Upload, DollarSign, PieChart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -79,30 +79,40 @@ const ReportDetailItem = ({ label, value, children, className }: { label: string
 
 const BusinessReportDetails = ({ report }: { report: any }) => {
     const mainSym = getCurrencySymbol(report.currency || 'USD');
+    const outreachTotal = (Number(report.coldCalls) || 0) + (Number(report.linkedinOutreach) || 0) + (Number(report.emailsSent) || 0);
+    const efficiencyRaw = outreachTotal > 0 ? ((Number(report.potentialClients) || 0) / outreachTotal) * 100 : 0;
+    const efficiency = Math.min(efficiencyRaw, 100);
 
     return (
         <div className="space-y-6">
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-3" /> 1️⃣ Outreach Analytics</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6">
-                    <ReportDetailItem label="Total Outreach" value={report.outreachTotal || 0} />
+                    <ReportDetailItem label="Cold Calls" value={report.coldCalls || 0} />
+                    <ReportDetailItem label="LinkedIn" value={report.linkedinOutreach || 0} />
+                    <ReportDetailItem label="Emails" value={report.emailsSent || 0} />
                     <ReportDetailItem label="Potential Clients" value={report.potentialClients || 0} />
-                    <ReportDetailItem label="Efficiency" value={`${report.outreachTotal > 0 ? ((report.potentialClients / report.outreachTotal) * 100).toFixed(2) : 0}%`} />
-                    <ReportDetailItem label="Follow-ups" value={report.followUpsCompleted || "0"} />
+                    <div className="col-span-2 p-3 bg-primary/5 rounded-xl border border-primary/10 flex justify-between items-center">
+                        <ReportDetailItem label="Total Volume" value={outreachTotal} />
+                        <ReportDetailItem label="Efficiency" value={`${efficiency.toFixed(2)}%`} className="text-right" />
+                    </div>
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-3" /> 2️⃣ Financial Impact</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-2 gap-6 pt-6">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-3" /> 2️⃣ Financial Impact ({report.currency})</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6">
+                    <ReportDetailItem label="Collected Revenue" value={`${mainSym}${report.collectedRevenue?.toLocaleString() ?? 0}`} />
+                    <ReportDetailItem label="Committed Revenue" value={`${mainSym}${report.committedRevenue?.toLocaleString() ?? 0}`} />
                     <ReportDetailItem label="Pipeline Value" value={`${mainSym}${report.pipelineValue?.toLocaleString() ?? 0}`} />
-                    <ReportDetailItem label="Currency" value={report.currency} />
+                    <ReportDetailItem label="Variance" value={`${mainSym}${report.revenueVariance?.toLocaleString() ?? 0}`} />
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Briefcase className="size-3" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
-                <CardContent className="space-y-6 pt-6">
+                <CardContent className="space-y-6 pt-6 text-sm">
+                    <ReportDetailItem label="Follow-ups Completed" value={report.followUpsCompleted || "0"} />
                     <ReportDetailItem label="Meetings Secured" value={report.meetingsSecured} />
                     <ReportDetailItem label="Client Win Highlight" value={report.clientWinHighlight} />
                     <ReportDetailItem label="Strategic Tactical Learning" value={report.strategicLearning} />
@@ -131,7 +141,7 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">5️⃣ T+1 Execution Planning</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 text-sm">
                     <ReportDetailItem label="Meetings Booked (Tomorrow)" value={report.meetingsBookedTomorrow} />
                     <ReportDetailItem label="Critical Path" value={report.criticalPathTomorrow} />
                     <ReportDetailItem label="Pending Deliverables" value={report.pendingDeliverables} />
@@ -211,11 +221,16 @@ const commonSchema = {
 
 const businessReportSchema = z.object({
   ...commonSchema,
-  outreachTotal: z.coerce.number().min(0).default(0),
+  coldCalls: z.coerce.number().min(0).default(0),
+  linkedinOutreach: z.coerce.number().min(0).default(0),
+  emailsSent: z.coerce.number().min(0).default(0),
   potentialClients: z.coerce.number().min(0).default(0),
   followUpsCompleted: z.string().default("0"),
   currency: z.enum(["USD", "EUR", "GBP", "INR", "AED"]).default("USD"),
+  collectedRevenue: z.coerce.number().min(0).default(0),
+  committedRevenue: z.coerce.number().min(0).default(0),
   pipelineValue: z.coerce.number().min(0).default(0),
+  revenueVariance: z.coerce.number().min(0).default(0),
   meetingsSecured: z.string().default(""),
   clientWinHighlight: z.string().default(""),
   strategicLearning: z.string().default(""),
@@ -318,7 +333,8 @@ export default function ReportsPage() {
       } else if (currentTemplateId === 'Digital Marketing' || currentTemplateId === 'Business') {
           form.reset({
               ...baseValues,
-              currency: "USD", outreachTotal: 0, potentialClients: 0, followUpsCompleted: "0", pipelineValue: 0,
+              currency: "USD", coldCalls: 0, linkedinOutreach: 0, emailsSent: 0, potentialClients: 0, followUpsCompleted: "0", 
+              collectedRevenue: 0, committedRevenue: 0, pipelineValue: 0, revenueVariance: 0,
               meetingsSecured: "", clientWinHighlight: "", strategicLearning: "", bestCallRecording: "", worstCallRecording: "",
               meetingsBookedTomorrow: "0", criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None (Standard)",
               ...(currentTemplateId === 'Digital Marketing' ? {
@@ -389,37 +405,61 @@ export default function ReportsPage() {
   };
 
   const BusinessFields = () => {
-    const total = Number(useWatch({ control: form.control, name: "outreachTotal" }) || 0);
-    const secured = Number(useWatch({ control: form.control, name: "potentialClients" }) || 0);
-    const efficiency = total > 0 ? (secured / total) * 100 : 0;
+    const coldCalls = Number(useWatch({ control: form.control, name: "coldCalls" }) || 0);
+    const linkedIn = Number(useWatch({ control: form.control, name: "linkedinOutreach" }) || 0);
+    const emails = Number(useWatch({ control: form.control, name: "emailsSent" }) || 0);
+    const potential = Number(useWatch({ control: form.control, name: "potentialClients" }) || 0);
+    
+    const totalOutreach = coldCalls + linkedIn + emails;
+    const efficiencyRaw = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
+    const efficiency = Math.min(efficiencyRaw, 100);
 
     return (
         <div className="space-y-8">
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach Analytics</CardTitle></CardHeader>
-                <CardContent className="space-y-6">
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach & Conversion Analytics</CardTitle></CardHeader>
+                <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <FormField control={form.control} name="outreachTotal" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Outreach Total Volume</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Potential Clients Secured</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="followUpsCompleted" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Follow Ups Completed</FormLabel><FormControl><Input {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="coldCalls" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="linkedinOutreach" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">LinkedIn Reach</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="emailsSent" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Emails Sent</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
                     </div>
-                    <div className="flex justify-center p-3 bg-primary/5 rounded-xl border border-primary/20">
-                        <p className="text-xs font-black text-primary uppercase tracking-widest">Efficiency: {efficiency.toFixed(2)}%</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 flex flex-col justify-center items-center gap-1 shadow-inner">
+                            <p className="text-[10px] font-black text-primary/70 uppercase tracking-widest">Total Outreach Volume</p>
+                            <p className="text-2xl font-black text-primary">{totalOutreach}</p>
+                        </div>
+                        <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Potential Clients Secured</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                    </div>
+                    <div className="flex justify-center p-3 bg-green-50 rounded-xl border border-green-200">
+                        <p className="text-xs font-black text-green-700 uppercase tracking-widest flex items-center gap-2"><CheckCircle2 className="size-3"/> Efficiency: {efficiency.toFixed(2)}% (Max 100%)</p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField control={form.control} name="currency" render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Base Currency</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent><SelectItem value="INR">INR (₹)</SelectItem><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="AED">AED (د.إ)</SelectItem></SelectContent></Select></FormItem>
+                        )} />
+                        <FormField control={form.control} name="collectedRevenue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Collected Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FormField control={form.control} name="committedRevenue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Committed Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Pipeline Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Revenue Variance</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
                     </div>
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Target className="size-4" /> 2️⃣ Financials & Engagements</CardTitle></CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField control={form.control} name="currency" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Currency</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent><SelectItem value="INR">INR (₹)</SelectItem><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="AED">AED (د.إ)</SelectItem></SelectContent></Select></FormItem>
-                        )} />
-                        <FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Pipeline Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                    </div>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Briefcase className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                    <FormField control={form.control} name="followUpsCompleted" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Follow Ups Completed</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
                     <FormField control={form.control} name="meetingsSecured" render={({ field }) => (
                       <FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Secured Today</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" placeholder="List clients and status..." /></FormControl></FormItem>
                     )} />
@@ -433,8 +473,8 @@ export default function ReportsPage() {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Mic className="size-4" /> 3️⃣ Call Recordings Upload</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Mic className="size-4" /> 4️⃣ Recording Audit (Upload MP3/WAV)</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                     <div className="space-y-3">
                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Best Call of the Day</Label>
                         <div className="flex items-center gap-3">
@@ -455,14 +495,14 @@ export default function ReportsPage() {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><MapPin className="size-4" /> 4️⃣ Forward Execution Planning</CardTitle></CardHeader>
-                <CardContent className="space-y-6">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><PieChart className="size-4" /> 5️⃣ Forward Execution Planning</CardTitle></CardHeader>
+                <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel><FormControl><Input {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
                         <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
                             <FormItem><FormLabel className="text-[10px] uppercase font-bold">Intervention Trigger</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>
                                 <SelectItem value="None (Standard)">None (Standard)</SelectItem>
                                 <SelectItem value="Manager Input Required">Manager Input Required</SelectItem>
@@ -486,17 +526,17 @@ export default function ReportsPage() {
   const DigitalMarketingFields = () => (
     <div className="space-y-8">
         <BusinessFields />
-        <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm">
-            <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> Marketing Pipeline Intelligence</CardTitle></CardHeader>
-            <CardContent className="pt-4 space-y-8">
+        <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
+            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 6️⃣ Marketing Pipeline Intelligence</CardTitle></CardHeader>
+            <CardContent className="pt-6 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {['Content', 'Posts', 'Reels', 'Shoots'].map(group => (
-                        <div key={group} className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4">
-                            <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><LayoutTemplate className="size-3"/> {group} Status</Label>
+                        <div key={group} className="p-4 bg-white/50 rounded-2xl border border-border/50 space-y-4 shadow-sm">
+                            <Label className="text-[10px] font-black uppercase text-purple-700 flex items-center gap-2"><LayoutTemplate className="size-3"/> {group} Status Tracking</Label>
                             <div className="grid grid-cols-3 gap-2">
                                 {['Approved', 'Pending', 'Rejected'].map(status => (
                                     <FormField key={status} control={form.control} name={`dm${group}${status}`} render={({ field }) => (
-                                        <FormItem><FormLabel className={cn("text-[9px] uppercase font-bold text-center", status === 'Approved' ? 'text-green-600' : status === 'Pending' ? 'text-yellow-600' : 'text-red-600')}>{status}</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-8 text-center font-bold" /></FormControl></FormItem>
+                                        <FormItem><FormLabel className={cn("text-[9px] uppercase font-bold text-center", status === 'Approved' ? 'text-green-600' : status === 'Pending' ? 'text-yellow-600' : 'text-red-600')}>{status}</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-9 text-center font-bold rounded-lg" /></FormControl></FormItem>
                                     )} />
                                 ))}
                             </div>
@@ -513,30 +553,30 @@ export default function ReportsPage() {
         <div className="space-y-8">
             <div className="grid grid-cols-2 gap-6">
                 <FormField control={form.control} name="logInTime" render={({ field }) => (
-                  <FormItem><FormLabel className="text-xs uppercase font-bold">Shift Start</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>
+                  <FormItem><FormLabel className="text-xs uppercase font-bold">Shift Start</FormLabel><FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                 )} />
                 <FormField control={form.control} name="logOutTime" render={({ field }) => (
-                  <FormItem><FormLabel className="text-xs uppercase font-bold">Shift End</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>
+                  <FormItem><FormLabel className="text-xs uppercase font-bold">Shift End</FormLabel><FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                 )} />
             </div>
             <div className="space-y-4">
                 <p className="font-black text-[10px] text-primary uppercase tracking-[0.2em] flex items-center gap-2"><Brain className="size-4" /> Completed Modules:</p>
                 {form.getValues('completedTasks')?.map((_: any, i: number) => (
-                    <Card key={i} className="relative group bg-white/50 border rounded-2xl overflow-hidden">
+                    <Card key={i} className="relative group bg-white/50 border rounded-2xl overflow-hidden shadow-sm">
                         <CardContent className="pt-6 space-y-4">
                             <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full h-8 w-8 text-red-600" onClick={() => {
                                 const current = form.getValues('completedTasks');
                                 form.setValue('completedTasks', current.filter((_:any, idx:number) => idx !== i));
                             }}><X className="size-4" /></Button>
-                            <FormField control={form.control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Module Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name={`completedTasks.${i}.workDone`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Functionality</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Module Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name={`completedTasks.${i}.workDone`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Functionality Description</FormLabel><FormControl><Textarea {...field} className="min-h-[80px] rounded-xl" /></FormControl></FormItem>)} />
                         </CardContent>
                     </Card>
                 ))}
                 <Button type="button" variant="outline" onClick={() => {
                     const current = form.getValues('completedTasks') || [];
                     form.setValue('completedTasks', [...current, { moduleName: "", workDone: "" }]);
-                }} className="w-full border-dashed rounded-2xl h-14 bg-white/50 text-xs font-black uppercase"><Plus className="size-4 mr-2" /> Add Module</Button>
+                }} className="w-full border-dashed rounded-2xl h-16 bg-white/50 text-xs font-black uppercase"><Plus className="size-4 mr-2" /> Add Development Module</Button>
             </div>
         </div>
     );
@@ -545,9 +585,9 @@ export default function ReportsPage() {
   const CustomTemplateFields = ({ definition }: { definition: any }) => (
       <div className="space-y-8">
           {definition.sections?.map((section: any, sIdx: number) => (
-              <Card key={sIdx} className="bg-white/50 border-none ring-1 ring-border/50 shadow-sm">
-                  <CardHeader><CardTitle className="text-xs font-bold uppercase tracking-widest text-primary">{section.title}</CardTitle></CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card key={sIdx} className="bg-white/50 border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                  <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase tracking-widest text-primary">{section.title}</CardTitle></CardHeader>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                       {section.fields?.map((field: any, fIdx: number) => (
                           <FormField key={fIdx} control={form.control} name={field.name} render={({ field: formField }) => (
                               <FormItem>
@@ -556,9 +596,9 @@ export default function ReportsPage() {
                                       {field.type === 'textarea' ? (
                                           <Textarea {...formField} className="rounded-xl" />
                                       ) : field.type === 'number' ? (
-                                          <Input type="number" min="0" {...formField} className="rounded-full" />
+                                          <Input type="number" min="0" {...formField} className="rounded-xl h-11" />
                                       ) : (
-                                          <Input {...formField} className="rounded-full" />
+                                          <Input {...formField} className="rounded-xl h-11" />
                                       )}
                                   </FormControl>
                               </FormItem>
@@ -683,7 +723,7 @@ export default function ReportsPage() {
                     </ScrollArea>
                     <div className="p-6 border-t bg-white/80 backdrop-blur-md">
                         <DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col">
-                            <Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button>
+                            <Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px]" onClick={() => { setIsAddDialogOpen(false); resetForm(); }}>Discard</Button>
                             <Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20" disabled={isUploading !== null}>Finalize Log & Logout</Button>
                         </DialogFooter>
                     </div>
