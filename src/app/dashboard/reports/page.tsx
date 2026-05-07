@@ -27,21 +27,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera, Link as LinkIcon, AlertCircle, CheckCircle2 } from "lucide-react";
+import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Video, Camera, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, setDocumentNonBlocking, useDoc } from "@/firebase";
 import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
@@ -428,21 +428,47 @@ export default function ReportsPage() {
                 <CardContent className="space-y-6">
                     <div className="space-y-4">
                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Meetings/Demos Secured</Label>
-                        {meetings.map((f, i) => (<div key={f.id} className="p-4 border rounded-2xl space-y-3 relative bg-white/50"><Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-red-500" onClick={() => removeMeeting(i)}><X className="size-3" /></Button><FormField control={form.control} name={`meetingsSecured.${i}.clientName`} render={({ field }) => (<FormItem><FormControl><Input placeholder="Client Name" {...field} /></FormControl></FormItem>)} /><FormField control={form.control} name={`meetingsSecured.${i}.context`} render={({ field }) => (<FormItem><FormControl><Textarea placeholder="Context / Objective" {...field} className="min-h-[60px]" /></FormControl></FormItem>)} /></div>))}
-                        <Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12" onClick={() => appendMeeting({ clientName: "", context: "" })}><Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD</Button>
+                        {meetings.map((f, i) => (
+                          <div key={f.id} className="p-4 border rounded-2xl space-y-3 relative bg-white/50">
+                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-red-500" onClick={() => removeMeeting(i)}>
+                              <X className="size-3" />
+                            </Button>
+                            <FormField control={form.control} name={`meetingsSecured.${i}.clientName`} render={({ field }) => (
+                              <FormItem><FormControl><Input placeholder="Client Name" {...field} /></FormControl></FormItem>
+                            )} />
+                            <FormField control={form.control} name={`meetingsSecured.${i}.context`} render={({ field }) => (
+                              <FormItem><FormControl><Textarea placeholder="Context / Objective" {...field} className="min-h-[60px]" /></FormControl></FormItem>
+                            )} />
+                          </div>
+                        ))}
+                        <Button type="button" variant="outline" className="w-full border-dashed rounded-xl h-12" onClick={() => appendMeeting({ clientName: "", context: "" })}>
+                          <Plus className="size-4 mr-2" /> ADD NEW CLIENT RECORD
+                        </Button>
                     </div>
-                    <FormField control={form.control} name="todayHighlight" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Today's Highlight Win</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="todayHighlight" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs uppercase font-bold">Today's Highlight Win</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>
+                    )} />
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                 <CardHeader><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><MapPin className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
-                    <FormField control={form.control} name="tomorrowCriticalPath" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">T+1 Critical Path Action</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="tomorrowCriticalPath" render={({ field }) => (
+                      <FormItem><FormLabel className="text-xs uppercase font-bold">T+1 Critical Path Action</FormLabel><FormControl><Textarea {...field} className="rounded-2xl" /></FormControl></FormItem>
+                    )} />
                     <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
                         <FormItem><FormLabel className="text-xs uppercase font-bold">Intervention Trigger Required?</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent><SelectItem value="None (Standard)">None (Standard)</SelectItem><SelectItem value="Manager Input Required">Manager Input Required</SelectItem><SelectItem value="Resource Blocked">Resource Blocked</SelectItem><SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem></SelectContent></Select></FormItem>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="None (Standard)">None (Standard)</SelectItem>
+                            <SelectItem value="Manager Input Required">Manager Input Required</SelectItem>
+                            <SelectItem value="Resource Blocked">Resource Blocked</SelectItem>
+                            <SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        </FormItem>
                     )} />
                 </CardContent>
             </Card>
@@ -485,8 +511,12 @@ export default function ReportsPage() {
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-2 gap-6">
-                <FormField control={form.control} name="logInTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Shift Start</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>)} />
-                <FormField control={form.control} name="logOutTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Shift End</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>)} />
+                <FormField control={form.control} name="logInTime" render={({ field }) => (
+                  <FormItem><FormLabel className="text-xs uppercase font-bold">Shift Start</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>
+                )} />
+                <FormField control={form.control} name="logOutTime" render={({ field }) => (
+                  <FormItem><FormLabel className="text-xs uppercase font-bold">Shift End</FormLabel><FormControl><Input type="time" {...field} className="rounded-full" /></FormControl></FormItem>
+                )} />
             </div>
             <div className="space-y-4">
                 <p className="font-black text-[10px] text-primary uppercase tracking-[0.2em] flex items-center gap-2"><Brain className="size-4" /> Completed Modules:</p>
@@ -558,7 +588,10 @@ export default function ReportsPage() {
       
       {isAdmin ? (
         <>
-          <div className="relative mb-6"><Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Search organizational fleet..." className="pl-10 h-12 rounded-2xl bg-white/50 border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
+          <div className="relative mb-6">
+            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search organizational fleet..." className="pl-10 h-12 rounded-2xl bg-white/50 border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          </div>
           <div className="border rounded-2xl overflow-hidden shadow-sm bg-white/50 ring-1 ring-border/50">
             <Table>
                 <TableHeader className="bg-muted/30">
@@ -680,7 +713,16 @@ export default function ReportsPage() {
                                             <AlertDialogTrigger asChild>
                                                 <Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8"><Trash2 className="h-3 w-3 mr-2" />Purge Log</Button>
                                             </AlertDialogTrigger>
-                                            <AlertDialogContent className="rounded-3xl"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently purge this record from the historical archives.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel><AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => deleteDoc(doc(firestore, `users/${reportUserId}/reports`, r.id))}>Purge Forever</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                                            <AlertDialogContent className="rounded-3xl">
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle className="text-xl font-black uppercase">Confirm Deletion</AlertDialogTitle>
+                                                <AlertDialogDescription>This will permanently purge this record from the historical archives.</AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel className="rounded-full font-bold text-[10px] uppercase">Cancel</AlertDialogCancel>
+                                                <AlertDialogAction className="rounded-full font-bold text-[10px] uppercase bg-red-600" onClick={() => deleteDoc(doc(firestore, `users/${reportUserId}/reports`, r.id))}>Purge Forever</AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
                                         </AlertDialog>
                                     </div>
                                     {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : r.reportType === 'Digital Marketing' ? <DigitalMarketingReportDetails report={r} /> : r.reportType === 'Technical' ? <TechnicalReportDetails report={r} /> : <CustomReportDetails report={r} />}
@@ -695,6 +737,3 @@ export default function ReportsPage() {
     </>
   );
 }
-
-import { Beaker as BeakerIcon, FileJson as FileJsonIcon } from "lucide-react";
-import { SelectGroup, SelectLabel } from "@/components/ui/select";
