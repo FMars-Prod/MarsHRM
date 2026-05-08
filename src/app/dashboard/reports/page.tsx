@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -131,7 +130,6 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
     const coldCalls = Number(useWatch({ control, name: 'coldCalls' }) || 0);
     const linkedin = Number(useWatch({ control, name: 'linkedinOutreach' }) || 0);
     const emails = Number(useWatch({ control, name: 'emailsSent' }) || 0);
-    const followUps = Number(useWatch({ control, name: 'followUps' }) || 0);
     const potential = Number(useWatch({ control, name: 'potentialClients' }) || 0);
     
     const totalOutreach = coldCalls + linkedin + emails;
@@ -186,7 +184,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                                 <CardContent className="p-6 space-y-6">
                                     <FormField control={control} name="potentialClients" render={({ field }) => (
                                         <FormItem className="text-center">
-                                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Prospects Identified</FormLabel>
+                                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Potential Client</FormLabel>
                                             <FormControl><Input type="number" min="0" {...field} className="h-14 text-3xl font-black text-center border-2 border-primary/20 rounded-2xl focus:border-primary transition-all" /></FormControl>
                                         </FormItem>
                                     )} />
@@ -408,7 +406,7 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
                         <span className="text-4xl font-black">{efficiency.toFixed(2)}%</span>
                     </div>
                     <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Qualified Prospects</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients Identified</span>
                         <span className="text-3xl font-black">{potential}</span>
                     </div>
                     <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center">
