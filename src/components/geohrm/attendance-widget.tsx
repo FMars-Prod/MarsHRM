@@ -444,9 +444,16 @@ export function AttendanceWidget() {
                 </div>
 
                 {(status === "lunch" || status === "short_break") && (
-                  <div className="flex flex-col items-center animate-pulse">
-                    <span className="text-[10px] font-black uppercase text-orange-600 tracking-widest flex items-center gap-1.5"><Coffee className="size-3"/> Current Break</span>
-                    <div className="text-2xl font-bold font-mono tabular-nums text-orange-600">{formatTime(breakTimer)}</div>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex flex-col items-center animate-pulse">
+                        <span className="text-[10px] font-black uppercase text-orange-600 tracking-widest flex items-center gap-1.5"><Coffee className="size-3"/> Current Break</span>
+                        <div className="text-2xl font-bold font-mono tabular-nums text-orange-600">{formatTime(breakTimer)}</div>
+                    </div>
+                    <div className="px-4 py-1 rounded-full bg-orange-50 border border-orange-100">
+                        <p className="text-[9px] font-black text-orange-700 uppercase tracking-widest">
+                            Total Break Duration: {formatTime(totalBreakTime + breakTimer)}
+                        </p>
+                    </div>
                   </div>
                 )}
             </div>
