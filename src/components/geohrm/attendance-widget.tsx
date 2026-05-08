@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -168,22 +167,6 @@ export function AttendanceWidget() {
     return () => clearInterval(interval);
   }, [status]);
 
-  const handleResetDay = async () => {
-    if (!user || !getTodaysAttendanceRef) return;
-    try {
-        await deleteDoc(getTodaysAttendanceRef);
-        setStatus("out");
-        setTimer(0);
-        setBreakTimer(0);
-        setTotalBreakTime(0);
-        setLastClockInTime(null);
-        setHasClockedOutToday(false);
-        toast({ title: "Strategic Reset", description: "Today's shift data has been purged." });
-    } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Reset Denied', description: e.message });
-    }
-  };
-
   const proceedWithBreakEnd = (userLocation: Location, dist: number, reason?: string) => {
       const updatedBreakTime = totalBreakTime + breakTimer;
       if (getTodaysAttendanceRef) {
@@ -336,11 +319,6 @@ export function AttendanceWidget() {
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
               <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Precision Attendance</CardTitle>
-              {lastClockInTime && (
-                  <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-red-600 font-bold uppercase text-[10px]" onClick={handleResetDay}>
-                      <RotateCcw className="size-3 mr-1.5" /> Reset My Day
-                  </Button>
-              )}
           </div>
           <CardDescription>High-accuracy geofenced tracking active.</CardDescription>
         </CardHeader>

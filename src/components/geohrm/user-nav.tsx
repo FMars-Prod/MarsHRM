@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,16 +11,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { LogOut } from "lucide-react";
+import { LogOut, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
-import { doc } from "firebase/firestore";
+import { doc, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import * as React from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export function UserNav({ user }: { user: User | null }) {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
@@ -29,9 +33,45 @@ export function UserNav({ user }: { user: User | null }) {
   );
   const { data: employee } = useDoc(userDocRef);
 
-  const handleLogout = () => {
-    auth.signOut();
-    router.push('/login');
+  const handleLogout = async () => {
+    if (!user) return;
+    setIsLoggingOut(true);
+
+    try {
+        const userRole = (employee as any)?.role || 'Member';
+        const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+
+        // Check if report for today exists (only for members/leads)
+        if (!isPrivileged) {
+            const todayStart = startOfDay(new Date());
+            const todayEnd = endOfDay(new Date());
+            
+            const q = query(
+                collection(firestore, `users/${user.uid}/reports`),
+                where('date', '>=', todayStart),
+                where('date', '<=', todayEnd)
+            );
+
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                toast({
+                    variant: 'destructive',
+                    title: "Report Required",
+                    description: "Protocol violation: Please submit your daily tactical report before logging out."
+                });
+                router.push('/dashboard/reports');
+                setIsLoggingOut(false);
+                return;
+            }
+        }
+
+        await auth.signOut();
+        router.push('/login');
+    } catch (err: any) {
+        console.error("Logout error:", err);
+        toast({ variant: 'destructive', title: 'Logout Interrupted', description: err.message });
+        setIsLoggingOut(false);
+    }
   };
 
   const employeeName = employee ? `${(employee as any).firstName} ${(employee as any).lastName}` : user?.displayName || 'User';
@@ -40,7 +80,7 @@ export function UserNav({ user }: { user: User | null }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full" disabled={isLoggingOut}>
           <Avatar className={cn("h-10 w-10", employeeAvatar && "bg-transparent")}>
             {employeeAvatar ? (
                 <span className="text-2xl">{employeeAvatar}</span>
@@ -62,9 +102,9 @@ export function UserNav({ user }: { user: User | null }) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+        <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
+          {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+          <span>{isLoggingOut ? "Verifying Protocols..." : "Log out"}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

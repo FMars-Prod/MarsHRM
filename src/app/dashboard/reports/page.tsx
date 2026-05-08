@@ -29,9 +29,6 @@ import Link from "next/link";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 
-/**
- * UTILITY: Format date to IST String
- */
 const formatIST = (date: any) => {
     if (!date) return "N/A";
     const d = date instanceof Timestamp ? date.toDate() : new Date(date);
@@ -46,9 +43,6 @@ const formatIST = (date: any) => {
     }).format(d) + " IST";
 };
 
-/**
- * COMPONENT: Common Shift Header (Login/Logout)
- */
 const ShiftHeaderFields = () => {
     const { control } = useFormContext();
     return (
@@ -69,9 +63,6 @@ const ShiftHeaderFields = () => {
     );
 };
 
-/**
- * COMPONENT: Common T+1 Execution Planning
- */
 const ExecutionPlanFields = () => {
     const { control } = useFormContext();
     return (
@@ -121,9 +112,6 @@ const ExecutionPlanFields = () => {
     );
 };
 
-/**
- * COMPONENT: Business Intelligence Fields (Core)
- */
 const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
     const { control, setValue } = useFormContext();
     const storage = useStorage();
@@ -291,9 +279,6 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
     );
 };
 
-/**
- * COMPONENT: Digital Marketing Matrix Module
- */
 const MarketingMatrixTable = () => {
     const { control } = useFormContext();
     const deliverables = [
@@ -358,9 +343,6 @@ const DigitalMarketingFields = () => (
     </div>
 );
 
-/**
- * COMPONENT: Technical Sprint Sub-Modules
- */
 const TechnicalProjectItem = ({ index, control }: { index: number, control: any }) => {
     const isCompleted = useWatch({ control, name: `technicalProjects.${index}.isCompleted` });
     return (
@@ -490,9 +472,6 @@ const TechnicalFields = () => {
     );
 };
 
-/**
- * COMPONENT: Audit Visualizations
- */
 const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
     const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0);
     const potential = Number(report.potentialClients || 0);
@@ -575,9 +554,6 @@ const TechnicalAuditDetail = ({ report }: { report: any }) => (
     </div>
 );
 
-/**
- * MAIN PAGE: Reports Dashboard
- */
 export default function ReportsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -697,12 +673,12 @@ export default function ReportsPage() {
                       {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetail report={selectedReportForReview} />}
                       <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> 5️⃣ Pipeline & Planning (T+1)</CardTitle></CardHeader><CardContent className="pt-6 space-y-4"><div className="grid grid-cols-2 gap-4"><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Meetings Tomorrow</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Intervention</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div></div><div><p className="text-[10px] font-black uppercase text-orange-600 mb-1">Critical Path</p><p className="text-sm italic">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p></div></CardContent></Card>
-                      <div className="pt-10 flex flex-col items-center text-center space-y-6"><div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">{selectedReportForReview?.signatureUrl ? (<img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />) : (<span className="font-mono text-[10px] italic opacity-60">Digital Handshake via Platform</span>)}</div><div className="space-y-1"><p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p><Separator className="w-10 mx-auto my-2" /><p className="text-[8px] font-mono text-muted-foreground italic">Submitted {formatIST(selectedReportForReview?.date)}</p></div></div></div></ScrollArea></DialogContent>
+                      <div className="pt-10 flex flex-col items-center text-center space-y-6"><div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">{selectedReportForReview?.signatureUrl ? (<img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />) : (<span className="font-mono text-[10px] italic opacity-60">Digital Verification via Platform</span>)}</div><div className="space-y-1"><p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p><Separator className="w-10 mx-auto my-2" /><p className="text-[8px] font-mono text-muted-foreground italic">Submitted {formatIST(selectedReportForReview?.date)}</p></div></div></div></ScrollArea></DialogContent>
       </Dialog>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}><DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl"><FormProvider {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 bg-secondary/30">
                     <DialogHeader className="p-8 pb-6 border-b bg-white/80 backdrop-blur-md"><div className="flex items-center gap-3"><div className="p-3 rounded-2xl bg-primary/10 text-primary"><Briefcase className="size-6" /></div><div><DialogTitle className="text-2xl font-black uppercase tracking-tighter">Daily {currentTemplateId} Submission</DialogTitle><DialogDescription className="text-xs font-bold">{formatIST(new Date())}</DialogDescription></div></div></DialogHeader>
-                    <ScrollArea className="flex-1"><div className="p-8 space-y-8"><div className="space-y-6"><Label className="text-[10px] font-black uppercase tracking-widest text-primary">Tactical Analytics Template</Label>{currentTemplateId === 'Technical' ? <TechnicalFields /> : currentTemplateId === 'Digital Marketing' ? <DigitalMarketingFields /> : <BusinessFields />}</div><Separator /><div className="space-y-6"><Label className="text-[10px] font-black uppercase text-primary">Strategic Handshake</Label><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl><FormLabel className="text-sm font-bold">I certify that this submission represents a verified and accurate account of my tactical shift output.</FormLabel></FormItem>)} /></div></div></ScrollArea>
+                    <ScrollArea className="flex-1"><div className="p-8 space-y-8"><div className="space-y-6"><Label className="text-[10px] font-black uppercase tracking-widest text-primary">Tactical Analytics Template</Label>{currentTemplateId === 'Technical' ? <TechnicalFields /> : currentTemplateId === 'Digital Marketing' ? <DigitalMarketingFields /> : <BusinessFields />}</div><Separator /><div className="space-y-6"><Label className="text-[10px] font-black uppercase text-primary">Strategic Certification</Label><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl><FormLabel className="text-sm font-bold">I certify that this submission represents a verified and accurate account of my tactical shift output.</FormLabel></FormItem>)} /></div></div></ScrollArea>
                     <div className="p-6 border-t bg-white/80 backdrop-blur-md"><DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col"><Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard Log</Button><Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px] shadow-lg shadow-primary/20">Finalize Intelligence</Button></DialogFooter></div>
                 </form></FormProvider></DialogContent></Dialog>
     </div>
