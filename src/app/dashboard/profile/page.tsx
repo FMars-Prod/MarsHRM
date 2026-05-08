@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { updateDocumentNonBlocking, addDocumentNonBlocking, useCollection } from "@/firebase";
 import Image from 'next/image';
 import { Textarea } from "@/components/ui/textarea";
-import { InteractiveMap } from "@/components/geohrm/interactive-map";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -64,10 +63,7 @@ export default function ProfilePage() {
     const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
     const [isAvatarDialogOpen, setIsAvatarDialogOpen] = React.useState(false);
     const [isRequestChangeOpen, setIsRequestChangeOpen] = React.useState(false);
-    const [isReasonDialogOpen, setIsReasonDialogOpen] = React.useState(false);
-    const [changeReason, setChangeReason] = React.useState("");
     const [capturedLocation, setCapturedLocation] = React.useState<{latitude: number, longitude: number} | null>(null);
-    const [selectedAddress, setSelectedAddress] = React.useState<string>("Getting address...");
     const [isUploadingSignature, setIsUploadingSignature] = React.useState(false);
     const [manualSignatureUrl, setManualSignatureUrl] = React.useState("");
 
@@ -123,7 +119,7 @@ export default function ProfilePage() {
             updateDocumentNonBlocking(userDocRef!, { signatureUrl: url, signatureStatus: 'pending' });
             toast({ title: "Identity Uploaded", description: "Your digital signature is awaiting HR approval." });
         } catch (e: any) {
-            toast({ variant: 'destructive', title: "Bucket Error", description: "Use direct URL tab if Storage bucket is not initialized." });
+            toast({ variant: 'destructive', title: "Bucket Error", description: "Use 'Manual URL' tab if Storage bucket initialization is pending." });
         } finally {
             setIsUploadingSignature(false);
         }
@@ -200,8 +196,8 @@ export default function ProfilePage() {
                             
                             <Tabs defaultValue="upload" className="w-full">
                                 <TabsList className="grid w-full grid-cols-2 rounded-lg bg-muted/50 h-10">
-                                    <TabsTrigger value="upload" className="text-[10px] font-black uppercase">Upload File</TabsTrigger>
-                                    <TabsTrigger value="url" className="text-[10px] font-black uppercase">Direct URL</TabsTrigger>
+                                    <TabsTrigger value="upload" className="text-[10px] font-black uppercase">File Upload</TabsTrigger>
+                                    <TabsTrigger value="url" className="text-[10px] font-black uppercase">Manual URL</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="upload" className="pt-4">
                                     <div className="relative">
@@ -216,7 +212,7 @@ export default function ProfilePage() {
                                         <Input value={manualSignatureUrl} onChange={e => setManualSignatureUrl(e.target.value)} placeholder="Paste hosted image URL..." className="h-10 text-xs rounded-xl" />
                                         <Button size="icon" className="h-10 w-10 rounded-xl" onClick={handleManualSignatureSave}><Save className="size-4" /></Button>
                                     </div>
-                                    <p className="text-[8px] text-muted-foreground italic text-center">Use this if Storage bucket initialization is pending.</p>
+                                    <p className="text-[8px] text-muted-foreground italic text-center">Bypass Storage bucket errors by using a direct URL.</p>
                                 </TabsContent>
                             </Tabs>
                         </CardContent>
