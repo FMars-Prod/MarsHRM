@@ -148,42 +148,55 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion Intelligence</CardTitle></CardHeader>
                 <CardContent className="space-y-8 pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Primary Outreach Input</p>
-                            <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                        {/* INPUTS COLUMN */}
+                        <div className="md:col-span-8 space-y-6">
+                            <div className="p-4 bg-muted/20 rounded-2xl border-2 border-dashed border-border/50 grid grid-cols-3 gap-4">
                                 <FormField control={control} name="coldCalls" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-white" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-white border-none shadow-sm ring-1 ring-border" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={control} name="linkedinOutreach" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-white" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-white border-none shadow-sm ring-1 ring-border" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={control} name="emailsSent" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold">Emails</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-white" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Emails</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-white border-none shadow-sm ring-1 ring-border" /></FormControl></FormItem>
                                 )} />
-                                <FormField control={control} name="followUps" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold text-primary">Follow-ups (Standalone)</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-primary/5 border-primary/20" /></FormControl></FormItem>
-                                )} />
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-1 p-6 bg-primary/5 rounded-3xl ring-2 ring-primary/10 shadow-sm text-center">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Total Combined Outreach</p>
+                                    <span className="text-4xl font-black text-primary tracking-tighter">{totalOutreach}</span>
+                                </div>
+                                <div className="w-1/3 p-6 bg-white rounded-3xl ring-1 ring-border/50 shadow-sm text-center">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Follow-ups</p>
+                                    <FormField control={control} name="followUps" render={({ field }) => (
+                                        <FormControl><Input type="number" min="0" {...field} className="h-10 text-xl font-black text-center border-none shadow-none focus-visible:ring-0" /></FormControl>
+                                    )} />
+                                </div>
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Conversion Analysis</p>
-                            <div className="space-y-4">
-                                <FormField control={control} name="potentialClients" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold">Potential Clients Identified</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-2xl h-12 text-lg font-black border-2 border-primary/20" /></FormControl></FormItem>
-                                )} />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-muted/20 rounded-2xl border border-dashed flex flex-col items-center justify-center">
-                                        <span className="text-[8px] font-black uppercase text-muted-foreground">Total Outreach</span>
-                                        <span className="font-black text-xl">{totalOutreach}</span>
-                                    </div>
-                                    <div className="p-4 bg-white rounded-2xl ring-2 ring-primary/10 shadow-inner flex flex-col items-center justify-center">
-                                        <span className="text-[8px] font-black uppercase text-muted-foreground">Efficiency Rate</span>
-                                        <span className={cn("font-black text-xl", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</span>
-                                    </div>
+                        {/* RESULTS COLUMN */}
+                        <div className="md:col-span-4 space-y-6">
+                            <Card className="bg-white border-none ring-2 ring-primary/20 shadow-xl rounded-3xl overflow-hidden">
+                                <div className="p-4 bg-primary text-white text-center">
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Tactical Results</p>
                                 </div>
-                            </div>
+                                <CardContent className="p-6 space-y-6">
+                                    <FormField control={control} name="potentialClients" render={({ field }) => (
+                                        <FormItem className="text-center">
+                                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Prospects Identified</FormLabel>
+                                            <FormControl><Input type="number" min="0" {...field} className="h-14 text-3xl font-black text-center border-2 border-primary/20 rounded-2xl focus:border-primary transition-all" /></FormControl>
+                                        </FormItem>
+                                    )} />
+                                    <Separator />
+                                    <div className="text-center">
+                                        <p className="text-[9px] font-black uppercase text-muted-foreground mb-1">Conversion Efficiency</p>
+                                        <p className={cn("text-4xl font-black tracking-tighter", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     </div>
                 </CardContent>
@@ -388,22 +401,27 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
         <div className="space-y-8">
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion Analysis</div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Cold Calls</p><p className="text-lg font-black">{report.coldCalls || 0}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">LinkedIn</p><p className="text-lg font-black">{report.linkedinOutreach || 0}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Emails</p><p className="text-lg font-black">{report.emailsSent || 0}</p></div>
-                    <div className="p-4 bg-primary/5 rounded-2xl ring-1 ring-primary/20 text-center"><p className="text-[8px] font-black uppercase text-primary">Total Outreach</p><p className="text-lg font-black">{totalOutreach}</p></div>
-                    <div className="p-4 bg-purple-50 rounded-2xl ring-1 ring-purple-200 text-center"><p className="text-[8px] font-black uppercase text-purple-700">Follow-ups</p><p className="text-lg font-black">{followUps}</p></div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-6 bg-primary text-white rounded-3xl shadow-xl flex flex-col items-center justify-center">
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span>
+                        <span className="text-4xl font-black">{efficiency.toFixed(2)}%</span>
+                    </div>
+                    <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Qualified Prospects</span>
+                        <span className="text-3xl font-black">{potential}</span>
+                    </div>
+                    <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups Executed</span>
+                        <span className="text-3xl font-black">{followUps}</span>
+                    </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-6 bg-secondary/10 rounded-2xl border flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase text-muted-foreground">Prospects Identified</span>
-                        <span className="text-2xl font-black">{potential}</span>
-                    </div>
-                    <div className="p-6 bg-white rounded-2xl ring-2 ring-primary/10 flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase text-muted-foreground">Strategic Efficiency</span>
-                        <span className={cn("text-2xl font-black", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</span>
-                    </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                    <div className="p-3 bg-muted/20 rounded-xl text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Cold Calls</p><p className="font-bold">{report.coldCalls || 0}</p></div>
+                    <div className="p-3 bg-muted/20 rounded-xl text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">LinkedIn</p><p className="font-bold">{report.linkedinOutreach || 0}</p></div>
+                    <div className="p-3 bg-muted/20 rounded-xl text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Emails</p><p className="font-bold">{report.emailsSent || 0}</p></div>
+                    <div className="p-3 bg-primary/5 rounded-xl text-center ring-1 ring-primary/20"><p className="text-[8px] font-black uppercase text-primary">Total Outreach</p><p className="font-black text-primary">{totalOutreach}</p></div>
                 </div>
             </div>
 
@@ -701,9 +719,9 @@ export default function ReportsPage() {
                       </Card>
 
                       <div className="pt-10 flex flex-col items-center text-center space-y-6">
-                          <div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center opacity-60">
+                          <div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center opacity-80">
                               {selectedReportForReview?.signatureUrl ? (
-                                  <img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain grayscale invert mix-blend-multiply" />
+                                  <img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain grayscale" />
                               ) : (
                                   <span className="font-mono text-[10px] italic">Digital Handshake via Platform</span>
                               )}
