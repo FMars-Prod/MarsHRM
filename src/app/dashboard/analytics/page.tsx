@@ -7,16 +7,17 @@ import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebas
 import { collection, query, where, orderBy, Timestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSunday, isValid, isAfter, isBefore, differenceInSeconds } from 'date-fns';
-import { MapPin, Calendar as CalendarIcon, AreaChart as AreaChartIcon, ExternalLink, Clock, Briefcase, CalendarOff, AlertTriangle, Coffee, Info } from 'lucide-react';
+import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSunday, isValid, isAfter, isBefore, differenceInSeconds, startOfMonth, endOfMonth, subWeeks, subMonths, isToday } from 'date-fns';
+import { MapPin, Calendar as CalendarIcon, AreaChart as AreaChartIcon, ExternalLink, Clock, Briefcase, CalendarOff, AlertTriangle, Coffee, Info, Filter } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SelectLabel } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
 
 type User = { id: string; firstName: string; lastName: string; jobTitle: string; department: string; };
 type Holiday = { id: string; date: Timestamp; title: string; };
@@ -72,6 +73,11 @@ export default function AnalyticsPage() {
   const [attendanceData, setAttendanceData] = React.useState<Attendance[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
+  // Filter States
+  const [dateFilter, setDateFilter] = React.useState<string>("last-7");
+  const [customStartDate, setCustomStartDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [customEndDate, setCustomEndDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
+
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users } = useCollection<User>(usersQuery);
 
@@ -81,18 +87,52 @@ export default function AnalyticsPage() {
   const leavesQuery = useMemoFirebase(() => query(collection(firestore, 'leave_requests'), where('status', '==', 'Approved')), [firestore]);
   const { data: leaves } = useCollection<LeaveRequest>(leavesQuery);
 
+  const dateRange = React.useMemo(() => {
+    const now = new Date();
+    let start: Date;
+    let end: Date = endOfDay(now);
+
+    switch (dateFilter) {
+        case 'today':
+            start = startOfDay(now);
+            end = endOfDay(now);
+            break;
+        case 'yesterday':
+            start = startOfDay(subDays(now, 1));
+            end = endOfDay(subDays(now, 1));
+            break;
+        case 'prev-week':
+            start = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+            end = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+            break;
+        case 'prev-month':
+            start = startOfMonth(subMonths(now, 1));
+            end = endOfMonth(subMonths(now, 1));
+            break;
+        case 'custom-date':
+            start = startOfDay(new Date(customStartDate));
+            end = endOfDay(new Date(customStartDate));
+            break;
+        case 'custom-range':
+            start = startOfDay(new Date(customStartDate));
+            end = endOfDay(new Date(customEndDate));
+            break;
+        default: // last-7
+            start = startOfDay(subDays(now, 6));
+            break;
+    }
+    return { start, end };
+  }, [dateFilter, customStartDate, customEndDate]);
+
   React.useEffect(() => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        const now = new Date();
-        const start = startOfDay(subDays(now, 14)); // View last 14 days
-
         let q;
         if (selectedUserId === 'all') {
-            q = query(collectionGroup(firestore, 'attendances'), where('checkInTime', '>=', Timestamp.fromDate(start)));
+            q = query(collectionGroup(firestore, 'attendances'), where('checkInTime', '>=', Timestamp.fromDate(dateRange.start)), where('checkInTime', '<=', Timestamp.fromDate(dateRange.end)));
         } else {
-            q = query(collection(firestore, `users/${selectedUserId}/attendances`), where('checkInTime', '>=', Timestamp.fromDate(start)));
+            q = query(collection(firestore, `users/${selectedUserId}/attendances`), where('checkInTime', '>=', Timestamp.fromDate(dateRange.start)), where('checkInTime', '<=', Timestamp.fromDate(dateRange.end)));
         }
 
         const snap = await getDocs(q);
@@ -104,10 +144,16 @@ export default function AnalyticsPage() {
       }
     };
     fetchStats();
-  }, [selectedUserId, firestore, toast]);
+  }, [selectedUserId, firestore, toast, dateRange]);
 
   const trendData = React.useMemo(() => {
-    const days = eachDayOfInterval({ start: subDays(new Date(), 6), end: new Date() }).filter(d => !isSunday(d));
+    // If it's a single day or small range, show at least 7 days for trend context
+    const isSingleDay = isSameDay(dateRange.start, dateRange.end);
+    const trendStart = isSingleDay ? subDays(dateRange.start, 6) : dateRange.start;
+    const trendEnd = dateRange.end;
+
+    const days = eachDayOfInterval({ start: trendStart, end: trendEnd }).filter(d => !isSunday(d));
+    
     return days.map(day => {
         const dayStr = format(day, 'EEE, MMM d');
         const dayRecs = attendanceData.filter(r => r.checkInTime && isSameDay(r.checkInTime.toDate(), day));
@@ -115,10 +161,10 @@ export default function AnalyticsPage() {
             date: dayStr,
             present: dayRecs.filter(r => r.status === 'present').length,
             late: dayRecs.filter(r => r.status === 'late').length,
-            absent: (users?.length || 0) - dayRecs.length
+            absent: Math.max(0, (users?.length || 0) - dayRecs.length)
         };
     });
-  }, [attendanceData, users]);
+  }, [attendanceData, users, dateRange]);
 
   const getDayStatus = (user: User, day: Date) => {
       const today = startOfDay(new Date());
@@ -176,27 +222,33 @@ export default function AnalyticsPage() {
           }
       });
 
-      const userLeaves = leaves?.filter(l => l.employeeId === user.id).reduce((acc, l) => {
-          const days = eachDayOfInterval({ start: l.startDate.toDate(), end: l.endDate.toDate() }).length;
+      const userLeaves = leaves?.filter(l => l.employeeId === user.id && isWithinInterval(l.startDate.toDate(), l.endDate.toDate(), dateRange)).reduce((acc, l) => {
+          const start = isBefore(l.startDate.toDate(), dateRange.start) ? dateRange.start : l.startDate.toDate();
+          const end = isAfter(l.endDate.toDate(), dateRange.end) ? dateRange.end : l.endDate.toDate();
+          const days = eachDayOfInterval({ start, end }).length;
           return acc + days;
       }, 0) || 0;
 
-      const range = eachDayOfInterval({ start: startOfDay(subDays(new Date(), 14)), end: startOfDay(new Date()) });
-      const sunCount = range.filter(d => isSunday(d)).length;
-      const holCount = holidays?.filter(h => isSameDay(h.date.toDate(), new Date())).length || 0;
+      const rangeDays = eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
+      const sunCount = rangeDays.filter(d => isSunday(d)).length;
+      const holCount = holidays?.filter(h => rangeDays.some(d => isSameDay(h.date.toDate(), d))).length || 0;
 
       return {
           leaves: userLeaves,
           workHours: (totalWorkSec / 3600).toFixed(1),
           breakHours: (totalBreakSec / 3600).toFixed(1),
-          holidays: holidays?.length || 0,
+          holidays: holCount,
           sundays: sunCount,
           nonCompliance
       };
-  }, [selectedUserId, attendanceData, leaves, holidays, users]);
+  }, [selectedUserId, attendanceData, leaves, holidays, users, dateRange]);
+
+  const isWithinInterval = (start: Date, end: Date, range: {start: Date, end: Date}) => {
+      return (start <= range.end && end >= range.start);
+  };
 
   const gridData = React.useMemo(() => {
-      const range = eachDayOfInterval({ start: subDays(new Date(), 7), end: new Date() }).reverse();
+      const range = eachDayOfInterval({ start: dateRange.start, end: dateRange.end }).reverse();
       if (selectedUserId !== 'all' && users) {
           const user = users.find(u => u.id === selectedUserId);
           if (!user) return [];
@@ -212,9 +264,8 @@ export default function AnalyticsPage() {
           });
       }
 
-      // Organization Overview: Show all entries for last 7 days
+      // Organization Overview: Show all entries for the selected range
       return attendanceData
-        .filter(a => isAfter(a.checkInTime?.toDate() || new Date(0), subDays(new Date(), 7)))
         .sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0))
         .map(att => {
             const user = users?.find(u => u.id === att.employeeId);
@@ -226,18 +277,66 @@ export default function AnalyticsPage() {
                 att
             };
         });
-  }, [selectedUserId, users, attendanceData, holidays, leaves]);
+  }, [selectedUserId, users, attendanceData, holidays, leaves, dateRange]);
 
   return (
     <div className="space-y-6">
       <PageHeader title="Organizational Analytics" description="High-fidelity performance metrics with geofenced verification.">
-        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger className="w-[240px] rounded-full h-11"><SelectValue placeholder="Select Scope" /></SelectTrigger>
-            <SelectContent>
-                <SelectItem value="all">Organization Overview</SelectItem>
-                {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
-            </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-2">
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="w-[200px] rounded-full h-11"><SelectValue placeholder="Scope" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Organization Overview</SelectItem>
+                    {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
+                </SelectContent>
+            </Select>
+
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-[180px] rounded-full h-11">
+                    <div className="flex items-center gap-2">
+                        <Filter className="size-3.5 opacity-50" />
+                        <SelectValue placeholder="Timeline" />
+                    </div>
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectGroup>
+                        <SelectLabel>Presets</SelectLabel>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="yesterday">Yesterday</SelectItem>
+                        <SelectItem value="prev-week">Previous Week</SelectItem>
+                        <SelectItem value="prev-month">Previous Month</SelectItem>
+                        <SelectItem value="last-7">Last 7 Days</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                        <SelectLabel>Custom</SelectLabel>
+                        <SelectItem value="custom-date">Select Date</SelectItem>
+                        <SelectItem value="custom-range">Select Range</SelectItem>
+                    </SelectGroup>
+                </SelectContent>
+            </Select>
+
+            {(dateFilter === 'custom-date' || dateFilter === 'custom-range') && (
+                <div className="flex gap-2 items-center">
+                    <Input 
+                        type="date" 
+                        value={customStartDate} 
+                        onChange={e => setCustomStartDate(e.target.value)} 
+                        className="h-11 rounded-xl w-40 bg-white/50 border-none ring-1 ring-border/50" 
+                    />
+                    {dateFilter === 'custom-range' && (
+                        <>
+                            <span className="text-[10px] font-black uppercase text-muted-foreground">to</span>
+                            <Input 
+                                type="date" 
+                                value={customEndDate} 
+                                onChange={e => setCustomEndDate(e.target.value)} 
+                                className="h-11 rounded-xl w-40 bg-white/50 border-none ring-1 ring-border/50" 
+                            />
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
       </PageHeader>
 
       <div className="grid gap-6">
@@ -256,7 +355,7 @@ export default function AnalyticsPage() {
             <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-headline flex items-center gap-2">
                     <AreaChartIcon className="size-5 text-primary" />
-                    7-Day Tactical Trend
+                    Tactical Trend Analysis
                 </CardTitle>
                 <CardDescription>Sundays are excluded from trend calculations.</CardDescription>
             </CardHeader>
@@ -376,4 +475,3 @@ function StatCard({ label, value, icon: Icon, color }: { label: string, value: s
         </Card>
     );
 }
-
