@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -9,10 +10,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle } from "lucide-react";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, addDocumentNonBlocking } from "@/firebase";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock } from "lucide-react";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, addDocumentNonBlocking, updateDocumentNonBlocking, useStorage } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { z } from "zod";
@@ -23,6 +25,7 @@ import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 
 const userSchema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -44,10 +47,12 @@ export default function UsersPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const auth = useAuth();
+  const storage = useStorage();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<any | null>(null);
+  const [isUploadingSignature, setIsUploadingSignature] = React.useState(false);
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
   const { data: users, isLoading } = useCollection<any>(usersQuery);
@@ -68,7 +73,6 @@ export default function UsersPage() {
             const batch = writeBatch(firestore);
             batch.update(userRef, updateData);
             
-            // Sync system roles
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
             if (values.role === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', editingUser.id), { employeeId: editingUser.id });
             if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', editingUser.id), { employeeId: editingUser.id });
@@ -84,7 +88,6 @@ export default function UsersPage() {
             const batch = writeBatch(firestore);
             batch.set(userRef, { id: newUserId, employeeId: newUserId, hireDate: new Date().toISOString(), ...userData });
             
-            // Log "Joined" event
             batch.set(doc(collection(firestore, 'audit_logs')), {
                 timestamp: serverTimestamp(),
                 employeeId: newUserId,
@@ -106,13 +109,31 @@ export default function UsersPage() {
     }
   };
 
+  const handleSignatureUpload = async (file: File) => {
+    if (!editingUser) return;
+    setIsUploadingSignature(true);
+    try {
+        const sigRef = ref(storage, `signatures/${editingUser.id}/${Date.now()}-${file.name}`);
+        const snap = await uploadBytes(sigRef, file);
+        const url = await getDownloadURL(snap.ref);
+        const userRef = doc(firestore, 'users', editingUser.id);
+        updateDocumentNonBlocking(userRef, { signatureUrl: url, signatureStatus: 'approved' });
+        toast({ title: "Signature provisioned and approved." });
+        setEditingUser({ ...editingUser, signatureUrl: url, signatureStatus: 'approved' });
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: "Upload Failed", description: e.message });
+    } finally {
+        setIsUploadingSignature(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Staff Management" description="Global registry of active and tactical team members.">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { if(!open) setEditingUser(null); setIsDialogOpen(open); }}>
             <DialogTrigger asChild><Button className="rounded-full h-11"><PlusCircle className="mr-2" /> Add Employee</Button></DialogTrigger>
             <DialogContent className="sm:max-w-md">
-                <DialogHeader><DialogTitle>Register New Staff Member</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{editingUser ? 'Edit Strategic Profile' : 'Register New Staff Member'}</DialogTitle></DialogHeader>
                 <ScrollArea className="max-h-[70vh] -mx-6 px-6">
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
@@ -135,6 +156,38 @@ export default function UsersPage() {
                                     <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
                                 )} />
                             </div>
+
+                            <Separator className="my-4" />
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Digital Identity Assets</Label>
+                                {editingUser ? (
+                                    <div className="space-y-4">
+                                        {editingUser.signatureUrl ? (
+                                            <div className="p-3 bg-muted/20 rounded-xl border border-dashed border-primary/20 flex flex-col items-center gap-2">
+                                                <img src={editingUser.signatureUrl} alt="Signature" className="h-12 object-contain grayscale invert mix-blend-multiply opacity-70" />
+                                                <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[8px] font-black uppercase"><CheckCircle2 className="size-2 mr-1" /> Active Signature</Badge>
+                                            </div>
+                                        ) : (
+                                            <div className="h-20 bg-muted/10 rounded-xl border border-dashed border-muted/50 flex flex-col items-center justify-center gap-1.5">
+                                                <Camera className="size-5 opacity-20" />
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground">Identity Slot Empty</p>
+                                            </div>
+                                        )}
+                                        <div className="relative">
+                                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
+                                            <Button variant="outline" className="w-full h-10 rounded-xl text-[10px] font-black uppercase" disabled={isUploadingSignature}>
+                                                {isUploadingSignature ? "Syncing..." : editingUser.signatureUrl ? "Update Identity Asset" : "Upload Identity Asset"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-muted/10 rounded-xl border border-dashed text-center">
+                                        <p className="text-[9px] font-bold text-muted-foreground">Register user first to provision identity assets.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <Separator className="my-4" />
+
                             <div className="flex items-center justify-between p-4 bg-muted/30 rounded-2xl border">
                                 <Label className="text-xs font-black uppercase">Demo/Test Account</Label>
                                 <FormField control={form.control} name="isDemoAccount" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />

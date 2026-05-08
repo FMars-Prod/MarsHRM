@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker, Mic, Loader2, DollarSign, PieChart, ExternalLink } from "lucide-react";
+import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker, Mic, Loader2, DollarSign, PieChart, ExternalLink, ShieldCheck, Download, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -31,6 +31,8 @@ import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const formatIST = (date: Date) => {
     return new Intl.DateTimeFormat('en-GB', {
@@ -59,7 +61,67 @@ const ReportDetailItem = ({ label, value, children, className }: { label: string
   </div>
 );
 
-const BusinessReportDetails = ({ report }: { report: any }) => {
+const VerificationSection = ({ report, userProfile }: { report: any, userProfile: any }) => {
+    const submittedAt = report.date?.toDate ? formatIST(report.date.toDate()) : "N/A";
+    return (
+        <Card className="bg-secondary/10 border-none ring-1 ring-border/50 overflow-hidden rounded-2xl">
+            <CardHeader className="bg-muted/10 py-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                    <ShieldCheck className="size-3" /> Tactical Verification
+                </CardTitle>
+                <div className="flex items-center gap-2 text-[8px] font-bold text-muted-foreground uppercase">
+                    <Clock className="size-2.5" /> IST: {submittedAt}
+                </div>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <div className="p-4 bg-white/50 rounded-xl border border-dashed border-primary/20 flex items-center justify-center">
+                            {userProfile?.signatureUrl ? (
+                                <img src={userProfile.signatureUrl} alt="Verified Signature" className="h-16 object-contain grayscale invert mix-blend-multiply opacity-70" />
+                            ) : (
+                                <div className="text-[9px] font-black uppercase text-muted-foreground/30">Signature Not Provisioned</div>
+                            )}
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Strategic E-Signature</p>
+                            <p className="text-[8px] text-muted-foreground mt-1 font-mono">{report.signature}</p>
+                        </div>
+                    </div>
+                    <div className="space-y-4 flex flex-col justify-center">
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Reporting Identity</p>
+                            <p className="font-bold text-sm">{report.employeeName}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Designation & Unit</p>
+                            <p className="text-xs font-medium">{userProfile?.jobTitle} • {userProfile?.department}</p>
+                        </div>
+                        <div className="pt-2">
+                            <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[8px] font-black uppercase gap-1">
+                                <CheckCircle2 className="size-2.5" /> Authenticated Submission
+                            </Badge>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
+const ExecutionPlanView = ({ report }: { report: any }) => (
+    <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+        <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">🚀 T+1 Execution Planning</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 text-sm">
+            <ReportDetailItem label="Meetings/Events Booked (Tomorrow)" value={report.meetingsBookedTomorrow} />
+            <ReportDetailItem label="Critical Path Priority" value={report.criticalPathTomorrow} />
+            <ReportDetailItem label="Pending Strategic Deliverables" value={report.pendingDeliverables} />
+            <ReportDetailItem label="Leadership Intervention Trigger" value={report.interventionTrigger} className={report.interventionTrigger !== 'None (Standard)' ? 'text-red-600 font-black' : ''} />
+        </CardContent>
+    </Card>
+);
+
+const BusinessReportDetails = ({ report, userProfile }: { report: any, userProfile: any }) => {
     const mainSym = getCurrencySymbol(report.currency || 'USD');
     const outreachTotal = (Number(report.coldCalls) || 0) + (Number(report.linkedinOutreach) || 0) + (Number(report.emailsSent) || 0);
     const efficiencyRaw = outreachTotal > 0 ? ((Number(report.potentialClients) || 0) / outreachTotal) * 100 : 0;
@@ -132,82 +194,112 @@ const BusinessReportDetails = ({ report }: { report: any }) => {
                 </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">5️⃣ T+1 Execution Planning</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 text-sm">
-                    <ReportDetailItem label="Meetings Booked (Tomorrow)" value={report.meetingsBookedTomorrow} />
-                    <ReportDetailItem label="Critical Path" value={report.criticalPathTomorrow} />
-                    <ReportDetailItem label="Pending Deliverables" value={report.pendingDeliverables} />
-                    <ReportDetailItem label="Intervention Trigger" value={report.interventionTrigger} className={report.interventionTrigger !== 'None (Standard)' ? 'text-red-600' : ''} />
+            <ExecutionPlanView report={report} />
+            <VerificationSection report={report} userProfile={userProfile} />
+        </div>
+    );
+};
+
+const DigitalMarketingReportDetails = ({ report, userProfile }: { report: any, userProfile: any }) => {
+    const categories = [
+        { label: 'Content', key: 'dmContent' },
+        { label: 'Posters', key: 'dmPosters' },
+        { label: 'Reels', key: 'dmReels' },
+        { label: 'Shoots', key: 'dmShoots' }
+    ];
+
+    return (
+        <div className="space-y-6">
+            <BusinessReportDetails report={report} userProfile={userProfile} />
+            <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
+                <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-3" /> Marketing Pipeline Intelligence</CardTitle></CardHeader>
+                <CardContent className="pt-4">
+                    <div className="border rounded-xl overflow-hidden bg-white/50">
+                        <Table>
+                            <TableHeader className="bg-muted/30">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="text-[9px] font-black uppercase tracking-widest">Deliverable</TableHead>
+                                    <TableHead className="text-[9px] font-black uppercase tracking-widest text-center">Approved</TableHead>
+                                    <TableHead className="text-[9px] font-black uppercase tracking-widest text-center">Pending</TableHead>
+                                    <TableHead className="text-[9px] font-black uppercase tracking-widest text-center">Rejected</TableHead>
+                                    <TableHead className="text-[9px] font-black uppercase tracking-widest text-center bg-purple-50">Total</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {categories.map(cat => {
+                                    const app = Number(report[`${cat.key}Approved`] || 0);
+                                    const pen = Number(report[`${cat.key}Pending`] || 0);
+                                    const rej = Number(report[`${cat.key}Rejected`] || 0);
+                                    const total = app + pen + rej;
+                                    return (
+                                        <TableRow key={cat.key} className="border-border/50">
+                                            <TableCell className="text-xs font-bold uppercase">{cat.label}</TableCell>
+                                            <TableCell className="text-center text-xs font-medium">{app}</TableCell>
+                                            <TableCell className="text-center text-xs font-medium">{pen}</TableCell>
+                                            <TableCell className="text-center text-xs font-medium">{rej}</TableCell>
+                                            <TableCell className="text-center text-xs font-black bg-purple-50/50 text-purple-700">{total}</TableCell>
+                                        </TableRow>
+                                    )
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </div>
     );
 };
 
-const DigitalMarketingReportDetails = ({ report }: { report: any }) => (
-    <div className="space-y-6">
-        <BusinessReportDetails report={report} />
-        <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
-            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-3" /> Marketing Pipeline Intelligence</CardTitle></CardHeader>
-            <CardContent className="pt-4 space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {['Content', 'Posts', 'Reels', 'Shoots'].map(group => (
-                        <div key={group} className="p-4 bg-white/50 rounded-xl border border-border/50 space-y-3">
-                            <p className="text-[10px] font-black text-muted-foreground uppercase text-center border-b pb-1">{group}</p>
-                            <div className="grid grid-cols-1 gap-1 text-center">
-                                <ReportDetailItem label="Approved" value={report[`dm${group}Approved`] || 0} />
-                                <ReportDetailItem label="Pending" value={report[`dm${group}Pending`] || 0} />
-                                <ReportDetailItem label="Rejected" value={report[`dm${group}Rejected`] || 0} />
-                            </div>
+const TechnicalReportDetails = ({ report, userProfile }: { report: any, userProfile: any }) => (
+  <div className="space-y-6">
+    <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
+        <CardContent className="space-y-6 pt-8 text-sm">
+            <div className="grid grid-cols-2 gap-6 px-2">
+                <ReportDetailItem label="Login" value={report.logInTime || "N/A"} />
+                <ReportDetailItem label="Logout" value={report.logOutTime || "N/A"} />
+            </div>
+            <div className="space-y-4">
+                <p className="font-bold text-xs text-primary uppercase tracking-widest px-2">Tasks Completed Today:</p>
+                <div className="grid gap-3">
+                    {Array.isArray(report.completedTasks) && report.completedTasks.map((task:any, i:number) => (
+                        <div key={i} className="p-4 bg-white/80 rounded-2xl border border-border/50 shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
+                            <p className="font-bold text-sm">{task.moduleName}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{task.workDone}</p>
                         </div>
                     ))}
                 </div>
-            </CardContent>
-        </Card>
-    </div>
-);
-
-const TechnicalReportDetails = ({ report }: { report: any }) => (
-  <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-    <CardContent className="space-y-6 pt-8 text-sm">
-        <div className="grid grid-cols-2 gap-6 px-2">
-            <ReportDetailItem label="Login" value={report.logInTime || "N/A"} />
-            <ReportDetailItem label="Logout" value={report.logOutTime || "N/A"} />
-        </div>
-        <div className="space-y-4">
-            <p className="font-bold text-xs text-primary uppercase tracking-widest px-2">Tasks Completed Today:</p>
-            <div className="grid gap-3">
-                {Array.isArray(report.completedTasks) && report.completedTasks.map((task:any, i:number) => (
-                    <div key={i} className="p-4 bg-white/80 rounded-2xl border border-border/50 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
-                        <p className="font-bold text-sm">{task.moduleName}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{task.workDone}</p>
-                    </div>
-                ))}
             </div>
-        </div>
-    </CardContent>
-  </Card>
+        </CardContent>
+    </Card>
+    <ExecutionPlanView report={report} />
+    <VerificationSection report={report} userProfile={userProfile} />
+  </div>
 );
 
-const CustomReportDetails = ({ report }: { report: any }) => (
+const CustomReportDetails = ({ report, userProfile }: { report: any, userProfile: any }) => (
     <div className="space-y-6">
         <Card className="bg-white/50 border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Beaker className="size-3"/> Custom Metrics Log</CardTitle></CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 {Object.entries(report).map(([key, value]) => {
-                    if (['id', 'employeeId', 'employeeName', 'employeeDepartment', 'date', 'reportType', 'signature', 'declaration'].includes(key)) return null;
+                    if (['id', 'employeeId', 'employeeName', 'employeeDepartment', 'date', 'reportType', 'signature', 'declaration', 'meetingsBookedTomorrow', 'criticalPathTomorrow', 'pendingDeliverables', 'interventionTrigger'].includes(key)) return null;
                     return <ReportDetailItem key={key} label={key.replace(/([A-Z])/g, ' $1').toUpperCase()} value={String(value)} />;
                 })}
             </CardContent>
         </Card>
+        <ExecutionPlanView report={report} />
+        <VerificationSection report={report} userProfile={userProfile} />
     </div>
 );
 
 const commonSchema = {
   declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Certification required." }) }),
   signature: z.string().min(1, "Signature is required."),
+  meetingsBookedTomorrow: z.string().default("0"),
+  criticalPathTomorrow: z.string().default(""),
+  pendingDeliverables: z.string().default(""),
+  interventionTrigger: z.enum(["None (Standard)", "Manager Input Required", "Resource Blocked", "Client Risk Detected"]).default("None (Standard)"),
 };
 
 const businessReportSchema = z.object({
@@ -228,19 +320,15 @@ const businessReportSchema = z.object({
   bestCallRecording: z.string().optional(),
   worstCallRecording: z.string().optional(),
   allCallsDriveLink: z.string().optional(),
-  meetingsBookedTomorrow: z.string().default("0"),
-  criticalPathTomorrow: z.string().default(""),
-  pendingDeliverables: z.string().default(""),
-  interventionTrigger: z.enum(["None (Standard)", "Manager Input Required", "Resource Blocked", "Client Risk Detected"]).default("None (Standard)"),
 });
 
 const digitalMarketingReportSchema = businessReportSchema.extend({
   dmContentApproved: z.coerce.number().min(0).default(0),
   dmContentPending: z.coerce.number().min(0).default(0),
   dmContentRejected: z.coerce.number().min(0).default(0),
-  dmPostsApproved: z.coerce.number().min(0).default(0),
-  dmPostsPending: z.coerce.number().min(0).default(0),
-  dmPostsRejected: z.coerce.number().min(0).default(0),
+  dmPostersApproved: z.coerce.number().min(0).default(0),
+  dmPostersPending: z.coerce.number().min(0).default(0),
+  dmPostersRejected: z.coerce.number().min(0).default(0),
   dmReelsApproved: z.coerce.number().min(0).default(0),
   dmReelsPending: z.coerce.number().min(0).default(0),
   dmReelsRejected: z.coerce.number().min(0).default(0),
@@ -272,7 +360,9 @@ export default function ReportsPage() {
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
-  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'Team Lead';
+  const userRole = currentUserData?.role;
+  const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+  const isLeadOrHigher = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'Team Lead';
 
   const mappingDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
   const { data: mappingData } = useDoc<{mappings: Record<string, string>}>(mappingDocRef);
@@ -285,14 +375,13 @@ export default function ReportsPage() {
   const customTemplateDocRef = useMemoFirebase(() => currentTemplateId && !['Business', 'Technical', 'Digital Marketing'].includes(currentTemplateId) ? doc(firestore, 'custom_report_definitions', currentTemplateId) : null, [firestore, currentTemplateId]);
   const { data: customTemplateData } = useDoc<any>(customTemplateDocRef);
 
-  const usersQuery = useMemoFirebase(() => (isAdmin && user) ? query(collection(firestore, "users")) : null, [firestore, isAdmin, user]);
-  const { data: rawUsersData, isLoading: areUsersLoading } = useCollection<any>(usersQuery);
-  const usersData = rawUsersData?.filter(u => u.firstName && u.lastName); // Filter out anonymous/unknown entries
+  const usersQuery = useMemoFirebase(() => (isLeadOrHigher && user) ? query(collection(firestore, "users")) : null, [firestore, isLeadOrHigher, user]);
+  const { data: usersData } = useCollection<any>(usersQuery);
 
-  const reportUserId = isAdmin ? selectedUser?.id : user?.uid;
+  const reportUserId = isLeadOrHigher ? selectedUser?.id : user?.uid;
   const reportsQuery = useMemoFirebase(() => reportUserId ? query(collection(firestore, `users/${reportUserId}/reports`), orderBy('date', 'desc')) : null, [firestore, reportUserId]);
   const { data: rawReports, isLoading: areReportsLoading } = useCollection<any>(reportsQuery);
-  const reports = rawReports?.filter(r => r.reportType && r.employeeId); // Clean data filter
+  const reports = rawReports?.filter(r => r.reportType && r.employeeId);
 
   const attendanceQuery = useMemoFirebase(() => {
       if (!user) return null;
@@ -314,7 +403,14 @@ export default function ReportsPage() {
       const now = new Date();
       const signatureStr = currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName} | ${currentUserData.employmentType || "Intern"} | ${formatIST(now)}` : "";
       
-      const baseValues = { signature: signatureStr, declaration: false };
+      const baseValues = { 
+          signature: signatureStr, 
+          declaration: false,
+          meetingsBookedTomorrow: "0",
+          criticalPathTomorrow: "",
+          pendingDeliverables: "",
+          interventionTrigger: "None (Standard)"
+      };
 
       if (currentTemplateId === 'Technical') {
           form.reset({
@@ -329,10 +425,9 @@ export default function ReportsPage() {
               currency: "USD", coldCalls: 0, linkedinOutreach: 0, emailsSent: 0, potentialClients: 0, followUpsCompleted: "0", 
               collectedRevenue: 0, committedRevenue: 0, pipelineValue: 0, revenueVariance: 0,
               meetingsSecured: "", clientWinHighlight: "", strategicLearning: "", bestCallRecording: "", worstCallRecording: "", allCallsDriveLink: "",
-              meetingsBookedTomorrow: "0", criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None (Standard)",
               ...(currentTemplateId === 'Digital Marketing' ? {
                   dmContentApproved: 0, dmContentPending: 0, dmContentRejected: 0,
-                  dmPostsApproved: 0, dmPostsPending: 0, dmPostsRejected: 0,
+                  dmPostersApproved: 0, dmPostersPending: 0, dmPostersRejected: 0,
                   dmReelsApproved: 0, dmReelsPending: 0, dmReelsRejected: 0,
                   dmShootsApproved: 0, dmShootsPending: 0, dmShootsRejected: 0
               } : {})
@@ -349,12 +444,6 @@ export default function ReportsPage() {
   }, [form, currentUserData, currentTemplateId, todaysAttendance, customTemplateData]);
 
   React.useEffect(() => { if (isAddDialogOpen && currentUserData) resetForm(); }, [isAddDialogOpen, resetForm, currentUserData]);
-
-  const submissionConstraints = React.useMemo(() => {
-    const now = new Date();
-    const hasSubmittedToday = reports?.some(r => r.date && isSameDay(r.date.toDate(), now)) || false;
-    return { hasSubmittedToday, canSubmit: !hasSubmittedToday };
-  }, [reports]);
 
   const handleFileUpload = async (fieldName: string, file: File) => {
     if (!user) return;
@@ -396,6 +485,76 @@ export default function ReportsPage() {
         { enableHighAccuracy: true, timeout: 10000 }
     );
   };
+
+  const handleDownloadReport = (r: any) => {
+    const doc = new jsPDF();
+    const dateStr = r.date?.toDate ? format(r.date.toDate(), 'PPP') : 'N/A';
+    
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text("FortuMars Strategic Report", 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Employee: ${r.employeeName}`, 14, 30);
+    doc.text(`Report Type: ${r.reportType}`, 14, 35);
+    doc.text(`Date: ${dateStr}`, 14, 40);
+    doc.text(`Department: ${r.employeeDepartment || 'N/A'}`, 14, 45);
+
+    let startY = 55;
+
+    if (r.reportType === 'Digital Marketing') {
+        const body = [
+            ['Content', r.dmContentApproved || 0, r.dmContentPending || 0, r.dmContentRejected || 0, (Number(r.dmContentApproved || 0) + Number(r.dmContentPending || 0) + Number(r.dmContentRejected || 0))],
+            ['Posters', r.dmPostersApproved || 0, r.dmPostersPending || 0, r.dmPostersRejected || 0, (Number(r.dmPostersApproved || 0) + Number(r.dmPostersPending || 0) + Number(r.dmPostersRejected || 0))],
+            ['Reels', r.dmReelsApproved || 0, r.dmReelsPending || 0, r.dmReelsRejected || 0, (Number(r.dmReelsApproved || 0) + Number(r.dmReelsPending || 0) + Number(r.dmReelsRejected || 0))],
+            ['Shoots', r.dmShootsApproved || 0, r.dmShootsPending || 0, r.dmShootsRejected || 0, (Number(r.dmShootsApproved || 0) + Number(r.dmShootsPending || 0) + Number(r.dmShootsRejected || 0))]
+        ];
+        autoTable(doc, {
+            startY,
+            head: [['Deliverable', 'Approved', 'Pending', 'Rejected', 'Total']],
+            body,
+            theme: 'grid'
+        });
+        startY = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    doc.text("T+1 Execution Plan:", 14, startY);
+    doc.text(`- Meetings Booked: ${r.meetingsBookedTomorrow || 0}`, 14, startY + 7);
+    doc.text(`- Critical Path: ${r.criticalPathTomorrow || 'N/A'}`, 14, startY + 14);
+    doc.text(`- Pending Deliverables: ${r.pendingDeliverables || 'N/A'}`, 14, startY + 21);
+    doc.text(`- Trigger: ${r.interventionTrigger || 'None'}`, 14, startY + 28);
+
+    doc.setFontSize(8);
+    doc.text(`Signature: ${r.signature}`, 14, doc.internal.pageSize.height - 15);
+    doc.text(`Generated on ${formatIST(new Date())}`, 14, doc.internal.pageSize.height - 10);
+
+    doc.save(`${r.employeeName}_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  };
+
+  const ExecutionPlanFields = () => (
+    <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+        <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 🚀 T+1 Execution Planning</CardTitle></CardHeader>
+        <CardContent className="space-y-6 pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (
+                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                )} />
+                <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
+                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Manager Intervention Trigger</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent><SelectItem value="None (Standard)">None (Standard)</SelectItem><SelectItem value="Manager Input Required">Manager Input Required</SelectItem><SelectItem value="Resource Blocked">Resource Blocked</SelectItem><SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem></SelectContent></Select></FormItem>
+                )} />
+            </div>
+            <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (
+                <FormItem><FormLabel className="text-[10px] uppercase font-bold">Top Priority / Critical Path</FormLabel><FormControl><Textarea {...field} placeholder="What is the single most important task for tomorrow?" className="rounded-xl" /></FormControl></FormItem>
+            )} />
+            <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (
+                <FormItem><FormLabel className="text-[10px] uppercase font-bold">Pending Strategic Deliverables</FormLabel><FormControl><Textarea {...field} placeholder="List items that need final completion..." className="rounded-xl" /></FormControl></FormItem>
+            )} />
+        </CardContent>
+    </Card>
+  );
 
   const BusinessFields = () => {
     const coldCalls = Number(useWatch({ control: form.control, name: "coldCalls" }) || 0);
@@ -470,32 +629,64 @@ export default function ReportsPage() {
                     )} />
                 </CardContent>
             </Card>
+            <ExecutionPlanFields />
         </div>
     );
   };
 
-  const DigitalMarketingFields = () => (
-    <div className="space-y-8">
-        <BusinessFields />
-        <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
-            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 4️⃣ Content Pipeline</CardTitle></CardHeader>
-            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                {['Content', 'Posts', 'Reels', 'Shoots'].map(group => (
-                    <div key={group} className="p-4 bg-white/50 rounded-2xl border space-y-4 shadow-sm">
-                        <Label className="text-[10px] font-black uppercase text-purple-700">{group} Audit</Label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {['Approved', 'Pending', 'Rejected'].map(status => (
-                                <FormField key={status} control={form.control} name={`dm${group}${status}`} render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold">{status}</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-9 text-center font-bold rounded-lg" /></FormControl></FormItem>
-                                )} />
-                            ))}
-                        </div>
+  const DigitalMarketingFields = () => {
+      const rows = [
+          { label: 'Content', key: 'dmContent' },
+          { label: 'Posters', key: 'dmPosters' },
+          { label: 'Reels', key: 'dmReels' },
+          { label: 'Shoots', key: 'dmShoots' }
+      ];
+      
+      return (
+        <div className="space-y-8">
+            <BusinessFields />
+            <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
+                <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 4️⃣ Tactical Output Matrix</CardTitle></CardHeader>
+                <CardContent className="pt-6">
+                    <div className="border rounded-2xl overflow-hidden bg-white/50">
+                        <Table>
+                            <TableHeader className="bg-muted/30">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Deliverable</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-center py-4">Approved</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-center py-4">Pending</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-center py-4">Rejected</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {rows.map(row => (
+                                    <TableRow key={row.key} className="border-border/50">
+                                        <TableCell className="text-xs font-black uppercase py-4">{row.label}</TableCell>
+                                        <TableCell className="py-2">
+                                            <FormField control={form.control} name={`${row.key}Approved`} render={({ field }) => (
+                                                <FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl>
+                                            )} />
+                                        </TableCell>
+                                        <TableCell className="py-2">
+                                            <FormField control={form.control} name={`${row.key}Pending`} render={({ field }) => (
+                                                <FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl>
+                                            )} />
+                                        </TableCell>
+                                        <TableCell className="py-2">
+                                            <FormField control={form.control} name={`${row.key}Rejected`} render={({ field }) => (
+                                                <FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl>
+                                            )} />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
-                ))}
-            </CardContent>
-        </Card>
-    </div>
-  );
+                </CardContent>
+            </Card>
+        </div>
+      );
+  };
 
   const TechnicalFields = () => (
     <div className="space-y-8">
@@ -517,6 +708,7 @@ export default function ReportsPage() {
             ))}
             <Button type="button" variant="outline" onClick={() => form.setValue('completedTasks', [...(form.getValues('completedTasks') || []), { moduleName: "", workDone: "" }])} className="w-full border-dashed rounded-2xl h-16 bg-white/50 text-xs font-black uppercase"><Plus className="size-4 mr-2" /> Add Module</Button>
         </div>
+        <ExecutionPlanFields />
     </div>
   );
 
@@ -530,15 +722,15 @@ export default function ReportsPage() {
         </div>
       )}
 
-      <PageHeader title={isAdmin ? "Organizational Strategic Log" : "My Strategic Submissions"} description="Comprehensive verification of organizational shifts.">
-        {!isAdmin && (
-            <Button onClick={() => setIsAddDialogOpen(true)} disabled={!submissionConstraints.canSubmit} className={cn("rounded-full h-11 px-6 shadow-lg", !submissionConstraints.canSubmit && "opacity-50 cursor-not-allowed")}>
-                <PlusCircle className="mr-2 h-4 w-4"/> {submissionConstraints.hasSubmittedToday ? "Submission Complete" : "Shift Completion Form"}
+      <PageHeader title={isLeadOrHigher ? "Organizational Strategic Log" : "My Strategic Submissions"} description="Comprehensive verification of organizational shifts.">
+        {!isLeadOrHigher && (
+            <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-full h-11 px-6 shadow-lg">
+                <PlusCircle className="mr-2 h-4 w-4"/> Shift Completion Form
             </Button>
         )}
       </PageHeader>
       
-      {isAdmin ? (
+      {isLeadOrHigher ? (
         <>
           <div className="relative mb-6">
             <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
@@ -548,7 +740,7 @@ export default function ReportsPage() {
             <Table>
                 <TableHeader className="bg-muted/30"><TableRow className="hover:bg-transparent border-border/50"><TableHead className="font-black uppercase tracking-tighter text-[10px]">Employee</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px]">Strategic Log</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px] text-right">Action</TableHead></TableRow></TableHeader>
                 <TableBody>
-                    {areUsersLoading ? (<TableRow><TableCell colSpan={3} className="h-32 text-center animate-pulse font-bold uppercase text-xs">Scanning Matrix...</TableCell></TableRow>) : usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+                    {usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
                         <TableRow key={u.id} className="hover:bg-white/80 transition-colors border-border/50">
                             <TableCell className="font-bold py-4">
                                 <Link href={`/dashboard/users/${u.id}`} className="hover:text-primary transition-colors">{u.firstName} {u.lastName}</Link>
@@ -574,7 +766,7 @@ export default function ReportsPage() {
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white/30 space-y-6 ring-1 ring-border/50 shadow-lg mt-[-1px]">
-                                {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : r.reportType === 'Digital Marketing' ? <DigitalMarketingReportDetails report={r} /> : r.reportType === 'Technical' ? <TechnicalReportDetails report={r} /> : <CustomReportDetails report={r} />}
+                                {r.reportType === 'Business' ? <BusinessReportDetails report={r} userProfile={currentUserData} /> : r.reportType === 'Digital Marketing' ? <DigitalMarketingReportDetails report={r} userProfile={currentUserData} /> : r.reportType === 'Technical' ? <TechnicalReportDetails report={r} userProfile={currentUserData} /> : <CustomReportDetails report={r} userProfile={currentUserData} />}
                             </AccordionContent>
                         </AccordionItem>
                     ))}
@@ -633,8 +825,13 @@ export default function ReportsPage() {
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="p-6 border border-t-0 rounded-b-2xl bg-white space-y-6 ring-1 ring-border/50 shadow-inner mt-[-1px]">
-                                    <div className="flex justify-end mb-4"><Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8" onClick={() => deleteDoc(doc(firestore, `users/${reportUserId}/reports`, r.id))}><Trash2 className="h-3 w-3 mr-2" />Purge Log</Button></div>
-                                    {r.reportType === 'Business' ? <BusinessReportDetails report={r} /> : r.reportType === 'Digital Marketing' ? <DigitalMarketingReportDetails report={r} /> : r.reportType === 'Technical' ? <TechnicalReportDetails report={r} /> : <CustomReportDetails report={r} />}
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div className="flex gap-2">
+                                            {isAdmin && <Button variant="outline" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8" onClick={() => handleDownloadReport(r)}><Download className="h-3 w-3 mr-2" />Download PDF</Button>}
+                                            <Button variant="destructive" size="sm" className="rounded-full text-[10px] font-bold uppercase tracking-widest h-8" onClick={() => deleteDoc(doc(firestore, `users/${reportUserId}/reports`, r.id))}><Trash2 className="h-3 w-3 mr-2" />Purge Log</Button>
+                                        </div>
+                                    </div>
+                                    {r.reportType === 'Business' ? <BusinessReportDetails report={r} userProfile={selectedUser} /> : r.reportType === 'Digital Marketing' ? <DigitalMarketingReportDetails report={r} userProfile={selectedUser} /> : r.reportType === 'Technical' ? <TechnicalReportDetails report={r} userProfile={selectedUser} /> : <CustomReportDetails report={r} userProfile={selectedUser} />}
                                 </AccordionContent>
                             </AccordionItem>
                         ))}
@@ -661,5 +858,26 @@ const CustomTemplateFields = ({ definition }: { definition: any }) => (
                 </CardContent>
             </Card>
         ))}
+        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">🚀 T+1 Execution Planning</CardTitle></CardHeader>
+            <CardContent className="space-y-6 pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField name="meetingsBookedTomorrow" render={({ field }) => (
+                        <FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                    )} />
+                    <FormField name="interventionTrigger" render={({ field }) => (
+                        <FormItem><FormLabel className="text-[10px] uppercase font-bold">Manager Intervention Trigger</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent><SelectItem value="None (Standard)">None (Standard)</SelectItem><SelectItem value="Manager Input Required">Manager Input Required</SelectItem><SelectItem value="Resource Blocked">Resource Blocked</SelectItem><SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem></SelectContent></Select></FormItem>
+                    )} />
+                </div>
+                <FormField name="criticalPathTomorrow" render={({ field }) => (
+                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Top Priority / Critical Path</FormLabel><FormControl><Textarea {...field} placeholder="What is the single most important task for tomorrow?" className="rounded-xl" /></FormControl></FormItem>
+                )} />
+                <FormField name="pendingDeliverables" render={({ field }) => (
+                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Pending Strategic Deliverables</FormLabel><FormControl><Textarea {...field} placeholder="List items that need final completion..." className="rounded-xl" /></FormControl></FormItem>
+                )} />
+            </CardContent>
+        </Card>
     </div>
 );
