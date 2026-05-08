@@ -5,12 +5,13 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, useStorage } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
-import { Edit, Smile, MapPin, Home, LocateFixed, Clock } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
@@ -24,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { updateDocumentNonBlocking, addDocumentNonBlocking, useCollection } from "@/firebase";
 import Image from 'next/image';
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { InteractiveMap } from "@/components/geohrm/interactive-map";
 import { Badge } from "@/components/ui/badge";
 
@@ -46,27 +46,16 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-type LocationChangeRequest = {
-    id: string;
-    status: 'pending' | 'approved' | 'rejected';
-    reason: string;
-    requestDate: any;
-};
-
 const emojiCategories = {
     "People": ["🧑", "👨", "👩", "👮", "👷", "🏠", "🕵️", "🧑‍💻", "👨‍💻", "👩‍💻", "🦸", "🦹", "🧙", "🧚"],
     "Smileys": ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "😊", "😇", "🙂", "😎", "🤩", "🥳", "🤔", "🤫"],
 };
 
-interface Location {
-  latitude: number;
-  longitude: number;
-}
-
 export default function ProfilePage() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
     const auth = useAuth();
+    const storage = useStorage();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
@@ -74,65 +63,34 @@ export default function ProfilePage() {
     const [isRequestChangeOpen, setIsRequestChangeOpen] = React.useState(false);
     const [isReasonDialogOpen, setIsReasonDialogOpen] = React.useState(false);
     const [changeReason, setChangeReason] = React.useState("");
-    const [isSetHomeLocationDialogOpen, setIsSetHomeLocationDialogOpen] = React.useState(false);
-    const [capturedLocation, setCapturedLocation] = React.useState<Location | null>(null);
+    const [capturedLocation, setCapturedLocation] = React.useState<{latitude: number, longitude: number} | null>(null);
     const [selectedAddress, setSelectedAddress] = React.useState<string>("Getting address...");
-    const [isVerifyingLocation, setIsVerifyingLocation] = React.useState(false);
+    const [isUploadingSignature, setIsUploadingSignature] = React.useState(false);
 
-    const userDocRef = useMemoFirebase(
-        () => (user ? doc(firestore, "users", user.uid) : null),
-        [user, firestore]
-    );
-    const { data: employee, isLoading: isEmployeeLoading } = useDoc(userDocRef);
-    
-    const userRole = (employee as any)?.role;
-    const isAdminOrHR = userRole === 'CEO/Admin' || userRole === 'HR Manager';
+    const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
+    const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
 
-    const pendingLocationRequestQuery = useMemoFirebase(
-        () => user ? query(
-            collection(firestore, "location_change_requests"),
-            where("employeeId", "==", user.uid),
-            where("status", "==", "pending")
-        ) : null,
-        [user, firestore]
-    );
-    const { data: pendingRequests } = useCollection<LocationChangeRequest>(pendingLocationRequestQuery);
+    const pendingLocationRequestQuery = useMemoFirebase(() => user ? query(collection(firestore, "location_change_requests"), where("employeeId", "==", user.uid), where("status", "==", "pending")) : null, [user, firestore]);
+    const { data: pendingRequests } = useCollection(pendingLocationRequestQuery);
     const hasPendingRequest = pendingRequests && pendingRequests.length > 0;
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: {
-            firstName: "",
-            lastName: "",
-            password: "",
-            confirmPassword: "",
-        },
+        defaultValues: { firstName: "", lastName: "", password: "", confirmPassword: "" },
     });
 
     React.useEffect(() => {
         if (employee) {
-            form.reset({
-                firstName: (employee as any).firstName || '',
-                lastName: (employee as any).lastName || '',
-                password: '',
-                confirmPassword: '',
-            });
+            form.reset({ firstName: employee.firstName || '', lastName: employee.lastName || '', password: '', confirmPassword: '' });
         }
     }, [employee, form]);
     
     async function onSubmit(data: ProfileFormValues) {
         setIsSubmitting(true);
-        if (!user || !auth.currentUser) {
-            toast({ variant: "destructive", title: "Error", description: "Login required." });
-            setIsSubmitting(false);
-            return;
-        }
+        if (!user || !auth.currentUser) return;
         try {
             if (userDocRef) {
-                updateDocumentNonBlocking(userDocRef, {
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                });
+                updateDocumentNonBlocking(userDocRef, { firstName: data.firstName, lastName: data.lastName });
             }
             await updateProfile(auth.currentUser, { displayName: `${data.firstName} ${data.lastName}` });
             if (data.password) await updatePassword(auth.currentUser, data.password);
@@ -140,9 +98,7 @@ export default function ProfilePage() {
             setIsProfileDialogOpen(false);
         } catch (error: any) {
             toast({ variant: "destructive", title: "Failed", description: error.message });
-        } finally {
-            setIsSubmitting(false);
-        }
+        } finally { setIsSubmitting(false); }
     }
     
     const handleAvatarUpdate = (emoji: string) => {
@@ -151,68 +107,50 @@ export default function ProfilePage() {
         toast({ title: "Avatar updated!" });
         setIsAvatarDialogOpen(false);
     }
-    
-    const handleLocationAction = () => {
-        setIsVerifyingLocation(true);
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                setCapturedLocation({ latitude, longitude });
-                setIsVerifyingLocation(false);
-                setIsRequestChangeOpen(true);
-            },
-            (error) => {
-                setIsVerifyingLocation(false);
-                toast({ variant: 'destructive', title: 'Location Error' });
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
-    };
-    
-    const handleSubmitChangeRequest = () => {
-        if (!user || !changeReason || !capturedLocation) return;
-        const requestPayload = {
-            employeeId: user.uid,
-            employeeName: `${(employee as any).firstName} ${(employee as any).lastName}`,
-            requestDate: serverTimestamp(),
-            newLatitude: capturedLocation.latitude,
-            newLongitude: capturedLocation.longitude,
-            reason: changeReason,
-            status: 'pending',
-        };
-        addDocumentNonBlocking(collection(firestore, 'location_change_requests'), requestPayload);
-        toast({ title: 'Request Submitted' });
-        setIsReasonDialogOpen(false);
-        setChangeReason("");
+
+    const handleSignatureUpload = async (file: File) => {
+        if (!user) return;
+        setIsUploadingSignature(true);
+        try {
+            const sigRef = ref(storage, `signatures/${user.uid}/${Date.now()}-${file.name}`);
+            const snap = await uploadBytes(sigRef, file);
+            const url = await getDownloadURL(snap.ref);
+            updateDocumentNonBlocking(userDocRef!, { signatureUrl: url, signatureStatus: 'pending' });
+            toast({ title: "Identity Uploaded", description: "Your digital signature is awaiting HR approval." });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: "Upload Failed", description: e.message });
+        } finally {
+            setIsUploadingSignature(false);
+        }
     };
 
-    if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center">Loading Profile...</div>;
-    if (!employee) return <div className="p-10 text-center">No employee record found.</div>;
+    if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse">Synchronizing Identity...</div>;
+    if (!employee) return <div className="p-10 text-center">No identity record found.</div>;
 
     return (
         <div className="space-y-6">
-            <PageHeader title="My Profile" description="Manage personal WFH and security settings." />
+            <PageHeader title="Identity Control" description="Manage personal geofencing and digital signature assets." />
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-1 space-y-6">
                     <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                        <CardHeader className="items-center text-center relative">
-                            <Avatar className="h-24 w-24 relative group">
-                               {(employee as any).avatar ? <span className="text-6xl">{(employee as any).avatar}</span> : <AvatarFallback>{(employee as any).firstName?.[0]}</AvatarFallback>}
+                        <CardHeader className="items-center text-center relative pt-10">
+                            <Avatar className="h-24 w-24 relative group ring-2 ring-primary ring-offset-4">
+                               {employee.avatar ? <span className="text-6xl">{employee.avatar}</span> : <AvatarFallback className="text-2xl">{employee.firstName?.[0]}{employee.lastName?.[0]}</AvatarFallback>}
                                <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
                                     <DialogTrigger asChild>
                                         <button className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Smile className="h-8 w-8 text-white" />
                                         </button>
                                     </DialogTrigger>
-                                    <DialogContent>
+                                    <DialogContent className="rounded-3xl">
                                         <DialogHeader><DialogTitle>Choose Your Avatar</DialogTitle></DialogHeader>
-                                        <div className="max-h-[50vh] overflow-y-auto">
+                                        <div className="max-h-[50vh] overflow-y-auto pr-2">
                                             {Object.entries(emojiCategories).map(([category, emojis]) => (
-                                                <div key={category}>
-                                                    <h3 className="font-semibold text-lg py-2">{category}</h3>
-                                                    <div className="grid grid-cols-6 gap-2">
+                                                <div key={category} className="mb-6">
+                                                    <h3 className="font-black text-[10px] uppercase tracking-widest mb-3 text-muted-foreground">{category}</h3>
+                                                    <div className="grid grid-cols-5 gap-2">
                                                         {emojis.map(emoji => (
-                                                            <button key={emoji} onClick={() => handleAvatarUpdate(emoji)} className="text-3xl p-2 rounded-lg hover:bg-accent">{emoji}</button>
+                                                            <button key={emoji} onClick={() => handleAvatarUpdate(emoji)} className="text-3xl p-3 rounded-2xl hover:bg-primary/10 transition-colors border border-transparent hover:border-primary/20">{emoji}</button>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -221,42 +159,90 @@ export default function ProfilePage() {
                                     </DialogContent>
                                </Dialog>
                             </Avatar>
-                             <div className="mt-4">
-                                <CardTitle className="font-headline text-2xl">{(employee as any).firstName} {(employee as any).lastName}</CardTitle>
-                                <CardDescription>{(employee as any).jobTitle}</CardDescription>
+                             <div className="mt-6">
+                                <CardTitle className="font-headline text-2xl tracking-tight">{employee.firstName} {employee.lastName}</CardTitle>
+                                <CardDescription className="uppercase text-[10px] font-black tracking-[0.2em] text-primary">{employee.jobTitle}</CardDescription>
                              </div>
                         </CardHeader>
+                        <CardContent className="flex justify-center pb-8">
+                             <Button variant="outline" size="sm" className="rounded-full font-bold uppercase text-[9px] tracking-widest px-6" onClick={() => setIsProfileDialogOpen(true)}><Edit className="size-3 mr-2"/> Edit Profile</Button>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
+                        <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><ShieldCheck className="size-4 text-primary"/> Digital Signature</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            {employee.signatureUrl ? (
+                                <div className="space-y-3">
+                                    <div className="p-3 bg-muted/20 rounded-xl border border-dashed border-primary/20 flex items-center justify-center grayscale invert">
+                                        <Image src={employee.signatureUrl} alt="E-Signature" width={150} height={60} className="object-contain opacity-60" />
+                                    </div>
+                                    <div className="flex justify-center">
+                                        {employee.signatureStatus === 'approved' ? (
+                                            <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[9px] uppercase font-black"><CheckCircle2 className="size-3 mr-1.5"/> Identity Verified</Badge>
+                                        ) : (
+                                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 rounded-full text-[9px] uppercase font-black"><Clock className="size-3 mr-1.5"/> Pending Review</Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="h-24 bg-muted/10 rounded-xl border-2 border-dashed border-muted/50 flex flex-col items-center justify-center gap-2">
+                                        <Camera className="size-6 opacity-20" />
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Upload Image Asset</p>
+                                    </div>
+                                    <div className="relative">
+                                        <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
+                                        <Button className="w-full rounded-full h-10 text-[10px] font-black uppercase tracking-widest" disabled={isUploadingSignature}>
+                                            {isUploadingSignature ? "Processing..." : "Add Signature"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
                     </Card>
                 </div>
+
                 <div className="lg:col-span-2 space-y-6">
                     <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                        <CardHeader><CardTitle className="font-headline">WFH Precision Registry</CardTitle><CardDescription>Set or request residential geofence points.</CardDescription></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Current Home Base</p>
-                                {(employee as any)?.homeLatitude ? (
-                                    <Badge variant="outline" className="mt-1">
-                                        <MapPin className="size-3 mr-1" />
-                                        {(employee as any).homeLatitude.toFixed(4)}, {(employee as any).homeLongitude.toFixed(4)}
-                                    </Badge>
-                                ) : <p className="text-sm font-bold text-orange-600 mt-1">Not Set</p>}
+                        <CardHeader><CardTitle className="font-headline text-lg flex items-center gap-2"><LocateFixed className="size-5 text-primary"/> WFH Precision Registry</CardTitle><CardDescription>Manage approved residential geofence points.</CardDescription></CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="p-4 bg-muted/20 rounded-2xl border flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Active Home Base</p>
+                                    {employee?.homeLatitude ? (
+                                        <Badge variant="outline" className="mt-2 h-8 px-4 rounded-full border-primary/20 bg-white shadow-sm">
+                                            <MapPin className="size-3 mr-2 text-primary" />
+                                            {employee.homeLatitude.toFixed(4)}, {employee.homeLongitude.toFixed(4)}
+                                        </Badge>
+                                    ) : <p className="text-sm font-bold text-orange-600 mt-2">Satellite Point Not Set</p>}
+                                </div>
+                                <Button onClick={() => {
+                                    navigator.geolocation.getCurrentPosition(p => {
+                                        setCapturedLocation({ latitude: p.coords.latitude, longitude: p.coords.longitude });
+                                        setIsRequestChangeOpen(true);
+                                    });
+                                }} disabled={hasPendingRequest} className="rounded-full h-11 px-8 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
+                                    {hasPendingRequest ? 'Awaiting Approval' : 'Update Satellite Point'}
+                                </Button>
                             </div>
-                            <Button onClick={handleLocationAction} disabled={hasPendingRequest} className="rounded-full">
-                                <LocateFixed className="mr-2 h-4 w-4" />
-                                {hasPendingRequest ? 'Change Request Pending' : 'Update Home Location'}
-                            </Button>
-                             {hasPendingRequest && <p className="text-xs text-yellow-600 font-bold">🟡 Request is awaiting executive approval.</p>}
+                             {hasPendingRequest && (
+                                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-2xl flex items-center gap-3">
+                                    <Clock className="size-5 text-yellow-600" />
+                                    <p className="text-xs text-yellow-700 font-bold uppercase tracking-tight">Deployment Pending: A change request is currently under executive review.</p>
+                                </div>
+                             )}
                         </CardContent>
                     </Card>
                 </div>
             </div>
 
             <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
-                 <DialogContent className="sm:max-w-lg">
-                    <DialogHeader><DialogTitle>Verify Point</DialogTitle></DialogHeader>
+                 <DialogContent className="sm:max-w-lg rounded-3xl">
+                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Verify Satellite Point</DialogTitle></DialogHeader>
                     {capturedLocation && (
                         <div className="space-y-4">
-                            <div className="aspect-video w-full rounded-md overflow-hidden border">
+                            <div className="aspect-video w-full rounded-2xl overflow-hidden border-2 border-muted shadow-inner">
                                 <InteractiveMap 
                                     initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }} 
                                     onLocationSelect={({ lat, lng, address }) => { 
@@ -265,29 +251,76 @@ export default function ProfilePage() {
                                     }} 
                                 />
                             </div>
-                            <div className="bg-muted p-3 rounded-lg text-xs font-mono">{selectedAddress}</div>
+                            <div className="bg-muted/30 p-4 rounded-2xl text-[10px] font-mono font-bold leading-relaxed">{selectedAddress}</div>
                         </div>
                     )}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsRequestChangeOpen(false)}>Cancel</Button>
-                        <Button onClick={() => { setIsRequestChangeOpen(false); setIsReasonDialogOpen(true); }}>Next: Justification</Button>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setIsRequestChangeOpen(false)} className="rounded-full font-black uppercase text-[10px]">Cancel</Button>
+                        <Button onClick={() => { setIsRequestChangeOpen(false); setIsReasonDialogOpen(true); }} className="rounded-full font-black uppercase text-[10px]">Next: Strategic Justification</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={isReasonDialogOpen} onOpenChange={setIsReasonDialogOpen}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Residential Change Reason</DialogTitle></DialogHeader>
+                <DialogContent className="rounded-3xl">
+                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Deployment Justification</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-4">
-                        <Label>Reason for WFH Location Update</Label>
-                        <Textarea value={changeReason} onChange={(e) => setChangeReason(e.target.value)} placeholder="e.g., Moving to new residence..." />
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Reason for Satellite Point Update</Label>
+                        <Textarea value={changeReason} onChange={(e) => setChangeReason(e.target.value)} placeholder="e.g., Tactical relocation to primary residence..." className="rounded-2xl min-h-[120px]" />
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsReasonDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSubmitChangeRequest}>Submit for Approval</Button>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setIsReasonDialogOpen(false)} className="rounded-full font-black uppercase text-[10px]">Cancel</Button>
+                        <Button onClick={() => {
+                            if (!user || !changeReason || !capturedLocation) return;
+                            addDocumentNonBlocking(collection(firestore, 'location_change_requests'), {
+                                employeeId: user.uid,
+                                employeeName: `${employee.firstName} ${employee.lastName}`,
+                                requestDate: serverTimestamp(),
+                                newLatitude: capturedLocation.latitude,
+                                newLongitude: capturedLocation.longitude,
+                                reason: changeReason,
+                                status: 'pending',
+                            });
+                            toast({ title: 'Request Transmitted' });
+                            setIsReasonDialogOpen(false);
+                            setChangeReason("");
+                        }} className="rounded-full font-black uppercase text-[10px]">Submit for Review</Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+                <DialogContent className="rounded-3xl sm:max-w-md">
+                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Edit Strategic Profile</DialogTitle></DialogHeader>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="firstName" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase">First Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="lastName" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase">Last Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </div>
+                            <Separator />
+                            <div className="space-y-4">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Security Override</h3>
+                                <FormField control={form.control} name="password" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-bold">New Cipher (Leave blank to keep current)</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl h-11" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name="confirmPassword" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-bold">Confirm Cipher</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl h-11" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </div>
+                            <DialogFooter className="pt-4">
+                                <Button type="submit" className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? "Transmitting..." : "Update Identity"}</Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
                 </DialogContent>
             </Dialog>
         </div>
     )
 }
+
+import { Separator } from "@/components/ui/separator";
