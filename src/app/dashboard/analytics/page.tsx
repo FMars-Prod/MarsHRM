@@ -8,7 +8,7 @@ import { collection, query, where, orderBy, Timestamp, getDocs, collectionGroup 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSunday, isValid, isAfter, isBefore, differenceInSeconds, startOfMonth, endOfMonth, subWeeks, subMonths, isToday } from 'date-fns';
-import { MapPin, Calendar as CalendarIcon, AreaChart as AreaChartIcon, ExternalLink, Clock, Briefcase, CalendarOff, AlertTriangle, Coffee, Info, Filter, Activity } from 'lucide-react';
+import { MapPin, Calendar as CalendarIcon, AreaChart as AreaChartIcon, ExternalLink, Clock, Briefcase, CalendarOff, AlertTriangle, Coffee, Info, Filter, Activity, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SelectLabel } from '@/components/ui/select';
@@ -18,6 +18,8 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, Bar
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type User = { id: string; firstName: string; lastName: string; jobTitle: string; department: string; role?: string; };
 type Holiday = { id: string; date: Timestamp; title: string; };
@@ -162,7 +164,6 @@ export default function AnalyticsPage() {
 
     const days = eachDayOfInterval({ start: trendStart, end: trendEnd }).filter(d => !isSunday(d));
     
-    // Filter users to get accurate expected count (exclude Admin/HR)
     const expectedUsers = users?.filter(u => u.role !== 'CEO/Admin' && u.role !== 'HR Manager') || [];
     const expectedCount = expectedUsers.length;
 
@@ -296,7 +297,6 @@ export default function AnalyticsPage() {
           });
       }
 
-      // Organization Overview: Show all entries for the selected range
       return attendanceData
         .sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0))
         .map(att => {
@@ -311,10 +311,100 @@ export default function AnalyticsPage() {
         });
   }, [selectedUserId, users, attendanceData, holidays, leaves, dateRange]);
 
+  const handleExportPdf = () => {
+    if (selectedUserId === 'all' || !users) {
+        toast({ variant: 'destructive', title: 'Export Restricted', description: 'Please select an individual employee to generate a performance audit PDF.' });
+        return;
+    }
+
+    const user = users.find(u => u.id === selectedUserId);
+    if (!user || !userStats) return;
+
+    const pdfDoc = new jsPDF();
+    const dateRangeStr = `${format(dateRange.start, 'PPP')} - ${format(dateRange.end, 'PPP')}`;
+
+    pdfDoc.setFontSize(16);
+    pdfDoc.setFont('helvetica', 'bold');
+    pdfDoc.text("FortuMars AI Technologies & Business Solutions.", pdfDoc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+    
+    pdfDoc.setFontSize(12);
+    pdfDoc.setTextColor(100);
+    pdfDoc.text("Individual Performance Audit Report", pdfDoc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+    
+    pdfDoc.setFontSize(10);
+    pdfDoc.setTextColor(0);
+    pdfDoc.text(`Employee: ${user.firstName} ${user.lastName}`, 14, 45);
+    pdfDoc.text(`Designation: ${user.jobTitle}`, 14, 50);
+    pdfDoc.text(`Department: ${user.department}`, 14, 55);
+    pdfDoc.text(`Audit Period: ${dateRangeStr}`, 14, 60);
+    pdfDoc.text(`Generated On: ${format(new Date(), 'PP p')}`, 14, 65);
+
+    pdfDoc.setFontSize(11);
+    pdfDoc.text("Strategic Metrics Summary:", 14, 75);
+    
+    const summaryData = [
+        ["Total Work Hours", `${userStats.workHours} h`],
+        ["Total Break Time", `${userStats.breakHours} h`],
+        ["Leaves Taken", `${userStats.leaves}`],
+        ["Non-Compliance Days", `${userStats.nonCompliance}`],
+        ["Holidays", `${userStats.holidays}`],
+        ["Sundays", `${userStats.sundays}`]
+    ];
+
+    autoTable(pdfDoc, {
+        startY: 80,
+        head: [['Metric', 'Value']],
+        body: summaryData,
+        theme: 'striped',
+        headStyles: { fillColor: [107, 33, 168] },
+        margin: { left: 14, right: 14 }
+    });
+
+    const logStartY = (pdfDoc as any).lastAutoTable.finalY + 15;
+    pdfDoc.text("Granular Attendance Log:", 14, logStartY);
+
+    const logBody = gridData.map(row => {
+        const dateStr = format(row.date, 'MMM d, yyyy');
+        const status = row.status.label;
+        const checkIn = row.att?.checkInTime ? format(row.att.checkInTime.toDate(), 'p') : '-';
+        const lunchOut = row.att?.lunchOutTime ? format(row.att.lunchOutTime.toDate(), 'p') : '-';
+        const lunchIn = row.att?.lunchInTime ? format(row.att.lunchInTime.toDate(), 'p') : '-';
+        const checkOut = row.att?.checkOutTime ? format(row.att.checkOutTime.toDate(), 'p') : '-';
+        
+        return [dateStr, status, checkIn, lunchOut, lunchIn, checkOut];
+    });
+
+    autoTable(pdfDoc, {
+        startY: logStartY + 5,
+        head: [['Date', 'Status', 'Log In', 'L-Out', 'L-In', 'Log Out']],
+        body: logBody,
+        theme: 'grid',
+        headStyles: { fillColor: [39, 55, 70] },
+        styles: { fontSize: 8 },
+        margin: { left: 14, right: 14 }
+    });
+
+    const pageCount = pdfDoc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        pdfDoc.setPage(i);
+        pdfDoc.setFontSize(8);
+        pdfDoc.setTextColor(150);
+        pdfDoc.text(`Page ${i} of ${pageCount} - MarsHRM Proprietary Performance Data`, 14, pdfDoc.internal.pageSize.height - 10);
+    }
+
+    pdfDoc.save(`Performance_Audit_${user.firstName}_${user.lastName}_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Organizational Analytics" description="High-fidelity performance metrics with geofenced verification.">
         <div className="flex flex-wrap gap-2">
+            {selectedUserId !== 'all' && (
+                <Button variant="outline" className="rounded-full h-11 bg-white/50" onClick={handleExportPdf}>
+                    <FileDown className="size-4 mr-2" />
+                    Download PDF
+                </Button>
+            )}
             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger className="w-[200px] rounded-full h-11"><SelectValue placeholder="Scope" /></SelectTrigger>
                 <SelectContent>
