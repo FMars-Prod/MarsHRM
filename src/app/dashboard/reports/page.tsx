@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, UserCheck, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, Upload } from "lucide-react";
+import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, UserCheck, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, Upload, FileDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -27,6 +27,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import jsPDF from "jspdf";
+import autoTable from 'jspdf-autotable';
 
 /**
  * UTILITY: Format date to IST String
@@ -132,7 +134,6 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
     const followUps = Number(useWatch({ control, name: 'followUps' }) || 0);
     const potential = Number(useWatch({ control, name: 'potentialClients' }) || 0);
     
-    // Total Outreach is sum of Cold Calls, LinkedIn, and Emails (excluding follow-ups)
     const totalOutreach = coldCalls + linkedin + emails;
     const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
     
@@ -145,33 +146,44 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
     return (
         <div className="space-y-8">
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion</CardTitle></CardHeader>
-                <CardContent className="space-y-6 pt-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <FormField control={control} name="coldCalls" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                        )} />
-                        <FormField control={control} name="linkedinOutreach" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                        )} />
-                        <FormField control={control} name="emailsSent" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Emails</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                        )} />
-                        <FormField control={control} name="followUps" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Follow-ups</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                        )} />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                        <FormField control={control} name="potentialClients" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Potential Clients Identified</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                        )} />
-                        <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 h-11 flex items-center justify-between px-6">
-                            <span className="text-[10px] font-black uppercase text-muted-foreground">Total Outreach</span>
-                            <span className="font-black text-sm">{totalOutreach}</span>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion Intelligence</CardTitle></CardHeader>
+                <CardContent className="space-y-8 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Primary Outreach Input</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={control} name="coldCalls" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-white" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={control} name="linkedinOutreach" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-white" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={control} name="emailsSent" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold">Emails</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-white" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={control} name="followUps" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold text-primary">Follow-ups (Standalone)</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11 bg-primary/5 border-primary/20" /></FormControl></FormItem>
+                                )} />
+                            </div>
                         </div>
-                        <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 h-11 flex items-center justify-between px-6">
-                            <span className="text-[10px] font-black uppercase text-muted-foreground">Efficiency Rate</span>
-                            <span className={cn("font-black text-sm", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</span>
+
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Conversion Analysis</p>
+                            <div className="space-y-4">
+                                <FormField control={control} name="potentialClients" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-bold">Potential Clients Identified</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-2xl h-12 text-lg font-black border-2 border-primary/20" /></FormControl></FormItem>
+                                )} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-muted/20 rounded-2xl border border-dashed flex flex-col items-center justify-center">
+                                        <span className="text-[8px] font-black uppercase text-muted-foreground">Total Outreach</span>
+                                        <span className="font-black text-xl">{totalOutreach}</span>
+                                    </div>
+                                    <div className="p-4 bg-white rounded-2xl ring-2 ring-primary/10 shadow-inner flex flex-col items-center justify-center">
+                                        <span className="text-[8px] font-black uppercase text-muted-foreground">Efficiency Rate</span>
+                                        <span className={cn("font-black text-xl", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
@@ -222,7 +234,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                 <CardContent className="space-y-6 pt-6">
                     <FormField control={control} name="totalCallRecordings" render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[9px] uppercase font-bold text-primary">Total Recordings Drive Link</FormLabel>
+                            <FormLabel className="text-[9px] uppercase font-bold text-primary">Today's Total Call Recording Drive Link</FormLabel>
                             <FormControl><Input {...field} placeholder="Paste Drive link here..." className="rounded-xl h-11" /></FormControl>
                         </FormItem>
                     )} />
@@ -361,7 +373,6 @@ const TechnicalFields = () => {
  * COMPONENT: Report Detail Visualization (Audit View)
  */
 const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
-    // Total Outreach is sum of Cold Calls, LinkedIn, and Emails (excluding follow-ups)
     const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0);
     const potential = Number(report.potentialClients || 0);
     const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
@@ -376,20 +387,23 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
     return (
         <div className="space-y-8">
             <div className="space-y-4">
-                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Total Outreach</p><p className="text-lg font-black">{totalOutreach}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Follow-ups</p><p className="text-lg font-black">{followUps}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Potential Clients</p><p className="text-lg font-black">{potential}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center col-span-2">
-                        <p className="text-[9px] font-black uppercase text-muted-foreground">Efficiency Rate</p>
-                        <p className={cn("text-lg font-black", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</p>
-                    </div>
+                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion Analysis</div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Cold Calls</p><p className="text-lg font-black">{report.coldCalls || 0}</p></div>
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">LinkedIn</p><p className="text-lg font-black">{report.linkedinOutreach || 0}</p></div>
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Emails</p><p className="text-lg font-black">{report.emailsSent || 0}</p></div>
+                    <div className="p-4 bg-primary/5 rounded-2xl ring-1 ring-primary/20 text-center"><p className="text-[8px] font-black uppercase text-primary">Total Outreach</p><p className="text-lg font-black">{totalOutreach}</p></div>
+                    <div className="p-4 bg-purple-50 rounded-2xl ring-1 ring-purple-200 text-center"><p className="text-[8px] font-black uppercase text-purple-700">Follow-ups</p><p className="text-lg font-black">{followUps}</p></div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 px-2 bg-muted/10 p-3 rounded-2xl border border-dashed">
-                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Cold Calls: {report.coldCalls || 0}</p>
-                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">LinkedIn: {report.linkedinOutreach || 0}</p>
-                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Emails: {report.emailsSent || 0}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-6 bg-secondary/10 rounded-2xl border flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase text-muted-foreground">Prospects Identified</span>
+                        <span className="text-2xl font-black">{potential}</span>
+                    </div>
+                    <div className="p-6 bg-white rounded-2xl ring-2 ring-primary/10 flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase text-muted-foreground">Strategic Efficiency</span>
+                        <span className={cn("text-2xl font-black", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</span>
+                    </div>
                 </div>
             </div>
 
@@ -406,7 +420,7 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
                 <div className="grid gap-4">
                     {report.totalCallRecordings && (
                         <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary" asChild>
-                            <Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> Shift Recordings Folder</Link>
+                            <Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> Today's Total Call Recording Drive Link</Link>
                         </Button>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -547,6 +561,54 @@ export default function ReportsPage() {
     } catch (err) { toast({ variant: 'destructive', title: 'Submission Failed' }); }
   };
 
+  const handleDownloadPdf = (report: any) => {
+      const pdfDoc = new jsPDF();
+      const reportDate = formatIST(report.date);
+
+      pdfDoc.setFontSize(16);
+      pdfDoc.setFont('helvetica', 'bold');
+      pdfDoc.text("FortuMars AI Technologies & Business Solutions.", pdfDoc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+      
+      pdfDoc.setFontSize(12);
+      pdfDoc.setTextColor(100);
+      pdfDoc.text(`${report.reportType} Tactical Audit Report`, pdfDoc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+
+      pdfDoc.setFontSize(10);
+      pdfDoc.setTextColor(0);
+      pdfDoc.text(`Employee: ${report.employeeName}`, 14, 45);
+      pdfDoc.text(`Designation: ${report.employeeJobTitle}`, 14, 50);
+      pdfDoc.text(`Department: ${report.employeeDepartment}`, 14, 55);
+      pdfDoc.text(`Submission Time: ${reportDate}`, 14, 60);
+
+      const tableData: any[] = [];
+      if (report.reportType === 'Business' || report.reportType === 'Digital Marketing') {
+          tableData.push(['Cold Calls', report.coldCalls]);
+          tableData.push(['LinkedIn Outreach', report.linkedinOutreach]);
+          tableData.push(['Emails Sent', report.emailsSent]);
+          tableData.push(['Follow-ups', report.followUps]);
+          tableData.push(['Potential Clients', report.potentialClients]);
+          tableData.push(['Revenue Collected', `$${report.revenueCollected}`]);
+          tableData.push(['Meetings Tomorrow', report.meetingsTomorrow]);
+      }
+
+      autoTable(pdfDoc, {
+          startY: 70,
+          head: [['Metric', 'Value']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [107, 33, 168] }
+      });
+
+      const finalY = (pdfDoc as any).lastAutoTable.finalY + 15;
+      pdfDoc.text("Strategic Narrative & Planning:", 14, finalY);
+      pdfDoc.setFontSize(9);
+      pdfDoc.text(`Critical Path: ${report.criticalPathTomorrow || 'NIL'}`, 14, finalY + 10);
+      pdfDoc.text(`Pending: ${report.pendingDeliverables || 'NIL'}`, 14, finalY + 20);
+
+      pdfDoc.save(`${report.employeeName}_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
+      toast({ title: "PDF Report Generated" });
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title={isLeadOrHigher ? "Strategic Fleet Log" : "My Shift Log"} description="Comprehensive verification of tactical submissions.">
@@ -598,7 +660,12 @@ export default function ReportsPage() {
                       <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Audit Detail</DialogTitle>
                       <p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)}</p>
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest">{selectedReportForReview?.reportType}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary border-primary/20" onClick={() => handleDownloadPdf(selectedReportForReview)}>
+                        <FileDown className="size-3 mr-1.5" /> Download Report
+                    </Button>
+                    <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest h-8">{selectedReportForReview?.reportType}</Badge>
+                  </div>
               </DialogHeader>
               <ScrollArea className="flex-1 p-8 bg-secondary/10">
                   <div className="space-y-8 pb-10">
