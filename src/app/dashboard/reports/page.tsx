@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -14,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, useDoc } from "@/firebase";
-import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -328,8 +327,6 @@ const BusinessAuditDetail = ({ report }: { report: any }) => (
 
 export default function ReportsPage() {
   const { user } = useUser();
-  const auth = useAuth();
-  const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -353,7 +350,7 @@ export default function ReportsPage() {
 
   const fetchMyReports = async () => {
     if (!user) return;
-    const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(5));
+    const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(10));
     const snap = await getDocs(q);
     setMyRecentReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
   };
@@ -418,7 +415,13 @@ export default function ReportsPage() {
     autoTable(pdfDoc, {
         startY: 30,
         head: [['Strategic Field', 'Recorded Value']],
-        body: [['Employee', report.employeeName], ['Designation', report.employeeJobTitle], ['Time', dateStr], ['Type', report.reportType], ['T+1 Path', report.criticalPathTomorrow || 'N/A']],
+        body: [
+            ['Employee', report.employeeName], 
+            ['Designation', report.employeeJobTitle], 
+            ['Time', dateStr], 
+            ['Type', report.reportType], 
+            ['T+1 Path', report.criticalPathTomorrow || 'N/A']
+        ],
         theme: 'striped',
         headStyles: { fillColor: [107, 33, 168] }
     });
@@ -484,34 +487,82 @@ export default function ReportsPage() {
       </Dialog>
 
       <Dialog open={!!selectedReportForReview} onOpenChange={o => !o && setSelectedReportForReview(null)}>
-          <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden">
-              <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center"><div className="space-y-1"><DialogTitle className="text-xl font-black uppercase tracking-tighter">Tactical Audit Detail</DialogTitle><p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)}</p></div><Button onClick={() => handleExportPdf(selectedReportForReview)} size="sm" className="rounded-full font-black uppercase text-[10px] gap-2"><Download className="size-3" /> Export PDF</Button></DialogHeader>
-              <ScrollArea className="flex-1 p-8 bg-secondary/10"><div className="space-y-8 pb-10">
-                      <div className="grid grid-cols-2 gap-6"><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Reporting Official</p><p className="font-bold">{selectedReportForReview?.employeeName}</p></div><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Designation</p><p className="font-bold">{selectedReportForReview?.employeeJobTitle}</p></div></div>
+          <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+              <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center">
+                  <div className="space-y-1">
+                      <DialogTitle className="text-xl font-black uppercase tracking-tighter">Tactical Audit Detail</DialogTitle>
+                      <p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)}</p>
+                  </div>
+                  <Button onClick={() => handleExportPdf(selectedReportForReview)} size="sm" className="rounded-full font-black uppercase text-[10px] gap-2">
+                      <Download className="size-3" /> Export PDF
+                  </Button>
+              </DialogHeader>
+              <ScrollArea className="flex-1 p-8 bg-secondary/10">
+                  <div className="space-y-8 pb-10">
+                      <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-1">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reporting Official</p>
+                              <p className="font-bold text-lg">{selectedReportForReview?.employeeName}</p>
+                          </div>
+                          <div className="space-y-1">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Designation</p>
+                              <p className="font-bold text-lg">{selectedReportForReview?.employeeJobTitle}</p>
+                          </div>
+                      </div>
                       <Separator />
                       <div className="space-y-4">
                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Shift Intelligence</p>
                           {selectedReportForReview?.reportType === 'Business' && <BusinessAuditDetail report={selectedReportForReview} />}
                           {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
-                          {selectedReportForReview?.reportType === 'Technical' && (<div className="bg-white p-6 rounded-2xl ring-1 ring-border/50 space-y-4">{selectedReportForReview.completedTasks?.map((t: any, i: number) => (<div key={i} className="pb-4 border-b last:border-none space-y-1"><p className="font-black text-xs uppercase">{t.moduleName}</p><p className="text-sm italic">"{t.workDone}"</p></div>))}</div>)}
-                          {(selectedReportForReview?.criticalPathTomorrow || selectedReportForReview?.pendingDeliverables) && (<Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> T+1 Objectives</CardTitle></CardHeader><CardContent className="pt-6 space-y-4"><div><p className="text-[10px] font-black uppercase text-orange-600">Critical Path</p><p className="text-sm italic">"{selectedReportForReview.criticalPathTomorrow}"</p></div></CardContent></Card>)}
+                          {selectedReportForReview?.reportType === 'Technical' && (
+                              <div className="bg-white p-6 rounded-2xl ring-1 ring-border/50 space-y-4 shadow-sm">
+                                  {selectedReportForReview.completedTasks?.map((t: any, i: number) => (
+                                      <div key={i} className="pb-4 border-b last:border-none space-y-1">
+                                          <p className="font-black text-xs uppercase text-primary">{t.moduleName}</p>
+                                          <p className="text-sm italic text-muted-foreground leading-relaxed">"{t.workDone}"</p>
+                                      </div>
+                                  ))}
+                              </div>
+                          )}
+                          {(selectedReportForReview?.criticalPathTomorrow || selectedReportForReview?.pendingDeliverables) && (
+                              <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm">
+                                  <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> T+1 Objectives</CardTitle></CardHeader>
+                                  <CardContent className="pt-6 space-y-4">
+                                      <div>
+                                          <p className="text-[10px] font-black uppercase text-orange-600 tracking-widest mb-1">Critical Path</p>
+                                          <p className="text-sm italic">"{selectedReportForReview.criticalPathTomorrow}"</p>
+                                      </div>
+                                      {selectedReportForReview.pendingDeliverables && (
+                                          <div>
+                                              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Pending Deliverables</p>
+                                              <p className="text-sm italic">"{selectedReportForReview.pendingDeliverables}"</p>
+                                          </div>
+                                      )}
+                                  </CardContent>
+                              </Card>
+                          )}
                       </div>
-                      <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary">Tactical Verification</p>
-                        <div className="bg-white p-8 rounded-3xl ring-1 ring-border/50 flex flex-col items-center text-center space-y-6 shadow-inner">
-                            {selectedReportForReview?.signatureUrl ? (
-                                <img src={selectedReportForReview.signatureUrl} alt="Approved Signature" className="h-24 object-contain grayscale invert mix-blend-multiply opacity-60" />
-                            ) : (
-                                <div className="p-6 border-2 border-dashed rounded-2xl text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-muted/10">Digital Identity Asset Not Provisioned</div>
-                            )}
-                            <div className="space-y-1">
-                                <p className="text-xs font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p>
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p>
-                                <Separator className="w-12 mx-auto my-2" />
-                                <p className="text-[9px] font-mono text-muted-foreground italic">Timestamp: {formatIST(selectedReportForReview?.date)}</p>
-                            </div>
-                        </div>
+                      <div className="space-y-4">
+                          <p className="text-[10px] font-black uppercase text-primary tracking-widest">Tactical Verification</p>
+                          <div className="bg-white p-8 rounded-3xl ring-1 ring-border/50 flex flex-col items-center text-center space-y-6 shadow-inner relative overflow-hidden">
+                              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                                  <CheckCircle2 className="size-20 text-green-600" />
+                              </div>
+                              {selectedReportForReview?.signatureUrl ? (
+                                  <img src={selectedReportForReview.signatureUrl} alt="Approved Signature" className="h-24 object-contain grayscale invert mix-blend-multiply opacity-60" />
+                              ) : (
+                                  <div className="p-6 border-2 border-dashed rounded-2xl text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-muted/10">Digital Identity Asset Not Provisioned</div>
+                              )}
+                              <div className="space-y-1">
+                                  <p className="text-lg font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p>
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p>
+                                  <Separator className="w-12 mx-auto my-2" />
+                                  <p className="text-[9px] font-mono text-muted-foreground italic">Timestamp: {formatIST(selectedReportForReview?.date)}</p>
+                              </div>
+                          </div>
                       </div>
-                  </div></ScrollArea>
+                  </div>
+              </ScrollArea>
           </DialogContent>
       </Dialog>
 
@@ -529,3 +580,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+

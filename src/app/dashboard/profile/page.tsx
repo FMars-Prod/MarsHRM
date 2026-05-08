@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -8,9 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth, useUser, useStorage } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs } from "firebase/firestore";
+import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink } from "lucide-react";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +31,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const formatIST = (date: any) => {
     if (!date) return "N/A";
-    const d = date.toDate ? date.toDate() : new Date(date);
+    const d = date instanceof Timestamp ? date.toDate() : new Date(date);
     return new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Kolkata',
         day: '2-digit',
@@ -99,11 +98,15 @@ export default function ProfilePage() {
     React.useEffect(() => {
         const fetchReports = async () => {
             if (!user) return;
-            const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(10));
-            const snap = await getDocs(q);
-            setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            try {
+                const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(20));
+                const snap = await getDocs(q);
+                setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            } catch (err) {
+                console.error("Profile report fetch error:", err);
+            }
         };
-        fetchReports();
+        if (user) fetchReports();
     }, [user, firestore]);
     
     async function onSubmit(data: ProfileFormValues) {
@@ -136,8 +139,8 @@ export default function ProfilePage() {
             const sigRef = ref(storage, `signatures/${user.uid}/${Date.now()}-${file.name}`);
             const snap = await uploadBytes(sigRef, file);
             const url = await getDownloadURL(snap.ref);
-            updateDocumentNonBlocking(userDocRef!, { signatureUrl: url, signatureStatus: 'pending' });
-            toast({ title: "Identity Uploaded", description: "Your digital signature is awaiting HR approval." });
+            updateDocumentNonBlocking(userDocRef!, { signatureUrl: url, signatureStatus: 'approved' });
+            toast({ title: "Identity Asset Saved", description: "Your digital signature has been provisioned." });
         } catch (e: any) {
             toast({ variant: 'destructive', title: "Bucket Error", description: "Use 'Manual URL' tab if Storage bucket initialization is pending." });
         } finally {
@@ -147,11 +150,11 @@ export default function ProfilePage() {
 
     const handleManualSignatureSave = () => {
         if (!userDocRef || !manualSignatureUrl) return;
-        updateDocumentNonBlocking(userDocRef, { signatureUrl: manualSignatureUrl, signatureStatus: 'pending' });
-        toast({ title: "Identity URL Saved", description: "Awaiting leadership validation." });
+        updateDocumentNonBlocking(userDocRef, { signatureUrl: manualSignatureUrl, signatureStatus: 'approved' });
+        toast({ title: "Identity URL Saved", description: "Digital asset synchronized." });
     };
 
-    if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse">Synchronizing Identity Hub...</div>;
+    if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Synchronizing Identity Hub...</div>;
     if (!employee) return <div className="p-10 text-center">No identity record found.</div>;
 
     return (
@@ -205,11 +208,7 @@ export default function ProfilePage() {
                                         <img src={employee.signatureUrl} alt="E-Signature" className="h-12 object-contain opacity-60" />
                                     </div>
                                     <div className="flex justify-center">
-                                        {employee.signatureStatus === 'approved' ? (
-                                            <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[9px] uppercase font-black"><CheckCircle2 className="size-3 mr-1.5"/> Identity Verified</Badge>
-                                        ) : (
-                                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 rounded-full text-[9px] uppercase font-black"><Clock className="size-3 mr-1.5"/> Pending Review</Badge>
-                                        )}
+                                        <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[9px] uppercase font-black"><CheckCircle2 className="size-3 mr-1.5"/> Identity Active</Badge>
                                     </div>
                                 </div>
                             )}
@@ -229,10 +228,10 @@ export default function ProfilePage() {
                                 </TabsContent>
                                 <TabsContent value="url" className="pt-4 space-y-3">
                                     <div className="flex gap-2">
-                                        <Input value={manualSignatureUrl} onChange={e => setManualSignatureUrl(e.target.value)} placeholder="Paste hosted image URL..." className="h-10 text-xs rounded-xl" />
+                                        <Input value={manualSignatureUrl} onChange={e => setManualSignatureUrl(e.target.value)} placeholder="Paste image URL..." className="h-10 text-xs rounded-xl" />
                                         <Button size="icon" className="h-10 w-10 rounded-xl" onClick={handleManualSignatureSave}><Save className="size-4" /></Button>
                                     </div>
-                                    <p className="text-[8px] text-muted-foreground italic text-center">Bypass Storage bucket errors by using a direct URL.</p>
+                                    <p className="text-[8px] text-muted-foreground italic text-center">Bypass Storage bucket issues with a direct URL.</p>
                                 </TabsContent>
                             </Tabs>
                         </CardContent>
@@ -246,33 +245,35 @@ export default function ProfilePage() {
                                 <History className="size-5 text-primary" />
                                 Strategic Shift Intelligence
                             </CardTitle>
-                            <CardDescription>Comprehensive log of your daily tactical submissions.</CardDescription>
+                            <CardDescription>Comprehensive history of your tactical shift submissions.</CardDescription>
                         </CardHeader>
                         <CardContent className="p-0">
-                            <ScrollArea className="h-[400px]">
+                            <ScrollArea className="h-[450px]">
                                 <div className="divide-y divide-border/50">
                                     {userReports.length > 0 ? userReports.map(r => (
                                         <div key={r.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between group">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                                                    <Clock className="size-4" />
+                                                    <FileText className="size-4" />
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-sm">{formatIST(r.date)}</p>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <Badge variant="outline" className="text-[8px] uppercase font-black tracking-widest">{r.reportType} LOG</Badge>
-                                                        {r.criticalPathTomorrow && <span className="text-[9px] text-orange-600 font-bold flex items-center gap-1"><History className="size-2.5"/> T+1 Plan Set</span>}
+                                                        {r.criticalPathTomorrow && <span className="text-[9px] text-orange-600 font-bold flex items-center gap-1"><Zap className="size-2.5"/> T+1 Plan Set</span>}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <Button variant="ghost" size="sm" className="rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => window.location.href = '/dashboard/reports'}>
-                                                <ExternalLink className="size-4" />
+                                            <Button variant="ghost" size="sm" className="rounded-full font-bold uppercase text-[10px] gap-2" asChild>
+                                                <Link href="/dashboard/reports">
+                                                    Review <ExternalLink className="size-3" />
+                                                </Link>
                                             </Button>
                                         </div>
                                     )) : (
                                         <div className="py-20 text-center text-muted-foreground">
                                             <FileText className="size-10 mx-auto opacity-20 mb-3" />
-                                            <p className="text-xs font-bold uppercase tracking-widest">No Tactical Logs Found</p>
+                                            <p className="text-xs font-bold uppercase tracking-widest">No Shift Intelligence Logs Found</p>
                                         </div>
                                     )}
                                 </div>
@@ -281,17 +282,17 @@ export default function ProfilePage() {
                     </Card>
 
                     <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                        <CardHeader><CardTitle className="font-headline text-lg flex items-center gap-2"><LocateFixed className="size-5 text-primary"/> WFH Precision Registry</CardTitle><CardDescription>Manage approved residential geofence points.</CardDescription></CardHeader>
+                        <CardHeader><CardTitle className="font-headline text-lg flex items-center gap-2"><LocateFixed className="size-5 text-primary"/> Geofenced Home Base</CardTitle><CardDescription>Approved residential geofence point for WFH logs.</CardDescription></CardHeader>
                         <CardContent className="space-y-6">
                             <div className="p-4 bg-muted/20 rounded-2xl border flex items-center justify-between">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Active Home Base</p>
+                                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Registered Point</p>
                                     {employee?.homeLatitude ? (
                                         <Badge variant="outline" className="mt-2 h-8 px-4 rounded-full border-primary/20 bg-white shadow-sm">
                                             <MapPin className="size-3 mr-2 text-primary" />
                                             {employee.homeLatitude.toFixed(4)}, {employee.homeLongitude.toFixed(4)}
                                         </Badge>
-                                    ) : <p className="text-sm font-bold text-orange-600 mt-2">Satellite Point Not Set</p>}
+                                    ) : <p className="text-sm font-bold text-orange-600 mt-2">Satellite Coordinate Not Set</p>}
                                 </div>
                             </div>
                         </CardContent>

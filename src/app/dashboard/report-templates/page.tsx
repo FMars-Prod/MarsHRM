@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -10,7 +9,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LayoutTemplate, Info, Download, Upload, Clock, Save, Trash2, Plus, FileJson, Beaker } from 'lucide-react';
+import { LayoutTemplate, Info, Download, Upload, Clock, Save, Trash2, Plus, FileJson, Beaker, BrainCircuit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,17 +96,19 @@ export default function ReportTemplatesPage() {
           name: template.name,
           description: template.description || '',
           type: isSystem ? 'system' : 'custom',
-          definition: isSystem ? {} : template.definition
+          definition: isSystem ? {} : template.definition,
+          promptHint: `AI OPTIMIZATION PROTOCOL: Please review the following report template for "${template.name}". Improve the 'wording' and 'labels' to be more tactically professional while ensuring the keys remain compatible with a web form. Output the optimized JSON definition array.`,
+          platformContext: "MarsHRM Tactical Reporting Suite"
       };
       
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `template_${template.name.toLowerCase().replace(/\s+/g, '_')}.json`;
+      a.download = `AI_READY_template_${template.name.toLowerCase().replace(/\s+/g, '_')}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: 'Template Exported', description: 'JSON structure ready for AI alignment.' });
+      toast({ title: 'AI-Ready Template Exported', description: 'JSON structure with wording hints exported.' });
   };
 
   const handleImportTemplate = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,14 +121,14 @@ export default function ReportTemplatesPage() {
               if (!imported.name) throw new Error('Invalid template format');
 
               const newTemplate = {
-                  name: `${imported.name} (Imported)`,
-                  description: imported.description || 'Imported custom template',
+                  name: `${imported.name} (Optimized)`,
+                  description: imported.description || 'AI optimized custom template',
                   definition: imported.definition || {},
                   createdAt: serverTimestamp()
               };
 
               await addDocumentNonBlocking(collection(firestore, 'custom_report_definitions'), newTemplate);
-              toast({ title: 'Template Imported', description: 'New custom template created successfully.' });
+              toast({ title: 'Template Imported', description: 'Optimized custom template created successfully.' });
           } catch (err) {
               toast({ variant: 'destructive', title: 'Import Failed', description: 'Invalid JSON template definition.' });
           }
@@ -164,7 +165,7 @@ export default function ReportTemplatesPage() {
             <div className="relative">
                 <Input type="file" className="hidden" id="import-template" accept=".json" onChange={handleImportTemplate} />
                 <Button size="sm" className="rounded-full shadow-lg" onClick={() => document.getElementById('import-template')?.click()}>
-                    <Plus className="size-4 mr-2"/> Import New Template
+                    <Plus className="size-4 mr-2"/> Import Optimized Template
                 </Button>
             </div>
         </div>
@@ -229,10 +230,10 @@ export default function ReportTemplatesPage() {
             <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 backdrop-blur-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 border-b">
                     <CardTitle className="text-lg font-headline flex items-center gap-2">
-                        <Beaker className="size-5 text-primary" />
-                        Template Library
+                        <BrainCircuit className="size-5 text-primary" />
+                        AI-Ready Template Library
                     </CardTitle>
-                    <CardDescription>Export JSON templates for AI alignment or import fixed definitions.</CardDescription>
+                    <CardDescription>Download templates with full instructional wording for ChatGPT/Gemini optimization.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
@@ -256,7 +257,7 @@ export default function ReportTemplatesPage() {
                                     <TableCell className="py-4"><Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest">System</Badge></TableCell>
                                     <TableCell className="text-right py-4">
                                         <Button variant="ghost" size="sm" onClick={() => handleExportTemplate(s, true)} className="rounded-full">
-                                            <Download className="size-3 mr-2" /> Export
+                                            <Download className="size-3 mr-2" /> Download Full
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -274,7 +275,7 @@ export default function ReportTemplatesPage() {
                                     <TableCell className="text-right py-4">
                                         <div className="flex justify-end gap-2">
                                             <Button variant="ghost" size="sm" onClick={() => handleExportTemplate(c, false)} className="rounded-full">
-                                                <Download className="size-3 mr-2" /> Export
+                                                <Download className="size-3 mr-2" /> Download Full
                                             </Button>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
@@ -328,9 +329,9 @@ export default function ReportTemplatesPage() {
           <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
             <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Info className="size-4" /> AI Integration Help</CardTitle></CardHeader>
             <CardContent className="text-[10px] space-y-4 text-muted-foreground leading-relaxed">
-              <p>Export templates to JSON, provide them to ChatGPT or Gemini with instructions to "Fix the definition array", and then import the fixed version back here.</p>
+              <p>Download the "Full" JSON template, provide it to an AI with instructions to "Fix and optimize the tactical wording", and then import the result.</p>
               <div className="space-y-2 border-t pt-4">
-                  <div className="flex gap-2"><strong>Strategy:</strong> Standardizing JSON allow AI to generate highly compatible tactical forms.</div>
+                  <div className="flex gap-2"><strong>Strategy:</strong> Standardizing definitions allows AI to generate error-free tactical forms.</div>
               </div>
             </CardContent>
           </Card>
