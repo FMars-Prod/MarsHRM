@@ -5,12 +5,12 @@ import * as React from 'react';
 import { use } from 'react';
 import { notFound } from 'next/navigation';
 import { useFirestore, useMemoFirebase, useCollection, useDoc, updateDocumentNonBlocking, useStorage, useUser } from '@/firebase';
-import { collection, query, doc, where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth } from 'date-fns';
-import { Grid, ShieldCheck, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Download, Save } from 'lucide-react';
+import { Grid, ShieldCheck, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Download, Save, ExternalLink, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +18,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -40,6 +41,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   
   const [currentMonth, setCurrentMonth] = React.useState(startOfMonth(new Date()));
   const [manualSignatureUrl, setManualSignatureUrl] = React.useState("");
+  const [userReports, setUserReports] = React.useState<any[]>([]);
 
   const userDocRef = useMemoFirebase(() => (userId ? doc(firestore, 'users', userId) : null), [firestore, userId]);
   const { data: user, isLoading: isUserLoading } = useDoc<any>(userDocRef);
@@ -51,11 +53,18 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const attendanceQuery = useMemoFirebase(() => userId ? query(collection(firestore, `users/${userId}/attendances`), orderBy('checkInTime', 'desc')) : null, [firestore, userId]);
   const { data: attendanceData } = useCollection<AttendanceRecord>(attendanceQuery);
   
-  const reportsQuery = useMemoFirebase(() => userId ? query(collection(firestore, `users/${userId}/reports`), orderBy('date', 'desc'), limit(30)) : null, [firestore, userId]);
-  const { data: reportsData } = useCollection<Report>(reportsQuery);
-
   const complianceQuery = useMemoFirebase(() => userId ? query(collection(firestore, 'compliance_reports'), where('employeeId', '==', userId), orderBy('timestamp', 'desc')) : null, [firestore, userId]);
   const { data: complianceData } = useCollection<ComplianceReport>(complianceQuery);
+
+  React.useEffect(() => {
+      const fetchReports = async () => {
+          if (!userId) return;
+          const q = query(collection(firestore, `users/${userId}/reports`), orderBy('date', 'desc'), limit(30));
+          const snap = await getDocs(q);
+          setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      };
+      fetchReports();
+  }, [userId, firestore]);
 
   const stats = React.useMemo(() => {
     if (!attendanceData) return { workHours: 0, lateDays: 0, leaves: 0, compliance: 0 };
@@ -73,9 +82,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const modifiers = React.useMemo(() => {
     const mods: Record<string, any> = { present: [], late: [], absent: [], on_leave: [], report: [], sunday: { dayOfWeek: [0] } };
     attendanceData?.forEach(event => { if (event.checkInTime instanceof Timestamp && mods[event.status]) mods[event.status].push(event.checkInTime.toDate()); });
-    reportsData?.forEach(report => { if (report.date instanceof Timestamp) mods.report.push(report.date.toDate()); });
+    userReports.forEach(report => { if (report.date instanceof Timestamp) mods.report.push(report.date.toDate()); });
     return mods;
-  }, [attendanceData, reportsData]);
+  }, [attendanceData, userReports]);
 
   const handleManualSignatureSave = () => {
     if (!userDocRef || !manualSignatureUrl) return;
@@ -124,6 +133,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
       <Tabs defaultValue="calendar" className="w-full">
         <TabsList className="w-full justify-center bg-transparent border-t border-b rounded-none h-14">
             <TabsTrigger value="calendar" className="rounded-none px-6 flex gap-2 font-black uppercase text-[10px] tracking-widest"><CalendarIcon className="size-4"/> Ops Log</TabsTrigger>
+            <TabsTrigger value="reports" className="rounded-none px-6 flex gap-2 font-black uppercase text-[10px] tracking-widest"><FileText className="size-4"/> Intelligence</TabsTrigger>
             <TabsTrigger value="compliance" className="rounded-none px-6 flex gap-2 font-black uppercase text-[10px] tracking-widest"><ShieldAlert className="size-4"/> Alerts</TabsTrigger>
             <TabsTrigger value="identity" className="rounded-none px-6 flex gap-2 font-black uppercase text-[10px] tracking-widest"><ShieldCheck className="size-4"/> Identity</TabsTrigger>
         </TabsList>
@@ -137,6 +147,31 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         sunday: 'opacity-20 bg-muted/20',
                     }} />
                 </CardContent></Card></TabsContent>
+        <TabsContent value="reports" className="p-4">
+            <Card className="border-none rounded-3xl shadow-sm bg-white/50">
+                <CardHeader className="bg-muted/10 border-b"><CardTitle className="text-sm font-black uppercase">Tactical Shift History</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                    <ScrollArea className="h-[400px]">
+                        <div className="divide-y divide-border/50">
+                            {userReports.length > 0 ? userReports.map(r => (
+                                <div key={r.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-primary/10 text-primary"><Clock className="size-4"/></div>
+                                        <div>
+                                            <p className="font-bold text-sm">{format(r.date.toDate(), 'PPP')}</p>
+                                            <Badge variant="outline" className="text-[8px] uppercase font-black">{r.reportType}</Badge>
+                                        </div>
+                                    </div>
+                                    <Button variant="ghost" size="sm" asChild className="rounded-full text-[9px] font-black uppercase">
+                                        <Link href="/dashboard/reports">View Detailed Log <ExternalLink className="size-3 ml-1.5"/></Link>
+                                    </Button>
+                                </div>
+                            )) : <div className="py-20 text-center opacity-30 text-[10px] font-black uppercase">No Intelligence Records Found</div>}
+                        </div>
+                    </ScrollArea>
+                </CardContent>
+            </Card>
+        </TabsContent>
         <TabsContent value="compliance" className="p-4"><Card className="border-none rounded-3xl shadow-sm bg-white/50"><CardHeader className="bg-red-500/5 border-b"><CardTitle className="text-sm font-black uppercase text-red-600">Protocol Alerts</CardTitle></CardHeader>
                 <CardContent className="p-0"><ScrollArea className="h-[300px]">{complianceData && complianceData.length > 0 ? complianceData.map(c => (
                     <div key={c.id} className="p-6 border-b border-border/50">

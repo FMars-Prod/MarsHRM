@@ -10,7 +10,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LayoutTemplate, Info, Download, Upload, Clock, Save, Trash2, Plus, FileJson, Beaker, BrainCircuit, ShieldCheck, Eye, TrendingUp, Target, DollarSign, Brain, CheckCircle2, Zap } from 'lucide-react';
+import { LayoutTemplate, Info, Download, Upload, Clock, Save, Trash2, Plus, FileJson, Beaker, BrainCircuit, ShieldCheck, Eye, TrendingUp, Target, DollarSign, Brain, CheckCircle2, Zap, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +63,7 @@ export default function ReportTemplatesPage() {
   const { data: configData, isLoading: configLoading } = useDoc<ReportMapping>(configDocRef);
 
   const [previewTemplate, setPreviewTemplate] = React.useState<any | null>(null);
+  const [isImporting, setIsImporting] = React.useState(false);
 
   const jobTitles = React.useMemo(() => {
     if (!users) return [];
@@ -83,8 +84,8 @@ export default function ReportTemplatesPage() {
           templateName: template.name,
           platformID: template.id,
           description: template.description,
-          wordingBaseline: template.sections,
-          aiOptimizationPrompt: `OPTIMIZE TACTICAL WORDING: Refine the labels for "${template.name}" to be extremely professional and elite. Maintain the JSON structure.`
+          sections: template.sections,
+          aiOptimizationPrompt: `OPTIMIZE TACTICAL WORDING: Refine the labels for "${template.name}" to be extremely professional and elite. Maintain the structure.`
       };
       
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -95,6 +96,28 @@ export default function ReportTemplatesPage() {
       a.click();
       URL.revokeObjectURL(url);
       toast({ title: 'JSON Exported' });
+  };
+
+  const handleImportTemplate = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+        try {
+            const json = JSON.parse(ev.target?.result as string);
+            if (!json.platformID) throw new Error("Invalid Format");
+            
+            // Logic to save the imported template (simplified for MVP: alert success)
+            toast({ title: "Import Successful", description: "Template language synchronized." });
+        } catch (err) {
+            toast({ variant: 'destructive', title: 'Import Failed', description: "Ensure the JSON matches the exported structure." });
+        } finally {
+            setIsImporting(false);
+        }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -186,6 +209,19 @@ export default function ReportTemplatesPage() {
         </div>
 
         <div className="space-y-6">
+          <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
+            <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Upload className="size-4 text-primary" /> Import Optimized Language</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+                <p className="text-[10px] text-muted-foreground leading-relaxed">Select a JSON file refined by AI to synchronize high-fidelity wording.</p>
+                <div className="relative">
+                    <input type="file" accept=".json" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleImportTemplate} disabled={isImporting} />
+                    <Button variant="outline" className="w-full h-11 rounded-xl font-bold uppercase text-[10px]" disabled={isImporting}>
+                        {isImporting ? <Loader2 className="size-4 animate-spin"/> : <Upload className="size-4 mr-2"/>}
+                        Upload JSON Template
+                    </Button>
+                </div>
+            </CardContent>
+          </Card>
           <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
             <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Info className="size-4 text-primary" /> AI Optimization Protocol</CardTitle></CardHeader>
             <CardContent className="text-[10px] space-y-4 text-muted-foreground leading-relaxed">

@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 
 /**
@@ -422,6 +423,11 @@ const MarketingAuditDetail = ({ report }: { report: any }) => {
         { label: 'Reel', key: 'dmReel' }, 
         { label: 'Shoot', key: 'dmShoot' }
     ];
+
+    const getColumnTotal = (key: string) => {
+        return Number(report[`${key}Approved`] || 0) + Number(report[`${key}Pending`] || 0) + Number(report[`${key}Rejected`] || 0);
+    };
+
     return (
         <div className="space-y-6">
             <BusinessAuditDetail report={report} isNested />
@@ -442,6 +448,12 @@ const MarketingAuditDetail = ({ report }: { report: any }) => {
                                 ))}
                             </TableRow>
                         ))}
+                        <TableRow className="bg-primary/5">
+                            <TableCell className="text-xs font-black uppercase py-4">Total</TableCell>
+                            {deliverables.map(d => (
+                                <TableCell key={d.key} className="text-center font-black text-primary">{getColumnTotal(d.key)}</TableCell>
+                            ))}
+                        </TableRow>
                     </TableBody>
                 </Table>
             </div>
