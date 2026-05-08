@@ -8,18 +8,18 @@ import { collection, query, where, orderBy, Timestamp, getDocs, collectionGroup 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSunday, isValid, isAfter, isBefore, differenceInSeconds, startOfMonth, endOfMonth, subWeeks, subMonths, isToday } from 'date-fns';
-import { MapPin, Calendar as CalendarIcon, AreaChart as AreaChartIcon, ExternalLink, Clock, Briefcase, CalendarOff, AlertTriangle, Coffee, Info, Filter } from 'lucide-react';
+import { MapPin, Calendar as CalendarIcon, AreaChart as AreaChartIcon, ExternalLink, Clock, Briefcase, CalendarOff, AlertTriangle, Coffee, Info, Filter, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SelectLabel } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, BarChart } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 
-type User = { id: string; firstName: string; lastName: string; jobTitle: string; department: string; };
+type User = { id: string; firstName: string; lastName: string; jobTitle: string; department: string; role?: string; };
 type Holiday = { id: string; date: Timestamp; title: string; };
 type LeaveRequest = { id: string; employeeId: string; startDate: Timestamp; endDate: Timestamp; status: string; };
 type Attendance = { 
@@ -42,10 +42,15 @@ type Attendance = {
     totalBreakDuration?: number;
 };
 
-const chartConfig = {
+const orgChartConfig = {
   present: { label: "Present", color: "#22c55e" },
   late: { label: "Late", color: "#eab308" },
   absent: { label: "Absent", color: "#ef4444" },
+} satisfies ChartConfig;
+
+const userChartConfig = {
+  workHours: { label: "Work Hours", color: "hsl(var(--primary))" },
+  breakHours: { label: "Break Time", color: "hsl(var(--accent))" },
 } satisfies ChartConfig;
 
 const MapPinLink = ({ lat, lng, time }: { lat?: number, lng?: number, time?: string }) => {
@@ -74,7 +79,7 @@ export default function AnalyticsPage() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   // Filter States
-  const [dateFilter, setDateFilter] = React.useState<string>("last-7");
+  const [dateFilter, setDateFilter] = React.useState<string>("today");
   const [customStartDate, setCustomStartDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [customEndDate, setCustomEndDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
 
@@ -101,6 +106,10 @@ export default function AnalyticsPage() {
             start = startOfDay(subDays(now, 1));
             end = endOfDay(subDays(now, 1));
             break;
+        case 'this-week':
+            start = startOfWeek(now, { weekStartsOn: 1 });
+            end = endOfDay(now);
+            break;
         case 'prev-week':
             start = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
             end = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
@@ -117,8 +126,8 @@ export default function AnalyticsPage() {
             start = startOfDay(new Date(customStartDate));
             end = endOfDay(new Date(customEndDate));
             break;
-        default: // last-7
-            start = startOfDay(subDays(now, 6));
+        default: // today
+            start = startOfDay(now);
             break;
     }
     return { start, end };
@@ -147,24 +156,47 @@ export default function AnalyticsPage() {
   }, [selectedUserId, firestore, toast, dateRange]);
 
   const trendData = React.useMemo(() => {
-    // If it's a single day or small range, show at least 7 days for trend context
     const isSingleDay = isSameDay(dateRange.start, dateRange.end);
     const trendStart = isSingleDay ? subDays(dateRange.start, 6) : dateRange.start;
     const trendEnd = dateRange.end;
 
     const days = eachDayOfInterval({ start: trendStart, end: trendEnd }).filter(d => !isSunday(d));
     
+    // Filter users to get accurate expected count (exclude Admin/HR)
+    const expectedUsers = users?.filter(u => u.role !== 'CEO/Admin' && u.role !== 'HR Manager') || [];
+    const expectedCount = expectedUsers.length;
+
     return days.map(day => {
         const dayStr = format(day, 'EEE, MMM d');
         const dayRecs = attendanceData.filter(r => r.checkInTime && isSameDay(r.checkInTime.toDate(), day));
-        return {
-            date: dayStr,
-            present: dayRecs.filter(r => r.status === 'present').length,
-            late: dayRecs.filter(r => r.status === 'late').length,
-            absent: Math.max(0, (users?.length || 0) - dayRecs.length)
-        };
+        
+        if (selectedUserId === 'all') {
+            const dayPresent = dayRecs.filter(r => r.status === 'present' && expectedUsers.some(u => u.id === r.employeeId)).length;
+            const dayLate = dayRecs.filter(r => r.status === 'late' && expectedUsers.some(u => u.id === r.employeeId)).length;
+            return {
+                date: dayStr,
+                present: dayPresent,
+                late: dayLate,
+                absent: Math.max(0, expectedCount - dayPresent - dayLate)
+            };
+        } else {
+            const att = dayRecs[0];
+            let workHours = 0;
+            let breakHours = 0;
+            if (att?.checkInTime && att?.checkOutTime) {
+                const diff = differenceInSeconds(att.checkOutTime.toDate(), att.checkInTime.toDate());
+                const brk = att.totalBreakDuration || 0;
+                workHours = (diff - brk) / 3600;
+                breakHours = brk / 3600;
+            }
+            return {
+                date: dayStr,
+                workHours: parseFloat(workHours.toFixed(2)),
+                breakHours: parseFloat(breakHours.toFixed(2))
+            };
+        }
     });
-  }, [attendanceData, users, dateRange]);
+  }, [attendanceData, users, dateRange, selectedUserId]);
 
   const getDayStatus = (user: User, day: Date) => {
       const today = startOfDay(new Date());
@@ -303,9 +335,9 @@ export default function AnalyticsPage() {
                         <SelectLabel>Presets</SelectLabel>
                         <SelectItem value="today">Today</SelectItem>
                         <SelectItem value="yesterday">Yesterday</SelectItem>
+                        <SelectItem value="this-week">This Week</SelectItem>
                         <SelectItem value="prev-week">Previous Week</SelectItem>
                         <SelectItem value="prev-month">Previous Month</SelectItem>
-                        <SelectItem value="last-7">Last 7 Days</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
                         <SelectLabel>Custom</SelectLabel>
@@ -354,28 +386,44 @@ export default function AnalyticsPage() {
         <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
             <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-headline flex items-center gap-2">
-                    <AreaChartIcon className="size-5 text-primary" />
-                    Tactical Trend Analysis
+                    {selectedUserId === 'all' ? <AreaChartIcon className="size-5 text-primary" /> : <Activity className="size-5 text-primary" />}
+                    {selectedUserId === 'all' ? 'Tactical Trend Analysis' : 'Individual Productivity Analysis'}
                 </CardTitle>
-                <CardDescription>Sundays are excluded from trend calculations.</CardDescription>
+                <CardDescription>
+                    {selectedUserId === 'all' ? 'Sundays are excluded from trend calculations.' : 'Visualization of daily work vs break hours.'}
+                </CardDescription>
             </CardHeader>
             <CardContent className="h-[300px]">
-                <ChartContainer config={chartConfig} className="h-full w-full">
-                    <AreaChart data={trendData}>
-                        <defs>
-                            <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22c55e" stopOpacity={0.1}/><stop offset="95%" stopColor="#22c55e" stopOpacity={0}/></linearGradient>
-                            <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#eab308" stopOpacity={0.1}/><stop offset="95%" stopColor="#eab308" stopOpacity={0}/></linearGradient>
-                        </defs>
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.2} />
-                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold'}} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10}} />
-                        <Tooltip content={<ChartTooltipContent />} />
-                        <Area type="monotone" dataKey="present" stroke="#22c55e" fillOpacity={1} fill="url(#colorPresent)" strokeWidth={3} stackId="1" />
-                        <Area type="monotone" dataKey="late" stroke="#eab308" fillOpacity={1} fill="url(#colorLate)" strokeWidth={3} stackId="1" />
-                        <Area type="monotone" dataKey="absent" stroke="#ef4444" fillOpacity={0.05} fill="#ef4444" strokeWidth={1} stackId="1" />
-                        <Legend verticalAlign="bottom" align="right" iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
-                    </AreaChart>
-                </ChartContainer>
+                {selectedUserId === 'all' ? (
+                    <ChartContainer config={orgChartConfig} className="h-full w-full">
+                        <AreaChart data={trendData}>
+                            <defs>
+                                <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22c55e" stopOpacity={0.1}/><stop offset="95%" stopColor="#22c55e" stopOpacity={0}/></linearGradient>
+                                <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#eab308" stopOpacity={0.1}/><stop offset="95%" stopColor="#eab308" stopOpacity={0}/></linearGradient>
+                            </defs>
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.2} />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold'}} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10}} />
+                            <Tooltip content={<ChartTooltipContent />} />
+                            <Area type="monotone" dataKey="present" stroke="#22c55e" fillOpacity={1} fill="url(#colorPresent)" strokeWidth={3} stackId="1" />
+                            <Area type="monotone" dataKey="late" stroke="#eab308" fillOpacity={1} fill="url(#colorLate)" strokeWidth={3} stackId="1" />
+                            <Area type="monotone" dataKey="absent" stroke="#ef4444" fillOpacity={0.05} fill="#ef4444" strokeWidth={1} stackId="1" />
+                            <Legend verticalAlign="bottom" align="right" iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
+                        </AreaChart>
+                    </ChartContainer>
+                ) : (
+                    <ChartContainer config={userChartConfig} className="h-full w-full">
+                        <BarChart data={trendData}>
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.2} />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold'}} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10}} unit="h" />
+                            <Tooltip content={<ChartTooltipContent />} />
+                            <Bar dataKey="workHours" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="breakHours" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                            <Legend verticalAlign="bottom" align="right" iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
+                        </BarChart>
+                    </ChartContainer>
+                )}
             </CardContent>
         </Card>
 
@@ -390,7 +438,7 @@ export default function AnalyticsPage() {
             <CardContent className="p-0">
                 <div className="overflow-x-auto">
                     <Table>
-                        <TableHeader className="bg-muted/30">
+                        <TableHeader>
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Date & Employee</TableHead>
                                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Status</TableHead>
