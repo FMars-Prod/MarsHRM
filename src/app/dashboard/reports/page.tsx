@@ -8,13 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, UserCheck, Activity, PhoneCall, Link as LinkIcon, ShieldCheck } from "lucide-react";
+import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, UserCheck, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, useDoc } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, useDoc, useStorage } from "@/firebase";
 import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -103,7 +104,30 @@ const ExecutionPlanFields = () => {
  * COMPONENT: Business Intelligence Fields (Core)
  */
 const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
-    const { control } = useFormContext();
+    const { control, setValue } = useFormContext();
+    const storage = useStorage();
+    const { user } = useUser();
+    const { toast } = useToast();
+    
+    const [isUploadingBest, setIsUploadingBest] = React.useState(false);
+    const [isUploadingWorst, setIsUploadingWorst] = React.useState(false);
+
+    const handleAudioUpload = async (file: File, fieldName: string, setUploading: (v: boolean) => void) => {
+        if (!user) return;
+        setUploading(true);
+        try {
+            const storageRef = ref(storage, `call_recordings/${user.uid}/${Date.now()}-${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(snapshot.ref);
+            setValue(fieldName, url);
+            toast({ title: "Recording Sync Success", description: "Audio asset provisioned." });
+        } catch (error: any) {
+            console.error("Upload error:", error);
+            toast({ variant: "destructive", title: "Storage Error", description: error.message });
+        } finally {
+            setUploading(false);
+        }
+    };
     
     // Efficiency Calculation for the Form Preview
     const coldCalls = useWatch({ control, name: 'coldCalls' }) || 0;
@@ -194,20 +218,46 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence Log</CardTitle></CardHeader>
-                <CardContent className="space-y-4 pt-6">
+                <CardContent className="space-y-6 pt-6">
                     <FormField control={control} name="totalCallRecordings" render={({ field }) => (
                         <FormItem>
                             <FormLabel className="text-[9px] uppercase font-bold text-primary">Total Recordings Drive Folder Link</FormLabel>
-                            <FormControl><Input {...field} placeholder="Paste link here..." className="rounded-xl h-11" /></FormControl>
+                            <FormControl><Input {...field} placeholder="Paste Drive link here..." className="rounded-xl h-11" /></FormControl>
                         </FormItem>
                     )} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField control={control} name="bestCallRecording" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[9px] uppercase font-bold">Best Call Recording (Link)</FormLabel><FormControl><Input {...field} placeholder="Paste recording link..." className="rounded-xl h-10" /></FormControl></FormItem>
-                        )} />
-                        <FormField control={control} name="worstCallRecording" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[9px] uppercase font-bold">Worst Call Recording (Link)</FormLabel><FormControl><Input {...field} placeholder="Paste recording link..." className="rounded-xl h-10" /></FormControl></FormItem>
-                        )} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Best Call Channel</Label>
+                            <div className="flex flex-col gap-2">
+                                <Input 
+                                    type="file" 
+                                    accept="audio/*" 
+                                    className="h-11 rounded-xl cursor-pointer bg-white" 
+                                    onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'bestCallRecording', setIsUploadingBest)}
+                                    disabled={isUploadingBest}
+                                />
+                                {isUploadingBest && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Transmitting recording...</div>}
+                                <FormField control={control} name="bestCallRecording" render={({ field }) => (
+                                    <FormControl><Input {...field} placeholder="Or paste manual recording link..." className="h-9 rounded-xl text-xs" /></FormControl>
+                                )} />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Worst Call Channel</Label>
+                            <div className="flex flex-col gap-2">
+                                <Input 
+                                    type="file" 
+                                    accept="audio/*" 
+                                    className="h-11 rounded-xl cursor-pointer bg-white" 
+                                    onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'worstCallRecording', setIsUploadingWorst)}
+                                    disabled={isUploadingWorst}
+                                />
+                                {isUploadingWorst && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Transmitting recording...</div>}
+                                <FormField control={control} name="worstCallRecording" render={({ field }) => (
+                                    <FormControl><Input {...field} placeholder="Or paste manual recording link..." className="h-9 rounded-xl text-xs" /></FormControl>
+                                )} />
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -370,13 +420,47 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
                 <div className="p-4 bg-muted/5 rounded-xl border border-dashed"><p className="text-[9px] font-black uppercase text-primary mb-1">Strategic Learning</p><p className="text-sm italic">"{report.strategicLearning || 'NIL'}"</p></div>
             </div>
 
-            <div className="p-4 bg-primary/5 rounded-2xl space-y-3">
+            <div className="p-4 bg-primary/5 rounded-2xl space-y-4">
                 <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence Log</p>
-                <div className="grid gap-2">
-                    {report.totalCallRecordings && <Button variant="outline" className="h-9 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary border-primary/20" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> Daily Call Drive Link</Link></Button>}
-                    <div className="grid grid-cols-2 gap-2">
-                        {report.bestCallRecording && <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2" asChild><Link href={report.bestCallRecording} target="_blank"><ExternalLink className="size-3" /> Best Call Link</Link></Button>}
-                        {report.worstCallRecording && <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2" asChild><Link href={report.worstCallRecording} target="_blank"><ExternalLink className="size-3" /> Worst Call Link</Link></Button>}
+                
+                <div className="grid gap-4">
+                    {report.totalCallRecordings && (
+                        <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary border-primary/20" asChild>
+                            <Link href={report.totalCallRecordings} target="_blank">
+                                <Download className="size-3 mr-2" /> Daily Call Drive Link
+                            </Link>
+                        </Button>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {report.bestCallRecording && (
+                            <div className="p-3 bg-white rounded-xl ring-1 ring-border/50 space-y-2">
+                                <p className="text-[9px] font-black uppercase text-green-600 flex items-center gap-1.5"><Mic className="size-3"/> Best Call</p>
+                                {report.bestCallRecording.startsWith('http') && (report.bestCallRecording.includes('firebasestorage') || report.bestCallRecording.endsWith('.mp3') || report.bestCallRecording.endsWith('.wav')) ? (
+                                    <audio controls className="w-full h-8 scale-90 -ml-2">
+                                        <source src={report.bestCallRecording} />
+                                    </audio>
+                                ) : (
+                                    <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2 truncate w-full" asChild>
+                                        <Link href={report.bestCallRecording} target="_blank"><ExternalLink className="size-3" /> View Recording</Link>
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+                        {report.worstCallRecording && (
+                            <div className="p-3 bg-white rounded-xl ring-1 ring-border/50 space-y-2">
+                                <p className="text-[9px] font-black uppercase text-red-600 flex items-center gap-1.5"><Mic className="size-3"/> Worst Call</p>
+                                {report.worstCallRecording.startsWith('http') && (report.worstCallRecording.includes('firebasestorage') || report.worstCallRecording.endsWith('.mp3') || report.worstCallRecording.endsWith('.wav')) ? (
+                                    <audio controls className="w-full h-8 scale-90 -ml-2">
+                                        <source src={report.worstCallRecording} />
+                                    </audio>
+                                ) : (
+                                    <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2 truncate w-full" asChild>
+                                        <Link href={report.worstCallRecording} target="_blank"><ExternalLink className="size-3" /> View Recording</Link>
+                                    </Button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
