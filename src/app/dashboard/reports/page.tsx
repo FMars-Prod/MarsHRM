@@ -30,6 +30,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 
 const formatIST = (date: Date) => {
     return new Intl.DateTimeFormat('en-GB', {

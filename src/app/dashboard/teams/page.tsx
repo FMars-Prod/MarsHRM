@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Users, Trash, Edit, MoreHorizontal, UserCheck } from "lucide-react";
+import { PlusCircle, Users, Trash, Edit, MoreHorizontal, UserCheck, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -21,6 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 type UserData = {
     id: string;
@@ -29,6 +30,7 @@ type UserData = {
     role: string;
     teamId?: string | null;
     avatar?: string;
+    jobTitle: string;
 };
 
 type Team = {
@@ -176,8 +178,14 @@ export default function TeamsPage() {
                                     {users?.map(member => (
                                         <div key={member.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white transition-colors">
                                             <Checkbox id={`m-${member.id}`} checked={selectedMemberIds.includes(member.id)} onCheckedChange={c => setSelectedMemberIds(p => c ? [...p, member.id] : p.filter(i => i !== member.id))} />
-                                            <Label htmlFor={`m-${member.id}`} className="font-bold text-sm cursor-pointer">{member.firstName} {member.lastName}</Label>
-                                            <span className="text-[9px] text-muted-foreground uppercase ml-auto">{member.jobTitle}</span>
+                                            <Label htmlFor={`m-${member.id}`} className={cn("font-bold text-sm cursor-pointer", member.teamId && member.teamId !== editingTeam?.id && "text-muted-foreground")}>
+                                                {member.firstName} {member.lastName}
+                                            </Label>
+                                            {member.teamId && member.teamId !== editingTeam?.id ? (
+                                                <Badge variant="outline" className="text-[8px] uppercase ml-auto">Assigned</Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="text-[8px] uppercase ml-auto text-green-600 border-green-600/20">Unassigned</Badge>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

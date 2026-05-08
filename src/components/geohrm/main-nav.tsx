@@ -26,7 +26,8 @@ import {
   ClipboardList,
   LayoutTemplate,
   ShieldAlert,
-  CalendarDays
+  CalendarDays,
+  ShieldCheck
 } from "lucide-react";
 import React from "react";
 
@@ -40,7 +41,7 @@ const links = [
   { href: "/dashboard/payslips", label: "Payslips", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/issues", label: "Support Desk", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-  { href: "/dashboard/compliance", label: "Compliance", icon: ShieldAlert, roles: ['HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/core-team-report", label: "Core Team Report", icon: ClipboardList, roles: ['Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/monitor", label: "Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/holidays", label: "Holidays", icon: CalendarDays, roles: ['HR Manager', 'CEO/Admin'] },
