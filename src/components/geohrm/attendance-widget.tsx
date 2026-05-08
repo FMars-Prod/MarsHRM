@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Utensils, LogOut, MapPinned, Info, LogIn, RotateCcw } from "lucide-react";
+import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -28,19 +28,14 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, serverTimestamp, Timestamp, deleteDoc } from "firebase/firestore";
+import { doc, serverTimestamp, deleteDoc, Timestamp } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
 import { format, parse, isAfter } from "date-fns";
 import { Textarea } from "../ui/textarea";
-import { Badge } from "../ui/badge";
 
 type AttendanceStatus = "out" | "in" | "lunch" | "short_break";
 
@@ -54,7 +49,7 @@ interface Location {
 
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
   if (!loc1 || !loc2 || isNaN(loc1.latitude) || isNaN(loc1.longitude) || isNaN(loc2.latitude) || isNaN(loc2.longitude)) return Infinity;
-  const R = 6371; // Radius in km
+  const R = 6371; 
   const dLat = (loc2.latitude - loc1.latitude) * (Math.PI / 180);
   const dLon = (loc2.longitude - loc1.longitude) * (Math.PI / 180);
   const a =
@@ -119,14 +114,14 @@ export function AttendanceWidget() {
 
   useEffect(() => {
     if (todaysAttendance) {
-        const checkIn = todaysAttendance.checkInTime?.toDate();
-        const checkOut = todaysAttendance.checkOutTime?.toDate();
-        const lunchOut = todaysAttendance.lunchOutTime?.toDate();
-        const lunchIn = todaysAttendance.lunchInTime?.toDate();
+        const checkIn = todaysAttendance.checkInTime instanceof Timestamp ? todaysAttendance.checkInTime.toDate() : null;
+        const checkOut = todaysAttendance.checkOutTime instanceof Timestamp ? todaysAttendance.checkOutTime.toDate() : null;
+        const lunchOut = todaysAttendance.lunchOutTime instanceof Timestamp ? todaysAttendance.lunchOutTime.toDate() : null;
+        const lunchIn = todaysAttendance.lunchInTime instanceof Timestamp ? todaysAttendance.lunchInTime.toDate() : null;
         const savedBreakSec = Number(todaysAttendance.totalBreakDuration || 0);
 
         setTotalBreakTime(savedBreakSec);
-        setLastClockInTime(checkIn || null);
+        setLastClockInTime(checkIn);
 
         if (checkOut && checkIn) {
             setStatus("out");
@@ -183,7 +178,7 @@ export function AttendanceWidget() {
         setTotalBreakTime(0);
         setLastClockInTime(null);
         setHasClockedOutToday(false);
-        toast({ title: "Strategic Reset", description: "Today's log has been purged." });
+        toast({ title: "Strategic Reset", description: "Today's shift data has been purged." });
     } catch (e: any) {
         toast({ variant: 'destructive', title: 'Reset Denied', description: e.message });
     }
@@ -196,8 +191,8 @@ export function AttendanceWidget() {
               totalBreakDuration: updatedBreakTime,
           };
           if (status === 'lunch') {
-              payload.locationLunchInLatitude = userLocation.latitude;
-              payload.locationLunchInLongitude = userLocation.longitude;
+              payload.locationLunchInLatitude = userLocation.latitude || 0;
+              payload.locationLunchInLongitude = userLocation.longitude || 0;
               payload.lunchInTime = serverTimestamp();
           }
           if (reason) {
@@ -208,7 +203,7 @@ export function AttendanceWidget() {
       setTotalBreakTime(updatedBreakTime);
       setBreakTimer(0);
       setStatus("in");
-      toast({ title: "Ops Resumed", description: "Location verification complete." });
+      toast({ title: "Ops Resumed" });
   }
 
   const handleLunch = () => {
@@ -267,15 +262,15 @@ export function AttendanceWidget() {
               checkInTime: serverTimestamp(),
               status: attendanceStatus,
               totalBreakDuration: 0,
-              locationCheckInLatitude: userLocation.latitude,
-              locationCheckInLongitude: userLocation.longitude,
+              locationCheckInLatitude: userLocation.latitude || 0,
+              locationCheckInLongitude: userLocation.longitude || 0,
               checkInNotes: reason || "",
               isOutOfRange: !!reason,
           };
           setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
       }
       setStatus("in");
-      toast({ title: "Deployment Start", description: `Status: ${attendanceStatus.toUpperCase()}` });
+      toast({ title: "Shift Started" });
   }
 
   const handleClockIn = () => {
@@ -307,7 +302,7 @@ export function AttendanceWidget() {
               setIsVerifyingLocation(false);
               setStatus("out");
               setHasClockedOutToday(true);
-              toast({ title: "Ops Complete" });
+              toast({ title: "Shift Logged" });
           }, () => { setIsVerifyingLocation(false); toast({ variant: 'destructive', title: 'GPS Required' }); });
       } else {
           router.push('/dashboard/reports');
@@ -333,7 +328,7 @@ export function AttendanceWidget() {
     </div>
   );
 
-  const getMilestoneTime = (timestamp: any) => (timestamp && timestamp.toDate) ? format(timestamp.toDate(), 'p') : '--:--';
+  const getMilestoneTime = (timestamp: any) => (timestamp instanceof Timestamp) ? format(timestamp.toDate(), 'p') : '--:--';
 
   return (
     <>
@@ -341,9 +336,9 @@ export function AttendanceWidget() {
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
               <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Precision Attendance</CardTitle>
-              {!hasClockedOutToday && lastClockInTime && (
-                  <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-red-600" onClick={handleResetDay}>
-                      <RotateCcw className="size-4" />
+              {lastClockInTime && (
+                  <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-red-600 font-bold uppercase text-[10px]" onClick={handleResetDay}>
+                      <RotateCcw className="size-3 mr-1.5" /> Reset My Day
                   </Button>
               )}
           </div>

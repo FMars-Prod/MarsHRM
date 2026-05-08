@@ -10,7 +10,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Link as LinkIcon, Save } from "lucide-react";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { InteractiveMap } from "@/components/geohrm/interactive-map";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -122,7 +123,7 @@ export default function ProfilePage() {
             updateDocumentNonBlocking(userDocRef!, { signatureUrl: url, signatureStatus: 'pending' });
             toast({ title: "Identity Uploaded", description: "Your digital signature is awaiting HR approval." });
         } catch (e: any) {
-            toast({ variant: 'destructive', title: "Bucket Error", description: "Please initialize Storage in Firebase Console or use direct URL option." });
+            toast({ variant: 'destructive', title: "Bucket Error", description: "Use direct URL tab if Storage bucket is not initialized." });
         } finally {
             setIsUploadingSignature(false);
         }
@@ -131,10 +132,10 @@ export default function ProfilePage() {
     const handleManualSignatureSave = () => {
         if (!userDocRef || !manualSignatureUrl) return;
         updateDocumentNonBlocking(userDocRef, { signatureUrl: manualSignatureUrl, signatureStatus: 'pending' });
-        toast({ title: "Identity URL Saved", description: "Awaiting HR validation." });
+        toast({ title: "Identity URL Saved", description: "Awaiting leadership validation." });
     };
 
-    if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse">Synchronizing Identity...</div>;
+    if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse">Synchronizing Identity Hub...</div>;
     if (!employee) return <div className="p-10 text-center">No identity record found.</div>;
 
     return (
@@ -185,7 +186,7 @@ export default function ProfilePage() {
                             {employee.signatureUrl && (
                                 <div className="space-y-3">
                                     <div className="p-3 bg-muted/20 rounded-xl border border-dashed border-primary/20 flex items-center justify-center grayscale invert">
-                                        <Image src={employee.signatureUrl} alt="E-Signature" width={150} height={60} className="object-contain opacity-60" />
+                                        <img src={employee.signatureUrl} alt="E-Signature" className="h-12 object-contain opacity-60" />
                                     </div>
                                     <div className="flex justify-center">
                                         {employee.signatureStatus === 'approved' ? (
@@ -198,33 +199,24 @@ export default function ProfilePage() {
                             )}
                             
                             <Tabs defaultValue="upload" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2 bg-muted/50 rounded-lg">
-                                    <TabsTrigger value="upload" className="text-[10px] font-black uppercase">Upload</TabsTrigger>
-                                    <TabsTrigger value="url" className="text-[10px] font-black uppercase">URL</TabsTrigger>
+                                <TabsList className="grid w-full grid-cols-2 rounded-lg bg-muted/50 h-10">
+                                    <TabsTrigger value="upload" className="text-[10px] font-black uppercase">Upload File</TabsTrigger>
+                                    <TabsTrigger value="url" className="text-[10px] font-black uppercase">Direct URL</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="upload" className="pt-4">
                                     <div className="relative">
                                         <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
                                         <Button className="w-full rounded-full h-10 text-[10px] font-black uppercase tracking-widest" disabled={isUploadingSignature}>
-                                            {isUploadingSignature ? "Processing..." : employee.signatureUrl ? "Update Signature" : "Upload Identity Asset"}
+                                            {isUploadingSignature ? "Transmitting..." : "Upload Identity Asset"}
                                         </Button>
                                     </div>
                                 </TabsContent>
                                 <TabsContent value="url" className="pt-4 space-y-3">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[9px] font-black uppercase text-muted-foreground">Signature Image URL</Label>
-                                        <div className="flex gap-2">
-                                            <Input 
-                                                value={manualSignatureUrl} 
-                                                onChange={e => setManualSignatureUrl(e.target.value)} 
-                                                placeholder="https://hosted-signature.png" 
-                                                className="h-9 text-xs rounded-xl"
-                                            />
-                                            <Button size="icon" className="shrink-0 rounded-xl" onClick={handleManualSignatureSave}>
-                                                <Save className="size-4" />
-                                            </Button>
-                                        </div>
+                                    <div className="flex gap-2">
+                                        <Input value={manualSignatureUrl} onChange={e => setManualSignatureUrl(e.target.value)} placeholder="Paste hosted image URL..." className="h-10 text-xs rounded-xl" />
+                                        <Button size="icon" className="h-10 w-10 rounded-xl" onClick={handleManualSignatureSave}><Save className="size-4" /></Button>
                                     </div>
+                                    <p className="text-[8px] text-muted-foreground italic text-center">Use this if Storage bucket initialization is pending.</p>
                                 </TabsContent>
                             </Tabs>
                         </CardContent>
@@ -254,68 +246,10 @@ export default function ProfilePage() {
                                     {hasPendingRequest ? 'Awaiting Approval' : 'Update Satellite Point'}
                                 </Button>
                             </div>
-                             {hasPendingRequest && (
-                                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-2xl flex items-center gap-3">
-                                    <Clock className="size-5 text-yellow-600" />
-                                    <p className="text-xs text-yellow-700 font-bold uppercase tracking-tight">Deployment Pending: A change request is currently under executive review.</p>
-                                </div>
-                             )}
                         </CardContent>
                     </Card>
                 </div>
             </div>
-
-            <Dialog open={isRequestChangeOpen} onOpenChange={setIsRequestChangeOpen}>
-                 <DialogContent className="sm:max-w-lg rounded-3xl">
-                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Verify Satellite Point</DialogTitle></DialogHeader>
-                    {capturedLocation && (
-                        <div className="space-y-4">
-                            <div className="aspect-video w-full rounded-2xl overflow-hidden border-2 border-muted shadow-inner">
-                                <InteractiveMap 
-                                    initialCenter={{ lat: capturedLocation.latitude, lng: capturedLocation.longitude }} 
-                                    onLocationSelect={({ lat, lng, address }) => { 
-                                        setCapturedLocation({ latitude: lat, longitude: lng }); 
-                                        setSelectedAddress(address); 
-                                    }} 
-                                />
-                            </div>
-                            <div className="bg-muted/30 p-4 rounded-2xl text-[10px] font-mono font-bold leading-relaxed">{selectedAddress}</div>
-                        </div>
-                    )}
-                    <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={() => setIsRequestChangeOpen(false)} className="rounded-full font-black uppercase text-[10px]">Cancel</Button>
-                        <Button onClick={() => { setIsRequestChangeOpen(false); setIsReasonDialogOpen(true); }} className="rounded-full font-black uppercase text-[10px]">Next: Strategic Justification</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={isReasonDialogOpen} onOpenChange={setIsReasonDialogOpen}>
-                <DialogContent className="rounded-3xl">
-                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Deployment Justification</DialogTitle></DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Reason for Satellite Point Update</Label>
-                        <Textarea value={changeReason} onChange={(e) => setChangeReason(e.target.value)} placeholder="e.g., Tactical relocation to primary residence..." className="rounded-2xl min-h-[120px]" />
-                    </div>
-                    <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={() => setIsReasonDialogOpen(false)} className="rounded-full font-black uppercase text-[10px]">Cancel</Button>
-                        <Button onClick={() => {
-                            if (!user || !changeReason || !capturedLocation) return;
-                            addDocumentNonBlocking(collection(firestore, 'location_change_requests'), {
-                                employeeId: user.uid,
-                                employeeName: `${employee.firstName} ${employee.lastName}`,
-                                requestDate: serverTimestamp(),
-                                newLatitude: capturedLocation.latitude,
-                                newLongitude: capturedLocation.longitude,
-                                reason: changeReason,
-                                status: 'pending',
-                            });
-                            toast({ title: 'Request Transmitted' });
-                            setIsReasonDialogOpen(false);
-                            setChangeReason("");
-                        }} className="rounded-full font-black uppercase text-[10px]">Submit for Review</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
 
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                 <DialogContent className="rounded-3xl sm:max-w-md">
@@ -331,15 +265,6 @@ export default function ProfilePage() {
                                 )} />
                             </div>
                             <Separator />
-                            <div className="space-y-4">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Security Override</h3>
-                                <FormField control={form.control} name="password" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-bold">New Cipher (Leave blank to keep current)</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl h-11" /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name="confirmPassword" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-bold">Confirm Cipher</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl h-11" /></FormControl><FormMessage /></FormItem>
-                                )} />
-                            </div>
                             <DialogFooter className="pt-4">
                                 <Button type="submit" className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? "Transmitting..." : "Update Identity"}</Button>
                             </DialogFooter>
@@ -350,5 +275,3 @@ export default function ProfilePage() {
         </div>
     )
 }
-
-import { Separator } from "@/components/ui/separator";
