@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { format, subDays, differenceInSeconds } from 'date-fns';
 import { Clock, Briefcase, CalendarOff, AlertTriangle, Hourglass, Coffee, FileText } from 'lucide-react';
@@ -31,6 +31,11 @@ type Report = {
     date: any;
     summary: string;
 }
+
+const chartConfig = {
+  work: { label: "Work", color: "hsl(var(--primary))" },
+  break: { label: "Break", color: "hsl(var(--muted-foreground))" },
+} satisfies ChartConfig;
 
 const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
   const firestore = useFirestore();
@@ -226,7 +231,7 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
                         <CardDescription>Work vs. Break hours over the last 7 days.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
+                        <ChartContainer config={chartConfig} className="h-[300px] w-full">
                             <BarChart data={chartData}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
@@ -238,10 +243,10 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
                                         indicator="dot"
                                         />}
                                 />
-                                <Bar dataKey="work" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Work" />
-                                <Bar dataKey="break" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} name="Break" />
+                                <Bar dataKey="work" fill="var(--color-work)" radius={[4, 4, 0, 0]} name="Work" />
+                                <Bar dataKey="break" fill="var(--color-break)" radius={[4, 4, 0, 0]} name="Break" />
                             </BarChart>
-                        </ResponsiveContainer>
+                        </ChartContainer>
                     </CardContent>
                 </Card>
 
@@ -283,9 +288,9 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
                                                     variant="outline"
                                                     className={cn(
                                                         rec.status === 'present' && 'text-green-600 border-green-600/50',
-                                                        rec.status === 'late' && 'text-yellow-600 border-yellow-600/50',
-                                                        rec.status === 'absent' && 'text-red-600 border-red-600/50',
-                                                        rec.status === 'on_leave' && 'text-blue-600 border-blue-600/50',
+                                                        rec.status === 'late' && 'text-yellow-600 border-yellow-200',
+                                                        rec.status === 'absent' && 'text-red-600 border-red-200',
+                                                        rec.status === 'on_leave' && 'text-blue-600 border-blue-200',
                                                     )}
                                                 >{rec.status}</Badge>
                                             </TableCell>
@@ -334,3 +339,4 @@ const UserAnalyticsPage = ({ params }: { params: { userId: string } }) => {
 };
 
 export default UserAnalyticsPage;
+

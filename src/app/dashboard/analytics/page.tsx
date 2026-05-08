@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
                 <CardDescription>Sundays are excluded from tactical reporting logic.</CardDescription>
             </CardHeader>
             <CardContent className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={chartConfig} className="h-full w-full">
                     <AreaChart data={trendData}>
                         <defs>
                             <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22c55e" stopOpacity={0.1}/><stop offset="95%" stopColor="#22c55e" stopOpacity={0}/></linearGradient>
@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
                         <Area type="monotone" dataKey="absent" stroke="#ef4444" fillOpacity={0.05} fill="#ef4444" strokeWidth={1} stackId="1" />
                         <Legend verticalAlign="bottom" align="right" iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
                     </AreaChart>
-                </ResponsiveContainer>
+                </ChartContainer>
             </CardContent>
         </Card>
 
@@ -157,3 +157,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
