@@ -325,19 +325,47 @@ const ExecutionPlanFields = () => {
             <CardContent className="space-y-6 pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={control} name="meetingsBookedTomorrow" render={({ field }) => (
-                        <FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                        <FormItem>
+                            <FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel>
+                            <FormControl>
+                                <Input type="number" min="0" {...field} className="rounded-xl h-11" />
+                            </FormControl>
+                        </FormItem>
                     )} />
                     <FormField control={control} name="interventionTrigger" render={({ field }) => (
-                        <FormItem><FormLabel className="text-[10px] uppercase font-bold">Manager Intervention Trigger</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent><SelectItem value="None (Standard)">None (Standard)</SelectItem><SelectItem value="Manager Input Required">Manager Input Required</SelectItem><SelectItem value="Resource Blocked">Resource Blocked</SelectItem><SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem></SelectContent></Select></FormItem>
+                        <FormItem>
+                            <FormLabel className="text-[10px] uppercase font-bold">Manager Intervention Trigger</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger className="rounded-xl h-11">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="None (Standard)">None (Standard)</SelectItem>
+                                    <SelectItem value="Manager Input Required">Manager Input Required</SelectItem>
+                                    <SelectItem value="Resource Blocked">Resource Blocked</SelectItem>
+                                    <SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormItem>
                     )} />
                 </div>
                 <FormField control={control} name="criticalPathTomorrow" render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Top Priority / Critical Path</FormLabel><FormControl><Textarea {...field} placeholder="What is the single most important task for tomorrow?" className="rounded-xl" /></FormControl></FormItem>
+                    <FormItem>
+                        <FormLabel className="text-[10px] uppercase font-bold">Top Priority / Critical Path</FormLabel>
+                        <FormControl>
+                            <Textarea {...field} placeholder="What is the single most important task for tomorrow?" className="rounded-xl" />
+                        </FormControl>
+                    </FormItem>
                 )} />
                 <FormField control={control} name="pendingDeliverables" render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Pending Strategic Deliverables</FormLabel><FormControl><Textarea {...field} placeholder="List items that need final completion..." className="rounded-xl" /></FormControl></FormItem>
+                    <FormItem>
+                        <FormLabel className="text-[10px] uppercase font-bold">Pending Strategic Deliverables</FormLabel>
+                        <FormControl>
+                            <Textarea {...field} placeholder="List items that need final completion..." className="rounded-xl" />
+                        </FormControl>
+                    </FormItem>
                 )} />
             </CardContent>
         </Card>
@@ -359,13 +387,44 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach Analytics</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <FormField control={control} name="coldCalls" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Cold Calls</Label><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                        <FormField control={control} name="linkedinOutreach" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                        <FormField control={control} name="emailsSent" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Emails Sent</Label><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={control} name="coldCalls" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Cold Calls</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" {...field} className="rounded-xl h-11" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="linkedinOutreach" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">LinkedIn</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" {...field} className="rounded-xl h-11" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="emailsSent" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Emails Sent</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" {...field} className="rounded-xl h-11" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="p-4 bg-primary/5 rounded-2xl border flex flex-col items-center gap-1"><p className="text-[10px] font-black text-primary/70 uppercase">Total Outreach</p><p className="text-2xl font-black text-primary">{totalOutreach}</p></div>
-                        <FormField control={control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Potential Clients</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <div className="p-4 bg-primary/5 rounded-2xl border flex flex-col items-center gap-1">
+                            <p className="text-[10px] font-black text-primary/70 uppercase">Total Outreach</p>
+                            <p className="text-2xl font-black text-primary">{totalOutreach}</p>
+                        </div>
+                        <FormField control={control} name="potentialClients" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Potential Clients</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" {...field} className="rounded-xl h-11" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
                     </div>
                     <div className="flex justify-center p-3 bg-green-50 rounded-xl border border-green-200">
                         <p className="text-xs font-black text-green-700 uppercase tracking-widest">Efficiency: {efficiency.toFixed(2)}%</p>
@@ -378,16 +437,58 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                 <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField control={control} name="currency" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Currency</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent><SelectItem value="INR">INR (₹)</SelectItem><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="AED">AED (د.إ)</SelectItem></SelectContent></Select></FormItem>
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Currency</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger className="rounded-xl h-11">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="INR">INR (₹)</SelectItem>
+                                        <SelectItem value="USD">USD ($)</SelectItem>
+                                        <SelectItem value="EUR">EUR (€)</SelectItem>
+                                        <SelectItem value="GBP">GBP (£)</SelectItem>
+                                        <SelectItem value="AED">AED (د.إ)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FormItem>
                         )} />
-                        <FormField control={control} name="collectedRevenue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Collected Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={control} name="collectedRevenue" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Collected Revenue</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" {...field} className="rounded-xl h-11" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <FormField control={control} name="committedRevenue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Committed Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                        <FormField control={control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Pipeline Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                        <FormField control={control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Revenue Variance</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={control} name="committedRevenue" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Committed Revenue</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" {...field} className="rounded-xl h-11" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="pipelineValue" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Pipeline Value</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" {...field} className="rounded-xl h-11" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="revenueVariance" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Revenue Variance</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" {...field} className="rounded-xl h-11" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
                     </div>
                 </CardContent>
             </Card>
@@ -406,7 +507,12 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                         </div>
                     </div>
                     <FormField control={control} name="allCallsDriveLink" render={({ field }) => (
-                      <FormItem><FormLabel className="text-[10px] uppercase font-bold">All Calls Archive (Drive Link)</FormLabel><FormControl><Input {...field} placeholder="https://drive.google.com/..." className="rounded-xl h-11" /></FormControl></FormItem>
+                      <FormItem>
+                          <FormLabel className="text-[10px] uppercase font-bold">All Calls Archive (Drive Link)</FormLabel>
+                          <FormControl>
+                              <Input {...field} placeholder="https://drive.google.com/..." className="rounded-xl h-11" />
+                          </FormControl>
+                      </FormItem>
                     )} />
                 </CardContent>
             </Card>
@@ -474,7 +580,11 @@ const DigitalMarketingFields = () => {
                                       {deliverables.map(d => (
                                           <TableCell key={d.key} className="py-2">
                                               <FormField control={control} name={`${d.key}${status}`} render={({ field }) => (
-                                                  <FormItem><FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl></FormItem>
+                                                  <FormItem>
+                                                      <FormControl>
+                                                          <Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" />
+                                                      </FormControl>
+                                                  </FormItem>
                                               )} />
                                           </TableCell>
                                       ))}
@@ -491,14 +601,28 @@ const DigitalMarketingFields = () => {
 };
 
 const TechnicalFields = () => {
-    const { control, getValues, setValue } = useFormContext();
+    const { control, setValue } = useFormContext();
     const tasks = useWatch({ control, name: "completedTasks" }) || [];
 
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-2 gap-6">
-                <FormField control={control} name="logInTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Shift Start</FormLabel><FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                <FormField control={control} name="logOutTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Shift End</FormLabel><FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                <FormField control={control} name="logInTime" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="text-xs uppercase font-bold">Shift Start</FormLabel>
+                        <FormControl>
+                            <Input type="time" {...field} className="rounded-xl h-11" />
+                        </FormControl>
+                    </FormItem>
+                )} />
+                <FormField control={control} name="logOutTime" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="text-xs uppercase font-bold">Shift End</FormLabel>
+                        <FormControl>
+                            <Input type="time" {...field} className="rounded-xl h-11" />
+                        </FormControl>
+                    </FormItem>
+                )} />
             </div>
             <div className="space-y-4">
                 <p className="font-black text-[10px] text-primary uppercase tracking-widest flex items-center gap-2"><Brain className="size-4" /> Development Modules:</p>
@@ -507,8 +631,22 @@ const TechnicalFields = () => {
                         <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full h-8 w-8 text-red-600" onClick={() => {
                             setValue('completedTasks', tasks.filter((_:any, idx:number) => idx !== i));
                         }}><X className="size-4" /></Button>
-                        <FormField control={control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Module</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                        <FormField control={control} name={`completedTasks.${i}.workDone`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Description</FormLabel><FormControl><Textarea {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                        <FormField control={control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Module</FormLabel>
+                                <FormControl>
+                                    <Input {...field} className="rounded-xl" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name={`completedTasks.${i}.workDone`} render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] uppercase font-bold">Description</FormLabel>
+                                <FormControl>
+                                    <Textarea {...field} className="rounded-xl" />
+                                </FormControl>
+                            </FormItem>
+                        )} />
                     </Card>
                 ))}
                 <Button type="button" variant="outline" onClick={() => setValue('completedTasks', [...tasks, { moduleName: "", workDone: "" }])} className="w-full border-dashed rounded-2xl h-16 bg-white/50 text-xs font-black uppercase"><Plus className="size-4 mr-2" /> Add Module</Button>
@@ -528,7 +666,12 @@ const CustomTemplateFields = ({ definition }: { definition: any }) => {
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                         {section.fields?.map((field: any, fIdx: number) => (
                             <FormField key={fIdx} control={control} name={field.name} render={({ field: formField }) => (
-                                <FormItem><FormLabel className="text-[10px] font-bold uppercase">{field.label}</FormLabel><FormControl>{field.type === 'textarea' ? <Textarea {...formField} className="rounded-xl" /> : field.type === 'number' ? <Input type="number" min="0" {...formField} className="rounded-xl h-11" /> : <Input {...formField} className="rounded-xl h-11" />}</FormControl></FormItem>
+                                <FormItem>
+                                    <FormLabel className="text-[10px] font-bold uppercase">{field.label}</FormLabel>
+                                    <FormControl>
+                                        {field.type === 'textarea' ? <Textarea {...formField} className="rounded-xl" /> : field.type === 'number' ? <Input type="number" min="0" {...formField} className="rounded-xl h-11" /> : <Input {...formField} className="rounded-xl h-11" />}
+                                    </FormControl>
+                                </FormItem>
                             )} />
                         ))}
                     </CardContent>
@@ -800,7 +943,13 @@ export default function ReportsPage() {
           </div>
           <div className="border rounded-2xl overflow-hidden shadow-sm bg-white/50 ring-1 ring-border/50">
             <Table>
-                <TableHeader className="bg-muted/30"><TableRow className="hover:bg-transparent border-border/50"><TableHead className="font-black uppercase tracking-tighter text-[10px]">Employee</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px]">Strategic Log</TableHead><TableHead className="font-black uppercase tracking-tighter text-[10px] text-right">Action</TableHead></TableRow></TableHeader>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="font-black uppercase tracking-tighter text-[10px]">Employee</TableHead>
+                    <TableHead className="font-black uppercase tracking-tighter text-[10px]">Strategic Log</TableHead>
+                    <TableHead className="font-black uppercase tracking-tighter text-[10px] text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                     {usersData?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
                         <TableRow key={u.id} className="hover:bg-white/80 transition-colors border-border/50">
