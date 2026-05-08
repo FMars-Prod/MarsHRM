@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, useDoc, useStorage } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage } from "@/firebase";
 import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,11 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { useRouter } from "next/navigation";
-import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 /**
  * UTILITY: Format date to IST String
@@ -54,7 +50,7 @@ const formatIST = (date: any) => {
 const ExecutionPlanFields = () => {
     const { control } = useFormContext();
     return (
-        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden mt-8">
             <CardHeader className="bg-muted/10 py-3">
                 <CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">
                     <Target className="size-4" /> 5️⃣ Pipeline & Planning (T+1)
@@ -113,7 +109,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
     const [isUploadingWorst, setIsUploadingWorst] = React.useState(false);
 
     const handleAudioUpload = async (file: File, fieldName: string, setUploading: (v: boolean) => void) => {
-        if (!user) return;
+        if (!user || !storage) return;
         setUploading(true);
         try {
             const storageRef = ref(storage, `call_recordings/${user.uid}/${Date.now()}-${file.name}`);
@@ -123,21 +119,20 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             toast({ title: "Recording Sync Success", description: "Audio asset provisioned." });
         } catch (error: any) {
             console.error("Upload error:", error);
-            toast({ variant: "destructive", title: "Storage Error", description: error.message });
+            toast({ variant: "destructive", title: "Storage Error", description: error.message || "Failed to upload audio." });
         } finally {
             setUploading(false);
         }
     };
     
-    // Efficiency Calculation for the Form Preview
-    const coldCalls = useWatch({ control, name: 'coldCalls' }) || 0;
-    const linkedin = useWatch({ control, name: 'linkedinOutreach' }) || 0;
-    const emails = useWatch({ control, name: 'emailsSent' }) || 0;
-    const followUps = useWatch({ control, name: 'followUps' }) || 0;
-    const potential = useWatch({ control, name: 'potentialClients' }) || 0;
+    const coldCalls = Number(useWatch({ control, name: 'coldCalls' }) || 0);
+    const linkedin = Number(useWatch({ control, name: 'linkedinOutreach' }) || 0);
+    const emails = Number(useWatch({ control, name: 'emailsSent' }) || 0);
+    const followUps = Number(useWatch({ control, name: 'followUps' }) || 0);
+    const potential = Number(useWatch({ control, name: 'potentialClients' }) || 0);
     
-    const totalOutreach = Number(coldCalls) + Number(linkedin) + Number(emails) + Number(followUps);
-    const efficiency = totalOutreach > 0 ? (Number(potential) / totalOutreach) * 100 : 0;
+    const totalOutreach = coldCalls + linkedin + emails + followUps;
+    const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
     
     const getEfficiencyColor = (val: number) => {
         if (val < 10) return "text-red-600";
@@ -169,7 +164,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                             <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Potential Clients Identified</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
                         <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 h-11 flex items-center justify-between px-6">
-                            <span className="text-[10px] font-black uppercase text-muted-foreground">Dynamic Efficiency</span>
+                            <span className="text-[10px] font-black uppercase text-muted-foreground">Efficiency Rate</span>
                             <span className={cn("font-black text-sm", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</span>
                         </div>
                     </div>
@@ -221,42 +216,32 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                 <CardContent className="space-y-6 pt-6">
                     <FormField control={control} name="totalCallRecordings" render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[9px] uppercase font-bold text-primary">Total Recordings Drive Folder Link</FormLabel>
+                            <FormLabel className="text-[9px] uppercase font-bold text-primary">Total Recordings Drive Link</FormLabel>
                             <FormControl><Input {...field} placeholder="Paste Drive link here..." className="rounded-xl h-11" /></FormControl>
                         </FormItem>
                     )} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Best Call Channel</Label>
-                            <div className="flex flex-col gap-2">
-                                <Input 
-                                    type="file" 
-                                    accept="audio/*" 
-                                    className="h-11 rounded-xl cursor-pointer bg-white" 
-                                    onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'bestCallRecording', setIsUploadingBest)}
-                                    disabled={isUploadingBest}
-                                />
-                                {isUploadingBest && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Transmitting recording...</div>}
-                                <FormField control={control} name="bestCallRecording" render={({ field }) => (
-                                    <FormControl><Input {...field} placeholder="Or paste manual recording link..." className="h-9 rounded-xl text-xs" /></FormControl>
-                                )} />
-                            </div>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Best Call Recording</Label>
+                            <Input 
+                                type="file" 
+                                accept="audio/*" 
+                                className="h-11 rounded-xl cursor-pointer bg-white" 
+                                onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'bestCallRecording', setIsUploadingBest)}
+                                disabled={isUploadingBest}
+                            />
+                            {isUploadingBest && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Syncing audio...</div>}
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Worst Call Channel</Label>
-                            <div className="flex flex-col gap-2">
-                                <Input 
-                                    type="file" 
-                                    accept="audio/*" 
-                                    className="h-11 rounded-xl cursor-pointer bg-white" 
-                                    onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'worstCallRecording', setIsUploadingWorst)}
-                                    disabled={isUploadingWorst}
-                                />
-                                {isUploadingWorst && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Transmitting recording...</div>}
-                                <FormField control={control} name="worstCallRecording" render={({ field }) => (
-                                    <FormControl><Input {...field} placeholder="Or paste manual recording link..." className="h-9 rounded-xl text-xs" /></FormControl>
-                                )} />
-                            </div>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Worst Call Recording</Label>
+                            <Input 
+                                type="file" 
+                                accept="audio/*" 
+                                className="h-11 rounded-xl cursor-pointer bg-white" 
+                                onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'worstCallRecording', setIsUploadingWorst)}
+                                disabled={isUploadingWorst}
+                            />
+                            {isUploadingWorst && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Syncing audio...</div>}
                         </div>
                     </div>
                 </CardContent>
@@ -392,12 +377,6 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
                         <p className={cn("text-xl font-black", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</p>
                     </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="p-3 bg-muted/10 rounded-xl text-center"><p className="text-[8px] font-bold text-muted-foreground uppercase">Calls</p><p className="text-sm font-black">{report.coldCalls || 0}</p></div>
-                    <div className="p-3 bg-muted/10 rounded-xl text-center"><p className="text-[8px] font-bold text-muted-foreground uppercase">LinkedIn</p><p className="text-sm font-black">{report.linkedinOutreach || 0}</p></div>
-                    <div className="p-3 bg-muted/10 rounded-xl text-center"><p className="text-[8px] font-bold text-muted-foreground uppercase">Emails</p><p className="text-sm font-black">{report.emailsSent || 0}</p></div>
-                    <div className="p-3 bg-muted/10 rounded-xl text-center"><p className="text-[8px] font-bold text-muted-foreground uppercase">Follow-ups</p><p className="text-sm font-black">{report.followUps || 0}</p></div>
-                </div>
             </div>
 
             <div className="space-y-4">
@@ -405,60 +384,28 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
                 <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">NET Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
                     <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed NET</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50"><p className="text-[9px] font-black uppercase text-muted-foreground">Pipeline Value</p><p className="text-xl font-black">${report.pipelineValue || 0}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50"><p className="text-[9px] font-black uppercase text-muted-foreground">Revenue Variance</p><p className="text-sm font-bold truncate">{report.revenueVariance || 'NIL'}</p></div>
                 </div>
-            </div>
-
-            <div className="space-y-4">
-                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><ShieldCheck className="size-4" /> 3️⃣ High-Value Engagements</div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Quotations Released</p><p className="text-lg font-black">{report.quotationsReleased || 0}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Meetings Secured</p><p className="text-lg font-black">{report.meetingsSecured || 0}</p></div>
-                </div>
-                <div className="p-4 bg-muted/5 rounded-xl border border-dashed"><p className="text-[9px] font-black uppercase text-primary mb-1">Win Highlight</p><p className="text-sm italic">"{report.clientWin || 'NIL'}"</p></div>
-                <div className="p-4 bg-muted/5 rounded-xl border border-dashed"><p className="text-[9px] font-black uppercase text-primary mb-1">Strategic Learning</p><p className="text-sm italic">"{report.strategicLearning || 'NIL'}"</p></div>
             </div>
 
             <div className="p-4 bg-primary/5 rounded-2xl space-y-4">
                 <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence Log</p>
-                
                 <div className="grid gap-4">
                     {report.totalCallRecordings && (
-                        <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary border-primary/20" asChild>
-                            <Link href={report.totalCallRecordings} target="_blank">
-                                <Download className="size-3 mr-2" /> Daily Call Drive Link
-                            </Link>
+                        <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary" asChild>
+                            <Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> Shift Recordings Folder</Link>
                         </Button>
                     )}
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {report.bestCallRecording && (
                             <div className="p-3 bg-white rounded-xl ring-1 ring-border/50 space-y-2">
                                 <p className="text-[9px] font-black uppercase text-green-600 flex items-center gap-1.5"><Mic className="size-3"/> Best Call</p>
-                                {report.bestCallRecording.startsWith('http') && (report.bestCallRecording.includes('firebasestorage') || report.bestCallRecording.endsWith('.mp3') || report.bestCallRecording.endsWith('.wav')) ? (
-                                    <audio controls className="w-full h-8 scale-90 -ml-2">
-                                        <source src={report.bestCallRecording} />
-                                    </audio>
-                                ) : (
-                                    <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2 truncate w-full" asChild>
-                                        <Link href={report.bestCallRecording} target="_blank"><ExternalLink className="size-3" /> View Recording</Link>
-                                    </Button>
-                                )}
+                                <audio controls className="w-full h-8 scale-90 -ml-2"><source src={report.bestCallRecording} /></audio>
                             </div>
                         )}
                         {report.worstCallRecording && (
                             <div className="p-3 bg-white rounded-xl ring-1 ring-border/50 space-y-2">
                                 <p className="text-[9px] font-black uppercase text-red-600 flex items-center gap-1.5"><Mic className="size-3"/> Worst Call</p>
-                                {report.worstCallRecording.startsWith('http') && (report.worstCallRecording.includes('firebasestorage') || report.worstCallRecording.endsWith('.mp3') || report.worstCallRecording.endsWith('.wav')) ? (
-                                    <audio controls className="w-full h-8 scale-90 -ml-2">
-                                        <source src={report.worstCallRecording} />
-                                    </audio>
-                                ) : (
-                                    <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2 truncate w-full" asChild>
-                                        <Link href={report.worstCallRecording} target="_blank"><ExternalLink className="size-3" /> View Recording</Link>
-                                    </Button>
-                                )}
+                                <audio controls className="w-full h-8 scale-90 -ml-2"><source src={report.worstCallRecording} /></audio>
                             </div>
                         )}
                     </div>
@@ -528,16 +475,16 @@ export default function ReportsPage() {
   const { data: mappingData } = useDoc<{mappings: Record<string, string>}>(mappingDocRef);
   const currentTemplateId = mappingData?.mappings?.[currentUserData?.jobTitle || ''] || 'Business';
 
-  const fetchMyReports = async () => {
+  const fetchMyReports = React.useCallback(async () => {
     if (!user) return;
     const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(10));
     const snap = await getDocs(q);
     setMyRecentReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  };
+  }, [user, firestore]);
 
   React.useEffect(() => {
     fetchMyReports();
-  }, [user, firestore]);
+  }, [fetchMyReports]);
 
   const form = useForm<any>({
     defaultValues: {
@@ -636,7 +583,7 @@ export default function ReportsPage() {
                       </div>
                       <Separator />
                       
-                      {selectedReportForReview?.reportType === 'Business' && <BusinessAuditDetail report={selectedReportForReview} />}
+                      {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Technical' && (
                           <div className="bg-white p-6 rounded-2xl ring-1 ring-border/50 space-y-4 shadow-sm">
