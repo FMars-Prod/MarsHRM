@@ -9,10 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, addDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, collection, query, writeBatch } from "firebase/firestore";
+import { doc, collection, query, writeBatch, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { z } from "zod";
@@ -67,6 +68,12 @@ export default function UsersPage() {
             const { password, ...updateData } = values;
             const batch = writeBatch(firestore);
             batch.update(userRef, updateData);
+            
+            // Sync system roles
+            if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
+            if (values.role === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', editingUser.id), { employeeId: editingUser.id });
+            if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', editingUser.id), { employeeId: editingUser.id });
+
             await batch.commit();
             toast({ title: "User Updated" });
         } else {
@@ -87,6 +94,9 @@ export default function UsersPage() {
             });
 
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', newUserId), { employeeId: newUserId });
+            else if (values.role === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', newUserId), { employeeId: newUserId });
+            else if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', newUserId), { employeeId: newUserId });
+            
             await batch.commit();
             toast({ title: "Employee Dispatched" });
         }
@@ -116,6 +126,16 @@ export default function UsersPage() {
                                 <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><Label>Job Title</Label><Input {...field}/></FormItem>)} />
                                 <FormField control={form.control} name="department" render={({ field }) => (<FormItem><Label>Department</Label><Input {...field}/></FormItem>)} />
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="employmentType" render={({ field }) => (
+                                    <FormItem><Label>Employment Type</Label>
+                                    <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
+                                )} />
+                                <FormField control={form.control} name="role" render={({ field }) => (
+                                    <FormItem><Label>System Role</Label>
+                                    <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
+                                )} />
+                            </div>
                             <div className="flex items-center justify-between p-4 bg-muted/30 rounded-2xl border">
                                 <Label className="text-xs font-black uppercase">Demo/Test Account</Label>
                                 <FormField control={form.control} name="isDemoAccount" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />
@@ -124,7 +144,7 @@ export default function UsersPage() {
                                 <Label className="text-xs font-black uppercase">Allow WFH Access</Label>
                                 <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />
                             </div>
-                            {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label>Password</Label><Input type="password" {...field}/></FormItem>)} />}
+                            {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label>Temporary Password</Label><Input type="password" {...field}/></FormItem>)} />}
                             <Button type="submit" className="w-full h-12 rounded-full font-black uppercase tracking-widest mt-6">Confirm Dispatch</Button>
                         </form>
                     </Form>
@@ -133,7 +153,7 @@ export default function UsersPage() {
         </Dialog>
       </PageHeader>
 
-      <div className="border rounded-2xl overflow-hidden bg-white/50">
+      <div className="border rounded-2xl overflow-hidden bg-white/50 shadow-sm">
         <Table>
           <TableHeader className="bg-muted/30">
             <TableRow>
@@ -147,7 +167,12 @@ export default function UsersPage() {
           <TableBody>
             {isLoading ? <TableRow><TableCell colSpan={5} className="h-32 text-center">Syncing registry...</TableCell></TableRow> : users?.map(u => (
               <TableRow key={u.id}>
-                <TableCell className="font-bold">{u.firstName} {u.lastName} {u.isDemoAccount && <Badge className="ml-2 bg-purple-100 text-purple-700 text-[8px] uppercase">Demo</Badge>}</TableCell>
+                <TableCell className="font-bold py-4">
+                    <div className="flex items-center">
+                        {u.firstName} {u.lastName} 
+                        {u.isDemoAccount && <Badge className="ml-2 bg-purple-100 text-purple-700 text-[8px] uppercase">Demo</Badge>}
+                    </div>
+                </TableCell>
                 <TableCell>{u.isWfhAllowed ? <Badge className="bg-blue-100 text-blue-700 uppercase text-[8px]">Enabled</Badge> : <Badge variant="outline" className="uppercase text-[8px]">Office Only</Badge>}</TableCell>
                 <TableCell className="text-xs">{u.employmentType}</TableCell>
                 <TableCell className="text-xs font-bold text-primary">{u.role}</TableCell>
@@ -156,6 +181,7 @@ export default function UsersPage() {
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }}><Edit className="mr-2 size-4" /> Edit Profile</DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href={`/dashboard/users/${u.id}`}><Eye className="mr-2 size-4" /> View Analytics</Link></DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -167,4 +193,3 @@ export default function UsersPage() {
     </div>
   );
 }
-import { serverTimestamp } from "firebase/firestore";
