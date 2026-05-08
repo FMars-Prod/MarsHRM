@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Link as LinkIcon, CheckCircle2, Beaker, Mic, Loader2, DollarSign, ExternalLink, ShieldCheck, Download, Clock } from "lucide-react";
+import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Link as LinkIcon, CheckCircle2, Beaker, Mic, Loader2, DollarSign, ExternalLink, ShieldCheck, Download, Clock, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -51,7 +51,7 @@ const formatIST = (date: any) => {
 };
 
 /**
- * SUB-COMPONENTS
+ * SUB-COMPONENTS - FORM FIELDS
  */
 const ExecutionPlanFields = () => {
     const { control } = useFormContext();
@@ -87,6 +87,8 @@ const FileUploadButton = ({ fieldName }: { fieldName: string }) => {
             const snapshot = await uploadBytes(fileRef, file);
             const url = await getDownloadURL(snapshot.ref);
             setValue(fieldName, url);
+        } catch(e) {
+            console.error("Upload failed", e);
         } finally { setUploading(false); }
     };
     return (
@@ -239,6 +241,107 @@ const CustomTemplateFields = ({ definition }: { definition: any }) => {
 };
 
 /**
+ * AUDIT DETAIL SUB-VIEWS
+ */
+const MarketingAuditDetail = ({ report }: { report: any }) => {
+    const deliverables = [
+        { label: 'Content', key: 'dmContent' }, 
+        { label: 'Posters', key: 'dmPosters' }, 
+        { label: 'Reels', key: 'dmReels' }, 
+        { label: 'Shoots', key: 'dmShoots' }
+    ];
+
+    const getVal = (k: string, s: string) => Number(report[`${k}${s}`] || 0);
+
+    const totals = deliverables.map(d => ({
+        label: d.label,
+        approved: getVal(d.key, 'Approved'),
+        pending: getVal(d.key, 'Pending'),
+        rejected: getVal(d.key, 'Rejected'),
+        total: getVal(d.key, 'Approved') + getVal(d.key, 'Pending') + getVal(d.key, 'Rejected')
+    }));
+
+    const grandTotalSubmitted = totals.reduce((acc, curr) => acc + curr.total, 0);
+    const grandTotalApproved = totals.reduce((acc, curr) => acc + curr.approved, 0);
+    const successRate = grandTotalSubmitted > 0 ? ((grandTotalApproved / grandTotalSubmitted) * 100).toFixed(1) : "0.0";
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center bg-purple-50 p-4 rounded-2xl border border-purple-100">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-600 text-white rounded-lg"><Zap className="size-4" /></div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase text-purple-700 tracking-widest">Success Metric</p>
+                        <p className="text-xl font-black text-purple-900">{successRate}% Approval Rate</p>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <p className="text-[10px] font-black uppercase text-purple-700 tracking-widest">Aggregate Score</p>
+                    <p className="text-xl font-black text-purple-900">{grandTotalApproved} / {grandTotalSubmitted}</p>
+                </div>
+            </div>
+            
+            <div className="border rounded-2xl overflow-hidden bg-white shadow-sm ring-1 ring-border/50">
+                <Table>
+                    <TableHeader className="bg-muted/30">
+                        <TableRow>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest">Deliverable</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-center">Approved</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-center">Pending</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-center">Rejected</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-right">Total</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {totals.map((t, i) => (
+                            <TableRow key={i} className="border-border/50">
+                                <TableCell className="font-bold text-sm py-4">{t.label}</TableCell>
+                                <TableCell className="text-center font-bold text-green-600">{t.approved}</TableCell>
+                                <TableCell className="text-center font-bold text-yellow-600">{t.pending}</TableCell>
+                                <TableCell className="text-center font-bold text-red-600">{t.rejected}</TableCell>
+                                <TableCell className="text-right font-black">{t.total}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
+    );
+};
+
+const BusinessAuditDetail = ({ report }: { report: any }) => (
+    <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 shadow-sm text-center">
+                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Cold Calls</p>
+                <p className="text-xl font-black mt-1">{report.coldCalls || 0}</p>
+            </div>
+            <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 shadow-sm text-center">
+                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">LinkedIn</p>
+                <p className="text-xl font-black mt-1">{report.linkedinOutreach || 0}</p>
+            </div>
+            <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 shadow-sm text-center">
+                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Emails</p>
+                <p className="text-xl font-black mt-1">{report.emailsSent || 0}</p>
+            </div>
+            <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 shadow-sm text-center">
+                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Potential</p>
+                <p className="text-xl font-black mt-1">{report.potentialClients || 0}</p>
+            </div>
+        </div>
+        <div className="p-6 bg-green-50 rounded-2xl border border-green-100 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-600 text-white rounded-xl"><DollarSign className="size-5" /></div>
+                <div>
+                    <p className="text-[10px] font-black uppercase text-green-700 tracking-widest">Revenue Collection</p>
+                    <p className="text-2xl font-black text-green-900">{report.currency || 'INR'} {report.collectedRevenue || 0}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+/**
  * MAIN PAGE
  */
 export default function ReportsPage() {
@@ -259,7 +362,7 @@ export default function ReportsPage() {
   const isLeadOrHigher = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'Team Lead';
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
-  const { data: allUsers } = useCollection<any>(usersQuery);
+  const { data: users } = useCollection<any>(usersQuery);
 
   const mappingDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
   const { data: mappingData } = useDoc<{mappings: Record<string, string>}>(mappingDocRef);
@@ -357,7 +460,7 @@ export default function ReportsPage() {
     pdfDoc.save(`Report_${report.employeeName.replace(/\s/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`);
   };
 
-  const filteredUsers = allUsers?.filter(u => 
+  const filteredUsers = users?.filter(u => 
     u.id !== user?.uid && 
     (u.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
      u.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -446,11 +549,18 @@ export default function ReportsPage() {
                           <div className="space-y-1"><p className="text-[10px] font-black uppercase text-muted-foreground">Designation</p><p className="font-bold">{selectedReportForReview?.employeeJobTitle}</p></div>
                       </div>
                       <Separator />
+                      
+                      {/* Intelligence Detail View based on Report Type */}
                       <div className="space-y-4">
                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Shift Intelligence</p>
-                          <div className="bg-white p-6 rounded-2xl ring-1 ring-border/50 shadow-sm space-y-4">
+                          <div className="space-y-6">
+                              {/* Strategy-Specific Data */}
+                              {selectedReportForReview?.reportType === 'Business' && <BusinessAuditDetail report={selectedReportForReview} />}
+                              {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
+                              
+                              {/* Common Logic: Technical Modules */}
                               {selectedReportForReview?.reportType === 'Technical' && (
-                                  <div className="space-y-4">
+                                  <div className="bg-white p-6 rounded-2xl ring-1 ring-border/50 shadow-sm space-y-4">
                                       {selectedReportForReview.completedTasks?.map((t: any, i: number) => (
                                           <div key={i} className="pb-4 border-b last:border-none space-y-1">
                                               <p className="font-black text-xs uppercase">{t.moduleName}</p>
@@ -459,11 +569,26 @@ export default function ReportsPage() {
                                       ))}
                                   </div>
                               )}
-                              {selectedReportForReview?.criticalPathTomorrow && (
-                                  <div className="pt-2">
-                                      <p className="text-[10px] font-black uppercase text-orange-600 mb-2">T+1 Critical Path</p>
-                                      <p className="text-sm font-medium leading-relaxed">"{selectedReportForReview.criticalPathTomorrow}"</p>
-                                  </div>
+
+                              {/* Common Logic: T+1 Execution */}
+                              {(selectedReportForReview?.criticalPathTomorrow || selectedReportForReview?.pendingDeliverables) && (
+                                  <Card className="bg-white border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                                      <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2"><Target className="size-4"/> T+1 Objectives</CardTitle></CardHeader>
+                                      <CardContent className="pt-6 space-y-4">
+                                          {selectedReportForReview.criticalPathTomorrow && (
+                                              <div>
+                                                  <p className="text-[10px] font-black uppercase text-orange-600 mb-1">Critical Path</p>
+                                                  <p className="text-sm italic leading-relaxed">"{selectedReportForReview.criticalPathTomorrow}"</p>
+                                              </div>
+                                          )}
+                                          {selectedReportForReview.pendingDeliverables && (
+                                              <div>
+                                                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Pending Items</p>
+                                                  <p className="text-sm leading-relaxed">{selectedReportForReview.pendingDeliverables}</p>
+                                              </div>
+                                          )}
+                                      </CardContent>
+                                  </Card>
                               )}
                           </div>
                       </div>
@@ -476,7 +601,7 @@ export default function ReportsPage() {
                                       <img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain grayscale invert mix-blend-multiply opacity-60" />
                                       <div className="space-y-0.5">
                                           <p className="text-[10px] font-black uppercase tracking-tighter">{selectedReportForReview.employeeName}</p>
-                                          <p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview.employeeJobTitle}</p>
+                                          <p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview.employeeJobTitle} | {selectedReportForReview.employeeDepartment}</p>
                                           <p className="text-[8px] font-mono text-muted-foreground mt-2">{formatIST(selectedReportForReview.date)}</p>
                                       </div>
                                   </div>

@@ -123,33 +123,28 @@ export function AttendanceWidget() {
         const checkOut = todaysAttendance.checkOutTime?.toDate();
         const lunchOut = todaysAttendance.lunchOutTime?.toDate();
         const lunchIn = todaysAttendance.lunchInTime?.toDate();
-        const savedBreakSec = todaysAttendance.totalBreakDuration || 0;
+        const savedBreakSec = Number(todaysAttendance.totalBreakDuration || 0);
 
         setTotalBreakTime(savedBreakSec);
         setLastClockInTime(checkIn || null);
 
-        if (checkOut) {
+        if (checkOut && checkIn) {
             setStatus("out");
             setHasClockedOutToday(true);
-            const checkInMs = checkIn?.getTime() || 0;
-            const checkOutMs = checkOut?.getTime() || 0;
-            const totalElapsed = (checkOutMs - checkInMs) / 1000;
+            const totalElapsed = (checkOut.getTime() - checkIn.getTime()) / 1000;
             setTimer(Math.max(0, totalElapsed - savedBreakSec));
             setBreakTimer(0);
-        } else {
+        } else if (checkIn) {
             setHasClockedOutToday(false);
             if (lunchOut && !lunchIn) {
                 setStatus("lunch");
-                const checkInMs = checkIn?.getTime() || 0;
-                const lunchOutMs = lunchOut?.getTime() || 0;
-                const elapsedBeforeLunch = (lunchOutMs - checkInMs) / 1000;
+                const elapsedBeforeLunch = (lunchOut.getTime() - checkIn.getTime()) / 1000;
                 setTimer(Math.max(0, elapsedBeforeLunch - savedBreakSec));
-                setBreakTimer(Math.max(0, (new Date().getTime() - lunchOutMs) / 1000));
+                setBreakTimer(Math.max(0, (new Date().getTime() - lunchOut.getTime()) / 1000));
             } else {
                 setStatus("in");
                 const now = new Date().getTime();
-                const checkInMs = checkIn?.getTime() || 0;
-                const totalElapsed = (now - checkInMs) / 1000;
+                const totalElapsed = (now - checkIn.getTime()) / 1000;
                 setTimer(Math.max(0, totalElapsed - savedBreakSec));
                 setBreakTimer(0);
             }
@@ -338,7 +333,7 @@ export function AttendanceWidget() {
     </div>
   );
 
-  const getMilestoneTime = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'p') : '--:--';
+  const getMilestoneTime = (timestamp: any) => (timestamp && timestamp.toDate) ? format(timestamp.toDate(), 'p') : '--:--';
 
   return (
     <>
@@ -346,7 +341,7 @@ export function AttendanceWidget() {
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
               <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Precision Attendance</CardTitle>
-              {!hasClockedOutToday && (
+              {!hasClockedOutToday && lastClockInTime && (
                   <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-red-600" onClick={handleResetDay}>
                       <RotateCcw className="size-4" />
                   </Button>
