@@ -17,6 +17,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Pie, PieChart, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import Link from 'next/link';
 
 type UserData = {
   id: string;
@@ -108,20 +109,20 @@ export default function MonitorPage() {
                 </CardHeader>
             </Card>
         </SheetTrigger>
-        <SheetContent>
-            <SheetHeader><SheetTitle>{title} ({users.length})</SheetTitle></SheetHeader>
+        <SheetContent className="rounded-l-3xl shadow-2xl border-none">
+            <SheetHeader><SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">{title} ({users.length})</SheetTitle></SheetHeader>
             <ScrollArea className="h-full mt-4">
                 <div className="space-y-3">
                     {users.map((u: any) => (
-                        <div key={u.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-muted">
-                            <div className="flex items-center gap-3">
-                                <Avatar className="size-8">
-                                    {u.avatar ? <span className="text-lg">{u.avatar}</span> : <AvatarFallback>{u.firstName?.[0]}</AvatarFallback>}
+                        <div key={u.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-primary/5 transition-colors border group">
+                            <Link href={`/dashboard/users/${u.id}`} className="flex items-center gap-3">
+                                <Avatar className="size-10 ring-1 ring-primary/20 ring-offset-2">
+                                    {u.avatar ? <span className="text-2xl">{u.avatar}</span> : <AvatarFallback>{u.firstName?.[0]}</AvatarFallback>}
                                 </Avatar>
-                                <div><p className="text-xs font-bold">{u.firstName} {u.lastName}</p><p className="text-[10px] text-muted-foreground">{u.jobTitle}</p></div>
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => window.open(`https://wa.me/${u.phoneNumber?.replace(/\D/g,'')}?text=MarsHRM Alert: Please check your status.`, '_blank')}>
-                                <Phone className="size-4 text-green-600" />
+                                <div><p className="text-sm font-bold group-hover:text-primary transition-colors">{u.firstName} {u.lastName}</p><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{u.jobTitle}</p></div>
+                            </Link>
+                            <Button variant="ghost" size="icon" className="rounded-full text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => window.open(`https://wa.me/${u.phoneNumber?.replace(/\D/g,'')}?text=MarsHRM Alert: Please check your status.`, '_blank')}>
+                                <Phone className="size-4" />
                             </Button>
                         </div>
                     ))}
@@ -135,8 +136,8 @@ export default function MonitorPage() {
     <div className="space-y-6">
       <PageHeader title="Real-Time Oversight" description="Tactical monitor with WhatsApp nudge integration.">
         <Popover>
-            <PopoverTrigger asChild><Button variant="outline" className="rounded-full h-11"><CalendarIcon className="size-4 mr-2" /> {format(date, 'PP')}</Button></PopoverTrigger>
-            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={d => d && setDate(d)} initialFocus /></PopoverContent>
+            <PopoverTrigger asChild><Button variant="outline" className="rounded-full h-11 bg-white/50"><CalendarIcon className="size-4 mr-2" /> {format(date, 'PP')}</Button></PopoverTrigger>
+            <PopoverContent className="w-auto p-0 rounded-2xl overflow-hidden border-none shadow-2xl"><Calendar mode="single" selected={date} onSelect={d => d && setDate(d)} initialFocus /></PopoverContent>
         </Popover>
       </PageHeader>
 
@@ -152,7 +153,7 @@ export default function MonitorPage() {
         
         <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 backdrop-blur-sm">
             <CardHeader>
-                <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2">
                     <PieChartIcon className="size-4 text-primary" />
                     Fleet Distribution
                 </CardTitle>
@@ -176,8 +177,8 @@ export default function MonitorPage() {
                                     <Cell key={`cell-${index}`} fill={entry.fill} />
                                 ))}
                             </Pie>
-                            <Tooltip />
-                            <Legend verticalAlign="bottom" align="center" iconType="circle" />
+                            <Tooltip content={<ChartTooltipContent />} />
+                            <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
                         </PieChart>
                     </ResponsiveContainer>
                 ) : (
