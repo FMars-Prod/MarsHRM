@@ -8,9 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth, useUser, useStorage } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
+import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save } from "lucide-react";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+const formatIST = (date: any) => {
+    if (!date) return "N/A";
+    const d = date.toDate ? date.toDate() : new Date(date);
+    return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(d) + " IST";
+};
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -62,17 +77,12 @@ export default function ProfilePage() {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
     const [isAvatarDialogOpen, setIsAvatarDialogOpen] = React.useState(false);
-    const [isRequestChangeOpen, setIsRequestChangeOpen] = React.useState(false);
-    const [capturedLocation, setCapturedLocation] = React.useState<{latitude: number, longitude: number} | null>(null);
     const [isUploadingSignature, setIsUploadingSignature] = React.useState(false);
     const [manualSignatureUrl, setManualSignatureUrl] = React.useState("");
+    const [userReports, setUserReports] = React.useState<any[]>([]);
 
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
-
-    const pendingLocationRequestQuery = useMemoFirebase(() => user ? query(collection(firestore, "location_change_requests"), where("employeeId", "==", user.uid), where("status", "==", "pending")) : null, [user, firestore]);
-    const { data: pendingRequests } = useCollection(pendingLocationRequestQuery);
-    const hasPendingRequest = pendingRequests && pendingRequests.length > 0;
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -85,6 +95,16 @@ export default function ProfilePage() {
             if (employee.signatureUrl) setManualSignatureUrl(employee.signatureUrl);
         }
     }, [employee, form]);
+
+    React.useEffect(() => {
+        const fetchReports = async () => {
+            if (!user) return;
+            const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(10));
+            const snap = await getDocs(q);
+            setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        };
+        fetchReports();
+    }, [user, firestore]);
     
     async function onSubmit(data: ProfileFormValues) {
         setIsSubmitting(true);
@@ -220,6 +240,46 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="lg:col-span-2 space-y-6">
+                    <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 backdrop-blur-sm">
+                        <CardHeader className="bg-muted/10 border-b">
+                            <CardTitle className="text-lg font-headline flex items-center gap-2">
+                                <History className="size-5 text-primary" />
+                                Strategic Shift Intelligence
+                            </CardTitle>
+                            <CardDescription>Comprehensive log of your daily tactical submissions.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <ScrollArea className="h-[400px]">
+                                <div className="divide-y divide-border/50">
+                                    {userReports.length > 0 ? userReports.map(r => (
+                                        <div key={r.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                                                    <Clock className="size-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm">{formatIST(r.date)}</p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <Badge variant="outline" className="text-[8px] uppercase font-black tracking-widest">{r.reportType} LOG</Badge>
+                                                        {r.criticalPathTomorrow && <span className="text-[9px] text-orange-600 font-bold flex items-center gap-1"><History className="size-2.5"/> T+1 Plan Set</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button variant="ghost" size="sm" className="rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => window.location.href = '/dashboard/reports'}>
+                                                <ExternalLink className="size-4" />
+                                            </Button>
+                                        </div>
+                                    )) : (
+                                        <div className="py-20 text-center text-muted-foreground">
+                                            <FileText className="size-10 mx-auto opacity-20 mb-3" />
+                                            <p className="text-xs font-bold uppercase tracking-widest">No Tactical Logs Found</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
+
                     <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
                         <CardHeader><CardTitle className="font-headline text-lg flex items-center gap-2"><LocateFixed className="size-5 text-primary"/> WFH Precision Registry</CardTitle><CardDescription>Manage approved residential geofence points.</CardDescription></CardHeader>
                         <CardContent className="space-y-6">
@@ -233,14 +293,6 @@ export default function ProfilePage() {
                                         </Badge>
                                     ) : <p className="text-sm font-bold text-orange-600 mt-2">Satellite Point Not Set</p>}
                                 </div>
-                                <Button onClick={() => {
-                                    navigator.geolocation.getCurrentPosition(p => {
-                                        setCapturedLocation({ latitude: p.coords.latitude, longitude: p.coords.longitude });
-                                        setIsRequestChangeOpen(true);
-                                    });
-                                }} disabled={hasPendingRequest} className="rounded-full h-11 px-8 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
-                                    {hasPendingRequest ? 'Awaiting Approval' : 'Update Satellite Point'}
-                                </Button>
                             </div>
                         </CardContent>
                     </Card>

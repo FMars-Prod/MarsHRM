@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap } from "lucide-react";
+import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -338,6 +338,7 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [selectedReportForReview, setSelectedReportForReview] = React.useState<any | null>(null);
+  const [myRecentReports, setMyRecentReports] = React.useState<any[]>([]);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
@@ -349,6 +350,17 @@ export default function ReportsPage() {
   const mappingDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
   const { data: mappingData } = useDoc<{mappings: Record<string, string>}>(mappingDocRef);
   const currentTemplateId = mappingData?.mappings?.[currentUserData?.jobTitle || ''] || 'Business';
+
+  const fetchMyReports = async () => {
+    if (!user) return;
+    const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(5));
+    const snap = await getDocs(q);
+    setMyRecentReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  };
+
+  React.useEffect(() => {
+    fetchMyReports();
+  }, [user, firestore]);
 
   const form = useForm<any>({
     defaultValues: {
@@ -366,7 +378,7 @@ export default function ReportsPage() {
     if (currentUserData) {
         form.reset({
             ...form.getValues(),
-            signature: currentUserData.signatureUrl || "Identity Verified via Platform Auth",
+            signature: currentUserData.signatureUrl || "Digital Handshake Verified via Platform Auth",
         });
     }
   }, [currentUserData, form]);
@@ -392,7 +404,8 @@ export default function ReportsPage() {
         };
         await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
         toast({ title: "Strategic Submission Confirmed" });
-        setTimeout(async () => { await auth.signOut(); router.push('/login'); }, 1500);
+        fetchMyReports();
+        setIsAddDialogOpen(false);
     } catch (err) { toast({ variant: 'destructive', title: 'Submission Failed' }); }
   };
 
@@ -428,20 +441,41 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={isLeadOrHigher ? "Strategic Fleet Log" : "My Shift Log"} description="Comprehensive verification of tactical submissions.">
-        {!isLeadOrHigher && (<Button onClick={() => setIsAddDialogOpen(true)} className="rounded-full h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4"/> Shift Completion Form</Button>)}
+        <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-full h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4"/> Shift Completion Form</Button>
       </PageHeader>
       
-      {isLeadOrHigher ? (
+      {!isLeadOrHigher && (
+          <div className="space-y-4">
+              <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><History className="size-4" /> My Recent Tactics</div>
+              <div className="grid gap-3">
+                  {myRecentReports.map(r => (
+                      <Card key={r.id} className="p-4 hover:bg-muted/50 cursor-pointer flex items-center justify-between border-none ring-1 ring-border/50" onClick={() => setSelectedReportForReview(r)}>
+                          <div className="flex items-center gap-4">
+                              <div className="p-2 rounded-xl bg-primary/10 text-primary"><Clock className="size-4" /></div>
+                              <div>
+                                  <p className="font-bold text-sm">{formatIST(r.date)}</p>
+                                  <p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Log</p>
+                              </div>
+                          </div>
+                          <ExternalLink className="size-4 opacity-30" />
+                      </Card>
+                  ))}
+                  {myRecentReports.length === 0 && <div className="text-center py-10 bg-muted/20 rounded-3xl border-2 border-dashed"><p className="text-xs font-bold text-muted-foreground">No reports recorded yet.</p></div>}
+              </div>
+          </div>
+      )}
+
+      {isLeadOrHigher && (
         <>
           <div className="relative mb-6"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input placeholder="Search staff..." className="pl-10 h-11 rounded-xl bg-white/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
           <div className="border rounded-2xl overflow-hidden bg-white/50">
             <Table>
                 <TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[10px] font-black uppercase">Employee</TableHead><TableHead className="text-[10px] font-black uppercase text-right">Action</TableHead></TableRow></TableHeader>
-                <TableBody>{filteredUsers?.map(u => (<TableRow key={u.id} className="border-border/50"><TableCell className="font-bold py-4"><Link href={`/dashboard/users/${u.id}`} className="hover:text-primary">{u.firstName} {u.lastName}</Link></TableCell><TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-[10px]" onClick={() => { setSelectedUser(u); fetchUserReports(u.id); }}>Review Logs</Button></TableCell></TableRow>))}</TableBody>
+                <TableBody>{filteredUsers?.map(u => (<TableRow key={u.id} className="border-border/50"><TableCell className="font-bold py-4"><Link href={`/dashboard/users/${u.id}`} className="hover:text-primary transition-colors flex items-center gap-2">{u.firstName} {u.lastName} <UserCheck className="size-3 text-green-600 opacity-0 group-hover:opacity-100"/></Link></TableCell><TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-[10px]" onClick={() => { setSelectedUser(u); fetchUserReports(u.id); }}>Review Logs</Button></TableCell></TableRow>))}</TableBody>
             </Table>
           </div>
         </>
-      ) : (<div className="text-center py-20 bg-muted/20 rounded-3xl border-2 border-dashed"><p className="text-sm font-bold text-muted-foreground">Log history is available in your profile.</p></div>)}
+      )}
 
       <Dialog open={!!selectedUser} onOpenChange={o => !o && setSelectedUser(null)}>
           <DialogContent className="max-w-2xl rounded-3xl"><DialogHeader><DialogTitle className="text-xl font-black uppercase">Shift History: {selectedUser?.firstName}</DialogTitle></DialogHeader>
@@ -450,7 +484,7 @@ export default function ReportsPage() {
       </Dialog>
 
       <Dialog open={!!selectedReportForReview} onOpenChange={o => !o && setSelectedReportForReview(null)}>
-          <DialogContent className="max-w-3xl rounded-3xl h-[80vh] flex flex-col p-0 overflow-hidden">
+          <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden">
               <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center"><div className="space-y-1"><DialogTitle className="text-xl font-black uppercase tracking-tighter">Tactical Audit Detail</DialogTitle><p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)}</p></div><Button onClick={() => handleExportPdf(selectedReportForReview)} size="sm" className="rounded-full font-black uppercase text-[10px] gap-2"><Download className="size-3" /> Export PDF</Button></DialogHeader>
               <ScrollArea className="flex-1 p-8 bg-secondary/10"><div className="space-y-8 pb-10">
                       <div className="grid grid-cols-2 gap-6"><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Reporting Official</p><p className="font-bold">{selectedReportForReview?.employeeName}</p></div><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Designation</p><p className="font-bold">{selectedReportForReview?.employeeJobTitle}</p></div></div>
@@ -462,7 +496,21 @@ export default function ReportsPage() {
                           {selectedReportForReview?.reportType === 'Technical' && (<div className="bg-white p-6 rounded-2xl ring-1 ring-border/50 space-y-4">{selectedReportForReview.completedTasks?.map((t: any, i: number) => (<div key={i} className="pb-4 border-b last:border-none space-y-1"><p className="font-black text-xs uppercase">{t.moduleName}</p><p className="text-sm italic">"{t.workDone}"</p></div>))}</div>)}
                           {(selectedReportForReview?.criticalPathTomorrow || selectedReportForReview?.pendingDeliverables) && (<Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> T+1 Objectives</CardTitle></CardHeader><CardContent className="pt-6 space-y-4"><div><p className="text-[10px] font-black uppercase text-orange-600">Critical Path</p><p className="text-sm italic">"{selectedReportForReview.criticalPathTomorrow}"</p></div></CardContent></Card>)}
                       </div>
-                      <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary">Tactical Verification</p><div className="bg-muted/30 p-6 rounded-2xl flex flex-col items-center text-center">{selectedReportForReview?.signatureUrl ? (<><img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain grayscale invert mix-blend-multiply opacity-60" /><div className="mt-4"><p className="text-[10px] font-black uppercase">{selectedReportForReview.employeeName}</p><p className="text-[9px] font-bold text-muted-foreground">{selectedReportForReview.employeeJobTitle}</p></div></>) : <p className="text-xs font-bold text-muted-foreground">Identity Verified via Platform Auth</p>}</div></div>
+                      <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary">Tactical Verification</p>
+                        <div className="bg-white p-8 rounded-3xl ring-1 ring-border/50 flex flex-col items-center text-center space-y-6 shadow-inner">
+                            {selectedReportForReview?.signatureUrl ? (
+                                <img src={selectedReportForReview.signatureUrl} alt="Approved Signature" className="h-24 object-contain grayscale invert mix-blend-multiply opacity-60" />
+                            ) : (
+                                <div className="p-6 border-2 border-dashed rounded-2xl text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-muted/10">Digital Identity Asset Not Provisioned</div>
+                            )}
+                            <div className="space-y-1">
+                                <p className="text-xs font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p>
+                                <Separator className="w-12 mx-auto my-2" />
+                                <p className="text-[9px] font-mono text-muted-foreground italic">Timestamp: {formatIST(selectedReportForReview?.date)}</p>
+                            </div>
+                        </div>
+                      </div>
                   </div></ScrollArea>
           </DialogContent>
       </Dialog>
@@ -473,9 +521,9 @@ export default function ReportsPage() {
                     <ScrollArea className="flex-1"><div className="p-8 space-y-8">
                             <div className="space-y-6"><Label className="text-[10px] font-black uppercase tracking-widest text-primary">Tactical Analytics Template</Label>{currentTemplateId === 'Technical' ? <TechnicalFields /> : currentTemplateId === 'Digital Marketing' ? <DigitalMarketingFields /> : <BusinessFields />}</div>
                             <Separator />
-                            <div className="space-y-6"><Label className="text-[10px] font-black uppercase text-primary">Tactical Verification</Label><FormField control={form.control} name="signature" render={({ field }) => (<FormItem><FormControl><Input {...field} readOnly className="bg-muted/50 font-mono text-[10px] h-12 rounded-xl cursor-not-allowed font-bold" /></FormControl></FormItem>)} /><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl><FormLabel className="text-sm font-bold">I certify that all information provided is accurate.</FormLabel></FormItem>)} /></div>
+                            <div className="space-y-6"><Label className="text-[10px] font-black uppercase text-primary">Tactical Verification</Label><FormField control={form.control} name="signature" render={({ field }) => (<FormItem><FormControl><Input {...field} readOnly className="bg-muted/50 font-mono text-[10px] h-12 rounded-xl cursor-not-allowed font-bold" /></FormControl></FormItem>)} /><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl><FormLabel className="text-sm font-bold">I certify that all information provided is accurate and my digital handshake is e-signed.</FormLabel></FormItem>)} /></div>
                         </div></ScrollArea>
-                    <div className="p-6 border-t bg-white/80 backdrop-blur-md"><DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col"><Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button><Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px] shadow-lg">Finalize & Logout</Button></DialogFooter></div>
+                    <div className="p-6 border-t bg-white/80 backdrop-blur-md"><DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col"><Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button><Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px] shadow-lg">Finalize & Submit</Button></DialogFooter></div>
                 </form></FormProvider></DialogContent>
       </Dialog>
     </div>

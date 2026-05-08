@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { SelectGroup, SelectLabel } from '@/components/ui/select';
 
 type UserData = {
   id: string;
@@ -106,7 +107,7 @@ export default function ReportTemplatesPage() {
       a.download = `template_${template.name.toLowerCase().replace(/\s+/g, '_')}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: 'Template Exported' });
+      toast({ title: 'Template Exported', description: 'JSON structure ready for AI alignment.' });
   };
 
   const handleImportTemplate = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,7 +232,7 @@ export default function ReportTemplatesPage() {
                         <Beaker className="size-5 text-primary" />
                         Template Library
                     </CardTitle>
-                    <CardDescription>Manage and export tactical report definitions.</CardDescription>
+                    <CardDescription>Export JSON templates for AI alignment or import fixed definitions.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
@@ -319,26 +320,17 @@ export default function ReportTemplatesPage() {
                             <div className="space-y-1"><Label className="text-[9px]">End</Label><Input type="time" value={timings.shiftEnd} onChange={e => setTimings({...timings, shiftEnd: e.target.value})} className="h-8 text-xs"/></div>
                         </div>
                     </div>
-                    <div className="grid gap-2">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Automated Report Slots</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1"><Label className="text-[9px]">Morning</Label><Input type="time" value={timings.morningReportSlot} onChange={e => setTimings({...timings, morningReportSlot: e.target.value})} className="h-8 text-xs"/></div>
-                            <div className="space-y-1"><Label className="text-[9px]">Evening</Label><Input type="time" value={timings.eveningReportSlot} onChange={e => setTimings({...timings, eveningReportSlot: e.target.value})} className="h-8 text-xs"/></div>
-                        </div>
-                    </div>
                 </div>
                 <Button className="w-full rounded-full h-10 font-bold uppercase text-[10px]" onClick={handleSaveTimings}><Save className="size-4 mr-2"/> Apply Timing Policy</Button>
             </CardContent>
           </Card>
 
           <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
-            <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Info className="size-4" /> Policy Guidelines</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Info className="size-4" /> AI Integration Help</CardTitle></CardHeader>
             <CardContent className="text-[10px] space-y-4 text-muted-foreground leading-relaxed">
-              <p>Mappings set here override system-default logic. <strong>Custom Templates</strong> can be exported, modified in JSON, and re-imported to create variations for specific sub-teams.</p>
+              <p>Export templates to JSON, provide them to ChatGPT or Gemini with instructions to "Fix the definition array", and then import the fixed version back here.</p>
               <div className="space-y-2 border-t pt-4">
-                  <div className="flex gap-2"><strong>Business:</strong> Sales and Revenue.</div>
-                  <div className="flex gap-2"><strong>Technical:</strong> Tasks and Code.</div>
-                  <div className="flex gap-2"><strong>Importing:</strong> Ensure JSON files retain the "definition" key to render custom fields correctly.</div>
+                  <div className="flex gap-2"><strong>Strategy:</strong> Standardizing JSON allow AI to generate highly compatible tactical forms.</div>
               </div>
             </CardContent>
           </Card>
@@ -347,5 +339,3 @@ export default function ReportTemplatesPage() {
     </div>
   );
 }
-
-import { SelectGroup, SelectLabel } from '@/components/ui/select';
