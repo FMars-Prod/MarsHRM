@@ -104,6 +104,23 @@ const ExecutionPlanFields = () => {
  */
 const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
     const { control } = useFormContext();
+    
+    // Efficiency Calculation for the Form Preview
+    const coldCalls = useWatch({ control, name: 'coldCalls' }) || 0;
+    const linkedin = useWatch({ control, name: 'linkedinOutreach' }) || 0;
+    const emails = useWatch({ control, name: 'emailsSent' }) || 0;
+    const followUps = useWatch({ control, name: 'followUps' }) || 0;
+    const potential = useWatch({ control, name: 'potentialClients' }) || 0;
+    
+    const totalOutreach = Number(coldCalls) + Number(linkedin) + Number(emails) + Number(followUps);
+    const efficiency = totalOutreach > 0 ? (Number(potential) / totalOutreach) * 100 : 0;
+    
+    const getEfficiencyColor = (val: number) => {
+        if (val < 10) return "text-red-600";
+        if (val <= 15) return "text-orange-500";
+        return "text-green-600";
+    };
+
     return (
         <div className="space-y-8">
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
@@ -123,9 +140,15 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                             <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Follow-ups</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
                     </div>
-                    <FormField control={control} name="potentialClients" render={({ field }) => (
-                        <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Potential Clients Identified</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                    )} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                        <FormField control={control} name="potentialClients" render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Potential Clients Identified</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                        )} />
+                        <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 h-11 flex items-center justify-between px-6">
+                            <span className="text-[10px] font-black uppercase text-muted-foreground">Dynamic Efficiency</span>
+                            <span className={cn("font-black text-sm", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</span>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -150,7 +173,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Activity className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><ShieldCheck className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField control={control} name="quotationsReleased" render={({ field }) => (
@@ -172,17 +195,20 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence Log</CardTitle></CardHeader>
                 <CardContent className="space-y-4 pt-6">
+                    <FormField control={control} name="totalCallRecordings" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[9px] uppercase font-bold text-primary">Total Recordings Drive Folder Link</FormLabel>
+                            <FormControl><Input {...field} placeholder="Paste link here..." className="rounded-xl h-11" /></FormControl>
+                        </FormItem>
+                    )} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={control} name="bestCallRecording" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[9px] uppercase font-bold">Best Call (URL)</FormLabel><FormControl><Input {...field} placeholder="Link to recording..." className="rounded-xl h-10" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[9px] uppercase font-bold">Best Call Recording (Link)</FormLabel><FormControl><Input {...field} placeholder="Paste recording link..." className="rounded-xl h-10" /></FormControl></FormItem>
                         )} />
                         <FormField control={control} name="worstCallRecording" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[9px] uppercase font-bold">Worst Call (URL)</FormLabel><FormControl><Input {...field} placeholder="Link to recording..." className="rounded-xl h-10" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[9px] uppercase font-bold">Worst Call Recording (Link)</FormLabel><FormControl><Input {...field} placeholder="Paste recording link..." className="rounded-xl h-10" /></FormControl></FormItem>
                         )} />
                     </div>
-                    <FormField control={control} name="totalCallRecordings" render={({ field }) => (
-                        <FormItem><FormLabel className="text-[9px] uppercase font-bold">Total Recordings Folder (URL)</FormLabel><FormControl><Input {...field} placeholder="Google Drive Link..." className="rounded-xl h-10" /></FormControl></FormItem>
-                    )} />
                 </CardContent>
             </Card>
 
@@ -296,7 +322,13 @@ const TechnicalFields = () => {
 const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
     const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0) + Number(report.followUps || 0);
     const potential = Number(report.potentialClients || 0);
-    const efficiency = totalOutreach > 0 ? ((potential / totalOutreach) * 100).toFixed(2) : "0.00";
+    const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
+
+    const getEfficiencyColor = (val: number) => {
+        if (val < 10) return "text-red-600";
+        if (val <= 15) return "text-orange-500";
+        return "text-green-600";
+    };
 
     return (
         <div className="space-y-8">
@@ -305,7 +337,10 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Total Outreach</p><p className="text-xl font-black">{totalOutreach}</p></div>
                     <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Potential Clients</p><p className="text-xl font-black">{potential}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Efficiency Rate</p><p className="text-xl font-black text-primary">{efficiency}%</p></div>
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center">
+                        <p className="text-[9px] font-black uppercase text-muted-foreground">Efficiency Rate</p>
+                        <p className={cn("text-xl font-black", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</p>
+                    </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="p-3 bg-muted/10 rounded-xl text-center"><p className="text-[8px] font-bold text-muted-foreground uppercase">Calls</p><p className="text-sm font-black">{report.coldCalls || 0}</p></div>
@@ -338,9 +373,11 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
             <div className="p-4 bg-primary/5 rounded-2xl space-y-3">
                 <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence Log</p>
                 <div className="grid gap-2">
-                    {report.bestCallRecording && <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2" asChild><Link href={report.bestCallRecording} target="_blank"><ExternalLink className="size-3" /> Best Call Recording</Link></Button>}
-                    {report.worstCallRecording && <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2" asChild><Link href={report.worstCallRecording} target="_blank"><ExternalLink className="size-3" /> Worst Call Recording</Link></Button>}
-                    {report.totalCallRecordings && <Button variant="outline" className="h-9 text-[10px] uppercase font-bold rounded-xl bg-white w-full" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> Open Total Records Folder</Link></Button>}
+                    {report.totalCallRecordings && <Button variant="outline" className="h-9 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary border-primary/20" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> Daily Call Drive Link</Link></Button>}
+                    <div className="grid grid-cols-2 gap-2">
+                        {report.bestCallRecording && <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2" asChild><Link href={report.bestCallRecording} target="_blank"><ExternalLink className="size-3" /> Best Call Link</Link></Button>}
+                        {report.worstCallRecording && <Button variant="link" className="h-auto p-0 text-xs justify-start gap-2" asChild><Link href={report.worstCallRecording} target="_blank"><ExternalLink className="size-3" /> Worst Call Link</Link></Button>}
+                    </div>
                 </div>
             </div>
         </div>
