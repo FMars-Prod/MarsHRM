@@ -1,16 +1,15 @@
-
 'use client';
 
 import * as React from 'react';
 import { use } from 'react';
 import { notFound } from 'next/navigation';
 import { useFirestore, useMemoFirebase, useCollection, useDoc, updateDocumentNonBlocking, useStorage, useUser } from '@/firebase';
-import { collection, query, doc, where, orderBy, limit, Timestamp, startOfMonth, endOfMonth } from 'firebase/firestore';
+import { collection, query, doc, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, differenceInSeconds, startOfToday, isSameDay, eachDayOfInterval } from 'date-fns';
+import { format, differenceInSeconds, startOfToday, isSameDay, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { Grid, ShieldCheck, MapPin, Camera, CheckCircle2, Clock, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Info, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -328,4 +327,3 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     </div>
   );
 }
-
