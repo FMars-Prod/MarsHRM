@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Settings, Building2, LogOut, Utensils, AlertCircle, LogIn, LocateFixed } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Utensils, LogOut, MapPinned, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -32,16 +31,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, serverTimestamp, Timestamp, collection, query, where, orderBy, limit } from "firebase/firestore";
-import { Input } from "@/components/ui/input";
+import { doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
-import { format, parse, isSameDay, endOfDay, isAfter, addMinutes, differenceInMinutes } from "date-fns";
+import { format, parse, isAfter } from "date-fns";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "../ui/badge";
 
@@ -101,36 +97,15 @@ export function AttendanceWidget() {
     () => doc(firestore, "settings", "location"),
     [firestore]
   );
-  const { data: officeLocationData, isLoading: isLocationLoading } = useDoc<Location>(officeLocationDocRef);
+  const { data: officeLocationData } = useDoc<Location>(officeLocationDocRef);
   
   const officeLocation = officeLocationData;
   const maxDistanceKm = officeLocation?.maxDistanceKm || 2;
 
-  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
-  const [newLatitude, setNewLatitude] = useState("");
-  const [newLongitude, setNewLongitude] = useState("");
-  const [newMaxDistance, setNewMaxDistance] = useState("");
-  const [newShiftStart, setNewShiftStart] = useState("");
-  const [newShiftEnd, setNewShiftEnd] = useState("");
-  const [newLunchStart, setNewLunchStart] = useState("");
-  const [newLunchDuration, setNewLunchDuration] = useState("");
-  
   const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
   const [outOfRangeAction, setOutOfRangeAction] = useState<(() => void) | null>(null);
   const [outOfRangeInfo, setOutOfRangeInfo] = useState('');
-
-  useEffect(() => {
-    if (officeLocation) {
-        setNewLatitude(officeLocation.latitude?.toString() || "");
-        setNewLongitude(officeLocation.longitude?.toString() || "");
-        setNewMaxDistance((officeLocation.maxDistanceKm || 2).toString());
-        setNewShiftStart(officeLocation.shiftStartTime || "09:30");
-        setNewShiftEnd(officeLocation.shiftEndTime || "18:30");
-        setNewLunchStart(officeLocation.lunchBreakStartTime || "13:30");
-        setNewLunchDuration((officeLocation.lunchBreakDurationMinutes || 60).toString());
-    }
-  }, [officeLocation]);
 
   const getTodaysAttendanceRef = useMemoFirebase(() => {
       if (!user) return null;
@@ -140,27 +115,45 @@ export function AttendanceWidget() {
   
   const {data: todaysAttendance} = useDoc(getTodaysAttendanceRef);
 
+  const formatTime = (totalSeconds: number) => {
+    if (!totalSeconds || isNaN(totalSeconds)) return "00:00:00";
+    const hrs = Math.floor(Math.max(0, totalSeconds) / 3600);
+    const mins = Math.floor((Math.max(0, totalSeconds) % 3600) / 60);
+    const secs = Math.floor(Math.max(0, totalSeconds) % 60);
+    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
+
   useEffect(() => {
     if (todaysAttendance) {
-        if (todaysAttendance.checkOutTime) {
+        const checkIn = todaysAttendance.checkInTime?.toDate();
+        const checkOut = todaysAttendance.checkOutTime?.toDate();
+        const lunchOut = todaysAttendance.lunchOutTime?.toDate();
+        const lunchIn = todaysAttendance.lunchInTime?.toDate();
+        const savedBreakSec = todaysAttendance.totalBreakDuration || 0;
+
+        setTotalBreakTime(savedBreakSec);
+        setLastClockInTime(checkIn || null);
+
+        if (checkOut) {
             setStatus("out");
             setHasClockedOutToday(true);
-            const workDuration = (todaysAttendance.checkOutTime.toMillis() - todaysAttendance.checkInTime.toMillis()) / 1000;
-            setTimer(workDuration - (todaysAttendance.totalBreakDuration || 0));
-            setTotalBreakTime(todaysAttendance.totalBreakDuration || 0);
+            const totalElapsed = (checkOut.getTime() - checkIn.getTime()) / 1000;
+            setTimer(totalElapsed - savedBreakSec);
+            setBreakTimer(0);
         } else {
-          if (todaysAttendance.checkInTime) {
-            if (todaysAttendance.locationLunchOutLatitude && !todaysAttendance.locationLunchInLatitude) {
+            setHasClockedOutToday(false);
+            if (lunchOut && !lunchIn) {
                 setStatus("lunch");
+                const elapsedBeforeLunch = (lunchOut.getTime() - checkIn.getTime()) / 1000;
+                setTimer(elapsedBeforeLunch - savedBreakSec);
+                setBreakTimer((new Date().getTime() - lunchOut.getTime()) / 1000);
             } else {
                 setStatus("in");
+                const now = new Date().getTime();
+                const totalElapsed = (now - checkIn.getTime()) / 1000;
+                setTimer(totalElapsed - savedBreakSec);
+                setBreakTimer(0);
             }
-            setHasClockedOutToday(false);
-            setLastClockInTime(todaysAttendance.checkInTime.toDate());
-            const secondsSinceClockIn = (new Date().getTime() - todaysAttendance.checkInTime.toMillis()) / 1000;
-            setTimer(secondsSinceClockIn);
-            setTotalBreakTime(todaysAttendance.totalBreakDuration || 0);
-          }
         }
     } else {
         setStatus("out");
@@ -171,6 +164,20 @@ export function AttendanceWidget() {
         setLastClockInTime(null);
     }
   }, [todaysAttendance]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    if (status === "in") {
+      interval = setInterval(() => {
+          setTimer((prev) => prev + 1);
+      }, 1000);
+    } else if (status === "lunch" || status === "short_break") {
+      interval = setInterval(() => {
+          setBreakTimer((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [status]);
 
   const proceedWithBreakEnd = (userLocation: Location, dist: number, reason?: string) => {
       const updatedBreakTime = totalBreakTime + breakTimer;
@@ -260,24 +267,6 @@ export function AttendanceWidget() {
           toast({ title: "Short Break Started" });
       }
   }
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
-    if (status === "in") {
-      interval = setInterval(() => {
-          setTimer((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [status]);
-
-  useEffect(() => {
-    let breakInterval: NodeJS.Timeout | undefined;
-    if (status === "lunch" || status === "short_break") {
-      breakInterval = setInterval(() => setBreakTimer((prev) => prev + 1), 1000);
-    }
-    return () => clearInterval(breakInterval);
-  }, [status]);
   
   const proceedWithClockIn = (userLocation: Location, dist: number, reason?: string) => {
       setCurrentUserLocation(userLocation);
@@ -393,14 +382,6 @@ export function AttendanceWidget() {
       );
   }
 
-  const formatTime = (totalSeconds: number) => {
-    if (!totalSeconds || isNaN(totalSeconds)) return "00:00:00";
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    const secs = Math.floor(totalSeconds % 60);
-    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  };
-
   const isLate = () => {
     if (!lastClockInTime || !officeLocation?.shiftStartTime) return false;
     const shiftStart = parse(officeLocation.shiftStartTime, 'HH:mm', lastClockInTime);
@@ -409,50 +390,99 @@ export function AttendanceWidget() {
 
   const hasReturnedFromLunch = todaysAttendance?.locationLunchInLatitude;
 
+  const TrackingCard = ({ label, time, icon: Icon, subValue, active }: { label: string, time: string, icon: any, subValue?: string, active: boolean }) => (
+    <div className={cn(
+        "flex-1 p-4 rounded-2xl border transition-all duration-500",
+        active ? "bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20" : "bg-white border-border/50 opacity-60 grayscale"
+    )}>
+        <div className="flex flex-col items-center text-center gap-2">
+            <div className={cn("p-1.5 rounded-lg", active ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
+                <Icon className="size-3.5" />
+            </div>
+            <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{label}</p>
+                <p className={cn("text-sm font-bold mt-0.5", active ? "text-primary" : "text-muted-foreground")}>{time}</p>
+                {subValue && active && <p className="text-[8px] font-mono font-bold text-muted-foreground mt-1 tracking-tighter">{subValue}</p>}
+            </div>
+        </div>
+    </div>
+  );
+
+  const getMilestoneTime = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'p') : '--:--';
+
   return (
     <>
       <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-border/50 shadow-sm relative overflow-hidden">
-        <CardHeader>
+        <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
               <CardTitle className="font-headline flex items-center gap-2 text-primary">
                 <Clock className="size-5" />
                 Precision Attendance
               </CardTitle>
           </div>
-          <CardDescription>
-            High-accuracy geofenced tracking active.
-          </CardDescription>
+          <CardDescription>High-accuracy geofenced tracking active.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-grow flex flex-col items-center justify-center gap-6 text-center pb-8">
-            <div className={cn(
-              "flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs",
-              status === "in" && (isLate() ? "text-orange-600" : "text-green-600"),
-              status === "lunch" && "text-yellow-600",
-              status === "short_break" && "text-blue-600",
-              status === "out" && "text-muted-foreground"
-            )}>
-              {status === "in" && (isLate() ? <Clock className="size-4" /> : <Briefcase className="size-4" />)}
-              {status === "lunch" && <Utensils className="size-4" />}
-              {status === "out" && <CheckCircle2 className="size-4" />}
-              {hasClockedOutToday ? "Daily Session Complete" : status === 'lunch' ? "L-OUT Active" : isLate() ? "Late Log-In" : status.toUpperCase()}
-            </div>
-            
-            <div className="text-7xl font-black font-mono tabular-nums tracking-tighter text-primary">
-              {formatTime(timer)}
-            </div>
 
-            <div className="flex items-center gap-6">
+        <CardContent className="flex-grow flex flex-col items-center justify-center gap-8 text-center pb-8 pt-2">
+            <div className="space-y-1">
+                <div className={cn(
+                    "inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-4",
+                    status === "in" ? (isLate() ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700") : "bg-muted text-muted-foreground"
+                )}>
+                    {status === "in" && (isLate() ? <Clock className="size-3" /> : <Briefcase className="size-3" />)}
+                    {status === 'in' ? (isLate() ? 'Late Operations' : 'Active Shift') : 'Ready to Start'}
+                </div>
+                
+                {lastClockInTime && (
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2">
+                        <LogIn className="size-3" /> Logged In At: <span className="text-primary">{format(lastClockInTime, 'p')}</span>
+                    </p>
+                )}
+                
+                <div className="text-7xl font-black font-mono tabular-nums tracking-tighter text-primary drop-shadow-sm py-2">
+                    {formatTime(timer)}
+                </div>
+
                 {(status === "lunch" || status === "short_break") && (
-                  <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black uppercase text-muted-foreground">Current Break</span>
-                    <div className="text-2xl font-bold font-mono tabular-nums">{formatTime(breakTimer)}</div>
+                  <div className="flex flex-col items-center animate-pulse">
+                    <span className="text-[10px] font-black uppercase text-orange-600 tracking-widest flex items-center gap-1.5"><Coffee className="size-3"/> Current Break</span>
+                    <div className="text-2xl font-bold font-mono tabular-nums text-orange-600">{formatTime(breakTimer)}</div>
                   </div>
                 )}
             </div>
+
+            <div className="w-full max-w-3xl flex gap-3 px-2">
+                <TrackingCard 
+                    label="Log In" 
+                    time={getMilestoneTime(todaysAttendance?.checkInTime)} 
+                    icon={LogIn} 
+                    subValue={todaysAttendance?.locationCheckInLatitude ? `${todaysAttendance.locationCheckInLatitude.toFixed(4)}, ${todaysAttendance.locationCheckInLongitude.toFixed(4)}` : undefined}
+                    active={!!todaysAttendance?.checkInTime} 
+                />
+                <TrackingCard 
+                    label="L-Out" 
+                    time={getMilestoneTime(todaysAttendance?.lunchOutTime)} 
+                    icon={Utensils} 
+                    active={!!todaysAttendance?.lunchOutTime} 
+                />
+                <TrackingCard 
+                    label="L-In" 
+                    time={getMilestoneTime(todaysAttendance?.lunchInTime)} 
+                    icon={LogIn} 
+                    active={!!todaysAttendance?.lunchInTime} 
+                />
+                <TrackingCard 
+                    label="Log-Out" 
+                    time={getMilestoneTime(todaysAttendance?.checkOutTime)} 
+                    icon={LogOut} 
+                    active={!!todaysAttendance?.checkOutTime} 
+                />
+            </div>
         </CardContent>
+
         <CardFooter className="flex justify-center items-center py-6 px-6 bg-muted/5 border-t">
           {status === 'out' && !hasClockedOutToday && (
-              <Button onClick={handleClockIn} className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl bg-primary text-white">
+              <Button onClick={handleClockIn} className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl bg-primary text-white hover:scale-[1.02] transition-transform">
                   Start Shift
               </Button>
           )}
@@ -461,40 +491,40 @@ export function AttendanceWidget() {
                   {status === "in" && (
                       <>
                           {!hasReturnedFromLunch && (
-                            <Button onClick={handleLunch} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white text-primary">
+                            <Button onClick={handleLunch} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white text-primary hover:bg-primary/5">
                                 L-OUT
                             </Button>
                           )}
-                          <Button onClick={handleShortBreak} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white text-primary">
+                          <Button onClick={handleShortBreak} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white text-primary hover:bg-primary/5">
                               Short Break
                           </Button>
                       </>
                   )}
                   {status === "lunch" && (
-                      <Button onClick={handleLunch} className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-primary text-white">
+                      <Button onClick={handleLunch} className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-primary text-white shadow-lg">
                           L-IN
                       </Button>
                   )}
                   {status === "short_break" && (
-                      <Button onClick={handleShortBreak} className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-primary text-white">
+                      <Button onClick={handleShortBreak} className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-primary text-white shadow-lg">
                           Resume Work
                       </Button>
                   )}
                   <AlertDialog>
                       <AlertDialogTrigger asChild>
-                          <Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md">
+                          <Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md hover:scale-[1.02] transition-transform">
                               Finish Day
                           </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="rounded-3xl">
                           <AlertDialogHeader>
-                              <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Ready to Clock Out?</AlertDialogTitle>
-                              <AlertDialogDescription>Capture final location and finish shift.</AlertDialogDescription>
+                              <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Shift Conclusion Protocol</AlertDialogTitle>
+                              <AlertDialogDescription>Capture final location and synchronize today's strategic log.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                              <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
+                              <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Resume Ops</AlertDialogCancel>
                               <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px]">
-                                  Confirm
+                                  Confirm & Finish
                               </AlertDialogAction>
                           </AlertDialogFooter>
                       </AlertDialogContent>
@@ -505,18 +535,23 @@ export function AttendanceWidget() {
 
         <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
           <DialogContent className="rounded-3xl">
-              <DialogHeader>
-                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Out of Range</DialogTitle>
-                  <DialogDescription>{outOfRangeInfo}</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                  <Label htmlFor="reason" className="font-bold text-xs uppercase tracking-widest text-primary">Mandatory Justification</Label>
-                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Why are you out of range?" className="rounded-2xl min-h-[100px]" />
+              <div className="flex flex-col items-center text-center gap-4 py-4">
+                  <div className="p-4 rounded-full bg-orange-100 text-orange-600">
+                    <MapPinned className="size-8" />
+                  </div>
+                  <div className="space-y-1">
+                      <h3 className="text-xl font-black uppercase tracking-tighter">Satellite Discrepancy</h3>
+                      <p className="text-sm text-muted-foreground font-medium">Device is currently operating outside the pre-approved geofence parameters.</p>
+                  </div>
               </div>
-              <DialogFooter>
-                  <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="outline" className="rounded-full font-bold uppercase text-[10px]">Cancel</Button>
-                  <Button onClick={handleOutOfRangeSubmit} className="rounded-full font-bold uppercase text-[10px] bg-primary text-white">Confirm & Proceed</Button>
-              </DialogFooter>
+              <div className="grid gap-4 py-2">
+                  <Label htmlFor="reason" className="font-bold text-[10px] uppercase tracking-widest text-primary">Mandatory Strategic Justification</Label>
+                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Provide specific reason for remote access (e.g. Field assignment, Client site...)" className="rounded-2xl min-h-[100px] bg-muted/20 border-none ring-1 ring-border/50" />
+              </div>
+              <div className="flex gap-3 mt-4">
+                  <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="outline" className="flex-1 rounded-full font-bold uppercase text-[10px]">Cancel</Button>
+                  <Button onClick={handleOutOfRangeSubmit} className="flex-1 rounded-full font-bold uppercase text-[10px] bg-primary text-white">Certify & Proceed</Button>
+              </div>
           </DialogContent>
         </Dialog>
       </Card>
