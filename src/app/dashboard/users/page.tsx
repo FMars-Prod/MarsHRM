@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -10,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, addDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch, serverTimestamp } from "firebase/firestore";
@@ -168,10 +167,10 @@ export default function UsersPage() {
             {isLoading ? <TableRow><TableCell colSpan={5} className="h-32 text-center">Syncing registry...</TableCell></TableRow> : users?.map(u => (
               <TableRow key={u.id}>
                 <TableCell className="font-bold py-4">
-                    <div className="flex items-center">
+                    <Link href={`/dashboard/users/${u.id}`} className="flex items-center hover:text-primary transition-colors">
                         {u.firstName} {u.lastName} 
                         {u.isDemoAccount && <Badge className="ml-2 bg-purple-100 text-purple-700 text-[8px] uppercase">Demo</Badge>}
-                    </div>
+                    </Link>
                 </TableCell>
                 <TableCell>{u.isWfhAllowed ? <Badge className="bg-blue-100 text-blue-700 uppercase text-[8px]">Enabled</Badge> : <Badge variant="outline" className="uppercase text-[8px]">Office Only</Badge>}</TableCell>
                 <TableCell className="text-xs">{u.employmentType}</TableCell>
@@ -181,7 +180,7 @@ export default function UsersPage() {
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }}><Edit className="mr-2 size-4" /> Edit Profile</DropdownMenuItem>
-                        <DropdownMenuItem asChild><Link href={`/dashboard/users/${u.id}`}><Eye className="mr-2 size-4" /> View Analytics</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href={`/dashboard/users/${u.id}`}><UserCircle className="mr-2 size-4" /> View Profile</Link></DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

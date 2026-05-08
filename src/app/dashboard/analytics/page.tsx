@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -291,6 +290,7 @@ export default function AnalyticsPage() {
               return {
                   date: day,
                   employeeName: `${user.firstName} ${user.lastName}`,
+                  employeeId: user.id,
                   status: statusInfo,
                   att
               };
@@ -305,6 +305,7 @@ export default function AnalyticsPage() {
             return {
                 date: att.checkInTime!.toDate(),
                 employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+                employeeId: user?.id,
                 status: statusInfo,
                 att
             };
@@ -547,7 +548,13 @@ export default function AnalyticsPage() {
                                         <TableCell className="py-4">
                                             <div className="flex flex-col">
                                                 <span className="font-bold text-sm">{format(row.date, 'MMM d, yyyy')}</span>
-                                                <span className="text-[10px] text-muted-foreground font-medium uppercase">{row.employeeName}</span>
+                                                {row.employeeId ? (
+                                                    <Link href={`/dashboard/users/${row.employeeId}`} className="text-[10px] text-muted-foreground font-medium uppercase hover:text-primary transition-colors">
+                                                        {row.employeeName}
+                                                    </Link>
+                                                ) : (
+                                                    <span className="text-[10px] text-muted-foreground font-medium uppercase">{row.employeeName}</span>
+                                                )}
                                             </div>
                                         </TableCell>
                                         <TableCell className="py-4">

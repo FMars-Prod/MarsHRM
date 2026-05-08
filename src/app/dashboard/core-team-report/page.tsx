@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, User, Calendar, FileText, Search } from "lucide-react";
+import { ClipboardList, User, Calendar, FileText, Search, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 const formatIST = (date: any) => {
   if (!date) return "N/A";
@@ -126,12 +128,12 @@ export default function CoreTeamReportPage() {
                                           </div>
                                       </TableCell>
                                       <TableCell className="py-4">
-                                          <div className="flex items-center gap-2">
-                                              <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                          <Link href={`/dashboard/users/${report.employeeId}`} className="flex items-center gap-2 group">
+                                              <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs group-hover:bg-primary group-hover:text-white transition-colors">
                                                   {report.employeeName?.[0]}
                                               </div>
-                                              <span className="font-bold text-sm">{report.employeeName}</span>
-                                          </div>
+                                              <span className="font-bold text-sm group-hover:text-primary transition-colors">{report.employeeName}</span>
+                                          </Link>
                                       </TableCell>
                                       <TableCell className="py-4">
                                           <Badge variant="outline" className={cn(
@@ -161,5 +163,3 @@ export default function CoreTeamReportPage() {
     </div>
   );
 }
-
-import { CheckCircle2 } from "lucide-react";

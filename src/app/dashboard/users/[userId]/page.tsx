@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfToday, isSameDay, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
-import { Grid, ShieldCheck, MapPin, Camera, CheckCircle2, Clock, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Info, AlertTriangle } from 'lucide-react';
+import { Grid, ShieldCheck, MapPin, Camera, CheckCircle2, Clock, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Info, AlertTriangle, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +41,11 @@ type ComplianceReport = {
     filedByName: string;
 };
 
+type Team = {
+    id: string;
+    name: string;
+};
+
 export default function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
   const firestore = useFirestore();
   const storage = useStorage();
@@ -53,6 +58,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const userDocRef = useMemoFirebase(() => doc(firestore, 'users', userId), [firestore, userId]);
   const { data: user, isLoading: isUserLoading } = useDoc<any>(userDocRef);
+
+  const teamDocRef = useMemoFirebase(() => (user?.teamId ? doc(firestore, 'teams', user.teamId) : null), [firestore, user?.teamId]);
+  const { data: teamData } = useDoc<Team>(teamDocRef);
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
@@ -67,7 +75,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const reportsQuery = useMemoFirebase(() => query(
     collection(firestore, `users/${userId}/reports`),
     orderBy('date', 'desc'),
-    limit(12)
+    limit(24)
   ), [firestore, userId]);
   const { data: reportsData } = useCollection<Report>(reportsQuery);
 
@@ -100,6 +108,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         late: [],
         absent: [],
         on_leave: [],
+        report: [],
         sunday: { dayOfWeek: [0] }
     };
     attendanceData?.forEach(event => {
@@ -107,8 +116,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             mods[event.status].push(event.checkInTime.toDate());
         }
     });
+    reportsData?.forEach(report => {
+        if (report.date) {
+            mods.report.push(report.date.toDate());
+        }
+    });
     return mods;
-  }, [attendanceData]);
+  }, [attendanceData, reportsData]);
 
   const handleSignatureUpload = async (file: File) => {
     setIsUploading(true);
@@ -162,6 +176,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 <div className="flex items-center justify-center md:justify-start gap-2 text-sm font-bold">
                     <Briefcase className="size-4 text-primary" />
                     <span>{user.department} Department</span>
+                </div>
+                <div className="flex items-center justify-center md:justify-start gap-2 text-sm font-bold">
+                    <Users className="size-4 text-primary" />
+                    <span>Unit: {teamData?.name || 'Unassigned Division'}</span>
                 </div>
                 <div className="flex items-center justify-center md:justify-start gap-2 text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                     <CalendarIcon className="size-3" />
@@ -218,6 +236,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             present: 'bg-green-500/20 text-green-700 font-black ring-1 ring-green-500/30',
                             late: 'bg-yellow-500/20 text-yellow-700 font-black ring-1 ring-yellow-500/30',
                             on_leave: 'bg-blue-500/20 text-blue-700 font-black ring-1 ring-blue-500/30',
+                            report: 'after:content-["•"] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:text-primary after:text-xl',
                             sunday: 'bg-muted/20 text-muted-foreground opacity-30',
                         }}
                     />
@@ -235,6 +254,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <div className="flex items-center justify-between p-3 rounded-2xl bg-blue-50 border border-blue-100">
                                 <span className="text-[10px] font-bold text-blue-700 uppercase">Approved Leave</span>
                                 <div className="size-2 rounded-full bg-blue-500" />
+                            </div>
+                            <div className="flex items-center justify-between p-3 rounded-2xl bg-primary/5 border border-primary/10">
+                                <span className="text-[10px] font-bold text-primary uppercase">Strategic Report Filed</span>
+                                <span className="text-primary text-xl font-bold">•</span>
                             </div>
                         </div>
                     </div>
