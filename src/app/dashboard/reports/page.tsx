@@ -121,14 +121,14 @@ const ExecutionPlanView = ({ report }: { report: any }) => (
     </Card>
 );
 
-const BusinessReportDetails = ({ report, userProfile }: { report: any, userProfile: any }) => {
+const BusinessReportCards = ({ report }: { report: any }) => {
     const mainSym = getCurrencySymbol(report.currency || 'USD');
     const outreachTotal = (Number(report.coldCalls) || 0) + (Number(report.linkedinOutreach) || 0) + (Number(report.emailsSent) || 0);
     const efficiencyRaw = outreachTotal > 0 ? ((Number(report.potentialClients) || 0) / outreachTotal) * 100 : 0;
     const efficiency = Math.min(efficiencyRaw, 100);
 
     return (
-        <div className="space-y-6">
+        <>
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-3" /> 1️⃣ Outreach Analytics</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6">
@@ -193,24 +193,32 @@ const BusinessReportDetails = ({ report, userProfile }: { report: any, userProfi
                     )}
                 </CardContent>
             </Card>
-
-            <ExecutionPlanView report={report} />
-            <VerificationSection report={report} userProfile={userProfile} />
-        </div>
+        </>
     );
 };
 
+const BusinessReportDetails = ({ report, userProfile }: { report: any, userProfile: any }) => (
+    <div className="space-y-6">
+        <BusinessReportCards report={report} />
+        <ExecutionPlanView report={report} />
+        <VerificationSection report={report} userProfile={userProfile} />
+    </div>
+);
+
 const DigitalMarketingReportDetails = ({ report, userProfile }: { report: any, userProfile: any }) => {
-    const categories = [
+    const deliverables = [
         { label: 'Content', key: 'dmContent' },
         { label: 'Posters', key: 'dmPosters' },
         { label: 'Reels', key: 'dmReels' },
         { label: 'Shoots', key: 'dmShoots' }
     ];
 
+    const getStatusVal = (status: string, key: string) => Number(report[`${key}${status}`] || 0);
+
     return (
         <div className="space-y-6">
-            <BusinessReportDetails report={report} userProfile={userProfile} />
+            <BusinessReportCards report={report} />
+            
             <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
                 <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-3" /> Marketing Pipeline Intelligence</CardTitle></CardHeader>
                 <CardContent className="pt-4">
@@ -218,34 +226,42 @@ const DigitalMarketingReportDetails = ({ report, userProfile }: { report: any, u
                         <Table>
                             <TableHeader className="bg-muted/30">
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className="text-[9px] font-black uppercase tracking-widest">Deliverable</TableHead>
-                                    <TableHead className="text-[9px] font-black uppercase tracking-widest text-center">Approved</TableHead>
-                                    <TableHead className="text-[9px] font-black uppercase tracking-widest text-center">Pending</TableHead>
-                                    <TableHead className="text-[9px] font-black uppercase tracking-widest text-center">Rejected</TableHead>
+                                    <TableHead className="text-[9px] font-black uppercase tracking-widest">Status</TableHead>
+                                    {deliverables.map(d => <TableHead key={d.key} className="text-[9px] font-black uppercase tracking-widest text-center">{d.label}</TableHead>)}
                                     <TableHead className="text-[9px] font-black uppercase tracking-widest text-center bg-purple-50">Total</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {categories.map(cat => {
-                                    const app = Number(report[`${cat.key}Approved`] || 0);
-                                    const pen = Number(report[`${cat.key}Pending`] || 0);
-                                    const rej = Number(report[`${cat.key}Rejected`] || 0);
-                                    const total = app + pen + rej;
+                                {['Approved', 'Pending', 'Rejected'].map(status => {
+                                    const rowTotal = deliverables.reduce((acc, d) => acc + getStatusVal(status, d.key), 0);
                                     return (
-                                        <TableRow key={cat.key} className="border-border/50">
-                                            <TableCell className="text-xs font-bold uppercase">{cat.label}</TableCell>
-                                            <TableCell className="text-center text-xs font-medium">{app}</TableCell>
-                                            <TableCell className="text-center text-xs font-medium">{pen}</TableCell>
-                                            <TableCell className="text-center text-xs font-medium">{rej}</TableCell>
-                                            <TableCell className="text-center text-xs font-black bg-purple-50/50 text-purple-700">{total}</TableCell>
+                                        <TableRow key={status} className="border-border/50">
+                                            <TableCell className="text-xs font-bold uppercase">{status}</TableCell>
+                                            {deliverables.map(d => (
+                                                <TableCell key={d.key} className="text-center text-xs font-medium">{getStatusVal(status, d.key)}</TableCell>
+                                            ))}
+                                            <TableCell className="text-center text-xs font-black bg-purple-50/50 text-purple-700">{rowTotal}</TableCell>
                                         </TableRow>
                                     )
                                 })}
+                                <TableRow className="bg-muted/20 border-t-2 font-black">
+                                    <TableCell className="text-xs uppercase">Total</TableCell>
+                                    {deliverables.map(d => {
+                                        const colTotal = ['Approved', 'Pending', 'Rejected'].reduce((acc, s) => acc + getStatusVal(s, d.key), 0);
+                                        return <TableCell key={d.key} className="text-center text-xs">{colTotal}</TableCell>
+                                    })}
+                                    <TableCell className="text-center text-xs bg-purple-100 text-purple-900">
+                                        {deliverables.reduce((acc, d) => acc + ['Approved', 'Pending', 'Rejected'].reduce((sum, s) => sum + getStatusVal(s, d.key), 0), 0)}
+                                    </TableCell>
+                                </TableRow>
                             </TableBody>
                         </Table>
                     </div>
                 </CardContent>
             </Card>
+
+            <ExecutionPlanView report={report} />
+            <VerificationSection report={report} userProfile={userProfile} />
         </div>
     );
 };
@@ -504,15 +520,35 @@ export default function ReportsPage() {
     let startY = 55;
 
     if (r.reportType === 'Digital Marketing') {
-        const body = [
-            ['Content', r.dmContentApproved || 0, r.dmContentPending || 0, r.dmContentRejected || 0, (Number(r.dmContentApproved || 0) + Number(r.dmContentPending || 0) + Number(r.dmContentRejected || 0))],
-            ['Posters', r.dmPostersApproved || 0, r.dmPostersPending || 0, r.dmPostersRejected || 0, (Number(r.dmPostersApproved || 0) + Number(r.dmPostersPending || 0) + Number(r.dmPostersRejected || 0))],
-            ['Reels', r.dmReelsApproved || 0, r.dmReelsPending || 0, r.dmReelsRejected || 0, (Number(r.dmReelsApproved || 0) + Number(r.dmReelsPending || 0) + Number(r.dmReelsRejected || 0))],
-            ['Shoots', r.dmShootsApproved || 0, r.dmShootsPending || 0, r.dmShootsRejected || 0, (Number(r.dmShootsApproved || 0) + Number(r.dmShootsPending || 0) + Number(r.dmShootsRejected || 0))]
+        const deliverables = [
+            { label: 'Content', key: 'dmContent' },
+            { label: 'Posters', key: 'dmPosters' },
+            { label: 'Reels', key: 'dmReels' },
+            { label: 'Shoots', key: 'dmShoots' }
         ];
+
+        const getVal = (s: string, k: string) => Number(r[`${k}${s}`] || 0);
+
+        const body = ['Approved', 'Pending', 'Rejected'].map(status => {
+            const row = [status];
+            deliverables.forEach(d => row.push(getVal(status, d.key).toString()));
+            const rowTotal = deliverables.reduce((acc, d) => acc + getVal(status, d.key), 0);
+            row.push(rowTotal.toString());
+            return row;
+        });
+
+        const footerRow = ['Total'];
+        deliverables.forEach(d => {
+            const colTotal = ['Approved', 'Pending', 'Rejected'].reduce((acc, s) => acc + getVal(s, d.key), 0);
+            footerRow.push(colTotal.toString());
+        });
+        const grandTotal = deliverables.reduce((acc, d) => acc + ['Approved', 'Pending', 'Rejected'].reduce((sum, s) => sum + getVal(s, d.key), 0), 0);
+        footerRow.push(grandTotal.toString());
+        body.push(footerRow);
+
         autoTable(doc, {
             startY,
-            head: [['Deliverable', 'Approved', 'Pending', 'Rejected', 'Total']],
+            head: [['Status', 'Content', 'Posters', 'Reels', 'Shoots', 'Total']],
             body,
             theme: 'grid'
         });
@@ -570,9 +606,9 @@ export default function ReportsPage() {
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach Analytics</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <FormField control={form.control} name="coldCalls" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="coldCalls" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Cold Calls</Label><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
                         <FormField control={form.control} name="linkedinOutreach" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="emailsSent" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Emails Sent</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="emailsSent" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Emails Sent</Label><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="p-4 bg-primary/5 rounded-2xl border flex flex-col items-center gap-1"><p className="text-[10px] font-black text-primary/70 uppercase">Total Outreach</p><p className="text-2xl font-black text-primary">{totalOutreach}</p></div>
@@ -629,63 +665,53 @@ export default function ReportsPage() {
                     )} />
                 </CardContent>
             </Card>
-            <ExecutionPlanFields />
         </div>
     );
   };
 
   const DigitalMarketingFields = () => {
-      const rows = [
-          { label: 'Content', key: 'dmContent' },
-          { label: 'Posters', key: 'dmPosters' },
-          { label: 'Reels', key: 'dmReels' },
-          { label: 'Shoots', key: 'dmShoots' }
-      ];
-      
-      return (
-        <div className="space-y-8">
-            <BusinessFields />
-            <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
-                <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 4️⃣ Tactical Output Matrix</CardTitle></CardHeader>
-                <CardContent className="pt-6">
-                    <div className="border rounded-2xl overflow-hidden bg-white/50">
-                        <Table>
-                            <TableHeader className="bg-muted/30">
-                                <TableRow className="hover:bg-transparent">
-                                    <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Deliverable</TableHead>
-                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-center py-4">Approved</TableHead>
-                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-center py-4">Pending</TableHead>
-                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-center py-4">Rejected</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {rows.map(row => (
-                                    <TableRow key={row.key} className="border-border/50">
-                                        <TableCell className="text-xs font-black uppercase py-4">{row.label}</TableCell>
-                                        <TableCell className="py-2">
-                                            <FormField control={form.control} name={`${row.key}Approved`} render={({ field }) => (
-                                                <FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl>
-                                            )} />
-                                        </TableCell>
-                                        <TableCell className="py-2">
-                                            <FormField control={form.control} name={`${row.key}Pending`} render={({ field }) => (
-                                                <FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl>
-                                            )} />
-                                        </TableCell>
-                                        <TableCell className="py-2">
-                                            <FormField control={form.control} name={`${row.key}Rejected`} render={({ field }) => (
-                                                <FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl>
-                                            )} />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-      );
+    const deliverables = [
+        { label: 'Content', key: 'dmContent' },
+        { label: 'Posters', key: 'dmPosters' },
+        { label: 'Reels', key: 'dmReels' },
+        { label: 'Shoots', key: 'dmShoots' }
+    ];
+    
+    return (
+      <div className="space-y-8">
+          <BusinessFields />
+          <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
+              <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 4️⃣ Tactical Output Matrix</CardTitle></CardHeader>
+              <CardContent className="pt-6">
+                  <div className="border rounded-2xl overflow-hidden bg-white/50">
+                      <Table>
+                          <TableHeader className="bg-muted/30">
+                              <TableRow className="hover:bg-transparent">
+                                  <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Status</TableHead>
+                                  {deliverables.map(d => <TableHead key={d.key} className="text-[10px] font-black uppercase tracking-widest text-center py-4">{d.label}</TableHead>)}
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              {['Approved', 'Pending', 'Rejected'].map(status => (
+                                  <TableRow key={status} className="border-border/50">
+                                      <TableCell className="text-xs font-black uppercase py-4">{status}</TableCell>
+                                      {deliverables.map(d => (
+                                          <TableCell key={d.key} className="py-2">
+                                              <FormField control={form.control} name={`${d.key}${status}`} render={({ field }) => (
+                                                  <FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl>
+                                              )} />
+                                          </TableCell>
+                                      ))}
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </div>
+              </CardContent>
+          </Card>
+          <ExecutionPlanFields />
+      </div>
+    );
   };
 
   const TechnicalFields = () => (
