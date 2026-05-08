@@ -10,7 +10,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Link as LinkIcon, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,7 @@ import Image from 'next/image';
 import { Textarea } from "@/components/ui/textarea";
 import { InteractiveMap } from "@/components/geohrm/interactive-map";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -57,6 +58,7 @@ export default function ProfilePage() {
     const auth = useAuth();
     const storage = useStorage();
     const { toast } = useToast();
+    
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
     const [isAvatarDialogOpen, setIsAvatarDialogOpen] = React.useState(false);
@@ -66,6 +68,7 @@ export default function ProfilePage() {
     const [capturedLocation, setCapturedLocation] = React.useState<{latitude: number, longitude: number} | null>(null);
     const [selectedAddress, setSelectedAddress] = React.useState<string>("Getting address...");
     const [isUploadingSignature, setIsUploadingSignature] = React.useState(false);
+    const [manualSignatureUrl, setManualSignatureUrl] = React.useState("");
 
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
@@ -82,6 +85,7 @@ export default function ProfilePage() {
     React.useEffect(() => {
         if (employee) {
             form.reset({ firstName: employee.firstName || '', lastName: employee.lastName || '', password: '', confirmPassword: '' });
+            if (employee.signatureUrl) setManualSignatureUrl(employee.signatureUrl);
         }
     }, [employee, form]);
     
@@ -118,10 +122,16 @@ export default function ProfilePage() {
             updateDocumentNonBlocking(userDocRef!, { signatureUrl: url, signatureStatus: 'pending' });
             toast({ title: "Identity Uploaded", description: "Your digital signature is awaiting HR approval." });
         } catch (e: any) {
-            toast({ variant: 'destructive', title: "Upload Failed", description: e.message });
+            toast({ variant: 'destructive', title: "Bucket Error", description: "Please initialize Storage in Firebase Console or use direct URL option." });
         } finally {
             setIsUploadingSignature(false);
         }
+    };
+
+    const handleManualSignatureSave = () => {
+        if (!userDocRef || !manualSignatureUrl) return;
+        updateDocumentNonBlocking(userDocRef, { signatureUrl: manualSignatureUrl, signatureStatus: 'pending' });
+        toast({ title: "Identity URL Saved", description: "Awaiting HR validation." });
     };
 
     if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse">Synchronizing Identity...</div>;
@@ -172,7 +182,7 @@ export default function ProfilePage() {
                     <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
                         <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><ShieldCheck className="size-4 text-primary"/> Digital Signature</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
-                            {employee.signatureUrl ? (
+                            {employee.signatureUrl && (
                                 <div className="space-y-3">
                                     <div className="p-3 bg-muted/20 rounded-xl border border-dashed border-primary/20 flex items-center justify-center grayscale invert">
                                         <Image src={employee.signatureUrl} alt="E-Signature" width={150} height={60} className="object-contain opacity-60" />
@@ -185,20 +195,38 @@ export default function ProfilePage() {
                                         )}
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="h-24 bg-muted/10 rounded-xl border-2 border-dashed border-muted/50 flex flex-col items-center justify-center gap-2">
-                                        <Camera className="size-6 opacity-20" />
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Upload Image Asset</p>
-                                    </div>
+                            )}
+                            
+                            <Tabs defaultValue="upload" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2 bg-muted/50 rounded-lg">
+                                    <TabsTrigger value="upload" className="text-[10px] font-black uppercase">Upload</TabsTrigger>
+                                    <TabsTrigger value="url" className="text-[10px] font-black uppercase">URL</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="upload" className="pt-4">
                                     <div className="relative">
                                         <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
                                         <Button className="w-full rounded-full h-10 text-[10px] font-black uppercase tracking-widest" disabled={isUploadingSignature}>
-                                            {isUploadingSignature ? "Processing..." : "Add Signature"}
+                                            {isUploadingSignature ? "Processing..." : employee.signatureUrl ? "Update Signature" : "Upload Identity Asset"}
                                         </Button>
                                     </div>
-                                </div>
-                            )}
+                                </TabsContent>
+                                <TabsContent value="url" className="pt-4 space-y-3">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-black uppercase text-muted-foreground">Signature Image URL</Label>
+                                        <div className="flex gap-2">
+                                            <Input 
+                                                value={manualSignatureUrl} 
+                                                onChange={e => setManualSignatureUrl(e.target.value)} 
+                                                placeholder="https://hosted-signature.png" 
+                                                className="h-9 text-xs rounded-xl"
+                                            />
+                                            <Button size="icon" className="shrink-0 rounded-xl" onClick={handleManualSignatureSave}>
+                                                <Save className="size-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
                         </CardContent>
                     </Card>
                 </div>

@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfToday, isSameDay, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
-import { Grid, ShieldCheck, MapPin, Camera, CheckCircle2, Clock, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Info, AlertTriangle, Users } from 'lucide-react';
+import { Grid, ShieldCheck, MapPin, Camera, CheckCircle2, Clock, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Info, AlertTriangle, Users, Save, Link as LinkIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 
 type AttendanceRecord = {
   id: string;
@@ -41,6 +42,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   
   const [isUploading, setIsUploading] = React.useState(false);
   const [currentMonth, setCurrentMonth] = React.useState(startOfMonth(new Date()));
+  const [manualSignatureUrl, setManualSignatureUrl] = React.useState("");
 
   const userDocRef = useMemoFirebase(() => (userId ? doc(firestore, 'users', userId) : null), [firestore, userId]);
   const { data: user, isLoading: isUserLoading } = useDoc<any>(userDocRef);
@@ -85,8 +87,20 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         const url = await getDownloadURL(snap.ref);
         updateDocumentNonBlocking(userDocRef!, { signatureUrl: url, signatureStatus: 'pending' });
         toast({ title: "Asset Uploaded", description: "Awaiting leadership audit." });
-    } catch (e: any) { toast({ variant: 'destructive', title: "Bucket Error", description: "Initialize Storage in console." }); } finally { setIsUploading(false); }
+    } catch (e: any) { 
+        toast({ variant: 'destructive', title: "Bucket Error", description: "Initialize Storage in console or use direct URL option." }); 
+    } finally { setIsUploading(false); }
   };
+
+  const handleManualSignatureSave = () => {
+    if (!userDocRef || !manualSignatureUrl) return;
+    updateDocumentNonBlocking(userDocRef, { signatureUrl: manualSignatureUrl, signatureStatus: 'pending' });
+    toast({ title: "Asset URL Saved" });
+  };
+
+  React.useEffect(() => {
+      if (user?.signatureUrl) setManualSignatureUrl(user.signatureUrl);
+  }, [user]);
 
   if (isUserLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Syncing Satellite Profile...</div>;
   if (!user) return notFound();
@@ -146,13 +160,64 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         <p className="text-sm font-medium italic">"{c.reason}"</p>
                     </div>)) : <div className="py-20 text-center opacity-30 text-[10px] font-black">All standards maintained.</div>}
                 </ScrollArea></CardContent></Card></TabsContent>
-        <TabsContent value="identity" className="pt-6 px-4"><Card className="border-none rounded-3xl shadow-inner bg-secondary/10"><CardContent className="p-8 flex flex-col items-center text-center space-y-6">
+        <TabsContent value="identity" className="pt-6 px-4">
+            <Card className="border-none rounded-3xl shadow-inner bg-secondary/10">
+                <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
                     <h3 className="font-black uppercase text-xs tracking-widest text-primary">Identity Asset Verification</h3>
-                    {user.signatureUrl ? (
-                        <div className="space-y-6 w-full max-w-sm"><div className="p-6 bg-white rounded-3xl border-2 border-dashed border-primary/20 relative shadow-sm"><Image src={user.signatureUrl} alt="Signature" width={400} height={200} className="object-contain grayscale invert mix-blend-multiply opacity-70" /><div className="absolute top-4 right-4">{user.signatureStatus === 'approved' ? <Badge className="bg-green-100 text-green-700 uppercase text-[8px] font-black">Verified</Badge> : <Badge variant="outline" className="bg-yellow-50 text-yellow-700 uppercase text-[8px] font-black">Pending Audit</Badge>}</div></div>
-                            {user.signatureStatus !== 'approved' && isAdmin && <Button className="w-full rounded-full h-12 font-black uppercase" onClick={() => updateDocumentNonBlocking(userDocRef!, { signatureStatus: 'approved' })}>Confirm Integrity</Button>}
-                        </div>) : (<div className="w-full max-w-sm space-y-6"><div className="aspect-video bg-white rounded-3xl border-2 border-dashed flex flex-col items-center justify-center opacity-50"><Camera className="size-10 mb-2"/><p className="text-[10px] font-black uppercase">Identity Slot Empty</p></div><div className="relative"><input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploading} /><Button disabled={isUploading} className="w-full rounded-full h-12 font-black uppercase">{isUploading ? 'Transmitting...' : 'Upload Asset'}</Button></div></div>)}
-                </CardContent></Card></TabsContent>
+                    <div className="w-full max-w-sm space-y-6">
+                        {user.signatureUrl ? (
+                            <div className="p-6 bg-white rounded-3xl border-2 border-dashed border-primary/20 relative shadow-sm">
+                                <Image src={user.signatureUrl} alt="Signature" width={400} height={200} className="object-contain grayscale invert mix-blend-multiply opacity-70" />
+                                <div className="absolute top-4 right-4">
+                                    {user.signatureStatus === 'approved' ? <Badge className="bg-green-100 text-green-700 uppercase text-[8px] font-black">Verified</Badge> : <Badge variant="outline" className="bg-yellow-50 text-yellow-700 uppercase text-[8px] font-black">Pending Audit</Badge>}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="aspect-video bg-white rounded-3xl border-2 border-dashed flex flex-col items-center justify-center opacity-50">
+                                <Camera className="size-10 mb-2"/>
+                                <p className="text-[10px] font-black uppercase">Identity Slot Empty</p>
+                            </div>
+                        )}
+                        
+                        <div className="space-y-4">
+                            <Tabs defaultValue="upload" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2 rounded-xl h-12 bg-white/50 border">
+                                    <TabsTrigger value="upload" className="font-black uppercase text-[10px]">File Upload</TabsTrigger>
+                                    <TabsTrigger value="url" className="font-black uppercase text-[10px]">Manual URL</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="upload" className="pt-4">
+                                    <div className="relative">
+                                        <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploading} />
+                                        <Button disabled={isUploading} className="w-full rounded-full h-12 font-black uppercase">
+                                            {isUploading ? 'Transmitting...' : 'Upload Asset'}
+                                        </Button>
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="url" className="pt-4 space-y-3">
+                                    <div className="flex gap-2">
+                                        <Input 
+                                            value={manualSignatureUrl} 
+                                            onChange={e => setManualSignatureUrl(e.target.value)} 
+                                            placeholder="https://link-to-signature.png" 
+                                            className="h-12 rounded-xl"
+                                        />
+                                        <Button size="icon" className="h-12 w-12 rounded-xl" onClick={handleManualSignatureSave}>
+                                            <Save className="size-5" />
+                                        </Button>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-muted-foreground italic">Save direct image link if upload fails.</p>
+                                </TabsContent>
+                            </Tabs>
+                            {user.signatureStatus !== 'approved' && isAdmin && (
+                                <Button className="w-full rounded-full h-12 font-black uppercase bg-green-600 hover:bg-green-700" onClick={() => updateDocumentNonBlocking(userDocRef!, { signatureStatus: 'approved' })}>
+                                    Confirm Integrity & Approve
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
