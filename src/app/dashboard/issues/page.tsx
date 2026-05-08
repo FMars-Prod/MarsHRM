@@ -1,59 +1,18 @@
+
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetDescription
-} from "@/components/ui/sheet";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { PlusCircle, MoreHorizontal, Trash2, Ticket } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
@@ -61,197 +20,134 @@ import { doc, collection, serverTimestamp, orderBy, query } from "firebase/fires
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { WithId } from "@/firebase/firestore/use-collection";
 
-type IssueStatus = "Open" | "In Progress" | "Resolved";
+type TicketStatus = "Open" | "In Progress" | "Resolved";
 
-type Issue = {
+type SupportTicket = {
   title: string;
   description: string;
-  status: IssueStatus;
+  status: TicketStatus;
   employeeId: string;
   submittedBy: string;
   submissionDate: any;
-  issueType: string;
+  category: string;
 };
 
-type IssueWithId = WithId<Issue>;
+const CATEGORIES = ["Mac Laptop Issue", "Windows Laptop Issue", "Chair Broken", "ID Card Broken", "Others"];
 
-export default function IssuesPage() {
+export default function TicketsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [selectedIssue, setSelectedIssue] = React.useState<IssueWithId | null>(null);
-
-  const userDocRef = useMemoFirebase(
-    () => (user ? doc(firestore, "users", user.uid) : null),
-    [user, firestore]
-  );
-  const { data: userData } = useDoc(userDocRef);
-  const userRole = (userData as any)?.role || 'Member';
-  
-  const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
-  
-  const issuesQuery = useMemoFirebase(
-      () => query(collection(firestore, "issue_reports"), orderBy("submissionDate", "desc")),
-      [firestore]
-  );
-  const { data: issues, isLoading } = useCollection<Issue>(issuesQuery);
-
+  const [selectedTicket, setSelectedTicket] = React.useState<WithId<SupportTicket> | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [newTitle, setNewTitle] = React.useState('');
   const [newDescription, setNewDescription] = React.useState('');
+  const [newCategory, setNewCategory] = React.useState(CATEGORIES[0]);
 
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
+  const { data: userData } = useDoc(userDocRef);
+  const userRole = (userData as any)?.role || 'Member';
+  const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+  
+  const ticketsQuery = useMemoFirebase(() => query(collection(firestore, "issue_reports"), orderBy("submissionDate", "desc")), [firestore]);
+  const { data: tickets, isLoading } = useCollection<SupportTicket>(ticketsQuery);
 
-  const handleStatusChange = (issueId: string, newStatus: IssueStatus) => {
-    const issueRef = doc(firestore, 'issue_reports', issueId);
-    updateDocumentNonBlocking(issueRef, { status: newStatus });
-  };
-
-  const handleCreateIssue = () => {
+  const handleCreateTicket = () => {
     if (!newTitle || !newDescription || !user || !userData) {
         toast({ variant: "destructive", title: "Missing fields" });
         return;
     }
-    const issuePayload = {
+    const payload = {
         title: newTitle,
         description: newDescription,
-        status: "Open" as IssueStatus,
+        status: "Open" as TicketStatus,
         employeeId: user.uid,
         submittedBy: `${(userData as any).firstName} ${(userData as any).lastName}`,
         submissionDate: serverTimestamp(),
-        issueType: "General",
+        category: newCategory,
     }
-    addDocumentNonBlocking(collection(firestore, 'issue_reports'), issuePayload);
-    toast({ title: "Issue Submitted" });
+    addDocumentNonBlocking(collection(firestore, 'issue_reports'), payload);
+    toast({ title: "Ticket Logged" });
     setIsCreateDialogOpen(false);
     setNewTitle('');
     setNewDescription('');
   }
 
-  const handleDeleteIssue = (issueId: string) => {
-    deleteDocumentNonBlocking(doc(firestore, 'issue_reports', issueId));
-    toast({ title: "Issue Deleted", description: "The issue has been removed." });
-  };
-
-  const issueData = isAdmin ? issues : issues?.filter(issue => issue.employeeId === user?.uid);
+  const ticketData = isAdmin ? tickets : tickets?.filter(t => t.employeeId === user?.uid);
 
   return (
     <>
-      <PageHeader
-        title="Issue Reporter"
-        description="Log non-emergency issues or view the status of existing ones."
-        className="animate-fade-in-up"
-      >
+      <PageHeader title="Support Desk" description="Log hardware or facility tickets for rapid resolution.">
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2" />
-              Report New Issue
-            </Button>
+            <Button className="rounded-full shadow-lg h-11"><PlusCircle className="mr-2 size-4" /> Open New Ticket</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Report a New Issue</DialogTitle>
-              <DialogDescription>
-                Describe the issue you're encountering.
-              </DialogDescription>
+                <DialogTitle className="text-xl font-black uppercase">Technical Support Desk</DialogTitle>
+                <DialogDescription>Submit a maintenance or hardware request.</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="title" className="text-right">
-                  Title
-                </Label>
-                <Input id="title" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g., Office AC not working" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label htmlFor="description" className="text-right pt-2">
-                  Description
-                </Label>
-                <Textarea id="description" value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Provide more details..." className="col-span-3" />
-              </div>
-            </div>
+            <ScrollArea className="max-h-[60vh] -mx-6 px-6">
+                <div className="grid gap-6 py-4">
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Ticket Subject</Label>
+                        <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g., Screen flickers periodically" className="rounded-xl" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Category</Label>
+                        <div className="flex flex-wrap gap-2">
+                            {CATEGORIES.map(cat => (
+                                <button key={cat} onClick={() => setNewCategory(cat)} className={cn("px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all", newCategory === cat ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground border-border hover:border-primary/50")}>{cat}</button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Contextual Description</Label>
+                        <Textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Provide specific details of the issue..." className="rounded-xl min-h-[120px]" />
+                    </div>
+                </div>
+            </ScrollArea>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateIssue}>Submit Issue</Button>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="rounded-full">Cancel</Button>
+              <Button onClick={handleCreateTicket} className="rounded-full">Dispatch Ticket</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </PageHeader>
-      <Sheet onOpenChange={(isOpen) => !isOpen && setSelectedIssue(null)}>
-        <div className="border rounded-lg overflow-x-auto animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '100ms' }}>
+      
+      <div className="border rounded-2xl overflow-hidden shadow-sm bg-white/50">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/30">
               <TableRow>
-                <TableHead>Title</TableHead>
-                {isAdmin && <TableHead>Submitted By</TableHead>}
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-[10px] font-black uppercase">Ticket</TableHead>
+                <TableHead className="text-[10px] font-black uppercase">Category</TableHead>
+                <TableHead className="text-[10px] font-black uppercase">Status</TableHead>
+                <TableHead className="text-right text-[10px] font-black uppercase">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading issues...</TableCell></TableRow>
-              ) : (issueData || []).map((issue) => (
-                <TableRow key={issue.id}>
-                  <TableCell className="font-medium">{issue.title}</TableCell>
-                  {isAdmin && <TableCell>{issue.submittedBy}</TableCell>}
+                <TableRow><TableCell colSpan={4} className="h-32 text-center">Scanning dispatch log...</TableCell></TableRow>
+              ) : ticketData?.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="font-bold">{t.title}</TableCell>
+                  <TableCell><Badge variant="secondary" className="text-[10px] rounded-full">{t.category}</Badge></TableCell>
                   <TableCell>
-                    <Badge variant="outline"
-                      className={cn(
-                          issue.status === 'Open' && 'text-red-600 border-red-600/50',
-                          issue.status === 'In Progress' && 'text-yellow-600 border-yellow-600/50',
-                          issue.status === 'Resolved' && 'text-green-600 border-green-600/50'
-                      )}
-                    >{issue.status}</Badge>
+                    <Badge variant="outline" className={cn("rounded-full text-[10px] font-black", t.status === 'Open' ? 'text-red-600 border-red-200' : t.status === 'In Progress' ? 'text-yellow-600 border-yellow-200' : 'text-green-600 border-green-200')}>
+                        {t.status.toUpperCase()}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <SheetTrigger asChild>
-                          <DropdownMenuItem onClick={() => setSelectedIssue(issue)}>View Details</DropdownMenuItem>
-                        </SheetTrigger>
+                        <DropdownMenuItem onClick={() => setSelectedTicket(t)}><Ticket className="mr-2 size-4"/> View Ticket</DropdownMenuItem>
                         {isAdmin && (
-                          <>
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent>
-                                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'Open')}>Open</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'In Progress')}>In Progress</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleStatusChange(issue.id, 'Resolved')}>Resolved</DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                             <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete this issue report.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteIssue(issue.id)}>
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </>
+                            <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(firestore, 'issue_reports', t.id))} className="text-destructive"><Trash2 className="mr-2 size-4" /> Purge</DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -260,44 +156,20 @@ export default function IssuesPage() {
               ))}
             </TableBody>
           </Table>
-        </div>
-        {selectedIssue && (
-            <SheetContent>
+      </div>
+
+      <Sheet open={!!selectedTicket} onOpenChange={o => !o && setSelectedTicket(null)}>
+        <SheetContent className="rounded-l-3xl border-none shadow-2xl">
             <SheetHeader>
-                <SheetTitle>Issue Details</SheetTitle>
-                <SheetDescription>
-                    Review the details of the reported issue.
-                </SheetDescription>
+                <SheetTitle className="text-xl font-black uppercase tracking-tighter">Support Ticket Details</SheetTitle>
+                <SheetDescription>Reference ID: {selectedTicket?.id.slice(0,8)}</SheetDescription>
             </SheetHeader>
-            <Separator className="my-4" />
-            <div className="space-y-4">
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Title</p>
-                    <p className="font-semibold">{selectedIssue.title}</p>
-                </div>
-                {isAdmin && (
-                  <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Submitted By</p>
-                      <p className="font-semibold">{selectedIssue.submittedBy}</p>
-                  </div>
-                )}
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <Badge variant="outline"
-                      className={cn(
-                          selectedIssue.status === 'Open' && 'text-red-600 border-red-600/50',
-                          selectedIssue.status === 'In Progress' && 'text-yellow-600 border-yellow-600/50',
-                          selectedIssue.status === 'Resolved' && 'text-green-600 border-green-600/50'
-                      )}
-                    >{selectedIssue.status}</Badge>
-                </div>
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Description</p>
-                    <p className="text-sm whitespace-pre-wrap">{selectedIssue.description}</p>
-                </div>
+            <div className="py-8 space-y-6">
+                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Subject</p><p className="font-bold">{selectedTicket?.title}</p></div>
+                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Classification</p><p className="font-bold">{selectedTicket?.category}</p></div>
+                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Description</p><p className="text-sm whitespace-pre-wrap">{selectedTicket?.description}</p></div>
             </div>
-            </SheetContent>
-        )}
+        </SheetContent>
       </Sheet>
     </>
   );

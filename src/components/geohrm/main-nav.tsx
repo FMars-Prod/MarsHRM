@@ -26,6 +26,8 @@ import {
   MapPin,
   ClipboardList,
   LayoutTemplate,
+  ShieldAlert,
+  CalendarDays
 } from "lucide-react";
 import React from "react";
 
@@ -37,15 +39,17 @@ const links = [
   { href: "/dashboard/announcements", label: "Announcements", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
   { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
   { href: "/dashboard/payslips", label: "Payslips", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-  { href: "/dashboard/issues", label: "Issues", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/issues", label: "Tickets", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/policies", label: "Policies", icon: ShieldCheck, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/compliance", label: "Compliance", icon: ShieldAlert, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/core-team-report", label: "Core Team Report", icon: ClipboardList, roles: ['Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/monitor", label: "Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/holidays", label: "Holidays", icon: CalendarDays, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/report-templates", label: "Report Templates", icon: LayoutTemplate, roles: ['HR Manager', 'CEO/Admin'] },
-  { href: "/dashboard/location-requests", label: "Location Requests", icon: MapPin, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
+  { href: "/dashboard/location-requests", label: "WFH Requests", icon: MapPin, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
 ];
 

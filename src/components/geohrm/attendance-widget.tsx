@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -58,7 +59,7 @@ interface Location {
 
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
   if (!loc1 || !loc2 || isNaN(loc1.latitude) || isNaN(loc1.longitude) || isNaN(loc2.latitude) || isNaN(loc2.longitude)) return Infinity;
-  const R = 6371; // Radius of the Earth in km
+  const R = 6371; // Radius in km
   const dLat = (loc2.latitude - loc1.latitude) * (Math.PI / 180);
   const dLon = (loc2.longitude - loc1.longitude) * (Math.PI / 180);
   const a =
@@ -79,7 +80,7 @@ export function AttendanceWidget() {
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
   const [currentUserLocation, setCurrentUserLocation] = useState<Location | null>(null);
-  const [distance, setDistance] = useState<number | null>(null);
+  const [distance, setDistance] = useState<number>(0);
   const [isVerifyingLocation, setIsVerifyingLocation] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -137,12 +138,6 @@ export function AttendanceWidget() {
       return doc(firestore, `users/${user.uid}/attendances`, todayId);
   }, [user, firestore]);
   
-  const getYesterdayAttendanceRef = useMemoFirebase(() => {
-      if (!user || !lastClockInTime) return null;
-      const yesterdayId = format(lastClockInTime, 'yyyy-MM-dd');
-      return doc(firestore, `users/${user.uid}/attendances`, yesterdayId);
-  }, [user, firestore, lastClockInTime]);
-
   const {data: todaysAttendance} = useDoc(getTodaysAttendanceRef);
 
   useEffect(() => {
@@ -160,7 +155,6 @@ export function AttendanceWidget() {
             } else {
                 setStatus("in");
             }
-            
             setHasClockedOutToday(false);
             setLastClockInTime(todaysAttendance.checkInTime.toDate());
             const secondsSinceClockIn = (new Date().getTime() - todaysAttendance.checkInTime.toMillis()) / 1000;
@@ -177,27 +171,6 @@ export function AttendanceWidget() {
         setLastClockInTime(null);
     }
   }, [todaysAttendance]);
-
-  const handleAutoClockOut = () => {
-    if (getYesterdayAttendanceRef && lastClockInTime) {
-      const midnight = endOfDay(lastClockInTime);
-      updateDocumentNonBlocking(getYesterdayAttendanceRef, {
-        checkOutTime: Timestamp.fromDate(midnight),
-        totalBreakDuration: totalBreakTime,
-        checkOutNotes: "Automatically clocked out at midnight."
-      });
-      toast({
-        title: "Automatically Clocked Out",
-        description: "You were clocked out as the day has changed.",
-      });
-      setStatus("out");
-      setHasClockedOutToday(false);
-      setTimer(0);
-      setBreakTimer(0);
-      setTotalBreakTime(0);
-      setLastClockInTime(null);
-    }
-  }
 
   const proceedWithBreakEnd = (userLocation: Location, dist: number, reason?: string) => {
       const updatedBreakTime = totalBreakTime + breakTimer;
@@ -217,6 +190,7 @@ export function AttendanceWidget() {
               const newNote = `${breakType} Return (${format(new Date(), 'p')}): ${reason}`;
               const existingNotes = (todaysAttendance as any)?.checkInNotes || "";
               payload.checkInNotes = existingNotes ? `${existingNotes}\n${newNote}` : newNote;
+              payload.isOutOfRange = true;
           }
           updateDocumentNonBlocking(getTodaysAttendanceRef, payload);
       }
@@ -231,7 +205,6 @@ export function AttendanceWidget() {
 
   const handleLunch = () => {
     if (status === "lunch") {
-        if (!user) return;
         setIsVerifyingLocation(true);
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -239,7 +212,7 @@ export function AttendanceWidget() {
               const dist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : 0;
               
               setIsVerifyingLocation(false);
-              if (officeLocation && dist > maxDistanceKm) {
+              if (officeLocation && dist > maxDistanceKm && !isAdminOrCEO) {
                   setOutOfRangeAction(() => () => proceedWithBreakEnd(userLocation, dist, outOfRangeReason));
                   setIsOutOfRangeReasonDialogOpen(true);
               } else {
@@ -248,12 +221,11 @@ export function AttendanceWidget() {
             },
             () => {
                 setIsVerifyingLocation(false);
-                toast({ variant: "destructive", title: "Location Error", description: "Could not get location. Please enable location services."});
+                toast({ variant: "destructive", title: "Location Error", description: "Enable GPS to end lunch."});
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 10000 }
         );
     } else {
-      if (!user) return;
       setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -267,12 +239,12 @@ export function AttendanceWidget() {
               }
               setStatus("lunch");
               setIsVerifyingLocation(false);
-              toast({ title: "Lunch Break Started (L-OUT)", description: "Your L-OUT location has been recorded." });
+              toast({ title: "Lunch Started (L-OUT)", description: "Location recorded." });
           },
           () => {
               setStatus("lunch");
               setIsVerifyingLocation(false);
-              toast({ variant: "destructive", title: "Location Warning", description: "L-OUT started but location couldn't be captured." });
+              toast({ variant: "destructive", title: "Location Error", description: "GPS required for lunch." });
           },
           { enableHighAccuracy: true, timeout: 10000 }
       );
@@ -285,25 +257,19 @@ export function AttendanceWidget() {
           proceedWithBreakEnd(userLocation, 0);
       } else {
           setStatus("short_break");
-          toast({ title: "Short Break Started", description: "Your work session is paused." });
+          toast({ title: "Short Break Started" });
       }
   }
-
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     if (status === "in") {
       interval = setInterval(() => {
-        if (lastClockInTime && !isSameDay(new Date(), lastClockInTime)) {
-            handleAutoClockOut();
-        } else {
-            setTimer((prev) => prev + 1);
-        }
+          setTimer((prev) => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [status, lastClockInTime]);
-
+  }, [status]);
 
   useEffect(() => {
     let breakInterval: NodeJS.Timeout | undefined;
@@ -336,6 +302,7 @@ export function AttendanceWidget() {
               locationCheckInLatitude: userLocation.latitude,
               locationCheckInLongitude: userLocation.longitude,
               checkInNotes: reason,
+              isOutOfRange: !!reason,
           };
           setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
       }
@@ -346,70 +313,51 @@ export function AttendanceWidget() {
       setBreakTimer(0);
       setTotalBreakTime(0);
       setHasClockedOutToday(false);
-      toast({ 
-        title: attendanceStatus === 'late' ? "Late Clock-In Recorded" : "Clocked In", 
-        description: `Location recorded for ${reason || 'clock-in'}. Status: ${attendanceStatus.toUpperCase()}` 
-      });
+      toast({ title: "Clocked In", description: `Status: ${attendanceStatus.toUpperCase()}` });
   }
 
   const handleClockIn = () => {
-    if (!user) {
-        toast({ variant: "destructive", title: "Cannot Clock In", description: "User not logged in." });
-        return;
-    }
-
     setIsVerifyingLocation(true);
     navigator.geolocation.getCurrentPosition(
         (position) => {
             const userLocation: Location = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+            setIsVerifyingLocation(false);
+            
+            if (isAdminOrCEO) {
+                proceedWithClockIn(userLocation, 0);
+                return;
+            }
+
             const homeLat = (userData as any)?.homeLatitude;
             const homeLon = (userData as any)?.homeLongitude;
-            const homeRange = (userData as any)?.homeLocationRangeKm === 0 ? 0 : ((userData as any)?.homeLocationRangeKm || 5);
+            const homeRange = (userData as any)?.homeLocationRangeKm || 5;
             
-            setIsVerifyingLocation(false);
             if (officeLocation) {
                 const officeDist = getDistanceInKm(userLocation, officeLocation);
                 if (officeDist <= maxDistanceKm) {
-                    proceedWithClockIn(userLocation, officeDist, "Office");
+                    proceedWithClockIn(userLocation, officeDist);
                     return;
                 }
             }
 
-            if (isWfhAllowed || isAdminOrCEO) {
-                if (homeLat && homeLon) {
-                    const homeLocation = { latitude: homeLat, longitude: homeLon };
-                    const homeDist = getDistanceInKm(userLocation, homeLocation);
-
-                    if (homeDist <= homeRange) {
-                        proceedWithClockIn(userLocation, homeDist, "Work From Home");
-                        return;
-                    }
+            if (isWfhAllowed && homeLat && homeLon) {
+                const homeLocation = { latitude: homeLat, longitude: homeLon };
+                const homeDist = getDistanceInKm(userLocation, homeLocation);
+                if (homeDist <= homeRange) {
+                    proceedWithClockIn(userLocation, homeDist, "WFH Area");
+                    return;
                 }
             }
 
-            const officeDist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : Infinity;
-
-            let infoMsg = '';
-            if ((isWfhAllowed || isAdminOrCEO) && homeLat && homeLon) {
-                 const homeLocation = { latitude: homeLat, longitude: homeLon };
-                 const homeDist = getDistanceInKm(userLocation, homeLocation);
-                 infoMsg = `You are outside your designated locations. You are ${officeDist.toFixed(2)} km from the office (max ${maxDistanceKm} km) and ${homeDist.toFixed(2)} km from home (max ${homeRange} km).`
-            } else if (officeLocation) {
-                infoMsg = `You are ${officeDist.toFixed(2)} km from the office. The allowed clock-in radius is ${maxDistanceKm} km.`
-            } else {
-                infoMsg = 'You are not within any designated clock-in area.'
-            }
-            setOutOfRangeInfo(infoMsg);
-            
-            setDistance(officeDist);
-            setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, officeDist, outOfRangeReason));
+            setOutOfRangeInfo("You are outside designated areas.");
+            setOutOfRangeAction(() => () => proceedWithClockIn(userLocation, 0, outOfRangeReason));
             setIsOutOfRangeReasonDialogOpen(true);
         },
         () => {
             setIsVerifyingLocation(false);
-            toast({ variant: "destructive", title: "Location Error", description: "Could not get your location. Please enable location services." });
+            toast({ variant: "destructive", title: "Location Error", description: "GPS required." });
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
@@ -428,83 +376,25 @@ export function AttendanceWidget() {
               const { latitude, longitude } = position.coords;
               const todayId = format(new Date(), 'yyyy-MM-dd');
               const attRef = doc(firestore, `users/${user!.uid}/attendances`, todayId);
-              
-              setDocumentNonBlocking(attRef, {
+              updateDocumentNonBlocking(attRef, {
                   checkOutTime: serverTimestamp(),
                   locationCheckOutLatitude: latitude,
                   locationCheckOutLongitude: longitude,
-              }, { merge: true });
-
+              });
               setIsVerifyingLocation(false);
-              toast({ title: "Shift Finished", description: "Your end-of-day location has been recorded." });
               setStatus("out");
               setHasClockedOutToday(true);
+              toast({ title: "Clocked Out" });
           },
-          (error) => {
+          () => {
               setIsVerifyingLocation(false);
-              toast({ variant: 'destructive', title: 'Location Error', description: "Failed to verify end-of-day location." });
-          },
-          { enableHighAccuracy: true, timeout: 10000 }
+              toast({ variant: 'destructive', title: 'Location Error' });
+          }
       );
-  }
-
-  const handleSaveSettings = async () => {
-      const lat = parseFloat(newLatitude);
-      const lon = parseFloat(newLongitude);
-      const range = parseFloat(newMaxDistance);
-      const lunchDuration = parseInt(newLunchDuration);
-
-      if (isNaN(lat) || isNaN(lon) || isNaN(range) || !newShiftStart || !newShiftEnd || !newLunchStart || isNaN(lunchDuration)) {
-          toast({ variant: "destructive", title: "Invalid Input", description: "Please enter valid numbers and times." });
-          return;
-      }
-      
-      if (officeLocationDocRef) {
-        setDocumentNonBlocking(officeLocationDocRef, { 
-            latitude: lat, 
-            longitude: lon, 
-            maxDistanceKm: range,
-            shiftStartTime: newShiftStart,
-            shiftEndTime: newShiftEnd,
-            lunchBreakStartTime: newLunchStart,
-            lunchBreakDurationMinutes: lunchDuration
-        }, { merge: true });
-        toast({ title: "Settings Updated", description: "The office settings have been saved." });
-        setIsSettingsDialogOpen(false);
-      }
-  }
-
-  const handleCaptureOfficeLocation = () => {
-      setIsVerifyingLocation(true);
-      navigator.geolocation.getCurrentPosition(
-          (position) => {
-              setNewLatitude(position.coords.latitude.toString());
-              setNewLongitude(position.coords.longitude.toString());
-              setIsVerifyingLocation(false);
-              toast({ title: "Location Captured", description: "Coordinates updated to your current position." });
-          },
-          (error) => {
-              setIsVerifyingLocation(false);
-              toast({ variant: "destructive", title: "Capture Failed", description: error.message });
-          },
-          { enableHighAccuracy: true }
-      );
-  }
-  
-  const handleOutOfRangeSubmit = () => {
-      if (!outOfRangeReason) {
-          toast({ variant: "destructive", title: "Reason required", description: "Please provide a reason for being out of range."});
-          return;
-      }
-      if (outOfRangeAction) {
-          outOfRangeAction();
-      }
-      setIsOutOfRangeReasonDialogOpen(false);
-      setOutOfRangeReason("");
-      setOutOfRangeAction(null);
   }
 
   const formatTime = (totalSeconds: number) => {
+    if (!totalSeconds || isNaN(totalSeconds)) return "00:00:00";
     const hrs = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = Math.floor(totalSeconds % 60);
@@ -517,363 +407,94 @@ export function AttendanceWidget() {
     return isAfter(lastClockInTime, shiftStart);
   };
 
-  const milestones = useMemo(() => {
-    if (!officeLocation) return null;
-    const now = new Date();
-    
-    const parseTime = (timeStr: string) => {
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const d = new Date(now);
-        d.setHours(hours, minutes, 0, 0);
-        return d;
-    };
-
-    const lOut = officeLocation.lunchBreakStartTime ? parseTime(officeLocation.lunchBreakStartTime) : null;
-    let lIn = null;
-    if (lOut && officeLocation.lunchBreakDurationMinutes) {
-        lIn = addMinutes(lOut, officeLocation.lunchBreakDurationMinutes);
-    }
-    const logout = officeLocation.shiftEndTime ? parseTime(officeLocation.shiftEndTime) : null;
-
-    return { lOut, lIn, logout };
-  }, [officeLocation]);
-
-  const upcomingMilestone = useMemo(() => {
-    if (!milestones) return null;
-    const now = new Date();
-    if (milestones.lOut && now < milestones.lOut && differenceInMinutes(milestones.lOut, now) < 30) return { type: 'L-OUT', time: milestones.lOut };
-    if (milestones.lIn && now < milestones.lIn && differenceInMinutes(milestones.lIn, now) < 15) return { type: 'L-IN', time: milestones.lIn };
-    if (milestones.logout && now < milestones.logout && differenceInMinutes(milestones.logout, now) < 30) return { type: 'Log-out', time: milestones.logout };
-    return null;
-  }, [milestones]);
-
-  const formatCapturedLocation = (lat?: number, lng?: number) => {
-      if (lat === undefined || lng === undefined) return null;
-      return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-  }
+  const hasReturnedFromLunch = todaysAttendance?.locationLunchInLatitude;
 
   return (
     <>
-      {isVerifyingLocation && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-purple-900/80 to-indigo-950/90 backdrop-blur-xl">
-            <div className="relative">
-                <div className="h-32 w-32 rounded-full border-4 border-white/10 border-t-purple-400 animate-spin" />
-                <MapPin className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-10 text-purple-300 animate-pulse" />
-            </div>
-            <h2 className="mt-8 text-2xl font-black uppercase tracking-[0.3em] text-white">Verifying Point</h2>
-            <p className="mt-2 text-sm text-purple-200/60 font-medium">Synchronizing with high-precision GPS satellites...</p>
-            <div className="mt-10 w-64 h-1.5 bg-white/10 rounded-full overflow-hidden shadow-inner">
-                <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-400 animate-progress-loading" />
-            </div>
-        </div>
-      )}
-
-      <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm relative overflow-hidden">
+      <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-border/50 shadow-sm relative overflow-hidden">
         <CardHeader>
           <div className="flex items-start justify-between">
               <CardTitle className="font-headline flex items-center gap-2 text-primary">
-              <Clock className="size-5" />
-              High-Accuracy Attendance
+                <Clock className="size-5" />
+                Precision Attendance
               </CardTitle>
-              {isAdminOrCEO && (
-                  <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
-                      <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                              <Settings className="size-5" />
-                          </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md flex flex-col max-h-[90vh]">
-                          <DialogHeader>
-                              <DialogTitle>Company Settings</DialogTitle>
-                              <DialogDescription>
-                                  Set global settings for attendance and location.
-                              </DialogDescription>
-                          </DialogHeader>
-                          <div className="flex-1 overflow-y-auto -mx-6 px-6">
-                              <div className="grid gap-4 py-4 pr-2">
-                                <div className="p-4 bg-muted/30 rounded-xl space-y-3">
-                                      <Label className="text-xs font-black uppercase text-primary">Precision Setup</Label>
-                                      <div className="grid grid-cols-2 gap-4">
-                                          <div className="grid gap-2">
-                                              <Label htmlFor="latitude">Office Latitude</Label>
-                                              <Input id="latitude" value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} placeholder="e.g., 37.7749" />
-                                          </div>
-                                          <div className="grid gap-2">
-                                              <Label htmlFor="longitude">Office Longitude</Label>
-                                              <Input id="longitude" value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} placeholder="e.g., -122.4194" />
-                                          </div>
-                                      </div>
-                                      <Button variant="secondary" className="w-full h-10 font-bold uppercase text-[10px]" onClick={handleCaptureOfficeLocation}>
-                                          Pin Current Office Coordinates
-                                      </Button>
-                                </div>
-                                <div className="grid gap-2">
-                                      <Label htmlFor="range">Clock-in Range (km)</Label>
-                                      <Input id="range" type="number" value={newMaxDistance} onChange={(e) => setNewMaxDistance(e.target.value)} placeholder="e.g., 2" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="grid gap-2">
-                                        <Label htmlFor="shift-start">Shift Start Time (Late Trigger)</Label>
-                                        <Input id="shift-start" type="time" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)} />
-                                  </div>
-                                  <div className="grid gap-2">
-                                        <Label htmlFor="shift-end">Shift End Time</Label>
-                                        <Input id="shift-end" type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="grid gap-2">
-                                        <Label htmlFor="lunch-start">Lunch Start Time</Label>
-                                        <Input id="lunch-start" type="time" value={newLunchStart} onChange={(e) => setNewLunchStart(e.target.value)} />
-                                  </div>
-                                  <div className="grid gap-2">
-                                        <Label htmlFor="lunch-duration">Lunch Duration (mins)</Label>
-                                        <Input id="lunch-duration" type="number" value={newLunchDuration} onChange={(e) => setNewLunchDuration(e.target.value)} />
-                                  </div>
-                                </div>
-                              </div>
-                          </div>
-                          <DialogFooter className="mt-auto pt-4 border-t">
-                              <DialogClose asChild>
-                                  <Button variant="outline">Cancel</Button>
-                              </DialogClose>
-                              <Button onClick={handleSaveSettings}>Save Settings</Button>
-                          </DialogFooter>
-                      </DialogContent>
-                  </Dialog>
-              )}
           </div>
           <CardDescription>
-            Precise location verification. Designated:
-            <span className="font-semibold text-foreground">
-              {isWfhAllowed ? " Work From Home" : " Work From Office"}
-            </span>.
+            High-accuracy geofenced tracking active.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col items-center justify-center gap-6 text-center pb-8">
-          {isLocationLoading && !isWfhAllowed && !isAdminOrCEO ? (
-              <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                  <Building2 className="h-10 w-10 animate-pulse" />
-                  <p>Loading Location...</p>
-              </div>
-          ) : (officeLocation || isWfhAllowed || isAdminOrCEO) ? (
-            <>
-              {upcomingMilestone && (status === 'in' || status === 'lunch' || status === 'short_break') && (
-                  <div className="absolute top-0 left-0 right-0 p-2 bg-primary/10 border-b border-primary/20 animate-pulse flex items-center justify-center gap-2">
-                      <AlertCircle className="size-4 text-primary" />
-                      <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                          Upcoming Milestone: {upcomingMilestone.type} at {format(upcomingMilestone.time, 'p')}
-                      </span>
-                  </div>
-              )}
+            <div className={cn(
+              "flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs",
+              status === "in" && (isLate() ? "text-orange-600" : "text-green-600"),
+              status === "lunch" && "text-yellow-600",
+              status === "short_break" && "text-blue-600",
+              status === "out" && "text-muted-foreground"
+            )}>
+              {status === "in" && (isLate() ? <Clock className="size-4" /> : <Briefcase className="size-4" />)}
+              {status === "lunch" && <Utensils className="size-4" />}
+              {status === "out" && <CheckCircle2 className="size-4" />}
+              {hasClockedOutToday ? "Daily Session Complete" : status === 'lunch' ? "L-OUT Active" : isLate() ? "Late Log-In" : status.toUpperCase()}
+            </div>
+            
+            <div className="text-7xl font-black font-mono tabular-nums tracking-tighter text-primary">
+              {formatTime(timer)}
+            </div>
 
-              <div
-                className={cn(
-                  "flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs",
-                  status === "in" && (isLate() ? "text-orange-600" : "text-green-600"),
-                  status === "lunch" && "text-yellow-600",
-                  status === "short_break" && "text-blue-600",
-                  status === "out" && !hasClockedOutToday && "text-red-600",
-                  status === "out" && hasClockedOutToday && "text-muted-foreground"
-                )}
-              >
-                {status === "in" && (isLate() ? <Clock className="size-4" /> : <Briefcase className="size-4" />)}
-                {status === "lunch" && <Utensils className="size-4" />}
-                {status === "short_break" && <Coffee className="size-4" />}
-                {status === "out" && <CheckCircle2 className="size-4" />}
-
-                {
-                  hasClockedOutToday
-                    ? "Daily Session Complete"
-                    : status === 'lunch'
-                      ? "L-OUT Active"
-                      : status === 'short_break'
-                      ? "Short Break Active"
-                      : isLate() ? "Late Attendance" : `Clocked ${status.charAt(0).toUpperCase() + status.slice(1)}`
-                }
-              </div>
-              
-              <div className="space-y-1">
-                  <div className="text-7xl font-black font-mono tabular-nums tracking-tighter drop-shadow-sm text-primary">
-                  {formatTime(timer)}
-                  </div>
-                  {lastClockInTime && status !== "out" && (
-                  <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-bold px-3 py-1">
-                      Logged In At: {format(lastClockInTime, 'p')}
-                  </Badge>
-                  )}
-              </div>
-              
-              <div className="w-full max-w-2xl grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-                  <div className={cn(
-                      "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                      status !== 'out' ? "bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30 shadow-inner" : "bg-white/50 border-border/50"
-                  )}>
-                      <LogIn className={cn("size-5", status !== 'out' ? "text-primary" : "text-muted-foreground/50")} />
-                      <div className="text-center">
-                          <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log In</p>
-                          <p className="text-sm font-bold">{lastClockInTime ? format(lastClockInTime, 'p') : '--:--'}</p>
-                          {todaysAttendance?.locationCheckInLatitude && (
-                              <p className="text-[10px] text-primary/60 font-mono mt-1">
-                                  {formatCapturedLocation(todaysAttendance.locationCheckInLatitude, todaysAttendance.locationCheckInLongitude)}
-                              </p>
-                          )}
-                      </div>
-                  </div>
-
-                  <div className={cn(
-                      "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                      status === 'lunch' || todaysAttendance?.locationLunchOutLatitude ? "bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 border-yellow-200" : "bg-white/50 border-border/50"
-                  )}>
-                      <Utensils className={cn("size-5", status === 'lunch' ? "text-yellow-600" : "text-muted-foreground/50")} />
-                      <div className="text-center">
-                          <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-Out</p>
-                          <p className="text-sm font-bold">{todaysAttendance?.lunchOutTime ? format(todaysAttendance.lunchOutTime.toDate(), 'p') : '--:--'}</p>
-                          {todaysAttendance?.locationLunchOutLatitude && (
-                              <p className="text-[10px] text-yellow-600/60 font-mono mt-1">
-                                  {formatCapturedLocation(todaysAttendance.locationLunchOutLatitude, todaysAttendance.locationLunchOutLongitude)}
-                              </p>
-                          )}
-                      </div>
-                  </div>
-
-                  <div className={cn(
-                      "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                      todaysAttendance?.locationLunchInLatitude ? "bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-blue-200" : "bg-white/50 border-border/50"
-                  )}>
-                      <Clock className={cn("size-5", todaysAttendance?.locationLunchInLatitude ? "text-blue-600" : "text-muted-foreground/50")} />
-                      <div className="text-center">
-                          <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">L-In</p>
-                          <p className="text-sm font-bold">{todaysAttendance?.lunchInTime ? format(todaysAttendance.lunchInTime.toDate(), 'p') : '--:--'}</p>
-                          {todaysAttendance?.locationLunchInLatitude && (
-                              <p className="text-[10px] text-blue-600/60 font-mono mt-1">
-                                  {formatCapturedLocation(todaysAttendance.locationLunchInLatitude, todaysAttendance.locationLunchInLongitude)}
-                              </p>
-                          )}
-                      </div>
-                  </div>
-
-                  <div className={cn(
-                      "p-4 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-2",
-                      hasClockedOutToday ? "bg-gradient-to-br from-purple-500/20 to-purple-500/5 border-purple-200" : "bg-white/50 border-border/50"
-                  )}>
-                      <LogOut className={cn("size-5", hasClockedOutToday ? "text-purple-600" : "text-muted-foreground/50")} />
-                      <div className="text-center">
-                          <p className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground">Log-out</p>
-                          <p className="text-sm font-bold">{todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'}</p>
-                          {todaysAttendance?.locationCheckOutLatitude && (
-                              <p className="text-[10px] text-purple-600/60 font-mono mt-1">
-                                  {formatCapturedLocation(todaysAttendance.locationCheckOutLatitude, todaysAttendance.locationCheckOutLongitude)}
-                              </p>
-                          )}
-                      </div>
-                  </div>
-              </div>
-
-              <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6">
                 {(status === "lunch" || status === "short_break") && (
                   <div className="flex flex-col items-center">
                     <span className="text-[10px] font-black uppercase text-muted-foreground">Current Break</span>
-                    <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
-                      {formatTime(breakTimer)}
-                    </div>
+                    <div className="text-2xl font-bold font-mono tabular-nums">{formatTime(breakTimer)}</div>
                   </div>
                 )}
-                {totalBreakTime > 0 && (
-                  <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black uppercase text-muted-foreground">Total Break Today</span>
-                    <div className="text-2xl font-bold font-mono tabular-nums tracking-tighter">
-                      {formatTime(totalBreakTime)}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {currentUserLocation && (
-                <div className="flex items-center text-xs text-muted-foreground gap-1 bg-muted/30 px-3 py-1 rounded-full">
-                  <MapPin className="size-3" />
-                  <span className="font-medium">{`Point Lat: ${currentUserLocation.latitude.toFixed(4)}, Lon: ${currentUserLocation.longitude.toFixed(4)}`}</span>
-                  {distance !== null && distance > 0 && (
-                    <span className="text-primary font-bold">({distance.toFixed(2)} km from base)</span>
-                  )}
-                </div>
-              )}
-            </>
-          ) : (
-              <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                  <Building2 className="h-10 w-10" />
-                  <p className="max-w-xs font-medium">Location not set. Please contact Admin.</p>
-              </div>
-          )}
+            </div>
         </CardContent>
         <CardFooter className="flex justify-center items-center py-6 px-6 bg-muted/5 border-t">
           {status === 'out' && !hasClockedOutToday && (
-              <Button
-                  onClick={handleClockIn}
-                  className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-95 bg-primary text-white"
-                  disabled={!isWfhAllowed && !officeLocation && !isAdminOrCEO}
-              >
-                  <Clock className="mr-2 h-5 w-5" /> Start Shift
+              <Button onClick={handleClockIn} className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl bg-primary text-white">
+                  Start Shift
               </Button>
           )}
           {status !== 'out' && (
               <div className="flex flex-col sm:flex-row gap-4 w-full max-w-[600px] justify-center">
                   {status === "in" && (
                       <>
-                          <Button
-                              onClick={handleLunch}
-                              variant="outline"
-                              className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-white border-primary/20 text-primary hover:bg-primary/5"
-                          >
-                              <Utensils className="mr-2 h-4 w-4" /> L-OUT
-                          </Button>
-                          <Button
-                              onClick={handleShortBreak}
-                              variant="outline"
-                              className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-white border-primary/20 text-primary hover:bg-primary/5"
-                          >
-                              <Coffee className="mr-2 h-4 w-4" /> Short Break
+                          {!hasReturnedFromLunch && (
+                            <Button onClick={handleLunch} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white text-primary">
+                                L-OUT
+                            </Button>
+                          )}
+                          <Button onClick={handleShortBreak} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white text-primary">
+                              Short Break
                           </Button>
                       </>
                   )}
-
                   {status === "lunch" && (
-                      <Button
-                          onClick={handleLunch}
-                          className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-primary text-white"
-                      >
-                          <LogIn className="mr-2 h-4 w-4" /> L-IN
+                      <Button onClick={handleLunch} className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-primary text-white">
+                          L-IN
                       </Button>
                   )}
-
                   {status === "short_break" && (
-                      <Button
-                          onClick={handleShortBreak}
-                          className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8 bg-primary text-white"
-                      >
-                          <Clock className="mr-2 h-4 w-4" /> End Short Break
+                      <Button onClick={handleShortBreak} className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-primary text-white">
+                          Resume Work
                       </Button>
                   )}
-
                   <AlertDialog>
                       <AlertDialogTrigger asChild>
-                          <Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md transition-all active:scale-95 px-8">
+                          <Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md">
                               Finish Day
                           </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="rounded-3xl">
                           <AlertDialogHeader>
                               <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Ready to Clock Out?</AlertDialogTitle>
-                              <AlertDialogDescription className="font-medium text-muted-foreground">
-                                  {isAdminOrCEO 
-                                    ? "This will finalize your high-precision attendance record for today immediately." 
-                                    : "This will capture your final GPS coordinates and redirect you to the Reports page to finish your shift."}
-                              </AlertDialogDescription>
+                              <AlertDialogDescription>Capture final location and finish shift.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                              <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Continue Working</AlertDialogCancel>
+                              <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
                               <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px]">
-                                  {isAdminOrCEO ? "Confirm Clock Out" : "Go to Reports"}
+                                  Confirm
                               </AlertDialogAction>
                           </AlertDialogFooter>
                       </AlertDialogContent>
@@ -885,20 +506,30 @@ export function AttendanceWidget() {
         <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
           <DialogContent className="rounded-3xl">
               <DialogHeader>
-                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Location Out of Range</DialogTitle>
-                  <DialogDescription className="font-medium text-muted-foreground">{outOfRangeInfo}</DialogDescription>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Out of Range</DialogTitle>
+                  <DialogDescription>{outOfRangeInfo}</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                  <Label htmlFor="reason" className="font-bold text-xs uppercase tracking-widest text-primary">Provide Mandatory Reason for Action</Label>
-                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="e.g., Client visit, working from temporary location, GPS deviation..." className="rounded-2xl min-h-[100px]" />
+                  <Label htmlFor="reason" className="font-bold text-xs uppercase tracking-widest text-primary">Mandatory Justification</Label>
+                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Why are you out of range?" className="rounded-2xl min-h-[100px]" />
               </div>
-              <DialogFooter className="flex-col sm:flex-row gap-2">
-                  <Button variant="outline" className="rounded-full font-bold uppercase text-[10px]" onClick={() => { setIsOutOfRangeReasonDialogOpen(false); setOutOfRangeReason(""); }}>Cancel</Button>
-                  <Button onClick={handleOutOfRangeSubmit} className="rounded-full font-bold uppercase text-[10px] bg-primary text-white">Confirm and Proceed</Button>
+              <DialogFooter>
+                  <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="outline" className="rounded-full font-bold uppercase text-[10px]">Cancel</Button>
+                  <Button onClick={handleOutOfRangeSubmit} className="rounded-full font-bold uppercase text-[10px] bg-primary text-white">Confirm & Proceed</Button>
               </DialogFooter>
           </DialogContent>
         </Dialog>
       </Card>
     </>
   );
+
+  function handleOutOfRangeSubmit() {
+    if (!outOfRangeReason) {
+        toast({ variant: "destructive", title: "Reason Required" });
+        return;
+    }
+    if (outOfRangeAction) outOfRangeAction();
+    setIsOutOfRangeReasonDialogOpen(false);
+    setOutOfRangeReason("");
+  }
 }
