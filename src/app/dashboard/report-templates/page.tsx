@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -10,13 +9,17 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LayoutTemplate, Info, Download, Upload, Clock, Save, Trash2, Plus, FileJson, Beaker, BrainCircuit, ShieldCheck } from 'lucide-react';
+import { LayoutTemplate, Info, Download, Upload, Clock, Save, Trash2, Plus, FileJson, Beaker, BrainCircuit, ShieldCheck, Eye, TrendingUp, Target, DollarSign, Brain, CheckCircle2, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { SelectGroup, SelectLabel } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 type UserData = {
   id: string;
@@ -38,7 +41,7 @@ type CustomTemplate = {
     name: string;
     description: string;
     createdAt: any;
-    definition: any; // The JSON structure of the fields
+    definition: any;
 };
 
 const SYSTEM_TEMPLATES = [
@@ -92,6 +95,8 @@ export default function ReportTemplatesPage() {
     morningReportSlot: '09:50',
     eveningReportSlot: '18:50'
   });
+
+  const [previewTemplate, setPreviewTemplate] = React.useState<any | null>(null);
 
   React.useEffect(() => {
     if (configData?.timings) {
@@ -162,7 +167,7 @@ export default function ReportTemplatesPage() {
           }
       };
       reader.readAsText(file);
-      e.target.value = ''; // Reset input
+      e.target.value = '';
   };
 
   const handleDeleteCustomTemplate = (id: string) => {
@@ -282,9 +287,14 @@ export default function ReportTemplatesPage() {
                                     </TableCell>
                                     <TableCell className="py-4"><Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest bg-muted/20">System</Badge></TableCell>
                                     <TableCell className="text-right py-4">
-                                        <Button variant="ghost" size="sm" onClick={() => handleExportTemplate(s, true)} className="rounded-full font-bold uppercase text-[9px] hover:bg-primary/5">
-                                            <Download className="size-3 mr-2" /> Download Baseline
-                                        </Button>
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => setPreviewTemplate(s)} className="rounded-full font-bold uppercase text-[9px] hover:bg-primary/5">
+                                                <Eye className="size-3 mr-2" /> Preview
+                                            </Button>
+                                            <Button variant="ghost" size="sm" onClick={() => handleExportTemplate(s, true)} className="rounded-full font-bold uppercase text-[9px] hover:bg-primary/5">
+                                                <Download className="size-3 mr-2" /> Download Baseline
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -299,6 +309,9 @@ export default function ReportTemplatesPage() {
                                     <TableCell className="py-4"><Badge className="bg-orange-100 text-orange-700 border-none text-[9px] uppercase font-black tracking-widest">Custom</Badge></TableCell>
                                     <TableCell className="text-right py-4">
                                         <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => setPreviewTemplate(c)} className="rounded-full font-bold uppercase text-[9px]">
+                                                <Eye className="size-3 mr-2" /> Preview
+                                            </Button>
                                             <Button variant="ghost" size="sm" onClick={() => handleExportTemplate(c, false)} className="rounded-full font-bold uppercase text-[9px]">
                                                 <Download className="size-3 mr-2" /> Baseline
                                             </Button>
@@ -366,6 +379,217 @@ export default function ReportTemplatesPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={!!previewTemplate} onOpenChange={o => !o && setPreviewTemplate(null)}>
+          <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl">
+              <DialogHeader className="p-8 border-b bg-white">
+                  <div className="flex items-center gap-3">
+                      <div className="p-3 rounded-2xl bg-primary/10 text-primary"><LayoutTemplate className="size-6" /></div>
+                      <div>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Tactical Layout Preview</DialogTitle>
+                        <DialogDescription className="text-xs font-bold">{previewTemplate?.name} Configuration</DialogDescription>
+                      </div>
+                  </div>
+              </DialogHeader>
+              <div className="flex-1 min-h-0 bg-secondary/20">
+                  <Tabs defaultValue="enter" className="h-full flex flex-col">
+                      <div className="bg-white border-b px-8">
+                          <TabsList className="bg-transparent h-12 gap-8">
+                              <TabsTrigger value="enter" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent font-black uppercase text-[10px] tracking-widest h-full">Submission UI (Enter Format)</TabsTrigger>
+                              <TabsTrigger value="saved" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent font-black uppercase text-[10px] tracking-widest h-full">Audit Layout (Saved Preview)</TabsTrigger>
+                          </TabsList>
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                          <ScrollArea className="h-full">
+                              <div className="p-8">
+                                  <TabsContent value="enter" className="mt-0 space-y-8 animate-fade-in-up">
+                                      <PreviewSubmissionUI template={previewTemplate} />
+                                  </TabsContent>
+                                  <TabsContent value="saved" className="mt-0 space-y-8 animate-fade-in-up">
+                                      <PreviewAuditLayout template={previewTemplate} />
+                                  </TabsContent>
+                              </div>
+                          </ScrollArea>
+                      </div>
+                  </Tabs>
+              </div>
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+function PreviewSubmissionUI({ template }: { template: any }) {
+    const isBusiness = template.id === 'Business' || template.name?.includes('Business');
+    const isTechnical = template.id === 'Technical' || template.name?.includes('Technical');
+    const isMarketing = template.id === 'Digital Marketing' || template.name?.includes('Marketing');
+
+    return (
+        <div className="max-w-2xl mx-auto space-y-8 pb-10">
+            {isBusiness && (
+                <div className="space-y-6">
+                    <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white overflow-hidden">
+                        <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Strategic Outreach Metrics</CardTitle></CardHeader>
+                        <CardContent className="space-y-4 pt-6">
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-1"><Label className="text-[9px] font-black text-muted-foreground uppercase">Cold Engagement (Voice)</Label><Input type="number" placeholder="0" className="h-9 text-xs rounded-xl" /></div>
+                                <div className="space-y-1"><Label className="text-[9px] font-black text-muted-foreground uppercase">LinkedIn Reach</Label><Input type="number" placeholder="0" className="h-9 text-xs rounded-xl" /></div>
+                                <div className="space-y-1"><Label className="text-[9px] font-black text-muted-foreground uppercase">Strategic Email</Label><Input type="number" placeholder="0" className="h-9 text-xs rounded-xl" /></div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white overflow-hidden">
+                        <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-4" /> 2️⃣ Economic Value Capture</CardTitle></CardHeader>
+                        <CardContent className="space-y-4 pt-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1"><Label className="text-[9px] font-black text-muted-foreground uppercase">Currency</Label><Select defaultValue="INR"><SelectTrigger className="h-9 text-xs rounded-xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="INR">INR (₹)</SelectItem></SelectContent></Select></div>
+                                <div className="space-y-1"><Label className="text-[9px] font-black text-muted-foreground uppercase">Revenue Realized</Label><Input type="number" placeholder="0" className="h-9 text-xs rounded-xl" /></div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {isTechnical && (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-1"><Label className="text-[9px] font-black text-muted-foreground uppercase">Shift Log-In</Label><Input type="time" className="h-9 text-xs rounded-xl" /></div>
+                         <div className="space-y-1"><Label className="text-[9px] font-black text-muted-foreground uppercase">Shift Log-Out</Label><Input type="time" className="h-9 text-xs rounded-xl" /></div>
+                    </div>
+                    <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white p-6 space-y-4 rounded-2xl">
+                        <div className="space-y-2">
+                             <Label className="text-[9px] font-black text-muted-foreground uppercase">Module Identification</Label>
+                             <Input placeholder="e.g., Auth Engine v2.1" className="h-9 text-xs rounded-xl" />
+                             <Label className="text-[9px] font-black text-muted-foreground uppercase">Implementation Detail</Label>
+                             <Input placeholder="Refactored Firebase hooks..." className="h-9 text-xs rounded-xl" />
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {isMarketing && (
+                <div className="space-y-6">
+                    <Card className="border-none ring-1 ring-purple-500/20 shadow-sm bg-white overflow-hidden">
+                        <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest">Marketing Pipeline Intelligence</CardTitle></CardHeader>
+                        <CardContent className="pt-6">
+                            <div className="border rounded-2xl overflow-hidden">
+                                <Table>
+                                    <TableHeader className="bg-muted/30">
+                                        <TableRow><TableHead className="text-[9px] font-black uppercase">Status</TableHead><TableHead className="text-[9px] font-black uppercase">Content</TableHead><TableHead className="text-[9px] font-black uppercase">Posters</TableHead><TableHead className="text-[9px] font-black uppercase">Reels</TableHead></TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        <TableRow><TableCell className="text-[9px] font-bold uppercase">Approved</TableCell><TableCell><Input type="number" placeholder="0" className="h-8 w-12 mx-auto text-center" /></TableCell><TableCell><Input type="number" placeholder="0" className="h-8 w-12 mx-auto text-center" /></TableCell><TableCell><Input type="number" placeholder="0" className="h-8 w-12 mx-auto text-center" /></TableCell></TableRow>
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white overflow-hidden">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 🚀 T+1 Execution Planning</CardTitle></CardHeader>
+                <CardContent className="space-y-4 pt-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1"><Label className="text-[9px] font-black text-muted-foreground uppercase">Meetings Tomorrow</Label><Input type="number" className="h-9 text-xs rounded-xl" /></div>
+                        <div className="space-y-1"><Label className="text-[9px] font-black text-muted-foreground uppercase">Critical Path</Label><Input className="h-9 text-xs rounded-xl" /></div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="space-y-4 pt-4">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest">Tactical Authentication</p>
+                <div className="bg-white p-6 rounded-3xl ring-1 ring-border/50 border-2 border-dashed flex flex-col items-center gap-4 opacity-50">
+                    <ShieldCheck className="size-8 text-muted-foreground" />
+                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Digital Handshake Slot</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function PreviewAuditLayout({ template }: { template: any }) {
+    const isBusiness = template.id === 'Business' || template.name?.includes('Business');
+    const isTechnical = template.id === 'Technical' || template.name?.includes('Technical');
+    const isMarketing = template.id === 'Digital Marketing' || template.name?.includes('Marketing');
+
+    return (
+        <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-sm border p-8 space-y-8">
+            <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                    <h2 className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Audit Detail</h2>
+                    <p className="text-[10px] font-bold text-muted-foreground">SUBMITTED ON: {new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())} IST</p>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest">{template.name}</Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Reporting Official</p><p className="font-bold">Test Employee</p></div>
+                <div className="space-y-1"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Designation</p><p className="font-bold">TACTICAL STRATEGIST</p></div>
+            </div>
+
+            <Separator />
+
+            {isBusiness && (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-4 gap-4">
+                        <div className="p-4 bg-muted/20 rounded-2xl text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Cold Engagement</p><p className="text-lg font-black">24</p></div>
+                        <div className="p-4 bg-muted/20 rounded-2xl text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">LinkedIn Reach</p><p className="text-lg font-black">12</p></div>
+                        <div className="p-4 bg-muted/20 rounded-2xl text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Email Correspondence</p><p className="text-lg font-black">8</p></div>
+                        <div className="p-4 bg-muted/20 rounded-2xl text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Prospects</p><p className="text-lg font-black">3</p></div>
+                    </div>
+                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex items-center justify-between">
+                         <div className="flex items-center gap-3"><DollarSign className="size-5 text-green-600" /><div><p className="text-[9px] font-black uppercase text-green-700">Financial Recognition</p><p className="text-xl font-black text-green-900">INR 12,500</p></div></div>
+                    </div>
+                </div>
+            )}
+
+            {isTechnical && (
+                <div className="space-y-4">
+                    <div className="p-4 bg-white rounded-2xl border space-y-1">
+                        <p className="text-[9px] font-black uppercase text-primary">Module: Auth Engine v2.1</p>
+                        <p className="text-xs italic text-muted-foreground">"Synchronized digital identity assets with Firestore non-blocking write engine."</p>
+                    </div>
+                </div>
+            )}
+
+            {isMarketing && (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center bg-purple-50 p-4 rounded-2xl border border-purple-100">
+                         <div className="flex items-center gap-3"><Zap className="size-5 text-purple-600" /><div><p className="text-[9px] font-black uppercase text-purple-700">Production Efficiency</p><p className="text-xl font-black text-purple-900">85.4% Approval Rate</p></div></div>
+                    </div>
+                    <div className="border rounded-2xl overflow-hidden shadow-sm">
+                        <Table>
+                             <TableHeader className="bg-muted/10"><TableRow><TableHead className="text-[9px] font-black uppercase">Metric</TableHead><TableHead className="text-center text-[9px] font-black uppercase">Content</TableHead><TableHead className="text-center text-[9px] font-black uppercase">Posters</TableHead><TableHead className="text-center text-[9px] font-black uppercase">Reels</TableHead></TableRow></TableHeader>
+                             <TableBody>
+                                 <TableRow><TableCell className="text-[9px] font-bold uppercase py-3">Approved</TableCell><TableCell className="text-center font-bold">4</TableCell><TableCell className="text-center font-bold">2</TableCell><TableCell className="text-center font-bold">1</TableCell></TableRow>
+                                 <TableRow className="bg-muted/5"><TableCell className="text-[9px] font-black uppercase py-3">Category Total</TableCell><TableCell className="text-center font-black">5</TableCell><TableCell className="text-center font-black">3</TableCell><TableCell className="text-center font-black">2</TableCell></TableRow>
+                             </TableBody>
+                        </Table>
+                    </div>
+                </div>
+            )}
+
+            <Card className="border-none ring-1 ring-border/50 overflow-hidden shadow-sm bg-muted/5">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-bold uppercase text-primary flex items-center gap-2"><Target className="size-3.5"/> T+1 Objectives</CardTitle></CardHeader>
+                <CardContent className="pt-4 space-y-3">
+                    <div><p className="text-[8px] font-black uppercase text-orange-600 tracking-widest">Critical Path</p><p className="text-xs italic">"Finalize high-fidelity strategic dashboard for executive review."</p></div>
+                    <div><p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Meetings Scheduled</p><p className="text-xs font-bold">2 confirmed briefings.</p></div>
+                </CardContent>
+            </Card>
+
+            <div className="pt-10 flex flex-col items-center text-center space-y-6">
+                <div className="h-16 w-48 border-b-2 border-dashed border-primary/20 flex items-center justify-center grayscale opacity-60">
+                    <span className="font-mono text-xs text-muted-foreground italic">E-Signature Logic Rendered Here</span>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-sm font-black uppercase tracking-tighter">Test Employee</p>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase">TACTICAL STRATEGIST • PRODUCT DESIGN</p>
+                    <Separator className="w-10 mx-auto my-2" />
+                    <p className="text-[8px] font-mono text-muted-foreground italic">Authenticated via MarsHRM Protocol</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
