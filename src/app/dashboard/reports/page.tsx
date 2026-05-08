@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, UserCheck, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, Upload, FileDown } from "lucide-react";
+import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, UserCheck, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, Upload, FileDown, Check, MousePointer2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStora
 import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm, useWatch, FormProvider, useFormContext } from "react-hook-form";
+import { useForm, useWatch, FormProvider, useFormContext, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
@@ -44,6 +44,29 @@ const formatIST = (date: any) => {
         minute: '2-digit',
         hour12: false
     }).format(d) + " IST";
+};
+
+/**
+ * COMPONENT: Common Shift Header (Login/Logout)
+ */
+const ShiftHeaderFields = () => {
+    const { control } = useFormContext();
+    return (
+        <div className="grid grid-cols-2 gap-6 mb-8">
+            <FormField control={control} name="logInTime" render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="text-xs uppercase font-bold text-muted-foreground">Shift Log-In</FormLabel>
+                    <FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl>
+                </FormItem>
+            )} />
+            <FormField control={control} name="logOutTime" render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="text-xs uppercase font-bold text-muted-foreground">Shift Log-Out</FormLabel>
+                    <FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl>
+                </FormItem>
+            )} />
+        </div>
+    );
 };
 
 /**
@@ -143,6 +166,8 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
 
     return (
         <div className="space-y-8">
+            {!isNested && <ShiftHeaderFields />}
+
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion Intelligence</CardTitle></CardHeader>
                 <CardContent className="space-y-8 pt-6">
@@ -295,6 +320,7 @@ const DigitalMarketingFields = () => {
 
     return (
         <div className="space-y-8">
+            <ShiftHeaderFields />
             <BusinessFields isNested />
             
             <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
@@ -337,51 +363,159 @@ const DigitalMarketingFields = () => {
  */
 const TechnicalFields = () => {
     const { control, setValue } = useFormContext();
-    const tasks = useWatch({ control, name: "completedTasks" }) || [];
+    
+    const { fields: meetingFields, append: addMeeting, remove: removeMeeting } = useFieldArray({ control, name: "technicalMeetings" });
+    const { fields: projectFields, append: addProject, remove: removeProject } = useFieldArray({ control, name: "technicalProjects" });
+    
+    const meetingsCount = useWatch({ control, name: "clientMeetingsCount" }) || 0;
+    const projectsCount = useWatch({ control, name: "projectsWorkedCount" }) || 0;
+
+    // Sync arrays with counts
+    React.useEffect(() => {
+        const count = parseInt(meetingsCount) || 0;
+        if (count > meetingFields.length) {
+            for (let i = meetingFields.length; i < count; i++) addMeeting({ clientName: "", productName: "", status: "New" });
+        } else if (count < meetingFields.length) {
+            for (let i = meetingFields.length - 1; i >= count; i--) removeMeeting(i);
+        }
+    }, [meetingsCount, addMeeting, removeMeeting, meetingFields.length]);
+
+    React.useEffect(() => {
+        const count = parseInt(projectsCount) || 0;
+        if (count > projectFields.length) {
+            for (let i = projectFields.length; i < count; i++) addProject({ projectName: "", type: "Client", statusPercent: "0", description: "", isCompleted: false, liveLink: "" });
+        } else if (count < projectFields.length) {
+            for (let i = projectFields.length - 1; i >= count; i--) removeProject(i);
+        }
+    }, [projectsCount, addProject, removeProject, projectFields.length]);
+
+    const learnings = useWatch({ control, name: "learnedToday" }) || [];
+    const [learningInput, setLearningRegistryInput] = React.useState("");
+
+    const addLearning = () => {
+        if (!learningInput.trim()) return;
+        setValue("learnedToday", [...learnings, learningInput.trim()]);
+        setLearningRegistryInput("");
+    };
+
     return (
         <div className="space-y-8">
-            <div className="grid grid-cols-2 gap-6">
-                <FormField control={control} name="logInTime" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel className="text-xs uppercase font-bold text-muted-foreground">Shift Log-In</FormLabel>
-                        <FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl>
-                    </FormItem>
-                )} />
-                <FormField control={control} name="logOutTime" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel className="text-xs uppercase font-bold text-muted-foreground">Shift Log-Out</FormLabel>
-                        <FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl>
-                    </FormItem>
-                )} />
-            </div>
-            <div className="space-y-4">
-                <p className="font-black text-[10px] text-primary uppercase tracking-widest flex items-center gap-2"><Brain className="size-4" /> Technical Sprint Modules:</p>
-                {tasks.map((_, i: number) => (
-                    <Card key={i} className="relative group bg-white/50 border rounded-2xl overflow-hidden shadow-sm p-6 space-y-4">
-                        <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-red-600" onClick={() => setValue('completedTasks', tasks.filter((_:any, idx:number) => idx !== i))}><X className="size-4" /></Button>
-                        <FormField control={control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Module Identification</FormLabel>
-                                <FormControl><Input {...field} className="rounded-xl" /></FormControl>
-                            </FormItem>
-                        )} />
-                        <FormField control={control} name={`completedTasks.${i}.workDone`} render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Implementation Detail</FormLabel>
-                                <FormControl><Textarea {...field} className="rounded-xl min-h-[60px]" /></FormControl>
-                            </FormItem>
-                        )} />
-                    </Card>
-                ))}
-                <Button type="button" variant="outline" onClick={() => setValue('completedTasks', [...tasks, { moduleName: "", workDone: "" }])} className="w-full border-dashed rounded-2xl h-16 bg-white/50 text-xs font-black uppercase"><Plus className="size-4 mr-2" /> Add Development Module</Button>
-            </div>
+            <ShiftHeaderFields />
+
+            {/* SECTION 1: MEETINGS */}
+            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><PhoneCall className="size-4"/> 1️⃣ Tactical Client Engagements</CardTitle></CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                    <FormField control={control} name="clientMeetingsCount" render={({ field }) => (
+                        <FormItem className="max-w-[200px]">
+                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">No. of Client Meetings</FormLabel>
+                            <FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl>
+                        </FormItem>
+                    )} />
+                    <div className="space-y-4">
+                        {meetingFields.map((field, index) => (
+                            <div key={field.id} className="p-4 rounded-2xl border bg-white grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FormField control={control} name={`technicalMeetings.${index}.clientName`} render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Client Name</FormLabel><FormControl><Input {...field} className="rounded-lg h-9" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={control} name={`technicalMeetings.${index}.productName`} render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Product Name</FormLabel><FormControl><Input {...field} className="rounded-lg h-9" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={control} name={`technicalMeetings.${index}.status`} render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Status</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl><SelectTrigger className="rounded-lg h-9"><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {["Won", "Close", "Pending", "In Review", "Followup", "New"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </FormItem>
+                                )} />
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* SECTION 2: PROJECTS */}
+            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Briefcase className="size-4"/> 2️⃣ Sprint Module Pipeline</CardTitle></CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                    <FormField control={control} name="projectsWorkedCount" render={({ field }) => (
+                        <FormItem className="max-w-[200px]">
+                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Total Projects Worked</FormLabel>
+                            <FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl>
+                        </FormItem>
+                    )} />
+                    <div className="space-y-6">
+                        {projectFields.map((field, index) => (
+                            <Card key={field.id} className="p-6 rounded-2xl border shadow-none space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <FormField control={control} name={`technicalProjects.${index}.projectName`} render={({ field }) => (
+                                        <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Project Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    )} />
+                                    <FormField control={control} name={`technicalProjects.${index}.type`} render={({ field }) => (
+                                        <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Type</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {["Client", "In House", "Demo"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={control} name={`technicalProjects.${index}.statusPercent`} render={({ field }) => (
+                                        <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Status (%)</FormLabel><FormControl><Input type="number" min="0" max="100" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    )} />
+                                </div>
+                                <FormField control={control} name={`technicalProjects.${index}.description`} render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Shift Implementation Detail</FormLabel><FormControl><Textarea {...field} className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
+                                )} />
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                                    <FormField control={control} name={`technicalProjects.${index}.isCompleted`} render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                            <FormLabel className="text-[10px] font-black uppercase">Yes Completed</FormLabel>
+                                        </FormItem>
+                                    )} />
+                                    {useWatch({ control, name: `technicalProjects.${index}.isCompleted` }) && (
+                                        <FormField control={control} name={`technicalProjects.${index}.liveLink`} render={({ field }) => (
+                                            <FormItem className="flex-1"><FormControl><Input {...field} placeholder="Paste live project link..." className="rounded-xl h-9" /></FormControl></FormItem>
+                                        )} />
+                                    )}
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* SECTION 3: LEARNING */}
+            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Brain className="size-4"/> 3️⃣ Tactical Knowledge Assets</CardTitle></CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                    <div className="flex gap-2">
+                        <Input value={learningInput} onChange={e => setLearningRegistryInput(e.target.value)} placeholder="What did you learn today?" className="rounded-xl h-11" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addLearning())} />
+                        <Button type="button" size="icon" className="h-11 w-11 rounded-xl" onClick={addLearning}><Plus className="size-5" /></Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {learnings.map((l: string, i: number) => (
+                            <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-full text-[10px] font-bold gap-2">
+                                {l}
+                                <X className="size-3 cursor-pointer opacity-50 hover:opacity-100" onClick={() => setValue("learnedToday", learnings.filter((_:any, idx:number) => idx !== i))} />
+                            </Badge>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
             <ExecutionPlanFields />
         </div>
     );
 };
 
 /**
- * COMPONENT: Report Detail Visualization (Audit View)
+ * COMPONENT: Business Audit Visualization
  */
 const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
     const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0);
@@ -399,22 +533,20 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
         <div className="space-y-8">
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion Analysis</div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-6 bg-primary text-white rounded-3xl shadow-xl flex flex-col items-center justify-center">
                         <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span>
                         <span className="text-4xl font-black">{efficiency.toFixed(2)}%</span>
                     </div>
                     <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients Identified</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients</span>
                         <span className="text-3xl font-black">{potential}</span>
                     </div>
                     <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups Executed</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups</span>
                         <span className="text-3xl font-black">{followUps}</span>
                     </div>
                 </div>
-
                 <div className="grid grid-cols-4 gap-2">
                     <div className="p-3 bg-muted/20 rounded-xl text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">Cold Calls</p><p className="font-bold">{report.coldCalls || 0}</p></div>
                     <div className="p-3 bg-muted/20 rounded-xl text-center"><p className="text-[8px] font-black uppercase text-muted-foreground">LinkedIn</p><p className="font-bold">{report.linkedinOutreach || 0}</p></div>
@@ -466,11 +598,6 @@ const MarketingAuditDetail = ({ report }: { report: any }) => {
         { label: 'Reel', key: 'dmReel' }, 
         { label: 'Shoot', key: 'dmShoot' }
     ];
-
-    const getColumnTotal = (key: string) => {
-        return Number(report[`${key}Approved`] || 0) + Number(report[`${key}Pending`] || 0) + Number(report[`${key}Rejected`] || 0);
-    };
-
     return (
         <div className="space-y-6">
             <BusinessAuditDetail report={report} isNested />
@@ -491,14 +618,51 @@ const MarketingAuditDetail = ({ report }: { report: any }) => {
                                 ))}
                             </TableRow>
                         ))}
-                        <TableRow className="bg-primary/5">
-                            <TableCell className="text-xs font-black uppercase py-4">Total</TableCell>
-                            {deliverables.map(d => (
-                                <TableCell key={d.key} className="text-center font-black text-primary">{getColumnTotal(d.key)}</TableCell>
-                            ))}
-                        </TableRow>
                     </TableBody>
                 </Table>
+            </div>
+        </div>
+    );
+};
+
+const TechnicalAuditDetail = ({ report }: { report: any }) => {
+    return (
+        <div className="space-y-8">
+            <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4"/> Tactical Engagements</p>
+                <div className="grid grid-cols-1 gap-3">
+                    {report.technicalMeetings?.map((m: any, i: number) => (
+                        <div key={i} className="p-3 bg-white rounded-xl border flex items-center justify-between">
+                            <div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div>
+                            <Badge variant="outline" className="text-[8px] uppercase font-black">{m.status}</Badge>
+                        </div>
+                    )) || <p className="text-xs italic text-muted-foreground">No engagements logged.</p>}
+                </div>
+            </div>
+            <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Briefcase className="size-4"/> Sprint Progress</p>
+                <div className="grid grid-cols-1 gap-4">
+                    {report.technicalProjects?.map((p: any, i: number) => (
+                        <Card key={i} className="p-4 border-none ring-1 ring-border/50 bg-white">
+                            <div className="flex justify-between items-start mb-3">
+                                <div><p className="font-bold text-sm">{p.projectName}</p><p className="text-[10px] uppercase text-muted-foreground">{p.type}</p></div>
+                                <div className="text-right"><p className="text-lg font-black text-primary">{p.statusPercent}%</p><p className="text-[8px] uppercase font-bold text-muted-foreground">Coverage</p></div>
+                            </div>
+                            <p className="text-xs italic text-muted-foreground mb-3">"{p.description}"</p>
+                            {p.isCompleted && p.liveLink && (
+                                <Button variant="ghost" size="sm" className="w-full h-8 text-[9px] font-bold uppercase gap-2 bg-primary/5 text-primary" asChild>
+                                    <Link href={p.liveLink} target="_blank"><LinkIcon className="size-3"/> Live Deployment Proof</Link>
+                                </Button>
+                            )}
+                        </Card>
+                    )) || <p className="text-xs italic text-muted-foreground">No projects logged.</p>}
+                </div>
+            </div>
+            <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Brain className="size-4"/> Knowledge Assets</p>
+                <div className="flex flex-wrap gap-2">
+                    {report.learnedToday?.map((l: string, i: number) => <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-full text-[10px] font-bold">{l}</Badge>) || <p className="text-xs italic text-muted-foreground">No learnings recorded.</p>}
+                </div>
             </div>
         </div>
     );
@@ -548,7 +712,10 @@ export default function ReportsPage() {
         revenueCollected: "0", committedRevenue: "0", pipelineValue: "0", revenueVariance: "NIL",
         quotationsReleased: "0", meetingsSecured: "0", clientWin: "NIL", strategicLearning: "NIL",
         bestCallRecording: "", worstCallRecording: "", totalCallRecordings: "https://drive.google.com/drive/folders/13M3L_52j1ceP1QlXHoBEty5rAowdFVtm",
-        completedTasks: [], logInTime: "", logOutTime: "",
+        logInTime: "", logOutTime: "",
+        technicalMeetings: [], clientMeetingsCount: "0",
+        technicalProjects: [], projectsWorkedCount: "0",
+        learnedToday: [],
         dmContentApproved: "0", dmContentPending: "0", dmContentRejected: "0",
         dmPosterApproved: "0", dmPosterPending: "0", dmPosterRejected: "0",
         dmReelApproved: "0", dmReelPending: "0", dmReelRejected: "0",
@@ -592,9 +759,9 @@ export default function ReportsPage() {
       pdfDoc.setFontSize(10);
       pdfDoc.setTextColor(0);
       pdfDoc.text(`Employee: ${report.employeeName}`, 14, 45);
-      pdfDoc.text(`Designation: ${report.employeeJobTitle}`, 14, 50);
-      pdfDoc.text(`Department: ${report.employeeDepartment}`, 14, 55);
-      pdfDoc.text(`Submission Time: ${reportDate}`, 14, 60);
+      pdfDoc.text(`Designation: ${report.employeeJobTitle} | Dept: ${report.employeeDepartment}`, 14, 50);
+      pdfDoc.text(`Submission Time: ${reportDate}`, 14, 55);
+      pdfDoc.text(`Shift Hours: ${report.logInTime || '--:--'} to ${report.logOutTime || '--:--'}`, 14, 60);
 
       const tableData: any[] = [];
       if (report.reportType === 'Business' || report.reportType === 'Digital Marketing') {
@@ -604,7 +771,6 @@ export default function ReportsPage() {
           tableData.push(['Follow-ups', report.followUps]);
           tableData.push(['Potential Clients', report.potentialClients]);
           tableData.push(['Revenue Collected', `$${report.revenueCollected}`]);
-          tableData.push(['Meetings Tomorrow', report.meetingsTomorrow]);
       }
 
       autoTable(pdfDoc, {
@@ -616,10 +782,11 @@ export default function ReportsPage() {
       });
 
       const finalY = (pdfDoc as any).lastAutoTable.finalY + 15;
-      pdfDoc.text("Strategic Narrative & Planning:", 14, finalY);
+      pdfDoc.setFontSize(11);
+      pdfDoc.text("T+1 Strategic Planning:", 14, finalY);
       pdfDoc.setFontSize(9);
       pdfDoc.text(`Critical Path: ${report.criticalPathTomorrow || 'NIL'}`, 14, finalY + 10);
-      pdfDoc.text(`Pending: ${report.pendingDeliverables || 'NIL'}`, 14, finalY + 20);
+      pdfDoc.text(`Meetings Tomorrow: ${report.meetingsTomorrow || 0}`, 14, finalY + 15);
 
       pdfDoc.save(`${report.employeeName}_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
       toast({ title: "PDF Report Generated" });
@@ -674,7 +841,7 @@ export default function ReportsPage() {
               <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center">
                   <div className="space-y-1">
                       <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Audit Detail</DialogTitle>
-                      <p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)}</p>
+                      <p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary border-primary/20" onClick={() => handleDownloadPdf(selectedReportForReview)}>
@@ -693,16 +860,7 @@ export default function ReportsPage() {
                       
                       {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
-                      {selectedReportForReview?.reportType === 'Technical' && (
-                          <div className="bg-white p-6 rounded-2xl ring-1 ring-border/50 space-y-4 shadow-sm">
-                              {selectedReportForReview.completedTasks?.map((t: any, i: number) => (
-                                  <div key={i} className="pb-4 border-b last:border-none space-y-1">
-                                      <p className="font-black text-xs uppercase text-primary">{t.moduleName}</p>
-                                      <p className="text-sm italic text-muted-foreground">"{t.workDone}"</p>
-                                  </div>
-                              ))}
-                          </div>
-                      )}
+                      {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetail report={selectedReportForReview} />}
 
                       <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm">
                           <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> 5️⃣ Pipeline & Planning (T+1)</CardTitle></CardHeader>
@@ -717,11 +875,11 @@ export default function ReportsPage() {
                       </Card>
 
                       <div className="pt-10 flex flex-col items-center text-center space-y-6">
-                          <div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center opacity-80">
+                          <div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">
                               {selectedReportForReview?.signatureUrl ? (
-                                  <img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain grayscale" />
+                                  <img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />
                               ) : (
-                                  <span className="font-mono text-[10px] italic">Digital Handshake via Platform</span>
+                                  <span className="font-mono text-[10px] italic opacity-60">Digital Handshake via Platform</span>
                               )}
                           </div>
                           <div className="space-y-1">
