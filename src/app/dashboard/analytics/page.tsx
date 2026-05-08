@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-type User = { id: string; firstName: string; lastName: string; jobTitle: string; department: string; role?: string; };
+type User = { id: string; firstName: string; lastName: string; jobTitle: string; department: string; role?: string; isDemoAccount?: boolean; };
 type Holiday = { id: string; date: Timestamp; title: string; };
 type LeaveRequest = { id: string; employeeId: string; startDate: Timestamp; endDate: Timestamp; status: string; };
 type Attendance = { 
@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
   const [attendanceData, setAttendanceData] = React.useState<Attendance[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // Filter States
+  // Filter States - Default to Today
   const [dateFilter, setDateFilter] = React.useState<string>("today");
   const [customStartDate, setCustomStartDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [customEndDate, setCustomEndDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -129,6 +129,7 @@ export default function AnalyticsPage() {
             break;
         default: // today
             start = startOfDay(now);
+            end = endOfDay(now);
             break;
     }
     return { start, end };
@@ -163,7 +164,12 @@ export default function AnalyticsPage() {
 
     const days = eachDayOfInterval({ start: trendStart, end: trendEnd }).filter(d => !isSunday(d));
     
-    const expectedUsers = users?.filter(u => u.role !== 'CEO/Admin' && u.role !== 'HR Manager') || [];
+    // EXCLUDE privileged roles and demo accounts from stats
+    const expectedUsers = users?.filter(u => 
+        u.role !== 'CEO/Admin' && 
+        u.role !== 'HR Manager' && 
+        !u.isDemoAccount
+    ) || [];
     const expectedCount = expectedUsers.length;
 
     return days.map(day => {
@@ -410,7 +416,7 @@ export default function AnalyticsPage() {
                 <SelectTrigger className="w-[200px] rounded-full h-11"><SelectValue placeholder="Scope" /></SelectTrigger>
                 <SelectContent>
                     <SelectItem value="all">Organization Overview</SelectItem>
-                    {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
+                    {users?.filter(u => u.firstName && u.lastName).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                 </SelectContent>
             </Select>
 

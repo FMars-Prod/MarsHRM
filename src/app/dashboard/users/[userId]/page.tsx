@@ -51,12 +51,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const storage = useStorage();
   const { user: currentUser } = useUser();
   const { toast } = useToast();
-  const { userId } = use(params);
+  const resolvedParams = use(params);
+  const userId = resolvedParams.userId;
   
   const [isUploading, setIsUploading] = React.useState(false);
   const [currentMonth, setCurrentMonth] = React.useState(startOfMonth(new Date()));
 
-  const userDocRef = useMemoFirebase(() => doc(firestore, 'users', userId), [firestore, userId]);
+  const userDocRef = useMemoFirebase(() => (userId ? doc(firestore, 'users', userId) : null), [firestore, userId]);
   const { data: user, isLoading: isUserLoading } = useDoc<any>(userDocRef);
 
   const teamDocRef = useMemoFirebase(() => (user?.teamId ? doc(firestore, 'teams', user.teamId) : null), [firestore, user?.teamId]);
@@ -66,24 +67,24 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
 
-  const attendanceQuery = useMemoFirebase(() => query(
+  const attendanceQuery = useMemoFirebase(() => userId ? query(
     collection(firestore, `users/${userId}/attendances`),
     orderBy('checkInTime', 'desc')
-  ), [firestore, userId]);
+  ) : null, [firestore, userId]);
   const { data: attendanceData } = useCollection<AttendanceRecord>(attendanceQuery);
   
-  const reportsQuery = useMemoFirebase(() => query(
+  const reportsQuery = useMemoFirebase(() => userId ? query(
     collection(firestore, `users/${userId}/reports`),
     orderBy('date', 'desc'),
     limit(24)
-  ), [firestore, userId]);
+  ) : null, [firestore, userId]);
   const { data: reportsData } = useCollection<Report>(reportsQuery);
 
-  const complianceQuery = useMemoFirebase(() => query(
+  const complianceQuery = useMemoFirebase(() => userId ? query(
       collection(firestore, 'compliance_reports'),
       where('employeeId', '==', userId),
       orderBy('timestamp', 'desc')
-  ), [firestore, userId]);
+  ) : null, [firestore, userId]);
   const { data: complianceData } = useCollection<ComplianceReport>(complianceQuery);
 
   const stats = React.useMemo(() => {
@@ -125,6 +126,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   }, [attendanceData, reportsData]);
 
   const handleSignatureUpload = async (file: File) => {
+    if (!userId) return;
     setIsUploading(true);
     try {
         const sigRef = ref(storage, `signatures/${userId}/${Date.now()}-${file.name}`);
@@ -140,12 +142,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   };
 
   const approveSignature = () => {
-      updateDocumentNonBlocking(userDocRef!, { signatureStatus: 'approved' });
+      if (!userDocRef) return;
+      updateDocumentNonBlocking(userDocRef, { signatureStatus: 'approved' });
       toast({ title: "Signature Approved" });
   };
 
   if (isUserLoading) return <div className="p-10 text-center animate-pulse text-xs font-black uppercase tracking-widest">Scanning Satellite Data...</div>;
-  if (!user) return notFound();
+  if (!user && !isUserLoading) return notFound();
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up pb-20">
