@@ -137,21 +137,21 @@ export function AttendanceWidget() {
         if (checkOut) {
             setStatus("out");
             setHasClockedOutToday(true);
-            const totalElapsed = (checkOut.getTime() - checkIn.getTime()) / 1000;
-            setTimer(totalElapsed - savedBreakSec);
+            const totalElapsed = (checkOut && checkIn) ? (checkOut.getTime() - checkIn.getTime()) / 1000 : 0;
+            setTimer(Math.max(0, totalElapsed - savedBreakSec));
             setBreakTimer(0);
         } else {
             setHasClockedOutToday(false);
             if (lunchOut && !lunchIn) {
                 setStatus("lunch");
-                const elapsedBeforeLunch = (lunchOut.getTime() - checkIn.getTime()) / 1000;
-                setTimer(elapsedBeforeLunch - savedBreakSec);
-                setBreakTimer((new Date().getTime() - lunchOut.getTime()) / 1000);
+                const elapsedBeforeLunch = checkIn ? (lunchOut.getTime() - checkIn.getTime()) / 1000 : 0;
+                setTimer(Math.max(0, elapsedBeforeLunch - savedBreakSec));
+                setBreakTimer(Math.max(0, (new Date().getTime() - lunchOut.getTime()) / 1000));
             } else {
                 setStatus("in");
                 const now = new Date().getTime();
-                const totalElapsed = (now - checkIn.getTime()) / 1000;
-                setTimer(totalElapsed - savedBreakSec);
+                const totalElapsed = checkIn ? (now - checkIn.getTime()) / 1000 : 0;
+                setTimer(Math.max(0, totalElapsed - savedBreakSec));
                 setBreakTimer(0);
             }
         }
