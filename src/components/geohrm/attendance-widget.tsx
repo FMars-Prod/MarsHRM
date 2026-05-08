@@ -74,7 +74,6 @@ export function AttendanceWidget() {
   const [totalBreakTime, setTotalBreakTime] = useState(0);
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
-  const [currentUserLocation, setCurrentUserLocation] = useState<Location | null>(null);
   const [isVerifyingLocation, setIsVerifyingLocation] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -89,7 +88,6 @@ export function AttendanceWidget() {
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
   const isAdminOrCEO = userRole === 'CEO/Admin' || userRole === 'HR Manager';
-  const isWfhAllowed = (userData as any)?.isWfhAllowed;
 
   const officeLocationDocRef = useMemoFirebase(
     () => doc(firestore, "settings", "location"),
@@ -133,20 +131,25 @@ export function AttendanceWidget() {
         if (checkOut) {
             setStatus("out");
             setHasClockedOutToday(true);
-            const totalElapsed = (checkOut && checkIn) ? (checkOut.getTime() - checkIn.getTime()) / 1000 : 0;
+            const checkInMs = checkIn?.getTime() || 0;
+            const checkOutMs = checkOut?.getTime() || 0;
+            const totalElapsed = (checkOutMs - checkInMs) / 1000;
             setTimer(Math.max(0, totalElapsed - savedBreakSec));
             setBreakTimer(0);
         } else {
             setHasClockedOutToday(false);
             if (lunchOut && !lunchIn) {
                 setStatus("lunch");
-                const elapsedBeforeLunch = checkIn ? (lunchOut.getTime() - checkIn.getTime()) / 1000 : 0;
+                const checkInMs = checkIn?.getTime() || 0;
+                const lunchOutMs = lunchOut?.getTime() || 0;
+                const elapsedBeforeLunch = (lunchOutMs - checkInMs) / 1000;
                 setTimer(Math.max(0, elapsedBeforeLunch - savedBreakSec));
-                setBreakTimer(Math.max(0, (new Date().getTime() - lunchOut.getTime()) / 1000));
+                setBreakTimer(Math.max(0, (new Date().getTime() - lunchOutMs) / 1000));
             } else {
                 setStatus("in");
                 const now = new Date().getTime();
-                const totalElapsed = checkIn ? (now - checkIn.getTime()) / 1000 : 0;
+                const checkInMs = checkIn?.getTime() || 0;
+                const totalElapsed = (now - checkInMs) / 1000;
                 setTimer(Math.max(0, totalElapsed - savedBreakSec));
                 setBreakTimer(0);
             }
@@ -271,7 +274,7 @@ export function AttendanceWidget() {
               totalBreakDuration: 0,
               locationCheckInLatitude: userLocation.latitude,
               locationCheckInLongitude: userLocation.longitude,
-              checkInNotes: reason,
+              checkInNotes: reason || "",
               isOutOfRange: !!reason,
           };
           setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
