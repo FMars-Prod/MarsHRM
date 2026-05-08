@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Utensils, LogOut, MapPinned, Info } from "lucide-react";
+import { Clock, Coffee, Briefcase, CheckCircle2, MapPin, Utensils, LogOut, MapPinned, Info, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -546,7 +546,7 @@ export function AttendanceWidget() {
               </div>
               <div className="grid gap-4 py-2">
                   <Label htmlFor="reason" className="font-bold text-[10px] uppercase tracking-widest text-primary">Mandatory Strategic Justification</Label>
-                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Provide specific reason for remote access (e.g. Field assignment, Client site...)" className="rounded-2xl min-h-[100px] bg-muted/20 border-none ring-1 ring-border/50" />
+                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Provide specific reason for remote access (e.g. Field assignment, Client site...)" className="rounded-2xl min-h-[120px] bg-muted/20 border-none ring-1 ring-border/50" />
               </div>
               <div className="flex gap-3 mt-4">
                   <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="outline" className="flex-1 rounded-full font-bold uppercase text-[10px]">Cancel</Button>
