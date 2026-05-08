@@ -7,22 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Link as LinkIcon, AlertCircle, CheckCircle2, Beaker, Mic, Loader2, DollarSign, PieChart, ExternalLink, ShieldCheck, Download, Clock } from "lucide-react";
+import { PlusCircle, Search, Trash2, TrendingUp, Target, Brain, X, Plus, FileText, MapPin, LayoutTemplate, Briefcase, Code, Link as LinkIcon, CheckCircle2, Beaker, Mic, Loader2, DollarSign, ExternalLink, ShieldCheck, Download, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { format, isSameDay } from "date-fns";
+import { format } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, setDocumentNonBlocking, useDoc, useStorage } from "@/firebase";
 import { collection, query, where, orderBy, doc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -34,6 +33,9 @@ import Link from "next/link";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+/**
+ * UTILITIES
+ */
 const formatIST = (date: Date) => {
     return new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Kolkata',
@@ -52,6 +54,9 @@ const getCurrencySymbol = (code: string) => {
     return symbols[code] || '$';
 };
 
+/**
+ * DISPLAY COMPONENTS
+ */
 const ReportDetailItem = ({ label, value, children, className }: { label: string, value?: React.ReactNode, children?: React.ReactNode, className?: string }) => (
   <div className={cn("space-y-1.5", className)}>
     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">{label}</p>
@@ -213,7 +218,7 @@ const DigitalMarketingReportDetails = ({ report, userProfile }: { report: any, u
         { label: 'Shoots', key: 'dmShoots' }
     ];
 
-    const getStatusVal = (status: string, key: string) => Number(report[`${key}${status}`] || 0);
+    const getVal = (status: string, key: string) => Number(report[`${key}${status}`] || 0);
 
     return (
         <div className="space-y-6">
@@ -233,12 +238,12 @@ const DigitalMarketingReportDetails = ({ report, userProfile }: { report: any, u
                             </TableHeader>
                             <TableBody>
                                 {['Approved', 'Pending', 'Rejected'].map(status => {
-                                    const rowTotal = deliverables.reduce((acc, d) => acc + getStatusVal(status, d.key), 0);
+                                    const rowTotal = deliverables.reduce((acc, d) => acc + getVal(status, d.key), 0);
                                     return (
                                         <TableRow key={status} className="border-border/50">
                                             <TableCell className="text-xs font-bold uppercase">{status}</TableCell>
                                             {deliverables.map(d => (
-                                                <TableCell key={d.key} className="text-center text-xs font-medium">{getStatusVal(status, d.key)}</TableCell>
+                                                <TableCell key={d.key} className="text-center text-xs font-medium">{getVal(status, d.key)}</TableCell>
                                             ))}
                                             <TableCell className="text-center text-xs font-black bg-purple-50/50 text-purple-700">{rowTotal}</TableCell>
                                         </TableRow>
@@ -247,11 +252,11 @@ const DigitalMarketingReportDetails = ({ report, userProfile }: { report: any, u
                                 <TableRow className="bg-muted/20 border-t-2 font-black">
                                     <TableCell className="text-xs uppercase">Total</TableCell>
                                     {deliverables.map(d => {
-                                        const colTotal = ['Approved', 'Pending', 'Rejected'].reduce((acc, s) => acc + getStatusVal(s, d.key), 0);
+                                        const colTotal = ['Approved', 'Pending', 'Rejected'].reduce((acc, s) => acc + getVal(s, d.key), 0);
                                         return <TableCell key={d.key} className="text-center text-xs">{colTotal}</TableCell>
                                     })}
                                     <TableCell className="text-center text-xs bg-purple-100 text-purple-900">
-                                        {deliverables.reduce((acc, d) => acc + ['Approved', 'Pending', 'Rejected'].reduce((sum, s) => sum + getStatusVal(s, d.key), 0), 0)}
+                                        {deliverables.reduce((acc, d) => acc + ['Approved', 'Pending', 'Rejected'].reduce((sum, s) => sum + getVal(s, d.key), 0), 0)}
                                     </TableCell>
                                 </TableRow>
                             </TableBody>
@@ -309,6 +314,234 @@ const CustomReportDetails = ({ report, userProfile }: { report: any, userProfile
     </div>
 );
 
+/**
+ * FORM SUB-COMPONENTS
+ */
+const ExecutionPlanFields = () => {
+    const { control } = useFormContext();
+    return (
+        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 🚀 T+1 Execution Planning</CardTitle></CardHeader>
+            <CardContent className="space-y-6 pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField control={control} name="meetingsBookedTomorrow" render={({ field }) => (
+                        <FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                    )} />
+                    <FormField control={control} name="interventionTrigger" render={({ field }) => (
+                        <FormItem><FormLabel className="text-[10px] uppercase font-bold">Manager Intervention Trigger</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent><SelectItem value="None (Standard)">None (Standard)</SelectItem><SelectItem value="Manager Input Required">Manager Input Required</SelectItem><SelectItem value="Resource Blocked">Resource Blocked</SelectItem><SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem></SelectContent></Select></FormItem>
+                    )} />
+                </div>
+                <FormField control={control} name="criticalPathTomorrow" render={({ field }) => (
+                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Top Priority / Critical Path</FormLabel><FormControl><Textarea {...field} placeholder="What is the single most important task for tomorrow?" className="rounded-xl" /></FormControl></FormItem>
+                )} />
+                <FormField control={control} name="pendingDeliverables" render={({ field }) => (
+                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Pending Strategic Deliverables</FormLabel><FormControl><Textarea {...field} placeholder="List items that need final completion..." className="rounded-xl" /></FormControl></FormItem>
+                )} />
+            </CardContent>
+        </Card>
+    );
+};
+
+const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
+    const { control } = useFormContext();
+    const coldCalls = Number(useWatch({ control, name: "coldCalls" }) || 0);
+    const linkedIn = Number(useWatch({ control, name: "linkedinOutreach" }) || 0);
+    const emails = Number(useWatch({ control, name: "emailsSent" }) || 0);
+    const totalOutreach = coldCalls + linkedIn + emails;
+    const potential = Number(useWatch({ control, name: "potentialClients" }) || 0);
+    const efficiency = totalOutreach > 0 ? Math.min((potential / totalOutreach) * 100, 100) : 0;
+
+    return (
+        <div className="space-y-8">
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach Analytics</CardTitle></CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FormField control={control} name="coldCalls" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Cold Calls</Label><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={control} name="linkedinOutreach" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={control} name="emailsSent" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Emails Sent</Label><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="p-4 bg-primary/5 rounded-2xl border flex flex-col items-center gap-1"><p className="text-[10px] font-black text-primary/70 uppercase">Total Outreach</p><p className="text-2xl font-black text-primary">{totalOutreach}</p></div>
+                        <FormField control={control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Potential Clients</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                    </div>
+                    <div className="flex justify-center p-3 bg-green-50 rounded-xl border border-green-200">
+                        <p className="text-xs font-black text-green-700 uppercase tracking-widest">Efficiency: {efficiency.toFixed(2)}%</p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-4" /> 2️⃣ Financial Impact</CardTitle></CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField control={control} name="currency" render={({ field }) => (
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Currency</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent><SelectItem value="INR">INR (₹)</SelectItem><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="AED">AED (د.إ)</SelectItem></SelectContent></Select></FormItem>
+                        )} />
+                        <FormField control={control} name="collectedRevenue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Collected Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FormField control={control} name="committedRevenue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Committed Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Pipeline Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                        <FormField control={control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Revenue Variance</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Mic className="size-4" /> 3️⃣ Call Quality Audit</CardTitle></CardHeader>
+                <CardContent className="space-y-8 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Best Call Record</Label>
+                            <FileUploadButton fieldName="bestCallRecording" />
+                        </div>
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Worst Call Record</Label>
+                            <FileUploadButton fieldName="worstCallRecording" />
+                        </div>
+                    </div>
+                    <FormField control={control} name="allCallsDriveLink" render={({ field }) => (
+                      <FormItem><FormLabel className="text-[10px] uppercase font-bold">All Calls Archive (Drive Link)</FormLabel><FormControl><Input {...field} placeholder="https://drive.google.com/..." className="rounded-xl h-11" /></FormControl></FormItem>
+                    )} />
+                </CardContent>
+            </Card>
+
+            {!isNested && <ExecutionPlanFields />}
+        </div>
+    );
+};
+
+const FileUploadButton = ({ fieldName }: { fieldName: string }) => {
+    const { setValue, getValues } = useFormContext();
+    const storage = useStorage();
+    const { user } = useUser();
+    const [uploading, setUploading] = React.useState(false);
+
+    const handleUpload = async (file: File) => {
+        if (!user) return;
+        setUploading(true);
+        try {
+            const fileRef = ref(storage, `reports/${user.uid}/${Date.now()}-${file.name}`);
+            const snapshot = await uploadBytes(fileRef, file);
+            const url = await getDownloadURL(snapshot.ref);
+            setValue(fieldName, url);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center gap-3">
+            <Input type="file" accept="audio/*" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} className="text-xs h-9 bg-white" disabled={uploading} />
+            {uploading && <Loader2 className="size-4 animate-spin text-primary" />}
+            {getValues(fieldName) && <CheckCircle2 className="size-4 text-green-600" />}
+        </div>
+    );
+};
+
+const DigitalMarketingFields = () => {
+    const { control } = useFormContext();
+    const deliverables = [
+        { label: 'Content', key: 'dmContent' },
+        { label: 'Posters', key: 'dmPosters' },
+        { label: 'Reels', key: 'dmReels' },
+        { label: 'Shoots', key: 'dmShoots' }
+    ];
+    
+    return (
+      <div className="space-y-8">
+          <BusinessFields isNested />
+          <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
+              <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 4️⃣ Tactical Output Matrix</CardTitle></CardHeader>
+              <CardContent className="pt-6">
+                  <div className="border rounded-2xl overflow-hidden bg-white/50">
+                      <Table>
+                          <TableHeader className="bg-muted/30">
+                              <TableRow className="hover:bg-transparent">
+                                  <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Status</TableHead>
+                                  {deliverables.map(d => <TableHead key={d.key} className="text-[10px] font-black uppercase tracking-widest text-center py-4">{d.label}</TableHead>)}
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              {['Approved', 'Pending', 'Rejected'].map(status => (
+                                  <TableRow key={status} className="border-border/50">
+                                      <TableCell className="text-xs font-black uppercase py-4">{status}</TableCell>
+                                      {deliverables.map(d => (
+                                          <TableCell key={d.key} className="py-2">
+                                              <FormField control={control} name={`${d.key}${status}`} render={({ field }) => (
+                                                  <FormItem><FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl></FormItem>
+                                              )} />
+                                          </TableCell>
+                                      ))}
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </div>
+              </CardContent>
+          </Card>
+          <ExecutionPlanFields />
+      </div>
+    );
+};
+
+const TechnicalFields = () => {
+    const { control, getValues, setValue } = useFormContext();
+    const tasks = useWatch({ control, name: "completedTasks" }) || [];
+
+    return (
+        <div className="space-y-8">
+            <div className="grid grid-cols-2 gap-6">
+                <FormField control={control} name="logInTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Shift Start</FormLabel><FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+                <FormField control={control} name="logOutTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Shift End</FormLabel><FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
+            </div>
+            <div className="space-y-4">
+                <p className="font-black text-[10px] text-primary uppercase tracking-widest flex items-center gap-2"><Brain className="size-4" /> Development Modules:</p>
+                {tasks.map((_: any, i: number) => (
+                    <Card key={i} className="relative group bg-white/50 border rounded-2xl overflow-hidden shadow-sm pt-6 px-6 pb-6 space-y-4">
+                        <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full h-8 w-8 text-red-600" onClick={() => {
+                            setValue('completedTasks', tasks.filter((_:any, idx:number) => idx !== i));
+                        }}><X className="size-4" /></Button>
+                        <FormField control={control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Module</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                        <FormField control={control} name={`completedTasks.${i}.workDone`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Description</FormLabel><FormControl><Textarea {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                    </Card>
+                ))}
+                <Button type="button" variant="outline" onClick={() => setValue('completedTasks', [...tasks, { moduleName: "", workDone: "" }])} className="w-full border-dashed rounded-2xl h-16 bg-white/50 text-xs font-black uppercase"><Plus className="size-4 mr-2" /> Add Module</Button>
+            </div>
+            <ExecutionPlanFields />
+        </div>
+    );
+};
+
+const CustomTemplateFields = ({ definition }: { definition: any }) => {
+    const { control } = useFormContext();
+    return (
+        <div className="space-y-8">
+            {definition.sections?.map((section: any, sIdx: number) => (
+                <Card key={sIdx} className="bg-white/50 border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                    <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase tracking-widest text-primary">{section.title}</CardTitle></CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                        {section.fields?.map((field: any, fIdx: number) => (
+                            <FormField key={fIdx} control={control} name={field.name} render={({ field: formField }) => (
+                                <FormItem><FormLabel className="text-[10px] font-bold uppercase">{field.label}</FormLabel><FormControl>{field.type === 'textarea' ? <Textarea {...formField} className="rounded-xl" /> : field.type === 'number' ? <Input type="number" min="0" {...formField} className="rounded-xl h-11" /> : <Input {...formField} className="rounded-xl h-11" />}</FormControl></FormItem>
+                            )} />
+                        ))}
+                    </CardContent>
+                </Card>
+            ))}
+            <ExecutionPlanFields />
+        </div>
+    );
+};
+
+/**
+ * MAIN PAGE COMPONENT
+ */
 const commonSchema = {
   declaration: z.literal<boolean>(true, { errorMap: () => ({ message: "Certification required." }) }),
   signature: z.string().min(1, "Signature is required."),
@@ -365,14 +598,12 @@ export default function ReportsPage() {
   const auth = useAuth();
   const router = useRouter();
   const firestore = useFirestore();
-  const storage = useStorage();
   const { toast } = useToast();
   
   const [selectedUser, setSelectedUser] = React.useState<any | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isVerifyingLocation, setIsVerifyingLocation] = React.useState(false);
-  const [isUploading, setIsUploading] = React.useState<string | null>(null);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
@@ -461,22 +692,6 @@ export default function ReportsPage() {
 
   React.useEffect(() => { if (isAddDialogOpen && currentUserData) resetForm(); }, [isAddDialogOpen, resetForm, currentUserData]);
 
-  const handleFileUpload = async (fieldName: string, file: File) => {
-    if (!user) return;
-    setIsUploading(fieldName);
-    try {
-        const fileRef = ref(storage, `reports/${user.uid}/${Date.now()}-${file.name}`);
-        const snapshot = await uploadBytes(fileRef, file);
-        const url = await getDownloadURL(snapshot.ref);
-        form.setValue(fieldName, url);
-        toast({ title: "Upload Success" });
-    } catch (err: any) {
-        toast({ variant: 'destructive', title: "Upload Failed" });
-    } finally {
-        setIsUploading(null);
-    }
-  };
-
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
     setIsVerifyingLocation(true);
@@ -503,19 +718,19 @@ export default function ReportsPage() {
   };
 
   const handleDownloadReport = (r: any) => {
-    const doc = new jsPDF();
+    const pdfDoc = new jsPDF();
     const dateStr = r.date?.toDate ? format(r.date.toDate(), 'PPP') : 'N/A';
     
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text("FortuMars Strategic Report", 14, 20);
+    pdfDoc.setFontSize(16);
+    pdfDoc.setFont('helvetica', 'bold');
+    pdfDoc.text("FortuMars Strategic Report", 14, 20);
     
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Employee: ${r.employeeName}`, 14, 30);
-    doc.text(`Report Type: ${r.reportType}`, 14, 35);
-    doc.text(`Date: ${dateStr}`, 14, 40);
-    doc.text(`Department: ${r.employeeDepartment || 'N/A'}`, 14, 45);
+    pdfDoc.setFontSize(10);
+    pdfDoc.setFont('helvetica', 'normal');
+    pdfDoc.text(`Employee: ${r.employeeName}`, 14, 30);
+    pdfDoc.text(`Report Type: ${r.reportType}`, 14, 35);
+    pdfDoc.text(`Date: ${dateStr}`, 14, 40);
+    pdfDoc.text(`Department: ${r.employeeDepartment || 'N/A'}`, 14, 45);
 
     let startY = 55;
 
@@ -537,206 +752,27 @@ export default function ReportsPage() {
             return row;
         });
 
-        const footerRow = ['Total'];
-        deliverables.forEach(d => {
-            const colTotal = ['Approved', 'Pending', 'Rejected'].reduce((acc, s) => acc + getVal(s, d.key), 0);
-            footerRow.push(colTotal.toString());
-        });
-        const grandTotal = deliverables.reduce((acc, d) => acc + ['Approved', 'Pending', 'Rejected'].reduce((sum, s) => sum + getVal(s, d.key), 0), 0);
-        footerRow.push(grandTotal.toString());
-        body.push(footerRow);
-
-        autoTable(doc, {
+        autoTable(pdfDoc, {
             startY,
             head: [['Status', 'Content', 'Posters', 'Reels', 'Shoots', 'Total']],
             body,
             theme: 'grid'
         });
-        startY = (doc as any).lastAutoTable.finalY + 10;
+        startY = (pdfDoc as any).lastAutoTable.finalY + 10;
     }
 
-    doc.text("T+1 Execution Plan:", 14, startY);
-    doc.text(`- Meetings Booked: ${r.meetingsBookedTomorrow || 0}`, 14, startY + 7);
-    doc.text(`- Critical Path: ${r.criticalPathTomorrow || 'N/A'}`, 14, startY + 14);
-    doc.text(`- Pending Deliverables: ${r.pendingDeliverables || 'N/A'}`, 14, startY + 21);
-    doc.text(`- Trigger: ${r.interventionTrigger || 'None'}`, 14, startY + 28);
+    pdfDoc.text("T+1 Execution Plan:", 14, startY);
+    pdfDoc.text(`- Meetings Booked: ${r.meetingsBookedTomorrow || 0}`, 14, startY + 7);
+    pdfDoc.text(`- Critical Path: ${r.criticalPathTomorrow || 'N/A'}`, 14, startY + 14);
+    pdfDoc.text(`- Pending Deliverables: ${r.pendingDeliverables || 'N/A'}`, 14, startY + 21);
+    pdfDoc.text(`- Trigger: ${r.interventionTrigger || 'None'}`, 14, startY + 28);
 
-    doc.setFontSize(8);
-    doc.text(`Signature: ${r.signature}`, 14, doc.internal.pageSize.height - 15);
-    doc.text(`Generated on ${formatIST(new Date())}`, 14, doc.internal.pageSize.height - 10);
+    pdfDoc.setFontSize(8);
+    pdfDoc.text(`Signature: ${r.signature}`, 14, pdfDoc.internal.pageSize.height - 15);
+    pdfDoc.text(`Generated on ${formatIST(new Date())}`, 14, pdfDoc.internal.pageSize.height - 10);
 
-    doc.save(`${r.employeeName}_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
+    pdfDoc.save(`${r.employeeName}_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
   };
-
-  const ExecutionPlanFields = () => (
-    <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-        <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 🚀 T+1 Execution Planning</CardTitle></CardHeader>
-        <CardContent className="space-y-6 pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name="meetingsBookedTomorrow" render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                )} />
-                <FormField control={form.control} name="interventionTrigger" render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Manager Intervention Trigger</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent><SelectItem value="None (Standard)">None (Standard)</SelectItem><SelectItem value="Manager Input Required">Manager Input Required</SelectItem><SelectItem value="Resource Blocked">Resource Blocked</SelectItem><SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem></SelectContent></Select></FormItem>
-                )} />
-            </div>
-            <FormField control={form.control} name="criticalPathTomorrow" render={({ field }) => (
-                <FormItem><FormLabel className="text-[10px] uppercase font-bold">Top Priority / Critical Path</FormLabel><FormControl><Textarea {...field} placeholder="What is the single most important task for tomorrow?" className="rounded-xl" /></FormControl></FormItem>
-            )} />
-            <FormField control={form.control} name="pendingDeliverables" render={({ field }) => (
-                <FormItem><FormLabel className="text-[10px] uppercase font-bold">Pending Strategic Deliverables</FormLabel><FormControl><Textarea {...field} placeholder="List items that need final completion..." className="rounded-xl" /></FormControl></FormItem>
-            )} />
-        </CardContent>
-    </Card>
-  );
-
-  const BusinessFields = () => {
-    const coldCalls = Number(useWatch({ control: form.control, name: "coldCalls" }) || 0);
-    const linkedIn = Number(useWatch({ control: form.control, name: "linkedinOutreach" }) || 0);
-    const emails = Number(useWatch({ control: form.control, name: "emailsSent" }) || 0);
-    const totalOutreach = coldCalls + linkedIn + emails;
-    const potential = Number(useWatch({ control: form.control, name: "potentialClients" }) || 0);
-    const efficiency = totalOutreach > 0 ? Math.min((potential / totalOutreach) * 100, 100) : 0;
-
-    return (
-        <div className="space-y-8">
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><TrendingUp className="size-4" /> 1️⃣ Outreach Analytics</CardTitle></CardHeader>
-                <CardContent className="space-y-6 pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <FormField control={form.control} name="coldCalls" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Cold Calls</Label><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="linkedinOutreach" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="emailsSent" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Emails Sent</Label><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="p-4 bg-primary/5 rounded-2xl border flex flex-col items-center gap-1"><p className="text-[10px] font-black text-primary/70 uppercase">Total Outreach</p><p className="text-2xl font-black text-primary">{totalOutreach}</p></div>
-                        <FormField control={form.control} name="potentialClients" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Potential Clients</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                    </div>
-                    <div className="flex justify-center p-3 bg-green-50 rounded-xl border border-green-200">
-                        <p className="text-xs font-black text-green-700 uppercase tracking-widest">Efficiency: {efficiency.toFixed(2)}%</p>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-4" /> 2️⃣ Financial Impact</CardTitle></CardHeader>
-                <CardContent className="space-y-6 pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField control={form.control} name="currency" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold">Currency</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent><SelectItem value="INR">INR (₹)</SelectItem><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem><SelectItem value="GBP">GBP (£)</SelectItem><SelectItem value="AED">AED (د.إ)</SelectItem></SelectContent></Select></FormItem>
-                        )} />
-                        <FormField control={form.control} name="collectedRevenue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Collected Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <FormField control={form.control} name="committedRevenue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Committed Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="pipelineValue" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Pipeline Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                        <FormField control={form.control} name="revenueVariance" render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Revenue Variance</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Mic className="size-4" /> 3️⃣ Call Quality Audit</CardTitle></CardHeader>
-                <CardContent className="space-y-8 pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Best Call Record</Label>
-                            <div className="flex items-center gap-3">
-                                <Input type="file" accept="audio/*" onChange={(e) => e.target.files?.[0] && handleFileUpload('bestCallRecording', e.target.files[0])} className="text-xs h-9 bg-white" disabled={isUploading === 'bestCallRecording'} />
-                                {isUploading === 'bestCallRecording' && <Loader2 className="size-4 animate-spin text-primary" />}
-                                {form.getValues('bestCallRecording') && <CheckCircle2 className="size-4 text-green-600" />}
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Worst Call Record</Label>
-                            <div className="flex items-center gap-3">
-                                <Input type="file" accept="audio/*" onChange={(e) => e.target.files?.[0] && handleFileUpload('worstCallRecording', e.target.files[0])} className="text-xs h-9 bg-white" disabled={isUploading === 'worstCallRecording'} />
-                                {isUploading === 'worstCallRecording' && <Loader2 className="size-4 animate-spin text-primary" />}
-                                {form.getValues('worstCallRecording') && <CheckCircle2 className="size-4 text-green-600" />}
-                            </div>
-                        </div>
-                    </div>
-                    <FormField control={form.control} name="allCallsDriveLink" render={({ field }) => (
-                      <FormItem><FormLabel className="text-[10px] uppercase font-bold">All Calls Archive (Drive Link)</FormLabel><FormControl><Input {...field} placeholder="https://drive.google.com/..." className="rounded-xl h-11" /></FormControl></FormItem>
-                    )} />
-                </CardContent>
-            </Card>
-        </div>
-    );
-  };
-
-  const DigitalMarketingFields = () => {
-    const deliverables = [
-        { label: 'Content', key: 'dmContent' },
-        { label: 'Posters', key: 'dmPosters' },
-        { label: 'Reels', key: 'dmReels' },
-        { label: 'Shoots', key: 'dmShoots' }
-    ];
-    
-    return (
-      <div className="space-y-8">
-          <BusinessFields />
-          <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
-              <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest"><LayoutTemplate className="size-4" /> 4️⃣ Tactical Output Matrix</CardTitle></CardHeader>
-              <CardContent className="pt-6">
-                  <div className="border rounded-2xl overflow-hidden bg-white/50">
-                      <Table>
-                          <TableHeader className="bg-muted/30">
-                              <TableRow className="hover:bg-transparent">
-                                  <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Status</TableHead>
-                                  {deliverables.map(d => <TableHead key={d.key} className="text-[10px] font-black uppercase tracking-widest text-center py-4">{d.label}</TableHead>)}
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              {['Approved', 'Pending', 'Rejected'].map(status => (
-                                  <TableRow key={status} className="border-border/50">
-                                      <TableCell className="text-xs font-black uppercase py-4">{status}</TableCell>
-                                      {deliverables.map(d => (
-                                          <TableCell key={d.key} className="py-2">
-                                              <FormField control={form.control} name={`${d.key}${status}`} render={({ field }) => (
-                                                  <FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center font-bold rounded-lg bg-white/50" /></FormControl>
-                                              )} />
-                                          </TableCell>
-                                      ))}
-                                  </TableRow>
-                              ))}
-                          </TableBody>
-                      </Table>
-                  </div>
-              </CardContent>
-          </Card>
-          <ExecutionPlanFields />
-      </div>
-    );
-  };
-
-  const TechnicalFields = () => (
-    <div className="space-y-8">
-        <div className="grid grid-cols-2 gap-6">
-            <FormField control={form.control} name="logInTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Shift Start</FormLabel><FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-            <FormField control={form.control} name="logOutTime" render={({ field }) => (<FormItem><FormLabel className="text-xs uppercase font-bold">Shift End</FormLabel><FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl></FormItem>)} />
-        </div>
-        <div className="space-y-4">
-            <p className="font-black text-[10px] text-primary uppercase tracking-widest flex items-center gap-2"><Brain className="size-4" /> Development Modules:</p>
-            {form.getValues('completedTasks')?.map((_: any, i: number) => (
-                <Card key={i} className="relative group bg-white/50 border rounded-2xl overflow-hidden shadow-sm pt-6 px-6 pb-6 space-y-4">
-                    <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 rounded-full h-8 w-8 text-red-600" onClick={() => {
-                        const current = form.getValues('completedTasks');
-                        form.setValue('completedTasks', current.filter((_:any, idx:number) => idx !== i));
-                    }}><X className="size-4" /></Button>
-                    <FormField control={form.control} name={`completedTasks.${i}.moduleName`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Module</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name={`completedTasks.${i}.workDone`} render={({ field }) => (<FormItem><FormLabel className="text-[10px] uppercase font-bold">Description</FormLabel><FormControl><Textarea {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                </Card>
-            ))}
-            <Button type="button" variant="outline" onClick={() => form.setValue('completedTasks', [...(form.getValues('completedTasks') || []), { moduleName: "", workDone: "" }])} className="w-full border-dashed rounded-2xl h-16 bg-white/50 text-xs font-black uppercase"><Plus className="size-4 mr-2" /> Add Module</Button>
-        </div>
-        <ExecutionPlanFields />
-    </div>
-  );
 
   return (
     <>
@@ -803,7 +839,7 @@ export default function ReportsPage() {
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl border-none ring-1 ring-border/50">
-            <Form {...form}>
+            <FormProvider {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 bg-secondary/30">
                     <DialogHeader className="p-8 pb-6 border-b bg-white/80 backdrop-blur-md">
                         <div className="flex items-center gap-3">
@@ -821,13 +857,18 @@ export default function ReportsPage() {
                             <div className="space-y-6">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Verification</Label>
                                 <FormField control={form.control} name="signature" render={({ field }) => (<FormItem><FormControl><Input {...field} readOnly className="bg-muted/50 font-mono text-[10px] h-12 rounded-xl border-none ring-1 ring-border/50 cursor-not-allowed font-bold" /></FormControl></FormItem>)} />
-                                <FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20 shadow-sm"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl><div className="space-y-1 leading-none"><FormLabel className="text-sm font-bold cursor-pointer">I certify that all information provided is accurate and complete.</FormLabel></div></FormItem>)} />
+                                <FormField control={form.control} name="declaration" render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20 shadow-sm">
+                                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl>
+                                        <div className="space-y-1 leading-none"><FormLabel className="text-sm font-bold cursor-pointer">I certify that all information provided is accurate and complete.</FormLabel></div>
+                                    </FormItem>
+                                )} />
                             </div>
                         </div>
                     </ScrollArea>
-                    <div className="p-6 border-t bg-white/80 backdrop-blur-md"><DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col"><Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button><Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20" disabled={isUploading !== null}>Finalize Log & Logout</Button></DialogFooter></div>
+                    <div className="p-6 border-t bg-white/80 backdrop-blur-md"><DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col"><Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button><Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">Finalize Log & Logout</Button></DialogFooter></div>
                 </form>
-            </Form>
+            </FormProvider>
         </DialogContent>
       </Dialog>
 
@@ -869,41 +910,3 @@ export default function ReportsPage() {
     </>
   );
 }
-
-const CustomTemplateFields = ({ definition }: { definition: any }) => (
-    <div className="space-y-8">
-        {definition.sections?.map((section: any, sIdx: number) => (
-            <Card key={sIdx} className="bg-white/50 border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase tracking-widest text-primary">{section.title}</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                    {section.fields?.map((field: any, fIdx: number) => (
-                        <FormField key={fIdx} name={field.name} render={({ field: formField }) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">{field.label}</FormLabel><FormControl>{field.type === 'textarea' ? <Textarea {...formField} className="rounded-xl" /> : field.type === 'number' ? <Input type="number" min="0" {...formField} className="rounded-xl h-11" /> : <Input {...formField} className="rounded-xl h-11" />}</FormControl></FormItem>
-                        )} />
-                    ))}
-                </CardContent>
-            </Card>
-        ))}
-        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-            <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">🚀 T+1 Execution Planning</CardTitle></CardHeader>
-            <CardContent className="space-y-6 pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField name="meetingsBookedTomorrow" render={({ field }) => (
-                        <FormItem><FormLabel className="text-[10px] uppercase font-bold">Meetings Booked Tomorrow</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                    )} />
-                    <FormField name="interventionTrigger" render={({ field }) => (
-                        <FormItem><FormLabel className="text-[10px] uppercase font-bold">Manager Intervention Trigger</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent><SelectItem value="None (Standard)">None (Standard)</SelectItem><SelectItem value="Manager Input Required">Manager Input Required</SelectItem><SelectItem value="Resource Blocked">Resource Blocked</SelectItem><SelectItem value="Client Risk Detected">Client Risk Detected</SelectItem></SelectContent></Select></FormItem>
-                    )} />
-                </div>
-                <FormField name="criticalPathTomorrow" render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Top Priority / Critical Path</FormLabel><FormControl><Textarea {...field} placeholder="What is the single most important task for tomorrow?" className="rounded-xl" /></FormControl></FormItem>
-                )} />
-                <FormField name="pendingDeliverables" render={({ field }) => (
-                    <FormItem><FormLabel className="text-[10px] uppercase font-bold">Pending Strategic Deliverables</FormLabel><FormControl><Textarea {...field} placeholder="List items that need final completion..." className="rounded-xl" /></FormControl></FormItem>
-                )} />
-            </CardContent>
-        </Card>
-    </div>
-);
