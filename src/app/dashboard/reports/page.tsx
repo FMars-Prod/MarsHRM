@@ -132,7 +132,8 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
     const followUps = Number(useWatch({ control, name: 'followUps' }) || 0);
     const potential = Number(useWatch({ control, name: 'potentialClients' }) || 0);
     
-    const totalOutreach = coldCalls + linkedin + emails + followUps;
+    // Total Outreach is sum of Cold Calls, LinkedIn, and Emails (excluding follow-ups)
+    const totalOutreach = coldCalls + linkedin + emails;
     const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
     
     const getEfficiencyColor = (val: number) => {
@@ -160,10 +161,14 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                             <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Follow-ups</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                         <FormField control={control} name="potentialClients" render={({ field }) => (
                             <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Potential Clients Identified</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
+                        <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 h-11 flex items-center justify-between px-6">
+                            <span className="text-[10px] font-black uppercase text-muted-foreground">Total Outreach</span>
+                            <span className="font-black text-sm">{totalOutreach}</span>
+                        </div>
                         <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 h-11 flex items-center justify-between px-6">
                             <span className="text-[10px] font-black uppercase text-muted-foreground">Efficiency Rate</span>
                             <span className={cn("font-black text-sm", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</span>
@@ -356,9 +361,11 @@ const TechnicalFields = () => {
  * COMPONENT: Report Detail Visualization (Audit View)
  */
 const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
-    const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0) + Number(report.followUps || 0);
+    // Total Outreach is sum of Cold Calls, LinkedIn, and Emails (excluding follow-ups)
+    const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0);
     const potential = Number(report.potentialClients || 0);
     const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
+    const followUps = Number(report.followUps || 0);
 
     const getEfficiencyColor = (val: number) => {
         if (val < 10) return "text-red-600";
@@ -370,13 +377,19 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
         <div className="space-y-8">
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion</div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Total Outreach</p><p className="text-xl font-black">{totalOutreach}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Potential Clients</p><p className="text-xl font-black">{potential}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Total Outreach</p><p className="text-lg font-black">{totalOutreach}</p></div>
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Follow-ups</p><p className="text-lg font-black">{followUps}</p></div>
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center"><p className="text-[9px] font-black uppercase text-muted-foreground">Potential Clients</p><p className="text-lg font-black">{potential}</p></div>
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50 text-center col-span-2">
                         <p className="text-[9px] font-black uppercase text-muted-foreground">Efficiency Rate</p>
-                        <p className={cn("text-xl font-black", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</p>
+                        <p className={cn("text-lg font-black", getEfficiencyColor(efficiency))}>{efficiency.toFixed(2)}%</p>
                     </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 px-2 bg-muted/10 p-3 rounded-2xl border border-dashed">
+                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Cold Calls: {report.coldCalls || 0}</p>
+                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">LinkedIn: {report.linkedinOutreach || 0}</p>
+                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Emails: {report.emailsSent || 0}</p>
                 </div>
             </div>
 
