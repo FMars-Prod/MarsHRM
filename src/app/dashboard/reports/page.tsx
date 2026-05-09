@@ -345,6 +345,7 @@ const DigitalMarketingFields = () => (
     </div>
 );
 
+// FIX: Extract project item to a component to follow Rules of Hooks (Hooks cannot be inside map/loop)
 const TechnicalProjectItem = ({ index, control }: { index: number, control: any }) => {
     const isCompleted = useWatch({ control, name: `technicalProjects.${index}.isCompleted` });
     return (
@@ -382,6 +383,19 @@ const TechnicalProjectItem = ({ index, control }: { index: number, control: any 
                 )}
             </div>
         </Card>
+    );
+};
+
+// FIX: Extract meeting item to a component
+const TechnicalMeetingItem = ({ index, control }: { index: number, control: any }) => {
+    return (
+        <div className="p-4 rounded-2xl border bg-white grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField control={control} name={`technicalMeetings.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Client Name</FormLabel><FormControl><Input {...field} className="rounded-lg h-9" /></FormControl></FormItem>)} />
+            <FormField control={control} name={`technicalMeetings.${index}.productName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Product Name</FormLabel><FormControl><Input {...field} className="rounded-lg h-9" /></FormControl></FormItem>)} />
+            <FormField control={control} name={`technicalMeetings.${index}.status`} render={({ field }) => (
+                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-lg h-9"><SelectValue /></SelectTrigger></FormControl><SelectContent>{["Won", "Close", "Pending", "In Review", "Followup", "New"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+            )} />
+        </div>
     );
 };
 
@@ -429,13 +443,7 @@ const TechnicalFields = () => {
                     )} />
                     <div className="space-y-4">
                         {meetingFields.map((field, index) => (
-                            <div key={field.id} className="p-4 rounded-2xl border bg-white grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FormField control={control} name={`technicalMeetings.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Client Name</FormLabel><FormControl><Input {...field} className="rounded-lg h-9" /></FormControl></FormItem>)} />
-                                <FormField control={control} name={`technicalMeetings.${index}.productName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Product Name</FormLabel><FormControl><Input {...field} className="rounded-lg h-9" /></FormControl></FormItem>)} />
-                                <FormField control={control} name={`technicalMeetings.${index}.status`} render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-lg h-9"><SelectValue /></SelectTrigger></FormControl><SelectContent>{["Won", "Close", "Pending", "In Review", "Followup", "New"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-                                )} />
-                            </div>
+                            <TechnicalMeetingItem key={field.id} index={index} control={control} />
                         ))}
                     </div>
                 </CardContent>

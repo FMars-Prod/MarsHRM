@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -37,8 +38,8 @@ const userSchema = z.object({
   employmentType: z.enum(['Intern', 'Employee']),
   role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/Admin']),
   password: z.string().optional(),
-  isWfhAllowed: z.boolean().optional(),
-  isDemoAccount: z.boolean().optional(),
+  isWfhAllowed: z.boolean().default(false),
+  isDemoAccount: z.boolean().default(false),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -71,8 +72,14 @@ export default function UsersPage() {
         if (editingUser) {
             const userRef = doc(firestore, 'users', editingUser.id);
             const { password, ...updateData } = values;
+            
+            // FIX: Remove undefined fields before updating Firestore
+            const sanitizedData = Object.fromEntries(
+                Object.entries(updateData).filter(([_, v]) => v !== undefined)
+            );
+
             const batch = writeBatch(firestore);
-            batch.update(userRef, updateData);
+            batch.update(userRef, sanitizedData);
             
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
             if (values.role === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', editingUser.id), { employeeId: editingUser.id });
@@ -264,7 +271,18 @@ export default function UsersPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); if(u.signatureUrl) setManualSignatureUrl(u.signatureUrl); setIsDialogOpen(true); }}><Edit className="mr-2 size-4" /> Edit Profile</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { 
+                          setEditingUser(u); 
+                          form.reset({
+                            ...u,
+                            isWfhAllowed: u.isWfhAllowed ?? false,
+                            isDemoAccount: u.isDemoAccount ?? false
+                          }); 
+                          if(u.signatureUrl) setManualSignatureUrl(u.signatureUrl); 
+                          setIsDialogOpen(true); 
+                        }}>
+                          <Edit className="mr-2 size-4" /> Edit Profile
+                        </DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href={`/dashboard/users/${u.id}`}><UserCircle className="mr-2 size-4" /> View Profile</Link></DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
