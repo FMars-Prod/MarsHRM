@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
@@ -345,7 +346,6 @@ const DigitalMarketingFields = () => (
     </div>
 );
 
-// FIX: Extract project item to a component to follow Rules of Hooks (Hooks cannot be inside map/loop)
 const TechnicalProjectItem = ({ index, control }: { index: number, control: any }) => {
     const isCompleted = useWatch({ control, name: `technicalProjects.${index}.isCompleted` });
     return (
@@ -386,7 +386,6 @@ const TechnicalProjectItem = ({ index, control }: { index: number, control: any 
     );
 };
 
-// FIX: Extract meeting item to a component
 const TechnicalMeetingItem = ({ index, control }: { index: number, control: any }) => {
     return (
         <div className="p-4 rounded-2xl border bg-white grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -744,3 +743,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+

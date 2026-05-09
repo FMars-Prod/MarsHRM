@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -54,7 +55,7 @@ const userChartConfig = {
   breakHours: { label: "Break Time", color: "hsl(var(--accent))" },
 } satisfies ChartConfig;
 
-// Helper functions moved to top level to ensure availability
+// Helper functions moved to module level to avoid initialization sequence issues
 const isWithinInterval = (start: Date, end: Date, range: {start: Date, end: Date}) => {
     return (start <= range.end && end >= range.start);
 };
@@ -215,7 +216,7 @@ export default function AnalyticsPage() {
     });
   }, [attendanceData, users, dateRange, selectedUserId]);
 
-  const getDayStatus = (user: User, day: Date) => {
+  const getDayStatusLocal = (user: User, day: Date) => {
       const today = startOfDay(new Date());
       if (isAfter(day, today)) return { status: 'future', label: '—', color: 'bg-muted/10 text-muted-foreground' };
 
@@ -292,7 +293,7 @@ export default function AnalyticsPage() {
           if (!user) return [];
           return range.map(day => {
               const att = attendanceData.find(a => a.employeeId === user.id && isSameDay(a.checkInTime?.toDate() || new Date(0), day));
-              const statusInfo = getDayStatus(user, day);
+              const statusInfo = getDayStatusLocal(user, day);
               return {
                   date: day,
                   employeeName: `${user.firstName} ${user.lastName}`,
@@ -307,7 +308,7 @@ export default function AnalyticsPage() {
         .sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0))
         .map(att => {
             const user = users?.find(u => u.id === att.employeeId);
-            const statusInfo = user ? getDayStatus(user, att.checkInTime!.toDate()) : { label: '?', color: '' };
+            const statusInfo = user ? getDayStatusLocal(user, att.checkInTime!.toDate()) : { label: '?', color: '' };
             return {
                 date: att.checkInTime!.toDate(),
                 employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
@@ -626,3 +627,4 @@ function StatCard({ label, value, icon: Icon, color }: { label: string, value: s
         </Card>
     );
 }
+
