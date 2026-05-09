@@ -33,6 +33,10 @@ type EventItem = {
 type LocationRequest = {
   status: string;
 };
+type SupportTicket = {
+  employeeId: string;
+  lastUpdatedDate?: Timestamp;
+}
 
 export default function DashboardLayout({
   children,
@@ -108,6 +112,23 @@ export default function DashboardLayout({
     return events.filter(e => e.date && isToday(e.date.toDate())).length;
   }, [events]);
 
+  // Support Desk Badge Logic (Updates in last 24h)
+  const ticketQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, "issue_reports"), where("employeeId", "==", user.uid));
+  }, [firestore, user]);
+  const { data: userTickets } = useCollection<SupportTicket>(ticketQuery);
+
+  const ticketUpdateCount = useMemo(() => {
+    if (!userTickets) return 0;
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return userTickets.filter(t => {
+      if (!t.lastUpdatedDate) return false;
+      const updateTime = t.lastUpdatedDate.toDate ? t.lastUpdatedDate.toDate() : new Date(t.lastUpdatedDate);
+      return updateTime > twentyFourHoursAgo;
+    }).length;
+  }, [userTickets]);
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
@@ -156,6 +177,7 @@ export default function DashboardLayout({
             unreadAnnouncementsCount={unreadAnnouncements}
             todaysEventsCount={todaysEventsCount}
             pendingLocationRequestsCount={pendingLocationRequestsCount}
+            ticketUpdateCount={ticketUpdateCount}
           />
         </SidebarContent>
         <SidebarFooter>

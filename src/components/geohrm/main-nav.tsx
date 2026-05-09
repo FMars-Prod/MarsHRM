@@ -39,7 +39,7 @@ const links = [
   { href: "/dashboard/announcements", label: "Announcements", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
   { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
   { href: "/dashboard/payslips", label: "Payslips", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-  { href: "/dashboard/issues", label: "Support Desk", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+  { href: "/dashboard/issues", label: "Support Desk", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
   { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
   { href: "/dashboard/core-team-report", label: "Core Team Report", icon: ClipboardList, roles: ['Team Lead', 'HR Manager', 'CEO/Admin'] },
@@ -58,6 +58,7 @@ interface MainNavProps {
   unreadAnnouncementsCount?: number;
   todaysEventsCount?: number;
   pendingLocationRequestsCount?: number;
+  ticketUpdateCount?: number;
 }
 
 export function MainNav({ 
@@ -66,6 +67,7 @@ export function MainNav({
   unreadAnnouncementsCount = 0,
   todaysEventsCount = 0,
   pendingLocationRequestsCount = 0,
+  ticketUpdateCount = 0,
 }: MainNavProps) {
   const pathname = usePathname();
 
@@ -74,6 +76,7 @@ export function MainNav({
     unreadAnnouncementsCount,
     todaysEventsCount,
     pendingLocationRequestsCount,
+    ticketUpdateCount,
   };
 
   return (

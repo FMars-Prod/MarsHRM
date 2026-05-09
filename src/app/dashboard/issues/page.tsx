@@ -10,13 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Ticket } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Ticket, CheckCircle2, Clock, Activity } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, collection, serverTimestamp, orderBy, query } from "firebase/firestore";
+import { doc, collection, serverTimestamp, orderBy, query, where } from "firebase/firestore";
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +33,7 @@ type SupportTicket = {
   submittedBy: string;
   submissionDate: any;
   category: string;
+  lastUpdatedDate?: any;
 };
 
 const CATEGORIES = ["Mac Laptop Issue", "Windows Laptop Issue", "Chair Broken", "ID Card Broken", "Others"];
@@ -53,7 +54,13 @@ export default function TicketsPage() {
   const userRole = (userData as any)?.role || 'Member';
   const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
-  const ticketsQuery = useMemoFirebase(() => query(collection(firestore, "issue_reports"), orderBy("submissionDate", "desc")), [firestore]);
+  const ticketsQuery = useMemoFirebase(() => {
+      if (!user) return null;
+      const base = collection(firestore, "issue_reports");
+      if (isAdmin) return query(base, orderBy("submissionDate", "desc"));
+      return query(base, where("employeeId", "==", user.uid), orderBy("submissionDate", "desc"));
+  }, [firestore, user, isAdmin]);
+
   const { data: tickets, isLoading } = useCollection<SupportTicket>(ticketsQuery);
 
   const handleCreateTicket = () => {
@@ -77,7 +84,14 @@ export default function TicketsPage() {
     setNewDescription('');
   }
 
-  const ticketData = isAdmin ? tickets : tickets?.filter(t => t.employeeId === user?.uid);
+  const handleUpdateStatus = (ticketId: string, newStatus: TicketStatus) => {
+    const ticketRef = doc(firestore, 'issue_reports', ticketId);
+    updateDocumentNonBlocking(ticketRef, {
+      status: newStatus,
+      lastUpdatedDate: serverTimestamp()
+    });
+    toast({ title: `Ticket status updated to ${newStatus}` });
+  };
 
   return (
     <>
@@ -132,7 +146,7 @@ export default function TicketsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={4} className="h-32 text-center">Scanning dispatch log...</TableCell></TableRow>
-              ) : ticketData?.map((t) => (
+              ) : tickets?.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-bold">{t.title}</TableCell>
                   <TableCell><Badge variant="secondary" className="text-[10px] rounded-full">{t.category}</Badge></TableCell>
@@ -147,7 +161,19 @@ export default function TicketsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setSelectedTicket(t)}><Ticket className="mr-2 size-4"/> View Ticket</DropdownMenuItem>
                         {isAdmin && (
-                            <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(firestore, 'issue_reports', t.id))} className="text-destructive"><Trash2 className="mr-2 size-4" /> Purge</DropdownMenuItem>
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase">Management Controls</DropdownMenuLabel>
+                                <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger><Activity className="mr-2 size-4" /> Change Status</DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent>
+                                        <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'Open')}>Open</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'In Progress')}>In Progress</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'Resolved')}>Resolved</DropdownMenuItem>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                                <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(firestore, 'issue_reports', t.id))} className="text-destructive"><Trash2 className="mr-2 size-4" /> Purge</DropdownMenuItem>
+                            </>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -167,6 +193,11 @@ export default function TicketsPage() {
             <div className="py-8 space-y-6">
                 <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Subject</p><p className="font-bold">{selectedTicket?.title}</p></div>
                 <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Classification</p><p className="font-bold">{selectedTicket?.category}</p></div>
+                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Status</p>
+                    <Badge variant="outline" className={cn("rounded-full text-[10px] font-black", selectedTicket?.status === 'Open' ? 'text-red-600 border-red-200' : selectedTicket?.status === 'In Progress' ? 'text-yellow-600 border-yellow-200' : 'text-green-600 border-green-200')}>
+                        {selectedTicket?.status.toUpperCase()}
+                    </Badge>
+                </div>
                 <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Description</p><p className="text-sm whitespace-pre-wrap">{selectedTicket?.description}</p></div>
             </div>
         </SheetContent>

@@ -12,9 +12,9 @@ import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Brief
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { format } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage } from "@/firebase";
-import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit } from "firebase/firestore";
+import { format, isSameDay, startOfDay } from "date-fns";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, useAuth } from "@/firebase";
+import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, FormProvider, useFormContext, useFieldArray } from "react-hook-form";
@@ -27,6 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 
@@ -558,6 +559,8 @@ const TechnicalAuditDetail = ({ report }: { report: any }) => (
 export default function ReportsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   
   const [selectedUser, setSelectedUser] = React.useState<any | null>(null);
@@ -565,7 +568,6 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [selectedReportForReview, setSelectedReportForReview] = React.useState<any | null>(null);
-  const [myRecentReports, setMyRecentReports] = React.useState<any[]>([]);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
@@ -574,18 +576,24 @@ export default function ReportsPage() {
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
   const { data: users } = useCollection<any>(usersQuery);
 
+  const myReportsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(10));
+  }, [user, firestore]);
+  const { data: myRecentReports } = useCollection(myReportsQuery);
+
+  const hasReportedToday = React.useMemo(() => {
+    if (!myRecentReports) return false;
+    const today = startOfDay(new Date());
+    return myRecentReports.some(r => {
+      const d = r.date instanceof Timestamp ? r.date.toDate() : new Date(r.date);
+      return isSameDay(d, new Date());
+    });
+  }, [myRecentReports]);
+
   const mappingDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
   const { data: mappingData } = useDoc<{mappings: Record<string, string>}>(mappingDocRef);
   const currentTemplateId = mappingData?.mappings?.[currentUserData?.jobTitle || ''] || 'Business';
-
-  const fetchMyReports = React.useCallback(async () => {
-    if (!user) return;
-    const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(10));
-    const snap = await getDocs(q);
-    setMyRecentReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  }, [user, firestore]);
-
-  React.useEffect(() => { fetchMyReports(); }, [fetchMyReports]);
 
   const form = useForm<any>({
     defaultValues: {
@@ -609,11 +617,16 @@ export default function ReportsPage() {
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
     try {
-        const payload = { ...values, employeeId: user.uid, employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`, employeeDepartment: currentUserData.department, employeeJobTitle: currentUserData.jobTitle, date: new Date(), reportType: currentTemplateId, signatureUrl: currentUserData.signatureUrl || null };
+        const payload = { ...values, employeeId: user.uid, employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`, employeeDepartment: currentUserData.department, employeeJobTitle: currentUserData.jobTitle, date: serverTimestamp(), reportType: currentTemplateId, signatureUrl: currentUserData.signatureUrl || null };
         await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
         toast({ title: "Strategic Submission Confirmed" });
-        fetchMyReports();
         setIsAddDialogOpen(false);
+        
+        // AUTO LOGOUT AFTER POSTING
+        setTimeout(async () => {
+          await auth.signOut();
+          router.push('/login');
+        }, 1500);
     } catch (err) { toast({ variant: 'destructive', title: 'Submission Failed' }); }
   };
 
@@ -647,11 +660,17 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={isLeadOrHigher ? "Strategic Fleet Log" : "My Shift Log"} description="Comprehensive verification of tactical submissions."><Button onClick={() => setIsAddDialogOpen(true)} className="rounded-full h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4"/> Shift Form</Button></PageHeader>
+      <PageHeader title={isLeadOrHigher ? "Strategic Fleet Log" : "My Shift Log"} description="Comprehensive verification of tactical submissions.">
+          {!hasReportedToday ? (
+            <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-full h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4"/> Shift Form</Button>
+          ) : (
+            <Badge className="h-11 px-6 bg-green-100 text-green-700 border-none rounded-full font-bold uppercase tracking-widest"><CheckCircle2 className="size-4 mr-2" /> Reported Today</Badge>
+          )}
+      </PageHeader>
       
       {!isLeadOrHigher && (
           <div className="space-y-4"><div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><History className="size-4" /> My Recent Tactics</div>
-              <div className="grid gap-3">{myRecentReports.map(r => (
+              <div className="grid gap-3">{myRecentReports?.map(r => (
                   <Card key={r.id} className="p-4 hover:bg-muted/50 cursor-pointer flex items-center justify-between border-none ring-1 ring-border/50" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4"><div className="p-2 rounded-xl bg-primary/10 text-primary"><Clock className="size-4" /></div><div><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Log</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
               ))}</div>
           </div>

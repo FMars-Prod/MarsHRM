@@ -7,11 +7,11 @@ import { EventsWidget } from "@/components/geohrm/events-widget";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, orderBy, limit } from "firebase/firestore";
+import { doc, collection, query, orderBy, limit, where, Timestamp } from "firebase/firestore";
 import { WorkHoursSummaryWidget } from "@/components/geohrm/work-hours-summary-widget";
 import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ShieldAlert, AlertTriangle } from "lucide-react";
+import { ShieldAlert, AlertTriangle, MessageSquareWarning } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -29,6 +29,23 @@ export default function DashboardPage() {
   const { data: latestCompliance } = useCollection(complianceQuery);
   const hasCriticalAlert = latestCompliance && latestCompliance.length > 0;
 
+  // Ticket Notification Logic
+  const ticketQuery = useMemoFirebase(() => {
+    if (!currentUser) return null;
+    return query(collection(firestore, "issue_reports"), where("employeeId", "==", currentUser.uid));
+  }, [firestore, currentUser]);
+  const { data: userTickets } = useCollection<any>(ticketQuery);
+
+  const recentTicketUpdates = React.useMemo(() => {
+    if (!userTickets) return [];
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return userTickets.filter(t => {
+      if (!t.lastUpdatedDate) return false;
+      const updateTime = t.lastUpdatedDate.toDate ? t.lastUpdatedDate.toDate() : new Date(t.lastUpdatedDate);
+      return updateTime > twentyFourHoursAgo;
+    });
+  }, [userTickets]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -44,6 +61,17 @@ export default function DashboardPage() {
               <AlertDescription className="flex justify-between items-center mt-2">
                   <p className="text-red-800 text-sm font-medium">A high-priority compliance report has been filed for <span className="font-black">{latestCompliance[0].employeeName}</span>.</p>
                   <Link href="/dashboard/compliance" className="text-red-600 font-black uppercase text-[10px] underline underline-offset-4">Review Detail</Link>
+              </AlertDescription>
+          </Alert>
+      )}
+
+      {recentTicketUpdates.length > 0 && (
+          <Alert className="mb-6 bg-blue-50 border-blue-200">
+              <MessageSquareWarning className="size-4 text-blue-600" />
+              <AlertTitle className="text-blue-700 font-black uppercase text-xs tracking-widest">Support Desk Update</AlertTitle>
+              <AlertDescription className="flex justify-between items-center mt-2">
+                  <p className="text-blue-800 text-sm font-medium">Your support ticket "<span className="font-black">{recentTicketUpdates[0].title}</span>" has been updated to <span className="font-black">{recentTicketUpdates[0].status}</span>.</p>
+                  <Link href="/dashboard/issues" className="text-blue-600 font-black uppercase text-[10px] underline underline-offset-4">View Updates</Link>
               </AlertDescription>
           </Alert>
       )}
