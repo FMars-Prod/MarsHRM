@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay, startOfDay } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, useAuth, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit, serverTimestamp, updateDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, FormProvider, useFormContext, useFieldArray } from "react-hook-form";
@@ -626,11 +626,19 @@ export default function ReportsPage() {
     if (!user || !currentUserData) return;
     try {
         const payload = { ...values, employeeId: user.uid, employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`, employeeDepartment: currentUserData.department, employeeJobTitle: currentUserData.jobTitle, date: serverTimestamp(), reportType: currentTemplateId, signatureUrl: currentUserData.signatureUrl || null };
+        
+        // 1. Submit Report
         await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
+        
+        // 2. Automated Clock-Out
+        const todayId = format(new Date(), 'yyyy-MM-dd');
+        const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
+        await setDoc(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
+
         toast({ title: "Strategic Submission Confirmed" });
         setIsAddDialogOpen(false);
         
-        // AUTO LOGOUT AFTER POSTING
+        // 3. Automated Protocol Sign-Out
         setTimeout(async () => {
           await auth.signOut();
           router.push('/login');
@@ -743,4 +751,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
