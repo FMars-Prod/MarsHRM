@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay, startOfDay } from "date-fns";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, useAuth, deleteDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, useAuth, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit, serverTimestamp, updateDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -622,28 +622,36 @@ export default function ReportsPage() {
     },
   });
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = (values: any) => {
     if (!user || !currentUserData) return;
-    try {
-        const payload = { ...values, employeeId: user.uid, employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`, employeeDepartment: currentUserData.department, employeeJobTitle: currentUserData.jobTitle, date: serverTimestamp(), reportType: currentTemplateId, signatureUrl: currentUserData.signatureUrl || null };
-        
-        // 1. Submit Report
-        await addDoc(collection(firestore, `users/${user.uid}/reports`), payload);
-        
-        // 2. Automated Clock-Out
-        const todayId = format(new Date(), 'yyyy-MM-dd');
-        const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
-        await setDoc(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
+    
+    const payload = { 
+        ...values, 
+        employeeId: user.uid, 
+        employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`, 
+        employeeDepartment: currentUserData.department, 
+        employeeJobTitle: currentUserData.jobTitle, 
+        date: serverTimestamp(), 
+        reportType: currentTemplateId, 
+        signatureUrl: currentUserData.signatureUrl || null 
+    };
+    
+    // 1. Submit Report (Non-blocking as per guidelines)
+    addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
+    
+    // 2. Automated Clock-Out (Final Stamp)
+    const todayId = format(new Date(), 'yyyy-MM-dd');
+    const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
+    setDocumentNonBlocking(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
 
-        toast({ title: "Strategic Submission Confirmed" });
-        setIsAddDialogOpen(false);
-        
-        // 3. Automated Protocol Sign-Out
-        setTimeout(async () => {
-          await auth.signOut();
-          router.push('/login');
-        }, 1500);
-    } catch (err) { toast({ variant: 'destructive', title: 'Submission Failed' }); }
+    toast({ title: "Strategic Submission Confirmed" });
+    setIsAddDialogOpen(false);
+    
+    // 3. Automated Protocol Sign-Out
+    setTimeout(async () => {
+      await auth.signOut();
+      router.push('/login');
+    }, 1500);
   };
 
   const handleDeleteReport = (report: any) => {

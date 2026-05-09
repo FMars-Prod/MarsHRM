@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const { data: currentUserData } = useDoc(currentUserDocRef);
   const userRole = (currentUserData as any)?.role;
   const isCEO = userRole === 'CEO/Admin';
+  // Team Lead should have the same dashboard as Member, so they are NOT in isAdminOrHR
   const isAdminOrHR = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
   const complianceQuery = useMemoFirebase(() => isCEO ? query(collection(firestore, 'compliance_reports'), orderBy('timestamp', 'desc'), limit(1)) : null, [isCEO, firestore]);

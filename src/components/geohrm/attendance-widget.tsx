@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -274,22 +275,29 @@ export function AttendanceWidget() {
   };
 
   const handleClockOutRedirect = () => {
-      if (isAdminOrCEO) {
-          setIsVerifyingLocation(true);
-          navigator.geolocation.getCurrentPosition(p => {
-              updateDocumentNonBlocking(getTodaysAttendanceRef!, {
+      // 1. Capture Location and Clock-Out before redirecting to reports
+      setIsVerifyingLocation(true);
+      navigator.geolocation.getCurrentPosition(p => {
+          if (getTodaysAttendanceRef) {
+              updateDocumentNonBlocking(getTodaysAttendanceRef, {
                   checkOutTime: serverTimestamp(),
                   locationCheckOutLatitude: p.coords.latitude,
                   locationCheckOutLongitude: p.coords.longitude,
               });
-              setIsVerifyingLocation(false);
-              setStatus("out");
-              setHasClockedOutToday(true);
-              toast({ title: "Shift Logged" });
-          }, () => { setIsVerifyingLocation(false); toast({ variant: 'destructive', title: 'GPS Required' }); });
-      } else {
-          router.push('/dashboard/reports');
-      }
+          }
+          setIsVerifyingLocation(false);
+          setStatus("out");
+          setHasClockedOutToday(true);
+          toast({ title: "Shift Concluded" });
+          
+          if (!isAdminOrCEO) {
+              // Redirect members to reports as their final required action
+              router.push('/dashboard/reports');
+          }
+      }, () => { 
+          setIsVerifyingLocation(false); 
+          toast({ variant: 'destructive', title: 'GPS Required for Clock-Out' }); 
+      });
   };
 
   const isLate = () => {

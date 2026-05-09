@@ -12,12 +12,12 @@ import {
 import { MainNav } from '@/components/geohrm/main-nav';
 import { UserNav } from '@/components/geohrm/user-nav';
 import { Building2 } from 'lucide-react';
-import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase, useCollection, useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
-import { isToday } from 'date-fns';
+import { isToday, startOfDay, endOfDay } from 'date-fns';
 import Image from 'next/image';
 import { AutomatedReportSender } from '@/components/geohrm/automated-report-sender';
 
@@ -44,6 +44,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const router = useRouter();
   const firestore = useFirestore();
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
@@ -56,6 +57,26 @@ export default function DashboardLayout({
   
   const userRole = (userData as any)?.role || 'Member';
   const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+
+  // 1. Report-Locked Re-entry Check
+  const todayStart = startOfDay(new Date());
+  const todayEnd = endOfDay(new Date());
+  const reportsQuery = useMemoFirebase(() => {
+    if (!user || isPrivileged) return null;
+    return query(
+      collection(firestore, `users/${user.uid}/reports`),
+      where('date', '>=', todayStart),
+      where('date', '<=', todayEnd)
+    );
+  }, [firestore, user, isPrivileged, todayStart, todayEnd]);
+  const { data: todayReports } = useCollection(reportsQuery);
+
+  useEffect(() => {
+    if (todayReports && todayReports.length > 0 && !isPrivileged) {
+       // If user already reported today and is not admin/hr, force logout
+       auth.signOut().then(() => router.push('/login'));
+    }
+  }, [todayReports, isPrivileged, auth, router]);
 
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
