@@ -8,18 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, TrendingUp, Target, Brain, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, UserCheck, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, Upload, FileDown, Check, MousePointer2, Trash2 } from "lucide-react";
+import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, FileDown, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay, startOfDay } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, useAuth, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, orderBy, doc, addDoc, getDocs, Timestamp, limit, serverTimestamp, updateDoc, setDoc } from "firebase/firestore";
+import { collection, query, where, orderBy, doc, getDocs, Timestamp, limit, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, FormProvider, useFormContext, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -636,10 +635,10 @@ export default function ReportsPage() {
         signatureUrl: currentUserData.signatureUrl || null 
     };
     
-    // 1. Submit Report (Non-blocking as per guidelines)
+    // 1. Submit Report
     addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
     
-    // 2. Automated Clock-Out (Final Stamp)
+    // 2. Automated Clock-Out (Final Stamp for shifts)
     const todayId = format(new Date(), 'yyyy-MM-dd');
     const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
     setDocumentNonBlocking(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
@@ -660,7 +659,6 @@ export default function ReportsPage() {
       deleteDocumentNonBlocking(reportRef);
       toast({ title: "Report Expunged" });
       setSelectedReportForReview(null);
-      // Refresh local list if auditing specific user
       if (selectedUser) {
         setUserReports(prev => prev.filter(r => r.id !== report.id));
       }

@@ -11,7 +11,7 @@ import { doc, collection, query, orderBy, limit, where, Timestamp } from "fireba
 import { WorkHoursSummaryWidget } from "@/components/geohrm/work-hours-summary-widget";
 import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ShieldAlert, AlertTriangle, MessageSquareWarning } from "lucide-react";
+import { ShieldAlert, MessageSquareWarning } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -23,7 +23,7 @@ export default function DashboardPage() {
   const { data: currentUserData } = useDoc(currentUserDocRef);
   const userRole = (currentUserData as any)?.role;
   const isCEO = userRole === 'CEO/Admin';
-  // Team Lead should have the same dashboard as Member, so they are NOT in isAdminOrHR
+  // Team Lead should have the same dashboard as Member for daily operations
   const isAdminOrHR = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
   const complianceQuery = useMemoFirebase(() => isCEO ? query(collection(firestore, 'compliance_reports'), orderBy('timestamp', 'desc'), limit(1)) : null, [isCEO, firestore]);
