@@ -275,7 +275,6 @@ export function AttendanceWidget() {
   };
 
   const handleClockOutRedirect = () => {
-      // 1. Capture Location and Clock-Out before redirecting to reports
       setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(p => {
           if (getTodaysAttendanceRef) {
@@ -291,13 +290,28 @@ export function AttendanceWidget() {
           toast({ title: "Shift Concluded" });
           
           if (!isAdminOrCEO) {
-              // Redirect members to reports as their final required action
               router.push('/dashboard/reports');
           }
       }, () => { 
           setIsVerifyingLocation(false); 
           toast({ variant: 'destructive', title: 'GPS Required for Clock-Out' }); 
       });
+  };
+
+  const handleResetDay = async () => {
+      if (!getTodaysAttendanceRef) return;
+      try {
+          await deleteDoc(getTodaysAttendanceRef);
+          setStatus("out");
+          setTimer(0);
+          setBreakTimer(0);
+          setTotalBreakTime(0);
+          setLastClockInTime(null);
+          setHasClockedOutToday(false);
+          toast({ title: "Tactical Reset Complete", description: "Today's log expunged." });
+      } catch (err) {
+          toast({ variant: 'destructive', title: 'Reset Failed' });
+      }
   };
 
   const isLate = () => {
@@ -326,9 +340,14 @@ export function AttendanceWidget() {
       <Card className="flex flex-col animate-fade-in-up bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-border/50 shadow-sm relative overflow-hidden">
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
-              <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Precision Attendance</CardTitle>
+              <div>
+                  <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Precision Attendance</CardTitle>
+                  <CardDescription>High-accuracy geofenced tracking active.</CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" className="rounded-full hover:bg-red-50 hover:text-red-600" onClick={handleResetDay} title="Tactical Reset (Testing Only)">
+                  <RotateCcw className="size-4" />
+              </Button>
           </div>
-          <CardDescription>High-accuracy geofenced tracking active.</CardDescription>
         </CardHeader>
 
         <CardContent className="flex-grow flex flex-col items-center justify-center gap-8 text-center pb-8 pt-2">
