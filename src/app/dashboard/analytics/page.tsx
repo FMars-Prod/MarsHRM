@@ -54,6 +54,18 @@ const userChartConfig = {
   breakHours: { label: "Break Time", color: "hsl(var(--accent))" },
 } satisfies ChartConfig;
 
+// Helper functions moved to top level to ensure availability
+const isWithinInterval = (start: Date, end: Date, range: {start: Date, end: Date}) => {
+    return (start <= range.end && end >= range.start);
+};
+
+const isWithinLeave = (day: Date, leave: LeaveRequest) => {
+    const d = startOfDay(day);
+    const start = startOfDay(leave.startDate.toDate());
+    const end = startOfDay(leave.endDate.toDate());
+    return (d >= start && d <= end);
+};
+
 const MapPinLink = ({ lat, lng, time }: { lat?: number, lng?: number, time?: string }) => {
     if (!lat || !lng || !time) return <span className="text-muted-foreground/30">—</span>;
     return (
@@ -164,7 +176,6 @@ export default function AnalyticsPage() {
 
     const days = eachDayOfInterval({ start: trendStart, end: trendEnd }).filter(d => !isSunday(d));
     
-    // EXCLUDE privileged roles and demo accounts from stats
     const expectedUsers = users?.filter(u => 
         u.role !== 'CEO/Admin' && 
         u.role !== 'HR Manager' && 
@@ -231,13 +242,6 @@ export default function AnalyticsPage() {
       return { status: 'absent', label: 'Absent', color: 'bg-red-100 text-red-700 border-red-200' };
   };
 
-  const isWithinLeave = (day: Date, leave: LeaveRequest) => {
-      const d = startOfDay(day);
-      const start = startOfDay(leave.startDate.toDate());
-      const end = startOfDay(leave.endDate.toDate());
-      return (d >= start && d <= end);
-  };
-
   const userStats = React.useMemo(() => {
       if (selectedUserId === 'all' || !users) return null;
       const user = users.find(u => u.id === selectedUserId);
@@ -280,10 +284,6 @@ export default function AnalyticsPage() {
           nonCompliance
       };
   }, [selectedUserId, attendanceData, leaves, holidays, users, dateRange]);
-
-  const isWithinInterval = (start: Date, end: Date, range: {start: Date, end: Date}) => {
-      return (start <= range.end && end >= range.start);
-  };
 
   const gridData = React.useMemo(() => {
       const range = eachDayOfInterval({ start: dateRange.start, end: dateRange.end }).reverse();

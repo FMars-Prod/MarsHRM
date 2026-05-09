@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -174,7 +173,7 @@ export default function UsersPage() {
                                     <div className="space-y-4">
                                         {editingUser.signatureUrl ? (
                                             <div className="p-3 bg-muted/20 rounded-xl border border-dashed border-primary/20 flex flex-col items-center gap-2">
-                                                <img src={editingUser.signatureUrl} alt="Signature" className="h-12 object-contain grayscale invert mix-blend-multiply opacity-70" />
+                                                <img src={editingUser.signatureUrl} alt="Signature" className="h-12 object-contain" />
                                                 <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[8px] font-black uppercase"><CheckCircle2 className="size-2 mr-1" /> Active Signature</Badge>
                                             </div>
                                         ) : (

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -206,7 +205,7 @@ export default function ProfilePage() {
                         <CardContent className="space-y-4">
                             {employee.signatureUrl && (
                                 <div className="space-y-3">
-                                    <div className="p-3 bg-muted/20 rounded-xl border border-dashed border-primary/20 flex items-center justify-center grayscale invert">
+                                    <div className="p-3 bg-muted/20 rounded-xl border border-dashed border-primary/20 flex items-center justify-center">
                                         <img src={employee.signatureUrl} alt="E-Signature" className="h-12 object-contain opacity-60" />
                                     </div>
                                     <div className="flex justify-center">
