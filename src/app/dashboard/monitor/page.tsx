@@ -15,8 +15,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Pie, PieChart, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import Link from 'next/link';
 
 type UserData = {
@@ -35,6 +35,13 @@ const CHART_COLORS = {
   outOfRange: '#f97316',
   absent: '#ef4444',
 };
+
+const monitorChartConfig = {
+  present: { label: "Present", color: CHART_COLORS.present },
+  late: { label: "Late", color: CHART_COLORS.late },
+  outOfRange: { label: "Out of Range", color: CHART_COLORS.outOfRange },
+  absent: { label: "Absent", color: CHART_COLORS.absent },
+} satisfies ChartConfig;
 
 export default function MonitorPage() {
   const firestore = useFirestore();
@@ -162,25 +169,27 @@ export default function MonitorPage() {
                 {summary.isLoading ? (
                     <div className="h-full flex items-center justify-center animate-pulse text-muted-foreground text-xs uppercase font-bold">Scanning...</div>
                 ) : chartData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={chartData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={80}
-                                paddingAngle={5}
-                                dataKey="value"
-                            >
-                                {chartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                ))}
-                            </Pie>
-                            <Tooltip content={<ChartTooltipContent />} />
-                            <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    <ChartContainer config={monitorChartConfig} className="h-full w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={chartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                </Pie>
+                                <ChartTooltip content={<ChartTooltipContent />} />
+                                <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </ChartContainer>
                 ) : (
                     <div className="h-full flex items-center justify-center text-muted-foreground text-xs uppercase font-bold">No Data Available</div>
                 )}
