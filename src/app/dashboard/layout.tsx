@@ -58,26 +58,6 @@ export default function DashboardLayout({
   const userRole = (userData as any)?.role || 'Member';
   const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
-  // 1. Report-Locked Re-entry Check
-  const todayStart = startOfDay(new Date());
-  const todayEnd = endOfDay(new Date());
-  const reportsQuery = useMemoFirebase(() => {
-    if (!user || isPrivileged) return null;
-    return query(
-      collection(firestore, `users/${user.uid}/reports`),
-      where('date', '>=', todayStart),
-      where('date', '<=', todayEnd)
-    );
-  }, [firestore, user, isPrivileged, todayStart, todayEnd]);
-  const { data: todayReports } = useCollection(reportsQuery);
-
-  useEffect(() => {
-    if (todayReports && todayReports.length > 0 && !isPrivileged) {
-       // If user already reported today and is not admin/hr, force logout
-       auth.signOut().then(() => router.push('/login'));
-    }
-  }, [todayReports, isPrivileged, auth, router]);
-
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
     let q = query(collection(firestore, "leave_requests"));

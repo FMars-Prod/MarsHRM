@@ -28,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import jsPDF from "jspdf";
+import jsPDF from "jsPDF";
 import autoTable from 'jspdf-autotable';
 
 const formatIST = (date: any) => {
@@ -643,14 +643,8 @@ export default function ReportsPage() {
     const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
     setDocumentNonBlocking(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
 
-    toast({ title: "Strategic Submission Confirmed" });
+    toast({ title: "Strategic Submission Confirmed", description: "You have been clocked out for the day." });
     setIsAddDialogOpen(false);
-    
-    // 3. Automated Protocol Sign-Out
-    setTimeout(async () => {
-      await auth.signOut();
-      router.push('/login');
-    }, 1500);
   };
 
   const handleDeleteReport = (report: any) => {
