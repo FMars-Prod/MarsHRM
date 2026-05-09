@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut, Loader2, PowerOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
 import { doc, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
@@ -34,7 +34,7 @@ export function UserNav({ user }: { user: User | null }) {
   );
   const { data: employee } = useDoc(userDocRef);
 
-  const handleLogout = async () => {
+  const handleLogout = async (force: boolean = false) => {
     if (!user) return;
     setIsLoggingOut(true);
 
@@ -42,8 +42,8 @@ export function UserNav({ user }: { user: User | null }) {
         const userRole = (employee as any)?.role || 'Member';
         const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
-        // Check if report for today exists (only for members/leads)
-        if (!isPrivileged) {
+        // Check if report for today exists (only for members/leads, if not forced)
+        if (!isPrivileged && !force) {
             const todayStart = startOfDay(new Date());
             const todayEnd = endOfDay(new Date());
             
@@ -103,9 +103,13 @@ export function UserNav({ user }: { user: User | null }) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
+        <DropdownMenuItem onClick={() => handleLogout(false)} disabled={isLoggingOut}>
           {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-          <span>{isLoggingOut ? "Verifying Protocols..." : "Log out"}</span>
+          <span>{isLoggingOut ? "Verifying Protocols..." : "Standard Logout"}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleLogout(true)} disabled={isLoggingOut} className="text-destructive focus:text-destructive">
+          <PowerOff className="mr-2 h-4 w-4" />
+          <span>Force Logout</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
