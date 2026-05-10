@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -10,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, addDocumentNonBlocking, updateDocumentNonBlocking, useStorage } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch, serverTimestamp } from "firebase/firestore";
@@ -125,9 +124,13 @@ export default function UsersPage() {
         const snap = await uploadBytes(sigRef, file);
         const url = await getDownloadURL(snap.ref);
         const userRef = doc(firestore, 'users', editingUser.id);
-        updateDocumentNonBlocking(userRef, { signatureUrl: url, signatureStatus: 'approved' });
+        updateDocumentNonBlocking(userRef, { 
+            signatureUrl: url, 
+            signatureStatus: 'approved',
+            canUpdateSignature: false // LOCK after upload
+        });
         toast({ title: "Signature provisioned and approved." });
-        setEditingUser({ ...editingUser, signatureUrl: url, signatureStatus: 'approved' });
+        setEditingUser({ ...editingUser, signatureUrl: url, signatureStatus: 'approved', canUpdateSignature: false });
     } catch (e: any) {
         toast({ variant: 'destructive', title: "Bucket Error", description: "Initialize Storage in console or use direct URL option." });
     } finally {
@@ -138,9 +141,21 @@ export default function UsersPage() {
   const handleManualSignatureSave = () => {
       if (!editingUser || !manualSignatureUrl) return;
       const userRef = doc(firestore, 'users', editingUser.id);
-      updateDocumentNonBlocking(userRef, { signatureUrl: manualSignatureUrl, signatureStatus: 'approved' });
+      updateDocumentNonBlocking(userRef, { 
+          signatureUrl: manualSignatureUrl, 
+          signatureStatus: 'approved',
+          canUpdateSignature: false // LOCK after sync
+      });
       toast({ title: "Signature URL Provisioned" });
-      setEditingUser({ ...editingUser, signatureUrl: manualSignatureUrl, signatureStatus: 'approved' });
+      setEditingUser({ ...editingUser, signatureUrl: manualSignatureUrl, signatureStatus: 'approved', canUpdateSignature: false });
+  };
+
+  const handleResetSignaturePermission = () => {
+      if (!editingUser) return;
+      const userRef = doc(firestore, 'users', editingUser.id);
+      updateDocumentNonBlocking(userRef, { canUpdateSignature: true });
+      toast({ title: "Re-upload Permission Granted", description: "User can now update their digital signature." });
+      setEditingUser({ ...editingUser, canUpdateSignature: true });
   };
 
   return (
@@ -190,34 +205,46 @@ export default function UsersPage() {
                                             </div>
                                         )}
                                         
-                                        <Tabs defaultValue="upload" className="w-full">
-                                            <TabsList className="grid w-full grid-cols-2 h-8">
-                                                <TabsTrigger value="upload" className="text-[10px] uppercase font-bold">Upload</TabsTrigger>
-                                                <TabsTrigger value="url" className="text-[10px] uppercase font-bold">Manual URL</TabsTrigger>
-                                            </TabsList>
-                                            <TabsContent value="upload" className="pt-2">
-                                                <div className="relative">
-                                                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
-                                                    <Button variant="outline" className="w-full h-10 rounded-xl text-[10px] font-black uppercase" disabled={isUploadingSignature}>
-                                                        {isUploadingSignature ? "Syncing..." : editingUser.signatureUrl ? "Update via File" : "Upload File Asset"}
-                                                    </Button>
-                                                </div>
-                                            </TabsContent>
-                                            <TabsContent value="url" className="pt-2 space-y-2">
-                                                <div className="flex gap-2">
-                                                    <Input 
-                                                        value={manualSignatureUrl} 
-                                                        onChange={e => setManualSignatureUrl(e.target.value)} 
-                                                        placeholder="Paste image URL here" 
-                                                        className="h-9 text-xs"
-                                                    />
-                                                    <Button type="button" size="icon" className="shrink-0" onClick={handleManualSignatureSave}>
-                                                        <Save className="size-4" />
-                                                    </Button>
-                                                </div>
-                                                <p className="text-[8px] text-muted-foreground italic">Useful if Storage bucket is not yet provisioned.</p>
-                                            </TabsContent>
-                                        </Tabs>
+                                        {editingUser.signatureUrl && !editingUser.canUpdateSignature ? (
+                                            <Button 
+                                                type="button" 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="w-full rounded-xl border-dashed border-primary/40 text-primary font-bold text-[9px] uppercase tracking-widest h-10"
+                                                onClick={handleResetSignaturePermission}
+                                            >
+                                                <RotateCcw className="size-3 mr-2" /> Allow Signature Re-upload
+                                            </Button>
+                                        ) : (
+                                            <Tabs defaultValue="upload" className="w-full">
+                                                <TabsList className="grid w-full grid-cols-2 h-8">
+                                                    <TabsTrigger value="upload" className="text-[10px] uppercase font-bold">Upload</TabsTrigger>
+                                                    <TabsTrigger value="url" className="text-[10px] uppercase font-bold">Manual URL</TabsTrigger>
+                                                </TabsList>
+                                                <TabsContent value="upload" className="pt-2">
+                                                    <div className="relative">
+                                                        <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
+                                                        <Button variant="outline" className="w-full h-10 rounded-xl text-[10px] font-black uppercase" disabled={isUploadingSignature}>
+                                                            {isUploadingSignature ? "Syncing..." : editingUser.signatureUrl ? "Update via File" : "Upload File Asset"}
+                                                        </Button>
+                                                    </div>
+                                                </TabsContent>
+                                                <TabsContent value="url" className="pt-2 space-y-2">
+                                                    <div className="flex gap-2">
+                                                        <Input 
+                                                            value={manualSignatureUrl} 
+                                                            onChange={e => setManualSignatureUrl(e.target.value)} 
+                                                            placeholder="Paste image URL here" 
+                                                            className="h-9 text-xs"
+                                                        />
+                                                        <Button type="button" size="icon" className="shrink-0" onClick={handleManualSignatureSave}>
+                                                            <Save className="size-4" />
+                                                        </Button>
+                                                    </div>
+                                                    <p className="text-[8px] text-muted-foreground italic">Useful if Storage bucket is not yet provisioned.</p>
+                                                </TabsContent>
+                                            </Tabs>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="p-4 bg-muted/10 rounded-xl border border-dashed text-center">

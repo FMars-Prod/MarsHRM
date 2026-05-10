@@ -277,11 +277,11 @@ export function AttendanceWidget() {
       setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(p => {
           if (getTodaysAttendanceRef) {
-              updateDocumentNonBlocking(getTodaysAttendanceRef, {
+              setDocumentNonBlocking(getTodaysAttendanceRef, {
                   checkOutTime: serverTimestamp(),
                   locationCheckOutLatitude: p.coords.latitude,
                   locationCheckOutLongitude: p.coords.longitude,
-              });
+              }, { merge: true });
           }
           setIsVerifyingLocation(false);
           setStatus("out");
@@ -295,22 +295,6 @@ export function AttendanceWidget() {
           setIsVerifyingLocation(false); 
           toast({ variant: 'destructive', title: 'GPS Required for Clock-Out' }); 
       });
-  };
-
-  const handleResetDay = async () => {
-      if (!getTodaysAttendanceRef) return;
-      try {
-          await deleteDoc(getTodaysAttendanceRef);
-          setStatus("out");
-          setTimer(0);
-          setBreakTimer(0);
-          setTotalBreakTime(0);
-          setLastClockInTime(null);
-          setHasClockedOutToday(false);
-          toast({ title: "Tactical Reset Complete", description: "Today's log expunged." });
-      } catch (err) {
-          toast({ variant: 'destructive', title: 'Reset Failed' });
-      }
   };
 
   const isLate = () => {

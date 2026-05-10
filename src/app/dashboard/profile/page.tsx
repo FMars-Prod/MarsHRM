@@ -9,7 +9,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap } from "lucide-react";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -134,13 +134,17 @@ export default function ProfilePage() {
     }
 
     const handleSignatureUpload = async (file: File) => {
-        if (!user) return;
+        if (!user || !userDocRef) return;
         setIsUploadingSignature(true);
         try {
             const sigRef = ref(storage, `signatures/${user.uid}/${Date.now()}-${file.name}`);
             const snap = await uploadBytes(sigRef, file);
             const url = await getDownloadURL(snap.ref);
-            updateDocumentNonBlocking(userDocRef!, { signatureUrl: url, signatureStatus: 'approved' });
+            updateDocumentNonBlocking(userDocRef, { 
+                signatureUrl: url, 
+                signatureStatus: 'approved',
+                canUpdateSignature: false // LOCK after upload
+            });
             toast({ title: "Identity Asset Saved", description: "Your digital signature has been provisioned." });
         } catch (e: any) {
             toast({ variant: 'destructive', title: "Bucket Error", description: "Use 'Manual URL' tab if Storage bucket initialization is pending." });
@@ -151,12 +155,18 @@ export default function ProfilePage() {
 
     const handleManualSignatureSave = () => {
         if (!userDocRef || !manualSignatureUrl) return;
-        updateDocumentNonBlocking(userDocRef, { signatureUrl: manualSignatureUrl, signatureStatus: 'approved' });
+        updateDocumentNonBlocking(userDocRef, { 
+            signatureUrl: manualSignatureUrl, 
+            signatureStatus: 'approved',
+            canUpdateSignature: false // LOCK after sync
+        });
         toast({ title: "Identity URL Saved", description: "Digital asset synchronized." });
     };
 
     if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Synchronizing Identity Hub...</div>;
     if (!employee) return <div className="p-10 text-center">No identity record found.</div>;
+
+    const isSignatureLocked = employee.signatureUrl && !employee.canUpdateSignature;
 
     return (
         <div className="space-y-6">
@@ -214,27 +224,35 @@ export default function ProfilePage() {
                                 </div>
                             )}
                             
-                            <Tabs defaultValue="upload" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2 rounded-lg bg-muted/50 h-10">
-                                    <TabsTrigger value="upload" className="text-[10px] font-black uppercase">File Upload</TabsTrigger>
-                                    <TabsTrigger value="url" className="text-[10px] font-black uppercase">Manual URL</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="upload" className="pt-4">
-                                    <div className="relative">
-                                        <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
-                                        <Button className="w-full rounded-full h-10 text-[10px] font-black uppercase tracking-widest" disabled={isUploadingSignature}>
-                                            {isUploadingSignature ? "Transmitting..." : "Upload Identity Asset"}
-                                        </Button>
-                                    </div>
-                                </TabsContent>
-                                <TabsContent value="url" className="pt-4 space-y-3">
-                                    <div className="flex gap-2">
-                                        <Input value={manualSignatureUrl} onChange={e => setManualSignatureUrl(e.target.value)} placeholder="Paste image URL..." className="h-10 text-xs rounded-xl" />
-                                        <Button size="icon" className="h-10 w-10 rounded-xl" onClick={handleManualSignatureSave}><Save className="size-4" /></Button>
-                                    </div>
-                                    <p className="text-[8px] text-muted-foreground italic text-center">Bypass Storage bucket issues with a direct URL.</p>
-                                </TabsContent>
-                            </Tabs>
+                            {isSignatureLocked ? (
+                                <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl flex flex-col items-center text-center gap-2">
+                                    <Lock className="size-4 text-primary opacity-40" />
+                                    <p className="text-[10px] font-black uppercase text-primary tracking-widest">Protocol Locked</p>
+                                    <p className="text-[8px] text-muted-foreground leading-relaxed">Identity asset verified. Reach out to Executive Oversight (Admin) to initiate a secure re-upload session.</p>
+                                </div>
+                            ) : (
+                                <Tabs defaultValue="upload" className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2 rounded-lg bg-muted/50 h-10">
+                                        <TabsTrigger value="upload" className="text-[10px] font-black uppercase">File Upload</TabsTrigger>
+                                        <TabsTrigger value="url" className="text-[10px] font-black uppercase">Manual URL</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="upload" className="pt-4">
+                                        <div className="relative">
+                                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
+                                            <Button className="w-full rounded-full h-10 text-[10px] font-black uppercase tracking-widest" disabled={isUploadingSignature}>
+                                                {isUploadingSignature ? "Transmitting..." : "Upload Identity Asset"}
+                                            </Button>
+                                        </div>
+                                    </TabsContent>
+                                    <TabsContent value="url" className="pt-4 space-y-3">
+                                        <div className="flex gap-2">
+                                            <Input value={manualSignatureUrl} onChange={e => setManualSignatureUrl(e.target.value)} placeholder="Paste image URL..." className="h-10 text-xs rounded-xl" />
+                                            <Button size="icon" className="h-10 w-10 rounded-xl" onClick={handleManualSignatureSave}><Save className="size-4" /></Button>
+                                        </div>
+                                        <p className="text-[8px] text-muted-foreground italic text-center">Bypass Storage bucket issues with a direct URL.</p>
+                                    </TabsContent>
+                                </Tabs>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
@@ -311,7 +329,7 @@ export default function ProfilePage() {
                                     <FormItem><FormLabel className="text-[10px] font-black uppercase">First Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={form.control} name="lastName" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase">Last Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase">Last Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl><FormMessage /></FormMessage>
                                 )} />
                             </div>
                             <Separator />

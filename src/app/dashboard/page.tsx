@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
@@ -67,7 +66,7 @@ export default function DashboardPage() {
       )}
 
       {recentTicketUpdates.length > 0 && (
-          <Alert className="mb-6 bg-blue-50 border-blue-200">
+          <Alert className="mb-6 bg-blue-50 border-2 border-blue-200">
               <MessageSquareWarning className="size-4 text-blue-600" />
               <AlertTitle className="text-blue-700 font-black uppercase text-xs tracking-widest">Support Desk Update</AlertTitle>
               <AlertDescription className="flex justify-between items-center mt-2">
