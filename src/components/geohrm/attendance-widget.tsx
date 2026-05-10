@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -344,9 +343,6 @@ export function AttendanceWidget() {
                   <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Precision Attendance</CardTitle>
                   <CardDescription>High-accuracy geofenced tracking active.</CardDescription>
               </div>
-              <Button variant="ghost" size="icon" className="rounded-full hover:bg-red-50 hover:text-red-600" onClick={handleResetDay} title="Tactical Reset (Testing Only)">
-                  <RotateCcw className="size-4" />
-              </Button>
           </div>
         </CardHeader>
 
