@@ -28,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import jsPDF from "jsPDF";
+import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 
 const formatIST = (date: any) => {
@@ -751,3 +751,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
