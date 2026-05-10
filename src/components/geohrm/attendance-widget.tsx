@@ -288,9 +288,7 @@ export function AttendanceWidget() {
           setHasClockedOutToday(true);
           toast({ title: "Shift Concluded" });
           
-          if (!isAdminOrCEO) {
-              router.push('/dashboard/reports');
-          }
+          router.push('/dashboard/reports');
       }, () => { 
           setIsVerifyingLocation(false); 
           toast({ variant: 'destructive', title: 'GPS Required for Clock-Out' }); 

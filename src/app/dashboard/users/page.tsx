@@ -72,7 +72,6 @@ export default function UsersPage() {
             const userRef = doc(firestore, 'users', editingUser.id);
             const { password, ...updateData } = values;
             
-            // FIX: Remove undefined fields before updating Firestore
             const sanitizedData = Object.fromEntries(
                 Object.entries(updateData).filter(([_, v]) => v !== undefined)
             );
@@ -93,7 +92,7 @@ export default function UsersPage() {
             const { password, ...userData } = values;
             
             const batch = writeBatch(firestore);
-            batch.set(userRef, { id: newUserId, employeeId: newUserId, hireDate: new Date().toISOString(), ...userData });
+            batch.set(userRef, { id: newUserId, employeeId: newUserId, hireDate: new Date().toISOString(), ...userData, canUpdateSignature: true });
             
             batch.set(doc(collection(firestore, 'audit_logs')), {
                 timestamp: serverTimestamp(),

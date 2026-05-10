@@ -620,7 +620,7 @@ export default function ReportsPage() {
     },
   });
 
-  const onSubmit = (values: any) => {
+  const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
     
     const payload = { 
@@ -635,14 +635,14 @@ export default function ReportsPage() {
     };
     
     // 1. Submit Report
-    addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
+    await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
     
     // 2. Automated Clock-Out (Final Stamp for shifts)
     const todayId = format(new Date(), 'yyyy-MM-dd');
     const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
     setDocumentNonBlocking(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
 
-    toast({ title: "Strategic Submission Confirmed", description: "You have been clocked out for the day." });
+    toast({ title: "Strategic Submission Confirmed", description: "Your shift conclusion has been registered." });
     setIsAddDialogOpen(false);
   };
 
