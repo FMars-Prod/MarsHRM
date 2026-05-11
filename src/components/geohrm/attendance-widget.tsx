@@ -67,6 +67,7 @@ export function AttendanceWidget() {
   const [breakTimer, setBreakTimer] = useState(0);
   const [totalBreakTime, setTotalBreakTime] = useState(0);
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
+  const [currentBreakStartTime, setCurrentBreakStartTime] = useState<Date | null>(null);
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
   const [isVerifyingLocation, setIsVerifyingLocation] = useState(false);
   const { toast } = useToast();
@@ -128,15 +129,18 @@ export function AttendanceWidget() {
             const totalElapsed = (checkOut.getTime() - checkIn.getTime()) / 1000;
             setTimer(Math.max(0, totalElapsed - savedBreakSec));
             setBreakTimer(0);
+            setCurrentBreakStartTime(null);
         } else if (checkIn) {
             setHasClockedOutToday(false);
             if (lunchOut && !lunchIn) {
                 setStatus("lunch");
+                setCurrentBreakStartTime(lunchOut);
                 const elapsedBeforeLunch = (lunchOut.getTime() - checkIn.getTime()) / 1000;
                 setTimer(Math.max(0, elapsedBeforeLunch - savedBreakSec));
                 setBreakTimer(Math.max(0, (Date.now() - lunchOut.getTime()) / 1000));
             } else {
                 setStatus("in");
+                setCurrentBreakStartTime(null);
                 const totalElapsed = (Date.now() - checkIn.getTime()) / 1000;
                 setTimer(Math.max(0, totalElapsed - savedBreakSec));
                 setBreakTimer(0);
@@ -149,10 +153,10 @@ export function AttendanceWidget() {
         setBreakTimer(0);
         setTotalBreakTime(0);
         setLastClockInTime(null);
+        setCurrentBreakStartTime(null);
     }
   }, [todaysAttendance]);
 
-  // HIGH PRECISION TIMER ENGINE
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     if (status === "in" || status === "lunch" || status === "short_break") {
@@ -161,16 +165,13 @@ export function AttendanceWidget() {
           if (status === "in" && lastClockInTime) {
               const elapsed = (now - lastClockInTime.getTime()) / 1000;
               setTimer(Math.max(0, elapsed - totalBreakTime));
-          } else if (status === "lunch" && todaysAttendance?.lunchOutTime) {
-              const start = todaysAttendance.lunchOutTime.toDate().getTime();
-              setBreakTimer(Math.max(0, (now - start) / 1000));
-          } else if (status === "short_break") {
-              setBreakTimer((prev) => prev + 1); // Local increment for short breaks
+          } else if ((status === "lunch" || status === "short_break") && currentBreakStartTime) {
+              setBreakTimer(Math.max(0, (now - currentBreakStartTime.getTime()) / 1000));
           }
-      }, 100); // 10Hz update for smooth visual flow
+      }, 100);
     }
     return () => clearInterval(interval);
-  }, [status, lastClockInTime, totalBreakTime, todaysAttendance]);
+  }, [status, lastClockInTime, totalBreakTime, currentBreakStartTime]);
 
   const proceedWithBreakEnd = (userLocation: Location, dist: number, reason?: string) => {
       const updatedBreakTime = totalBreakTime + breakTimer;
@@ -190,6 +191,7 @@ export function AttendanceWidget() {
       }
       setTotalBreakTime(updatedBreakTime);
       setBreakTimer(0);
+      setCurrentBreakStartTime(null);
       setStatus("in");
       toast({ title: "Ops Resumed" });
   }
@@ -210,6 +212,7 @@ export function AttendanceWidget() {
                   proceedWithBreakEnd(userLocation, dist);
               }
           } else {
+              const now = new Date();
               if (getTodaysAttendanceRef) {
                   updateDocumentNonBlocking(getTodaysAttendanceRef, {
                       locationLunchOutLatitude: userLocation.latitude,
@@ -217,6 +220,7 @@ export function AttendanceWidget() {
                       lunchOutTime: serverTimestamp(),
                   });
               }
+              setCurrentBreakStartTime(now);
               setStatus("lunch");
               toast({ title: "L-OUT Recorded" });
           }
@@ -230,6 +234,7 @@ export function AttendanceWidget() {
       if (status === "short_break") {
           proceedWithBreakEnd({ latitude: 0, longitude: 0 }, 0);
       } else {
+          setCurrentBreakStartTime(new Date());
           setStatus("short_break");
           toast({ title: "Short Break Active" });
       }
@@ -282,11 +287,11 @@ export function AttendanceWidget() {
       setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(p => {
           if (getTodaysAttendanceRef) {
-              updateDocumentNonBlocking(getTodaysAttendanceRef, {
+              setDocumentNonBlocking(getTodaysAttendanceRef, {
                   checkOutTime: serverTimestamp(),
                   locationCheckOutLatitude: p.coords.latitude,
                   locationCheckOutLongitude: p.coords.longitude,
-              });
+              }, { merge: true });
           }
           setIsVerifyingLocation(false);
           setStatus("out");
@@ -327,7 +332,7 @@ export function AttendanceWidget() {
           <div className="flex items-start justify-between">
               <div>
                   <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Precision Attendance</CardTitle>
-                  <CardDescription>High-accuracy timing engine active.</CardDescription>
+                  <CardDescription>High-accuracy geofenced tracking active.</CardDescription>
               </div>
           </div>
         </CardHeader>
