@@ -9,7 +9,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap, Lock } from "lucide-react";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap, Lock, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,6 +83,9 @@ export default function ProfilePage() {
 
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
+
+    const teamDocRef = useMemoFirebase(() => employee?.teamId ? doc(firestore, "teams", employee.teamId) : null, [employee, firestore]);
+    const { data: teamData } = useDoc<any>(teamDocRef);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -203,6 +206,11 @@ export default function ProfilePage() {
                              <div className="mt-6">
                                 <CardTitle className="font-headline text-2xl tracking-tight">{employee.firstName} {employee.lastName}</CardTitle>
                                 <CardDescription className="uppercase text-[10px] font-black tracking-[0.2em] text-primary">{employee.jobTitle}</CardDescription>
+                                {teamData && (
+                                    <Badge variant="secondary" className="mt-2 rounded-full font-bold text-[9px] uppercase tracking-widest bg-primary/10 text-primary border-none">
+                                        <Users className="size-3 mr-1" /> {teamData.name} Fleet
+                                    </Badge>
+                                )}
                              </div>
                         </CardHeader>
                         <CardContent className="flex justify-center pb-8">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -10,7 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth } from 'date-fns';
-import { Grid, ShieldCheck, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Download, Save, ExternalLink, Clock } from 'lucide-react';
+import { Grid, ShieldCheck, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Download, Save, ExternalLink, Clock, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +44,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const userDocRef = useMemoFirebase(() => (userId ? doc(firestore, 'users', userId) : null), [firestore, userId]);
   const { data: user, isLoading: isUserLoading } = useDoc<any>(userDocRef);
+
+  const teamDocRef = useMemoFirebase(() => user?.teamId ? doc(firestore, "teams", user.teamId) : null, [user, firestore]);
+  const { data: teamData } = useDoc<any>(teamDocRef);
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
@@ -120,7 +122,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             {user.avatar ? <span className="text-5xl">{user.avatar}</span> : <AvatarFallback className="text-2xl">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>}
         </div>
         <div className="flex-1 flex flex-col items-center md:items-start gap-4">
-            <div className="flex flex-col md:flex-row items-center gap-3"><h2 className="text-2xl font-black tracking-tighter">{user.firstName} {user.lastName}</h2><div className="flex gap-1.5"><Badge variant="secondary" className="rounded-full px-3 text-[9px] uppercase font-black tracking-widest">{user.jobTitle}</Badge></div></div>
+            <div className="flex flex-col md:flex-row items-center gap-3">
+                <h2 className="text-2xl font-black tracking-tighter">{user.firstName} {user.lastName}</h2>
+                <div className="flex gap-1.5">
+                    <Badge variant="secondary" className="rounded-full px-3 text-[9px] uppercase font-black tracking-widest">{user.jobTitle}</Badge>
+                    {teamData && <Badge className="bg-primary/10 text-primary border-none rounded-full px-3 text-[9px] uppercase font-black tracking-widest"><Users className="size-3 mr-1"/> {teamData.name}</Badge>}
+                </div>
+            </div>
             <div className="flex justify-center md:justify-start gap-8 md:gap-12 w-full max-w-sm border-t border-b py-3 md:border-none md:p-0">
                 <div className="text-center"><p className="font-black text-xl">{stats.workHours}</p><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Hours</p></div>
                 <div className="text-center"><p className="font-black text-xl">{stats.lateDays}</p><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Late Ops</p></div>
