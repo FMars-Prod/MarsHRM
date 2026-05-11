@@ -3,13 +3,13 @@
 import * as React from 'react';
 import { use } from 'react';
 import { notFound } from 'next/navigation';
-import { useFirestore, useMemoFirebase, useCollection, useDoc, updateDocumentNonBlocking, useStorage, useUser } from '@/firebase';
+import { useFirestore, useMemoFirebase, useCollection, useDoc, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } from 'firebase/firestore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth } from 'date-fns';
-import { Grid, ShieldCheck, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Download, Save, ExternalLink, Clock, Users } from 'lucide-react';
+import { Grid, ShieldCheck, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Download, Save, ExternalLink, Clock, Users, MapPin, CalendarDays } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import Link from "next/link";
 
 type AttendanceRecord = {
   id: string;
@@ -61,15 +62,19 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   React.useEffect(() => {
       const fetchReports = async () => {
           if (!userId) return;
-          const q = query(collection(firestore, `users/${userId}/reports`), orderBy('date', 'desc'), limit(30));
-          const snap = await getDocs(q);
-          setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          try {
+            const q = query(collection(firestore, `users/${userId}/reports`), orderBy('date', 'desc'), limit(30));
+            const snap = await getDocs(q);
+            setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          } catch (e) {
+            console.error("Report fetch failed:", e);
+          }
       };
       fetchReports();
   }, [userId, firestore]);
 
   const stats = React.useMemo(() => {
-    if (!attendanceData) return { workHours: 0, lateDays: 0, leaves: 0, compliance: 0 };
+    if (!attendanceData) return { workHours: 0, lateDays: 0, leaves: 0, reports: 0 };
     let totalSec = 0;
     let late = 0;
     attendanceData.forEach(r => {
@@ -78,8 +83,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         }
         if (r.status === 'late') late++;
     });
-    return { workHours: (totalSec / 3600).toFixed(1), lateDays: late, leaves: attendanceData.filter(a => a.status === 'on_leave').length, compliance: complianceData?.length || 0 };
-  }, [attendanceData, complianceData]);
+    return { 
+        workHours: (totalSec / 3600).toFixed(1), 
+        lateDays: late, 
+        leaves: attendanceData.filter(a => a.status === 'on_leave').length, 
+        reports: userReports.length 
+    };
+  }, [attendanceData, userReports]);
 
   const modifiers = React.useMemo(() => {
     const mods: Record<string, any> = { present: [], late: [], absent: [], on_leave: [], report: [], sunday: { dayOfWeek: [0] } };
@@ -103,7 +113,12 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     autoTable(pdfDoc, {
         startY: 35,
         head: [['Metric', 'Value']],
-        body: [['Work Hours', `${stats.workHours}h`], ['Late Logs', stats.lateDays], ['Leaves', stats.leaves], ['Compliance Alerts', stats.compliance]],
+        body: [
+            ['Work Hours', `${stats.workHours}h`], 
+            ['Late Logs', stats.lateDays], 
+            ['Leaves', stats.leaves], 
+            ['Total Reports', stats.reports]
+        ],
         theme: 'striped',
         headStyles: { fillColor: [107, 33, 168] }
     });
@@ -116,89 +131,224 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   if (!user) return notFound();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up pb-20">
-      <div className="flex flex-col md:flex-row items-center gap-8 px-6 pt-6">
-        <div className="size-20 md:size-24 rounded-full ring-2 ring-primary ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg">
-            {user.avatar ? <span className="text-5xl">{user.avatar}</span> : <AvatarFallback className="text-2xl">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>}
+    <div className="max-w-4xl mx-auto animate-fade-in-up pb-20">
+      {/* Instagram Header Style */}
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-20 px-6 py-10">
+        {/* Avatar */}
+        <div className="relative group">
+          <div className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
+              {user.avatar ? <span className="text-6xl md:text-8xl">{user.avatar}</span> : <AvatarFallback className="text-4xl">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>}
+          </div>
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 md:hidden">
+             <Badge className="bg-primary text-white border-none text-[8px] uppercase font-black tracking-widest px-2">Active</Badge>
+          </div>
         </div>
-        <div className="flex-1 flex flex-col items-center md:items-start gap-4">
-            <div className="flex flex-col md:flex-row items-center gap-3">
-                <h2 className="text-2xl font-black tracking-tighter">{user.firstName} {user.lastName}</h2>
-                <div className="flex gap-1.5">
-                    <Badge variant="secondary" className="rounded-full px-3 text-[9px] uppercase font-black tracking-widest">{user.jobTitle}</Badge>
-                    {teamData && <Badge className="bg-primary/10 text-primary border-none rounded-full px-3 text-[9px] uppercase font-black tracking-widest"><Users className="size-3 mr-1"/> {teamData.name}</Badge>}
-                </div>
+
+        {/* Stats and Info */}
+        <div className="flex-1 space-y-6">
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <h2 className="text-2xl font-light tracking-tight text-foreground/90">{user.firstName} {user.lastName}</h2>
+            <div className="flex gap-2">
+              {isAdmin && (
+                <Button onClick={handleExportPdf} size="sm" variant="outline" className="h-8 rounded-lg font-bold text-[11px] px-4">
+                  Audit Log PDF
+                </Button>
+              )}
+              {teamData && (
+                <Badge variant="secondary" className="rounded-lg px-3 text-[10px] uppercase font-black tracking-widest bg-muted/50 border-none">
+                  <Users className="size-3 mr-1.5 opacity-50" /> {teamData.name}
+                </Badge>
+              )}
             </div>
-            <div className="flex justify-center md:justify-start gap-8 md:gap-12 w-full max-w-sm border-t border-b py-3 md:border-none md:p-0">
-                <div className="text-center"><p className="font-black text-xl">{stats.workHours}</p><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Hours</p></div>
-                <div className="text-center"><p className="font-black text-xl">{stats.lateDays}</p><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Late Ops</p></div>
-                <div className="text-center"><p className="font-black text-xl">{stats.leaves}</p><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Leaves</p></div>
-                <div className="text-center"><p className="font-black text-xl text-red-600">{stats.compliance}</p><p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Alerts</p></div>
+          </div>
+
+          {/* Counts Bar */}
+          <div className="flex items-center justify-center md:justify-start gap-8 md:gap-12 py-1">
+            <div className="text-center md:text-left">
+              <p className="font-black text-lg">{stats.reports}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Reports</p>
             </div>
-            {isAdmin && <Button onClick={handleExportPdf} size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest"><Download className="size-3 mr-2"/> Download Audit PDF</Button>}
+            <div className="text-center md:text-left">
+              <p className="font-black text-lg">{stats.workHours}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Hours</p>
+            </div>
+            <div className="text-center md:text-left">
+              <p className="font-black text-lg">{stats.lateDays}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Late Ops</p>
+            </div>
+            <div className="text-center md:text-left">
+              <p className="font-black text-lg">{stats.leaves}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Leaves</p>
+            </div>
+          </div>
+
+          {/* Bio Section */}
+          <div className="text-center md:text-left space-y-1">
+            <p className="font-bold text-sm">{user.jobTitle}</p>
+            <p className="text-sm text-muted-foreground">{user.department} Department</p>
+            {user.hireDate && (
+                <p className="text-xs text-muted-foreground flex items-center justify-center md:justify-start gap-1 pt-2">
+                    <CalendarDays className="size-3" /> Joined {format(new Date(user.hireDate), 'MMMM yyyy')}
+                </p>
+            )}
+          </div>
         </div>
       </div>
+
+      <Separator className="opacity-50" />
+
+      {/* Instagram Content Tabs */}
       <Tabs defaultValue="calendar" className="w-full">
-        <TabsList className="w-full justify-center bg-transparent border-t border-b rounded-none h-14">
-            <TabsTrigger value="calendar" className="rounded-none px-6 flex gap-2 font-black uppercase text-[10px] tracking-widest"><CalendarIcon className="size-4"/> Ops Log</TabsTrigger>
-            <TabsTrigger value="reports" className="rounded-none px-6 flex gap-2 font-black uppercase text-[10px] tracking-widest"><FileText className="size-4"/> Intelligence</TabsTrigger>
-            <TabsTrigger value="compliance" className="rounded-none px-6 flex gap-2 font-black uppercase text-[10px] tracking-widest"><ShieldAlert className="size-4"/> Alerts</TabsTrigger>
-            <TabsTrigger value="identity" className="rounded-none px-6 flex gap-2 font-black uppercase text-[10px] tracking-widest"><ShieldCheck className="size-4"/> Identity</TabsTrigger>
+        <TabsList className="w-full justify-center bg-transparent border-none rounded-none h-14 space-x-12">
+            <TabsTrigger 
+                value="calendar" 
+                className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
+            >
+                <Grid className="size-4"/> Ops Grid
+            </TabsTrigger>
+            <TabsTrigger 
+                value="reports" 
+                className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
+            >
+                <FileText className="size-4"/> Intelligence
+            </TabsTrigger>
+            <TabsTrigger 
+                value="compliance" 
+                className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
+            >
+                <ShieldAlert className="size-4"/> Alerts
+            </TabsTrigger>
+            <TabsTrigger 
+                value="identity" 
+                className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
+            >
+                <ShieldCheck className="size-4"/> Identity
+            </TabsTrigger>
         </TabsList>
-        <TabsContent value="calendar" className="p-4"><Card className="border-none rounded-3xl overflow-hidden shadow-sm bg-white/50"><CardHeader className="bg-muted/10 border-b"><CardTitle className="text-sm font-black uppercase tracking-widest">Shift Verification Grid</CardTitle></CardHeader>
-                <CardContent className="p-4 flex flex-col md:flex-row gap-8 items-center justify-center">
-                    <Calendar mode="single" month={currentMonth} onMonthChange={setCurrentMonth} className="rounded-2xl border p-4 shadow-inner" modifiers={modifiers} modifiersClassNames={{
-                        present: 'bg-green-500/20 text-green-700 font-black',
-                        late: 'bg-yellow-500/20 text-yellow-700 font-black',
-                        on_leave: 'bg-blue-500/20 text-blue-700 font-black',
-                        report: 'after:content-["•"] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:text-primary after:font-black',
-                        sunday: 'opacity-20 bg-muted/20',
-                    }} />
-                </CardContent></Card></TabsContent>
-        <TabsContent value="reports" className="p-4">
-            <Card className="border-none rounded-3xl shadow-sm bg-white/50">
-                <CardHeader className="bg-muted/10 border-b"><CardTitle className="text-sm font-black uppercase">Tactical Shift History</CardTitle></CardHeader>
-                <CardContent className="p-0">
-                    <ScrollArea className="h-[400px]">
-                        <div className="divide-y divide-border/50">
-                            {userReports.length > 0 ? userReports.map(r => (
-                                <div key={r.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-primary/10 text-primary"><Clock className="size-4"/></div>
-                                        <div>
-                                            <p className="font-bold text-sm">{format(r.date.toDate(), 'PPP')}</p>
-                                            <Badge variant="outline" className="text-[8px] uppercase font-black">{r.reportType}</Badge>
+
+        <div className="pt-4 px-4 md:px-0">
+            <TabsContent value="calendar" className="mt-0">
+                <Card className="border-none rounded-3xl overflow-hidden shadow-sm bg-white/30 backdrop-blur-sm">
+                    <CardHeader className="bg-muted/10 border-b">
+                        <CardTitle className="text-[10px] font-black uppercase tracking-widest opacity-60">Fleet Verification Calendar</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 flex flex-col md:flex-row gap-8 items-center justify-center">
+                        <Calendar 
+                            mode="single" 
+                            month={currentMonth} 
+                            onMonthChange={setCurrentMonth} 
+                            className="rounded-2xl border p-4 shadow-inner bg-white/50" 
+                            modifiers={modifiers} 
+                            modifiersClassNames={{
+                                present: 'bg-green-500/20 text-green-700 font-black',
+                                late: 'bg-yellow-500/20 text-yellow-700 font-black',
+                                on_leave: 'bg-blue-500/20 text-blue-700 font-black',
+                                report: 'after:content-["•"] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:text-primary after:font-black',
+                                sunday: 'opacity-20 bg-muted/20',
+                            }} 
+                        />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="reports" className="mt-0">
+                <Card className="border-none rounded-3xl shadow-sm bg-white/30 backdrop-blur-sm">
+                    <CardHeader className="bg-muted/10 border-b">
+                        <CardTitle className="text-[10px] font-black uppercase opacity-60">Tactical Shift Intelligence</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <ScrollArea className="h-[450px]">
+                            <div className="divide-y divide-border/30">
+                                {userReports.length > 0 ? userReports.map(r => (
+                                    <div key={r.id} className="p-5 flex items-center justify-between hover:bg-muted/20 transition-colors group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-2.5 rounded-xl bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                                <Clock className="size-5"/>
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-sm">{format(r.date.toDate(), 'PPP')}</p>
+                                                <Badge variant="outline" className="text-[8px] uppercase font-black tracking-widest mt-0.5">{r.reportType} LOG</Badge>
+                                            </div>
                                         </div>
+                                        <Button variant="ghost" size="sm" asChild className="rounded-full text-[9px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Link href="/dashboard/reports">View Details <ExternalLink className="size-3 ml-1.5"/></Link>
+                                        </Button>
                                     </div>
-                                    <Button variant="ghost" size="sm" asChild className="rounded-full text-[9px] font-black uppercase">
-                                        <Link href="/dashboard/reports">View Detailed Log <ExternalLink className="size-3 ml-1.5"/></Link>
-                                    </Button>
+                                )) : (
+                                    <div className="py-20 text-center flex flex-col items-center gap-3 opacity-30">
+                                        <FileText className="size-12" />
+                                        <p className="text-[10px] font-black uppercase">No Intelligence Records</p>
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="compliance" className="mt-0">
+                <Card className="border-none rounded-3xl shadow-sm bg-white/30 backdrop-blur-sm">
+                    <CardHeader className="bg-red-500/5 border-b">
+                        <CardTitle className="text-[10px] font-black uppercase text-red-600/60">Fleet Protocol Discrepancies</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <ScrollArea className="h-[400px]">
+                            {complianceData && complianceData.length > 0 ? complianceData.map(c => (
+                                <div key={c.id} className="p-6 border-b border-border/30 last:border-none">
+                                    <Badge className={cn("rounded-full text-[8px] font-black uppercase mb-3", c.severity === 'Critical' ? 'bg-red-600' : 'bg-blue-500')}>
+                                        {c.severity} ALERT
+                                    </Badge>
+                                    <p className="text-xs text-muted-foreground mb-1 font-medium">Filed by {c.filedByName} • {format(c.timestamp.toDate(), 'PP p')}</p>
+                                    <p className="text-sm font-medium italic text-foreground/80 leading-relaxed">"{c.reason}"</p>
                                 </div>
-                            )) : <div className="py-20 text-center opacity-30 text-[10px] font-black uppercase">No Intelligence Records Found</div>}
+                            )) : (
+                                <div className="py-20 text-center flex flex-col items-center gap-3 opacity-30">
+                                    <ShieldCheck className="size-12" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Operating within parameters</p>
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="identity" className="mt-0">
+                <Card className="border-none rounded-3xl shadow-inner bg-secondary/10">
+                    <CardContent className="p-10 flex flex-col items-center text-center space-y-8">
+                        <h3 className="font-black uppercase text-[10px] tracking-[0.3em] text-primary/60">Identity Asset Repository</h3>
+                        <div className="w-full max-w-sm space-y-8">
+                            {user.signatureUrl ? (
+                                <div className="p-8 bg-white/80 rounded-3xl border-2 border-dashed border-primary/20 relative shadow-sm group">
+                                    <img src={user.signatureUrl} alt="Signature" className="h-24 object-contain grayscale invert mix-blend-multiply opacity-70 w-full" />
+                                    <div className="absolute top-2 right-2">
+                                        <Badge className="bg-green-100 text-green-700 text-[8px] uppercase font-black border-none">Verified</Badge>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="aspect-video bg-white/40 rounded-3xl border-2 border-dashed border-muted/50 flex flex-col items-center justify-center opacity-40">
+                                    <MapPin className="size-8 mb-2 opacity-50" />
+                                    <p className="text-[10px] font-black uppercase">Identity asset missing</p>
+                                </div>
+                            )}
+                            <div className="flex gap-2 p-1 bg-white rounded-2xl ring-1 ring-border shadow-sm">
+                                <Input 
+                                    value={manualSignatureUrl} 
+                                    onChange={e => setManualSignatureUrl(e.target.value)} 
+                                    placeholder="Synchronize Asset URL..." 
+                                    className="h-12 border-none focus-visible:ring-0 shadow-none text-xs" 
+                                />
+                                <Button size="icon" className="h-12 w-12 rounded-xl shrink-0" onClick={handleManualSignatureSave}>
+                                    <Save className="size-5" />
+                                </Button>
+                            </div>
+                            <p className="text-[9px] text-muted-foreground italic max-w-xs mx-auto">
+                                Identity assets are cross-referenced during strategic shift certifications.
+                            </p>
                         </div>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-        </TabsContent>
-        <TabsContent value="compliance" className="p-4"><Card className="border-none rounded-3xl shadow-sm bg-white/50"><CardHeader className="bg-red-500/5 border-b"><CardTitle className="text-sm font-black uppercase text-red-600">Protocol Alerts</CardTitle></CardHeader>
-                <CardContent className="p-0"><ScrollArea className="h-[300px]">{complianceData && complianceData.length > 0 ? complianceData.map(c => (
-                    <div key={c.id} className="p-6 border-b border-border/50">
-                        <Badge className={cn("rounded-full text-[8px] font-black uppercase mb-2", c.severity === 'Critical' ? 'bg-red-600' : 'bg-blue-500')}>{c.severity} ALERT</Badge>
-                        <p className="text-xs text-muted-foreground mb-1">Filed by {c.filedByName} • {format(c.timestamp.toDate(), 'PP p')}</p>
-                        <p className="text-sm font-medium italic">"{c.reason}"</p>
-                    </div>)) : <div className="py-20 text-center opacity-30 text-[10px] font-black">Fleet is operating within parameters.</div>}
-                </ScrollArea></CardContent></Card></TabsContent>
-        <TabsContent value="identity" className="pt-6 px-4">
-            <Card className="border-none rounded-3xl shadow-inner bg-secondary/10">
-                <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
-                    <h3 className="font-black uppercase text-xs tracking-widest text-primary">Identity Asset Hub</h3>
-                    <div className="w-full max-w-sm space-y-6">
-                        {user.signatureUrl ? (<div className="p-6 bg-white rounded-3xl border-2 border-dashed relative shadow-sm"><img src={user.signatureUrl} alt="Signature" className="h-20 object-contain grayscale invert mix-blend-multiply opacity-70 w-full" /></div>) : (<div className="aspect-video bg-white rounded-3xl border-2 border-dashed flex flex-col items-center justify-center opacity-50"><p className="text-[10px] font-black uppercase">No Identity Asset</p></div>)}
-                        <div className="flex gap-2"><Input value={manualSignatureUrl} onChange={e => setManualSignatureUrl(e.target.value)} placeholder="Sync direct image URL..." className="h-12 rounded-xl" /><Button size="icon" className="h-12 w-12 rounded-xl" onClick={handleManualSignatureSave}><Save className="size-5" /></Button></div>
-                    </div>
-                </CardContent>
-            </Card>
-        </TabsContent>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
