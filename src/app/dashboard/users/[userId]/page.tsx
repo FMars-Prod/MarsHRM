@@ -134,23 +134,18 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     <div className="max-w-4xl mx-auto animate-fade-in-up pb-20">
       {/* Instagram Header Style */}
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-20 px-6 py-10">
-        {/* Avatar */}
         <div className="relative group">
           <div className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
               {user.avatar ? <span className="text-6xl md:text-8xl">{user.avatar}</span> : <AvatarFallback className="text-4xl">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>}
           </div>
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 md:hidden">
-             <Badge className="bg-primary text-white border-none text-[8px] uppercase font-black tracking-widest px-2">Active</Badge>
-          </div>
         </div>
 
-        {/* Stats and Info */}
         <div className="flex-1 space-y-6">
           <div className="flex flex-col md:flex-row items-center gap-4">
             <h2 className="text-2xl font-light tracking-tight text-foreground/90">{user.firstName} {user.lastName}</h2>
             <div className="flex gap-2">
               {isAdmin && (
-                <Button onClick={handleExportPdf} size="sm" variant="outline" className="h-8 rounded-lg font-bold text-[11px] px-4">
+                <Button onClick={handleExportPdf} size="sm" variant="outline" className="h-8 rounded-lg font-bold text-[11px] px-4 bg-white/50 backdrop-blur-sm">
                   Audit Log PDF
                 </Button>
               )}
@@ -162,7 +157,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </div>
           </div>
 
-          {/* Counts Bar */}
           <div className="flex items-center justify-center md:justify-start gap-8 md:gap-12 py-1">
             <div className="text-center md:text-left">
               <p className="font-black text-lg">{stats.reports}</p>
@@ -182,7 +176,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </div>
           </div>
 
-          {/* Bio Section */}
           <div className="text-center md:text-left space-y-1">
             <p className="font-bold text-sm">{user.jobTitle}</p>
             <p className="text-sm text-muted-foreground">{user.department} Department</p>
@@ -197,31 +190,18 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
       <Separator className="opacity-50" />
 
-      {/* Instagram Content Tabs */}
       <Tabs defaultValue="calendar" className="w-full">
         <TabsList className="w-full justify-center bg-transparent border-none rounded-none h-14 space-x-12">
-            <TabsTrigger 
-                value="calendar" 
-                className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
-            >
+            <TabsTrigger value="calendar" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                 <Grid className="size-4"/> Ops Grid
             </TabsTrigger>
-            <TabsTrigger 
-                value="reports" 
-                className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
-            >
+            <TabsTrigger value="reports" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                 <FileText className="size-4"/> Intelligence
             </TabsTrigger>
-            <TabsTrigger 
-                value="compliance" 
-                className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
-            >
+            <TabsTrigger value="compliance" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                 <ShieldAlert className="size-4"/> Alerts
             </TabsTrigger>
-            <TabsTrigger 
-                value="identity" 
-                className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
-            >
+            <TabsTrigger value="identity" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                 <ShieldCheck className="size-4"/> Identity
             </TabsTrigger>
         </TabsList>
@@ -330,17 +310,19 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     <p className="text-[10px] font-black uppercase">Identity asset missing</p>
                                 </div>
                             )}
-                            <div className="flex gap-2 p-1 bg-white rounded-2xl ring-1 ring-border shadow-sm">
-                                <Input 
-                                    value={manualSignatureUrl} 
-                                    onChange={e => setManualSignatureUrl(e.target.value)} 
-                                    placeholder="Synchronize Asset URL..." 
-                                    className="h-12 border-none focus-visible:ring-0 shadow-none text-xs" 
-                                />
-                                <Button size="icon" className="h-12 w-12 rounded-xl shrink-0" onClick={handleManualSignatureSave}>
-                                    <Save className="size-5" />
-                                </Button>
-                            </div>
+                            {isAdmin && (
+                                <div className="flex gap-2 p-1 bg-white rounded-2xl ring-1 ring-border shadow-sm">
+                                    <Input 
+                                        value={manualSignatureUrl} 
+                                        onChange={e => setManualSignatureUrl(e.target.value)} 
+                                        placeholder="Synchronize Asset URL..." 
+                                        className="h-12 border-none focus-visible:ring-0 shadow-none text-xs" 
+                                    />
+                                    <Button size="icon" className="h-12 w-12 rounded-xl shrink-0" onClick={handleManualSignatureSave}>
+                                        <Save className="size-5" />
+                                    </Button>
+                                </div>
+                            )}
                             <p className="text-[9px] text-muted-foreground italic max-w-xs mx-auto">
                                 Identity assets are cross-referenced during strategic shift certifications.
                             </p>

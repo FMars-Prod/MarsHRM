@@ -9,7 +9,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap, Lock, Users, CalendarDays, Grid } from "lucide-react";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap, Lock, Users, CalendarDays, Grid, ShieldAlert } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -147,7 +147,7 @@ export default function ProfilePage() {
             updateDocumentNonBlocking(userDocRef, { 
                 signatureUrl: url, 
                 signatureStatus: 'approved',
-                canUpdateSignature: false // LOCK after upload
+                canUpdateSignature: false 
             });
             toast({ title: "Identity Asset Saved", description: "Your digital signature has been provisioned." });
         } catch (e: any) {
@@ -162,7 +162,7 @@ export default function ProfilePage() {
         updateDocumentNonBlocking(userDocRef, { 
             signatureUrl: manualSignatureUrl, 
             signatureStatus: 'approved',
-            canUpdateSignature: false // LOCK after sync
+            canUpdateSignature: false 
         });
         toast({ title: "Identity URL Saved", description: "Digital asset synchronized." });
     };
@@ -176,7 +176,6 @@ export default function ProfilePage() {
         <div className="max-w-4xl mx-auto animate-fade-in-up pb-20">
             {/* Instagram Style Header */}
             <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-20 px-6 py-10">
-                {/* Avatar with Ring */}
                 <div className="relative group cursor-pointer" onClick={() => setIsAvatarDialogOpen(true)}>
                     <div className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
                         {employee.avatar ? <span className="text-6xl md:text-8xl">{employee.avatar}</span> : <AvatarFallback className="text-4xl">{employee.firstName?.[0]}{employee.lastName?.[0]}</AvatarFallback>}
@@ -186,7 +185,6 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* Stats and Bio */}
                 <div className="flex-1 space-y-6">
                     <div className="flex flex-col md:flex-row items-center gap-4">
                         <h2 className="text-2xl font-light tracking-tight text-foreground/90">{employee.firstName} {employee.lastName}</h2>
@@ -202,7 +200,6 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* Stats bar */}
                     <div className="flex items-center justify-center md:justify-start gap-8 md:gap-12 py-1">
                         <div className="text-center md:text-left">
                             <p className="font-black text-lg">{userReports.length}</p>
@@ -218,7 +215,6 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* Personal Bio */}
                     <div className="text-center md:text-left space-y-1">
                         <p className="font-bold text-sm">{employee.jobTitle}</p>
                         <p className="text-sm text-muted-foreground">{employee.department} Division</p>
@@ -233,25 +229,15 @@ export default function ProfilePage() {
 
             <Separator className="opacity-50" />
 
-            {/* Instagram Style Tabs */}
             <Tabs defaultValue="feed" className="w-full">
                 <TabsList className="w-full justify-center bg-transparent border-none rounded-none h-14 space-x-12">
-                    <TabsTrigger 
-                        value="feed" 
-                        className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
-                    >
+                    <TabsTrigger value="feed" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                         <Grid className="size-4"/> Tactical Feed
                     </TabsTrigger>
-                    <TabsTrigger 
-                        value="identity" 
-                        className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
-                    >
+                    <TabsTrigger value="identity" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                         <ShieldCheck className="size-4"/> Digital Asset
                     </TabsTrigger>
-                    <TabsTrigger 
-                        value="location" 
-                        className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none"
-                    >
+                    <TabsTrigger value="location" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                         <LocateFixed className="size-4"/> Geofence
                     </TabsTrigger>
                 </TabsList>
@@ -383,7 +369,6 @@ export default function ProfilePage() {
                 </div>
             </Tabs>
 
-            {/* Edit Avatar Dialog */}
             <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
                 <DialogContent className="rounded-3xl max-w-sm">
                     <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Identity Avatar</DialogTitle></DialogHeader>
@@ -408,7 +393,6 @@ export default function ProfilePage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Edit Profile Dialog */}
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                 <DialogContent className="rounded-3xl sm:max-w-md">
                     <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Profile</DialogTitle></DialogHeader>
