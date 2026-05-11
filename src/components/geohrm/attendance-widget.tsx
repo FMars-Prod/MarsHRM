@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,8 +63,7 @@ const getDistanceInKm = (loc1: Location, loc2: Location) => {
 
 export function AttendanceWidget() {
   const [status, setStatus] = useState<AttendanceStatus>("out");
-  const [timer, setTimer] = useState(0);
-  const [breakTimer, setBreakTimer] = useState(0);
+  const [now, setNow] = useState(Date.now());
   const [totalBreakTime, setTotalBreakTime] = useState(0);
   const [lastClockInTime, setLastClockInTime] = useState<Date | null>(null);
   const [currentBreakStartTime, setCurrentBreakStartTime] = useState<Date | null>(null);
@@ -126,31 +125,19 @@ export function AttendanceWidget() {
         if (checkOut && checkIn) {
             setStatus("out");
             setHasClockedOutToday(true);
-            const totalElapsed = (checkOut.getTime() - checkIn.getTime()) / 1000;
-            setTimer(Math.max(0, totalElapsed - savedBreakSec));
-            setBreakTimer(0);
-            setCurrentBreakStartTime(null);
         } else if (checkIn) {
             setHasClockedOutToday(false);
             if (lunchOut && !lunchIn) {
                 setStatus("lunch");
                 setCurrentBreakStartTime(lunchOut);
-                const elapsedBeforeLunch = (lunchOut.getTime() - checkIn.getTime()) / 1000;
-                setTimer(Math.max(0, elapsedBeforeLunch - savedBreakSec));
-                setBreakTimer(Math.max(0, (Date.now() - lunchOut.getTime()) / 1000));
             } else {
                 setStatus("in");
                 setCurrentBreakStartTime(null);
-                const totalElapsed = (Date.now() - checkIn.getTime()) / 1000;
-                setTimer(Math.max(0, totalElapsed - savedBreakSec));
-                setBreakTimer(0);
             }
         }
     } else {
         setStatus("out");
         setHasClockedOutToday(false);
-        setTimer(0);
-        setBreakTimer(0);
         setTotalBreakTime(0);
         setLastClockInTime(null);
         setCurrentBreakStartTime(null);
@@ -158,26 +145,42 @@ export function AttendanceWidget() {
   }, [todaysAttendance]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
-    if (status === "in" || status === "lunch" || status === "short_break") {
-      interval = setInterval(() => {
-          const now = Date.now();
-          if (status === "in" && lastClockInTime) {
-              const elapsed = (now - lastClockInTime.getTime()) / 1000;
-              setTimer(Math.max(0, elapsed - totalBreakTime));
-          } else if ((status === "lunch" || status === "short_break") && currentBreakStartTime) {
-              setBreakTimer(Math.max(0, (now - currentBreakStartTime.getTime()) / 1000));
-          }
-      }, 100);
-    }
+    const interval = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(interval);
-  }, [status, lastClockInTime, totalBreakTime, currentBreakStartTime]);
+  }, []);
 
-  const proceedWithBreakEnd = (userLocation: Location, dist: number, reason?: string) => {
-      const updatedBreakTime = totalBreakTime + breakTimer;
+  const breakTimer = useMemo(() => {
+    if ((status === "lunch" || status === "short_break") && currentBreakStartTime) {
+        return Math.max(0, (now - currentBreakStartTime.getTime()) / 1000);
+    }
+    return 0;
+  }, [now, status, currentBreakStartTime]);
+
+  const workTimer = useMemo(() => {
+    if (!lastClockInTime) return 0;
+    const currentAbsoluteTotalElapsed = (now - lastClockInTime.getTime()) / 1000;
+    
+    if (status === "in") {
+        return Math.max(0, currentAbsoluteTotalElapsed - totalBreakTime);
+    } else if (status === "lunch" || status === "short_break") {
+        // If on break, freeze the work timer at the start of the break
+        const elapsedUntilBreak = (currentBreakStartTime!.getTime() - lastClockInTime.getTime()) / 1000;
+        return Math.max(0, elapsedUntilBreak - totalBreakTime);
+    } else if (status === "out" && hasClockedOutToday) {
+        const checkOut = todaysAttendance?.checkOutTime instanceof Timestamp ? todaysAttendance.checkOutTime.toDate() : new Date();
+        const totalElapsed = (checkOut.getTime() - lastClockInTime.getTime()) / 1000;
+        return Math.max(0, totalElapsed - totalBreakTime);
+    }
+    return 0;
+  }, [now, status, lastClockInTime, totalBreakTime, currentBreakStartTime, hasClockedOutToday, todaysAttendance]);
+
+  const proceedWithBreakEnd = useCallback((userLocation: Location, dist: number, reason?: string) => {
+      const finalBreakDuration = (Date.now() - currentBreakStartTime!.getTime()) / 1000;
+      const updatedTotalBreakTime = totalBreakTime + finalBreakDuration;
+      
       if (getTodaysAttendanceRef) {
           const payload: any = {
-              totalBreakDuration: updatedBreakTime,
+              totalBreakDuration: updatedTotalBreakTime,
           };
           if (status === 'lunch') {
               payload.locationLunchInLatitude = userLocation.latitude || 0;
@@ -189,12 +192,11 @@ export function AttendanceWidget() {
           }
           updateDocumentNonBlocking(getTodaysAttendanceRef, payload);
       }
-      setTotalBreakTime(updatedBreakTime);
-      setBreakTimer(0);
+      setTotalBreakTime(updatedTotalBreakTime);
       setCurrentBreakStartTime(null);
       setStatus("in");
       toast({ title: "Ops Resumed" });
-  }
+  }, [currentBreakStartTime, totalBreakTime, status, getTodaysAttendanceRef, toast]);
 
   const handleLunch = () => {
     setIsVerifyingLocation(true);
@@ -212,7 +214,7 @@ export function AttendanceWidget() {
                   proceedWithBreakEnd(userLocation, dist);
               }
           } else {
-              const now = new Date();
+              const nowBreak = new Date();
               if (getTodaysAttendanceRef) {
                   updateDocumentNonBlocking(getTodaysAttendanceRef, {
                       locationLunchOutLatitude: userLocation.latitude,
@@ -220,7 +222,7 @@ export function AttendanceWidget() {
                       lunchOutTime: serverTimestamp(),
                   });
               }
-              setCurrentBreakStartTime(now);
+              setCurrentBreakStartTime(nowBreak);
               setStatus("lunch");
               toast({ title: "L-OUT Recorded" });
           }
@@ -241,16 +243,16 @@ export function AttendanceWidget() {
   }
   
   const proceedWithClockIn = (userLocation: Location, dist: number, reason?: string) => {
-      const now = new Date();
+      const nowClock = new Date();
       let attendanceStatus: 'present' | 'late' = 'present';
       if (officeLocation?.shiftStartTime) {
           const shiftStart = parse(officeLocation.shiftStartTime, 'HH:mm', new Date());
-          if (isAfter(now, shiftStart)) attendanceStatus = 'late';
+          if (isAfter(nowClock, shiftStart)) attendanceStatus = 'late';
       }
       
       if (getTodaysAttendanceRef) {
           const attendancePayload: any = {
-              id: format(now, 'yyyy-MM-dd'),
+              id: format(nowClock, 'yyyy-MM-dd'),
               employeeId: user!.uid,
               checkInTime: serverTimestamp(),
               status: attendanceStatus,
@@ -344,7 +346,7 @@ export function AttendanceWidget() {
                     {status === 'in' ? (isLate() ? 'Late Operations' : 'Active Shift') : 'Ready to Start'}
                 </div>
                 {lastClockInTime && <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2"><LogIn className="size-3" /> Logged In At: <span className="text-primary">{format(lastClockInTime, 'p')}</span></p>}
-                <div className="text-7xl font-black font-mono tabular-nums tracking-tighter text-primary drop-shadow-sm py-2">{formatTime(timer)}</div>
+                <div className="text-7xl font-black font-mono tabular-nums tracking-tighter text-primary drop-shadow-sm py-2">{formatTime(workTimer)}</div>
                 {(status === "lunch" || status === "short_break") && (
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex flex-col items-center animate-pulse"><span className="text-[10px] font-black uppercase text-orange-600 tracking-widest flex items-center gap-1.5"><Coffee className="size-3"/> Current Break</span><div className="text-2xl font-bold font-mono tabular-nums text-orange-600">{formatTime(breakTimer)}</div></div>
