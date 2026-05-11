@@ -634,15 +634,13 @@ export default function ReportsPage() {
         signatureUrl: currentUserData.signatureUrl || null 
     };
     
-    // 1. Submit Report
-    await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
-    
-    // 2. Automated Clock-Out (Final Stamp for shifts)
     const todayId = format(new Date(), 'yyyy-MM-dd');
     const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
+    
+    await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
     setDocumentNonBlocking(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
 
-    toast({ title: "Strategic Submission Confirmed", description: "Your shift conclusion has been registered." });
+    toast({ title: "Strategic Submission Confirmed", description: "Shift conclusion registered." });
     setIsAddDialogOpen(false);
   };
 

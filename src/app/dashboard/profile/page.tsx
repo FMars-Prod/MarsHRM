@@ -149,9 +149,9 @@ export default function ProfilePage() {
                 signatureStatus: 'approved',
                 canUpdateSignature: false 
             });
-            toast({ title: "Identity Asset Saved", description: "Your digital signature has been provisioned." });
+            toast({ title: "Identity Asset Saved" });
         } catch (e: any) {
-            toast({ variant: 'destructive', title: "Bucket Error", description: "Use 'Manual URL' tab if Storage bucket initialization is pending." });
+            toast({ variant: 'destructive', title: "Upload Error" });
         } finally {
             setIsUploadingSignature(false);
         }
@@ -164,7 +164,7 @@ export default function ProfilePage() {
             signatureStatus: 'approved',
             canUpdateSignature: false 
         });
-        toast({ title: "Identity URL Saved", description: "Digital asset synchronized." });
+        toast({ title: "Identity URL Saved" });
     };
 
     if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Synchronizing Identity Hub...</div>;
@@ -174,7 +174,6 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-4xl mx-auto animate-fade-in-up pb-20">
-            {/* Instagram Style Header */}
             <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-20 px-6 py-10">
                 <div className="relative group cursor-pointer" onClick={() => setIsAvatarDialogOpen(true)}>
                     <div className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
@@ -194,7 +193,7 @@ export default function ProfilePage() {
                             </Button>
                             {teamData && (
                                 <Badge variant="secondary" className="rounded-lg px-3 text-[10px] uppercase font-black tracking-widest bg-muted/50 border-none">
-                                    <Users className="size-3 mr-1.5 opacity-50" /> {teamData.name} Fleet
+                                    <Users className="size-3 mr-1.5 opacity-50" /> {teamData.name}
                                 </Badge>
                             )}
                         </div>

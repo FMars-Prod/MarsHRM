@@ -6,7 +6,7 @@ import { EventsWidget } from "@/components/geohrm/events-widget";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, orderBy, limit, where, Timestamp } from "firebase/firestore";
+import { doc, collection, query, orderBy, limit, where } from "firebase/firestore";
 import { WorkHoursSummaryWidget } from "@/components/geohrm/work-hours-summary-widget";
 import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,7 +29,6 @@ export default function DashboardPage() {
   const { data: latestCompliance } = useCollection(complianceQuery);
   const hasCriticalAlert = latestCompliance && latestCompliance.length > 0;
 
-  // Ticket Notification Logic
   const ticketQuery = useMemoFirebase(() => {
     if (!currentUser) return null;
     return query(collection(firestore, "issue_reports"), where("employeeId", "==", currentUser.uid));
@@ -96,8 +95,6 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <EventsWidget />
         </div>
-
-        <div className="lg:col-span-1" />
 
         <div className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
           <WorkHoursSummaryWidget />

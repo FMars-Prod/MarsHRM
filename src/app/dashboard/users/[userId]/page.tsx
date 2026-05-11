@@ -29,7 +29,6 @@ type AttendanceRecord = {
   status: 'present' | 'late' | 'absent' | 'on_leave';
 };
 
-type Report = { id: string; date: Timestamp; reportType: string; };
 type ComplianceReport = { id: string; severity: string; reason: string; timestamp: Timestamp; filedByName: string; };
 
 export default function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
@@ -132,7 +131,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   return (
     <div className="max-w-4xl mx-auto animate-fade-in-up pb-20">
-      {/* Instagram Header Style */}
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-20 px-6 py-10">
         <div className="relative group">
           <div className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
@@ -315,7 +313,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     <Input 
                                         value={manualSignatureUrl} 
                                         onChange={e => setManualSignatureUrl(e.target.value)} 
-                                        placeholder="Synchronize Asset URL..." 
+                                        placeholder="Sync direct URL..." 
                                         className="h-12 border-none focus-visible:ring-0 shadow-none text-xs" 
                                     />
                                     <Button size="icon" className="h-12 w-12 rounded-xl shrink-0" onClick={handleManualSignatureSave}>
@@ -323,9 +321,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     </Button>
                                 </div>
                             )}
-                            <p className="text-[9px] text-muted-foreground italic max-w-xs mx-auto">
-                                Identity assets are cross-referenced during strategic shift certifications.
-                            </p>
                         </div>
                     </CardContent>
                 </Card>

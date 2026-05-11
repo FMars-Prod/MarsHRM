@@ -71,13 +71,8 @@ export default function UsersPage() {
         if (editingUser) {
             const userRef = doc(firestore, 'users', editingUser.id);
             const { password, ...updateData } = values;
-            
-            const sanitizedData = Object.fromEntries(
-                Object.entries(updateData).filter(([_, v]) => v !== undefined)
-            );
-
             const batch = writeBatch(firestore);
-            batch.update(userRef, sanitizedData);
+            batch.update(userRef, updateData);
             
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
             if (values.role === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', editingUser.id), { employeeId: editingUser.id });
@@ -94,13 +89,6 @@ export default function UsersPage() {
             const batch = writeBatch(firestore);
             batch.set(userRef, { id: newUserId, employeeId: newUserId, hireDate: new Date().toISOString(), ...userData, canUpdateSignature: true });
             
-            batch.set(doc(collection(firestore, 'audit_logs')), {
-                timestamp: serverTimestamp(),
-                employeeId: newUserId,
-                action: 'JOINED',
-                details: `Employee ${userData.firstName} ${userData.lastName} added to fleet.`
-            });
-
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', newUserId), { employeeId: newUserId });
             else if (values.role === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', newUserId), { employeeId: newUserId });
             else if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', newUserId), { employeeId: newUserId });
@@ -123,15 +111,11 @@ export default function UsersPage() {
         const snap = await uploadBytes(sigRef, file);
         const url = await getDownloadURL(snap.ref);
         const userRef = doc(firestore, 'users', editingUser.id);
-        updateDocumentNonBlocking(userRef, { 
-            signatureUrl: url, 
-            signatureStatus: 'approved',
-            canUpdateSignature: false // LOCK after upload
-        });
-        toast({ title: "Signature provisioned and approved." });
+        updateDocumentNonBlocking(userRef, { signatureUrl: url, signatureStatus: 'approved', canUpdateSignature: false });
+        toast({ title: "Signature provisioned." });
         setEditingUser({ ...editingUser, signatureUrl: url, signatureStatus: 'approved', canUpdateSignature: false });
     } catch (e: any) {
-        toast({ variant: 'destructive', title: "Bucket Error", description: "Initialize Storage in console or use direct URL option." });
+        toast({ variant: 'destructive', title: "Upload Error" });
     } finally {
         setIsUploadingSignature(false);
     }
@@ -140,12 +124,8 @@ export default function UsersPage() {
   const handleManualSignatureSave = () => {
       if (!editingUser || !manualSignatureUrl) return;
       const userRef = doc(firestore, 'users', editingUser.id);
-      updateDocumentNonBlocking(userRef, { 
-          signatureUrl: manualSignatureUrl, 
-          signatureStatus: 'approved',
-          canUpdateSignature: false // LOCK after sync
-      });
-      toast({ title: "Signature URL Provisioned" });
+      updateDocumentNonBlocking(userRef, { signatureUrl: manualSignatureUrl, signatureStatus: 'approved', canUpdateSignature: false });
+      toast({ title: "Signature Synced" });
       setEditingUser({ ...editingUser, signatureUrl: manualSignatureUrl, signatureStatus: 'approved', canUpdateSignature: false });
   };
 
@@ -153,7 +133,7 @@ export default function UsersPage() {
       if (!editingUser) return;
       const userRef = doc(firestore, 'users', editingUser.id);
       updateDocumentNonBlocking(userRef, { canUpdateSignature: true });
-      toast({ title: "Re-upload Permission Granted", description: "User can now update their digital signature." });
+      toast({ title: "Re-upload Permission Granted" });
       setEditingUser({ ...editingUser, canUpdateSignature: true });
   };
 
@@ -224,30 +204,22 @@ export default function UsersPage() {
                                                     <div className="relative">
                                                         <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
                                                         <Button variant="outline" className="w-full h-10 rounded-xl text-[10px] font-black uppercase" disabled={isUploadingSignature}>
-                                                            {isUploadingSignature ? "Syncing..." : editingUser.signatureUrl ? "Update via File" : "Upload File Asset"}
+                                                            {isUploadingSignature ? "Syncing..." : "Update via File"}
                                                         </Button>
                                                     </div>
                                                 </TabsContent>
                                                 <TabsContent value="url" className="pt-2 space-y-2">
                                                     <div className="flex gap-2">
-                                                        <Input 
-                                                            value={manualSignatureUrl} 
-                                                            onChange={e => setManualSignatureUrl(e.target.value)} 
-                                                            placeholder="Paste image URL here" 
-                                                            className="h-9 text-xs"
-                                                        />
-                                                        <Button type="button" size="icon" className="shrink-0" onClick={handleManualSignatureSave}>
-                                                            <Save className="size-4" />
-                                                        </Button>
+                                                        <Input value={manualSignatureUrl} onChange={e => setManualSignatureUrl(e.target.value)} placeholder="Paste image URL here" className="h-9 text-xs" />
+                                                        <Button type="button" size="icon" className="shrink-0" onClick={handleManualSignatureSave}><Save className="size-4" /></Button>
                                                     </div>
-                                                    <p className="text-[8px] text-muted-foreground italic">Useful if Storage bucket is not yet provisioned.</p>
                                                 </TabsContent>
                                             </Tabs>
                                         )}
                                     </div>
                                 ) : (
                                     <div className="p-4 bg-muted/10 rounded-xl border border-dashed text-center">
-                                        <p className="text-[9px] font-bold text-muted-foreground">Register user first to provision identity assets.</p>
+                                        <p className="text-[9px] font-bold text-muted-foreground">Register user to provision assets.</p>
                                     </div>
                                 )}
                             </div>
@@ -297,18 +269,7 @@ export default function UsersPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { 
-                          setEditingUser(u); 
-                          form.reset({
-                            ...u,
-                            isWfhAllowed: u.isWfhAllowed ?? false,
-                            isDemoAccount: u.isDemoAccount ?? false
-                          }); 
-                          if(u.signatureUrl) setManualSignatureUrl(u.signatureUrl); 
-                          setIsDialogOpen(true); 
-                        }}>
-                          <Edit className="mr-2 size-4" /> Edit Profile
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); if(u.signatureUrl) setManualSignatureUrl(u.signatureUrl); setIsDialogOpen(true); }}><Edit className="mr-2 size-4" /> Edit Profile</DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href={`/dashboard/users/${u.id}`}><UserCircle className="mr-2 size-4" /> View Profile</Link></DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

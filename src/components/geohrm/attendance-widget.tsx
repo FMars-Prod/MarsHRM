@@ -31,7 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, serverTimestamp, deleteDoc, Timestamp } from "firebase/firestore";
+import { doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
 import { format, parse, isAfter } from "date-fns";
 import { Textarea } from "../ui/textarea";
@@ -134,11 +134,10 @@ export function AttendanceWidget() {
                 setStatus("lunch");
                 const elapsedBeforeLunch = (lunchOut.getTime() - checkIn.getTime()) / 1000;
                 setTimer(Math.max(0, elapsedBeforeLunch - savedBreakSec));
-                setBreakTimer(Math.max(0, (new Date().getTime() - lunchOut.getTime()) / 1000));
+                setBreakTimer(Math.max(0, (Date.now() - lunchOut.getTime()) / 1000));
             } else {
                 setStatus("in");
-                const now = new Date().getTime();
-                const totalElapsed = (now - checkIn.getTime()) / 1000;
+                const totalElapsed = (Date.now() - checkIn.getTime()) / 1000;
                 setTimer(Math.max(0, totalElapsed - savedBreakSec));
                 setBreakTimer(0);
             }
@@ -153,19 +152,25 @@ export function AttendanceWidget() {
     }
   }, [todaysAttendance]);
 
+  // HIGH PRECISION TIMER ENGINE
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-    if (status === "in") {
+    if (status === "in" || status === "lunch" || status === "short_break") {
       interval = setInterval(() => {
-          setTimer((prev) => prev + 1);
-      }, 1000);
-    } else if (status === "lunch" || status === "short_break") {
-      interval = setInterval(() => {
-          setBreakTimer((prev) => prev + 1);
-      }, 1000);
+          const now = Date.now();
+          if (status === "in" && lastClockInTime) {
+              const elapsed = (now - lastClockInTime.getTime()) / 1000;
+              setTimer(Math.max(0, elapsed - totalBreakTime));
+          } else if (status === "lunch" && todaysAttendance?.lunchOutTime) {
+              const start = todaysAttendance.lunchOutTime.toDate().getTime();
+              setBreakTimer(Math.max(0, (now - start) / 1000));
+          } else if (status === "short_break") {
+              setBreakTimer((prev) => prev + 1); // Local increment for short breaks
+          }
+      }, 100); // 10Hz update for smooth visual flow
     }
     return () => clearInterval(interval);
-  }, [status]);
+  }, [status, lastClockInTime, totalBreakTime, todaysAttendance]);
 
   const proceedWithBreakEnd = (userLocation: Location, dist: number, reason?: string) => {
       const updatedBreakTime = totalBreakTime + breakTimer;
@@ -277,21 +282,20 @@ export function AttendanceWidget() {
       setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(p => {
           if (getTodaysAttendanceRef) {
-              setDocumentNonBlocking(getTodaysAttendanceRef, {
+              updateDocumentNonBlocking(getTodaysAttendanceRef, {
                   checkOutTime: serverTimestamp(),
                   locationCheckOutLatitude: p.coords.latitude,
                   locationCheckOutLongitude: p.coords.longitude,
-              }, { merge: true });
+              });
           }
           setIsVerifyingLocation(false);
           setStatus("out");
           setHasClockedOutToday(true);
           toast({ title: "Shift Concluded" });
-          
           router.push('/dashboard/reports');
       }, () => { 
           setIsVerifyingLocation(false); 
-          toast({ variant: 'destructive', title: 'GPS Required for Clock-Out' }); 
+          toast({ variant: 'destructive', title: 'GPS Required' }); 
       });
   };
 
@@ -323,7 +327,7 @@ export function AttendanceWidget() {
           <div className="flex items-start justify-between">
               <div>
                   <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Precision Attendance</CardTitle>
-                  <CardDescription>High-accuracy geofenced tracking active.</CardDescription>
+                  <CardDescription>High-accuracy timing engine active.</CardDescription>
               </div>
           </div>
         </CardHeader>
