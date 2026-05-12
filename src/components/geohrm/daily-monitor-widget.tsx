@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone, Home } from 'lucide-react';
+import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone, Home, MapPin } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -518,31 +518,50 @@ export function DailyMonitorWidget() {
                 <ScrollArea className="flex-1 -mx-6">
                   <div className="py-4 px-6 space-y-3">
                      {sheetContent.users.length > 0 ? (
-                        sheetContent.users.map(user => (
-                            <div key={user.id} className="flex items-center justify-between group p-2 rounded-lg hover:bg-muted transition-colors">
-                                <Link href={`/dashboard/users/${user.id}`} className="flex items-center gap-3 flex-1">
-                                    <Avatar className="h-9 w-9">
-                                    {user.avatar && <span className="text-xl">{user.avatar}</span>}
-                                    <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                    <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>
-                                    <p className="text-xs text-muted-foreground">{user.jobTitle}</p>
+                        sheetContent.users.map(user => {
+                            const rec = attendanceRecords.get(user.id);
+                            return (
+                                <div key={user.id} className="flex flex-col p-3 rounded-2xl hover:bg-muted transition-colors border group">
+                                    <div className="flex items-center justify-between">
+                                        <Link href={`/dashboard/users/${user.id}`} className="flex items-center gap-3 flex-1">
+                                            <Avatar className="h-9 w-9">
+                                                {user.avatar && <span className="text-xl">{user.avatar}</span>}
+                                                <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>
+                                                <p className="text-xs text-muted-foreground">{user.jobTitle}</p>
+                                            </div>
+                                        </Link>
+                                        <div className="flex gap-2">
+                                            {rec?.locationCheckInLatitude && (
+                                                <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-primary/10">
+                                                    <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
+                                                        <MapPin className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
+                                            )}
+                                            {sheetContent.nudgeType && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                    onClick={() => handleNudgeWhatsApp(user, sheetContent.nudgeType)}
+                                                    title="Nudge via WhatsApp"
+                                                >
+                                                    <Phone className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
-                                </Link>
-                                {sheetContent.nudgeType && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                        onClick={() => handleNudgeWhatsApp(user, sheetContent.nudgeType)}
-                                        title="Nudge via WhatsApp"
-                                    >
-                                        <Phone className="h-4 w-4" />
-                                    </Button>
-                                )}
-                            </div>
-                        ))
+                                    {rec?.checkInNotes && (
+                                        <p className="mt-2 text-[10px] italic text-muted-foreground bg-white/50 p-2 rounded-lg border border-dashed">
+                                            "{rec.checkInNotes}"
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })
                     ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">No employees in this category.</p>
                     )}

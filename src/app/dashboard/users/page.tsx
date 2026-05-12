@@ -191,13 +191,23 @@ export default function UsersPage() {
                                             <MapPin className="size-3" /> Home Base Coordinates
                                         </Label>
                                         <div className="grid grid-cols-2 gap-3">
-                                            <FormField control={form.control} name="homeLatitude" render={({ field }) => (<FormItem><Label className="text-[10px] uppercase opacity-60">Latitude</Label><Input type="number" step="any" {...field}/></FormItem>)} />
-                                            <FormField control={form.control} name="homeLongitude" render={({ field }) => (<FormItem><Label className="text-[10px] uppercase opacity-60">Longitude</Label><Input type="number" step="any" {...field}/></FormItem>)} />
+                                            <FormField control={form.control} name="homeLatitude" render={({ field }) => (
+                                                <FormItem>
+                                                    <Label className="text-[10px] uppercase opacity-60">Latitude</Label>
+                                                    <Input type="number" step="any" {...field} value={field.value ?? ""} />
+                                                </FormItem>
+                                            )} />
+                                            <FormField control={form.control} name="homeLongitude" render={({ field }) => (
+                                                <FormItem>
+                                                    <Label className="text-[10px] uppercase opacity-60">Longitude</Label>
+                                                    <Input type="number" step="any" {...field} value={field.value ?? ""} />
+                                                </FormItem>
+                                            )} />
                                         </div>
                                         <FormField control={form.control} name="homeRadius" render={({ field }) => (
                                             <FormItem>
                                                 <Label className="text-[10px] uppercase opacity-60">Geofence Radius (KM)</Label>
-                                                <Input type="number" step="0.1" {...field}/>
+                                                <Input type="number" step="0.1" {...field} value={field.value ?? ""} />
                                                 <p className="text-[9px] text-muted-foreground italic">Standard value: 0.5 KM (500 meters)</p>
                                             </FormItem>
                                         )} />
