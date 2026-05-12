@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -29,9 +30,9 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { doc, serverTimestamp, Timestamp, collection } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
 import { format, parse, isAfter } from "date-fns";
 import { Textarea } from "../ui/textarea";
@@ -163,7 +164,6 @@ export function AttendanceWidget() {
     if (status === "in") {
         return Math.max(0, currentAbsoluteTotalElapsed - totalBreakTime);
     } else if (status === "lunch" || status === "short_break") {
-        // If on break, freeze the work timer at the start of the break
         const elapsedUntilBreak = (currentBreakStartTime!.getTime() - lastClockInTime.getTime()) / 1000;
         return Math.max(0, elapsedUntilBreak - totalBreakTime);
     } else if (status === "out" && hasClockedOutToday) {
@@ -249,6 +249,9 @@ export function AttendanceWidget() {
           const shiftStart = parse(officeLocation.shiftStartTime, 'HH:mm', new Date());
           if (isAfter(nowClock, shiftStart)) attendanceStatus = 'late';
       }
+
+      const isAtHome = userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
+                       getDistanceInKm(userLocation, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5);
       
       if (getTodaysAttendanceRef) {
           const attendancePayload: any = {
@@ -261,9 +264,24 @@ export function AttendanceWidget() {
               locationCheckInLongitude: userLocation.longitude || 0,
               checkInNotes: reason || "",
               isOutOfRange: !!reason,
+              isAtHome: isAtHome || false,
           };
           setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
       }
+
+      if (reason) {
+          addDocumentNonBlocking(collection(firestore, "attendanceApprovalRequests"), {
+              employeeId: user!.uid,
+              employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
+              requestedCheckInTime: format(nowClock, 'PP p'),
+              requestedLatitude: userLocation.latitude,
+              requestedLongitude: userLocation.longitude,
+              reason: reason,
+              status: 'Pending',
+              requestTimestamp: serverTimestamp()
+          });
+      }
+
       setStatus("in");
       toast({ title: "Shift Started" });
   }
@@ -275,9 +293,17 @@ export function AttendanceWidget() {
             const userLoc = { latitude: position.coords.latitude, longitude: position.coords.longitude };
             setIsVerifyingLocation(false);
             if (isAdminOrCEO) { proceedWithClockIn(userLoc, 0); return; }
-            const officeDist = officeLocation ? getDistanceInKm(userLoc, officeLocation) : 0;
-            if (officeDist <= maxDistanceKm) { proceedWithClockIn(userLoc, officeDist); return; }
-            setOutOfRangeAction(() => () => proceedWithClockIn(userLoc, 0, outOfRangeReason));
+
+            const officeDist = officeLocation ? getDistanceInKm(userLoc, officeLocation) : Infinity;
+            const isAtHome = userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
+                             getDistanceInKm(userLoc, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5);
+
+            if (officeDist <= maxDistanceKm || isAtHome) { 
+                proceedWithClockIn(userLoc, officeDist); 
+                return; 
+            }
+
+            setOutOfRangeAction(() => () => proceedWithClockIn(userLoc, officeDist, outOfRangeReason));
             setIsOutOfRangeReasonDialogOpen(true);
         },
         () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "GPS Error" }); },
@@ -289,11 +315,11 @@ export function AttendanceWidget() {
       setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(p => {
           if (getTodaysAttendanceRef) {
-              setDocumentNonBlocking(getTodaysAttendanceRef, {
+              updateDocumentNonBlocking(getTodaysAttendanceRef, {
                   checkOutTime: serverTimestamp(),
                   locationCheckOutLatitude: p.coords.latitude,
                   locationCheckOutLongitude: p.coords.longitude,
-              }, { merge: true });
+              });
           }
           setIsVerifyingLocation(false);
           setStatus("out");

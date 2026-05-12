@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone } from 'lucide-react';
+import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone, Home } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -40,6 +40,7 @@ type AttendanceRecord = {
   locationCheckInLatitude?: number;
   locationCheckInLongitude?: number;
   isOutOfRange?: boolean;
+  isAtHome?: boolean;
 };
 
 type LeaveRequest = {
@@ -59,13 +60,14 @@ export function DailyMonitorWidget() {
     onLeave: [] as UserData[],
     present: [] as UserData[],
     outOfRange: [] as UserData[],
+    atHome: [] as UserData[],
     isLoading: true,
   });
   const [attendanceRecords, setAttendanceRecords] = React.useState<Map<string, AttendanceRecord>>(new Map());
   const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[], nudgeType?: 'missing_login' | 'missing_logout' } | null>(null);
 
   const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
-  const { data: currentUserData } = useDoc(currentUserDocRef);
+  const { data: currentUserData } = useDoc(userDocRef);
   
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
@@ -120,11 +122,14 @@ export function DailyMonitorWidget() {
         const presentUsers: UserData[] = [];
         const absentUsers: UserData[] = [];
         const outOfRangeUsers: UserData[] = [];
+        const atHomeUsers: UserData[] = [];
 
         users.forEach(u => {
           const att = attendanceMap.get(u.id);
           if (att) {
-              if (att.isOutOfRange) {
+              if (att.isAtHome) {
+                  atHomeUsers.push(u);
+              } else if (att.isOutOfRange) {
                   outOfRangeUsers.push(u);
               } else if (att.status === 'late') {
                   lateUsers.push(u);
@@ -146,6 +151,7 @@ export function DailyMonitorWidget() {
           onLeave: onLeaveUsers,
           present: presentUsers,
           outOfRange: outOfRangeUsers,
+          atHome: atHomeUsers,
           isLoading: false,
         });
       } catch (error: any) {
@@ -165,8 +171,8 @@ export function DailyMonitorWidget() {
   };
 
   const handleExport = () => {
-    const { present, late, absent, onLeave, outOfRange, isLoading } = summary;
-    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length && !outOfRange.length)) {
+    const { present, late, absent, onLeave, outOfRange, atHome, isLoading } = summary;
+    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length && !outOfRange.length && !atHome.length)) {
       toast({ variant: "destructive", title: "No data to export" });
       return;
     }
@@ -175,6 +181,7 @@ export function DailyMonitorWidget() {
       ...present.map(u => ({ ...u, status: 'Present' })),
       ...late.map(u => ({ ...u, status: 'Late' })),
       ...outOfRange.map(u => ({ ...u, status: 'Out of Range' })),
+      ...atHome.map(u => ({ ...u, status: 'At Home' })),
       ...absent.map(u => ({ ...u, status: 'Absent' })),
       ...onLeave.map(u => ({ ...u, status: 'On Leave' })),
     ];
@@ -261,6 +268,7 @@ export function DailyMonitorWidget() {
     };
 
     reportText += createSection('Present', summary.present, true);
+    reportText += createSection('Logged in at Home', summary.atHome, true);
     reportText += createSection('Late', summary.late, true);
     reportText += createSection('Out of Range', summary.outOfRange, true);
     reportText += createSection('Absent', summary.absent);
@@ -362,6 +370,7 @@ export function DailyMonitorWidget() {
     };
     
     addSection('Present', summary.present, 'Present', true);
+    addSection('Logged in at Home', summary.atHome, 'At Home', true);
     addSection('Late', summary.late, 'Late', true);
     addSection('Out of Range', summary.outOfRange, 'Out of Range', true);
     addSection('Absent', summary.absent, 'Absent', false);
@@ -435,7 +444,7 @@ export function DailyMonitorWidget() {
                     <Building2 className="h-10 w-10 animate-pulse text-muted-foreground" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                   <SheetTrigger asChild>
                     <UserListCard 
                         title="Present" 
@@ -443,7 +452,17 @@ export function DailyMonitorWidget() {
                         Icon={UserCheck} 
                         iconColor="text-green-600" 
                         gradient="bg-gradient-to-br from-green-500/10 to-white/50"
-                        onClick={() => setSheetContent({title: "Present Today", users: summary.present})} 
+                        onClick={() => setSheetContent({title: "Present (In-Office)", users: summary.present})} 
+                    />
+                  </SheetTrigger>
+                  <SheetTrigger asChild>
+                    <UserListCard 
+                        title="Logged at Home" 
+                        users={summary.atHome} 
+                        Icon={Home} 
+                        iconColor="text-blue-600" 
+                        gradient="bg-gradient-to-br from-blue-500/10 to-white/50"
+                        onClick={() => setSheetContent({title: "WFH Log-ins", users: summary.atHome})} 
                     />
                   </SheetTrigger>
                   <SheetTrigger asChild>
@@ -481,8 +500,8 @@ export function DailyMonitorWidget() {
                         title="On Leave" 
                         users={summary.onLeave} 
                         Icon={User} 
-                        iconColor="text-blue-600" 
-                        gradient="bg-gradient-to-br from-blue-500/10 to-white/50"
+                        iconColor="text-slate-600" 
+                        gradient="bg-gradient-to-br from-slate-500/10 to-white/50"
                         onClick={() => setSheetContent({title: "On Leave", users: summary.onLeave})} 
                     />
                    </SheetTrigger>

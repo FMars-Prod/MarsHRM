@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -9,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, addDocumentNonBlocking, updateDocumentNonBlocking, useStorage } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch, serverTimestamp } from "firebase/firestore";
@@ -39,6 +40,9 @@ const userSchema = z.object({
   password: z.string().optional(),
   isWfhAllowed: z.boolean().default(false),
   isDemoAccount: z.boolean().default(false),
+  homeLatitude: z.coerce.number().optional(),
+  homeLongitude: z.coerce.number().optional(),
+  homeRadius: z.coerce.number().optional().default(0.5),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -62,9 +66,12 @@ export default function UsersPage() {
     resolver: zodResolver(userSchema),
     defaultValues: {
       firstName: "", lastName: "", email: "", phoneNumber: "", jobTitle: "", department: "",
-      employmentType: "Intern", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false
+      employmentType: "Intern", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
+      homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5
     },
   });
+
+  const isWfhAllowedValue = form.watch("isWfhAllowed");
 
   const onSubmit = async (values: UserFormValues) => {
     try {
@@ -144,7 +151,7 @@ export default function UsersPage() {
             <DialogTrigger asChild><Button className="rounded-full h-11"><PlusCircle className="mr-2" /> Add Employee</Button></DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader><DialogTitle>{editingUser ? 'Edit Strategic Profile' : 'Register New Staff Member'}</DialogTitle></DialogHeader>
-                <ScrollArea className="max-h-[70vh] -mx-6 px-6">
+                <ScrollArea className="max-h-[80vh] -mx-6 px-6">
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -168,6 +175,38 @@ export default function UsersPage() {
                             </div>
 
                             <Separator className="my-4" />
+                            
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-2xl border">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-xs font-black uppercase">Allow WFH Access</Label>
+                                        <p className="text-[10px] text-muted-foreground">Enable geolocation check for residential base.</p>
+                                    </div>
+                                    <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />
+                                </div>
+
+                                {isWfhAllowedValue && (
+                                    <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 space-y-4 animate-fade-in-up">
+                                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                                            <MapPin className="size-3" /> Home Base Coordinates
+                                        </Label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <FormField control={form.control} name="homeLatitude" render={({ field }) => (<FormItem><Label className="text-[10px] uppercase opacity-60">Latitude</Label><Input type="number" step="any" {...field}/></FormItem>)} />
+                                            <FormField control={form.control} name="homeLongitude" render={({ field }) => (<FormItem><Label className="text-[10px] uppercase opacity-60">Longitude</Label><Input type="number" step="any" {...field}/></FormItem>)} />
+                                        </div>
+                                        <FormField control={form.control} name="homeRadius" render={({ field }) => (
+                                            <FormItem>
+                                                <Label className="text-[10px] uppercase opacity-60">Geofence Radius (KM)</Label>
+                                                <Input type="number" step="0.1" {...field}/>
+                                                <p className="text-[9px] text-muted-foreground italic">Standard value: 0.5 KM (500 meters)</p>
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                )}
+                            </div>
+
+                            <Separator className="my-4" />
+
                             <div className="space-y-3">
                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Digital Identity Assets</Label>
                                 {editingUser ? (
@@ -229,10 +268,7 @@ export default function UsersPage() {
                                 <Label className="text-xs font-black uppercase">Demo/Test Account</Label>
                                 <FormField control={form.control} name="isDemoAccount" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />
                             </div>
-                            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-2xl border">
-                                <Label className="text-xs font-black uppercase">Allow WFH Access</Label>
-                                <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />
-                            </div>
+                            
                             {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label>Temporary Password</Label><Input type="password" {...field}/></FormItem>)} />}
                             <Button type="submit" className="w-full h-12 rounded-full font-black uppercase tracking-widest mt-6">Confirm Dispatch</Button>
                         </form>

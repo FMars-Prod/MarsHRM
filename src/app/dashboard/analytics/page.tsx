@@ -8,7 +8,7 @@ import { collection, query, where, orderBy, Timestamp, getDocs, collectionGroup 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSunday, isValid, isAfter, isBefore, differenceInSeconds, startOfMonth, endOfMonth, subWeeks, subMonths, isToday } from 'date-fns';
-import { MapPin, Calendar as CalendarIcon, AreaChart as AreaChartIcon, ExternalLink, Clock, Briefcase, CalendarOff, AlertTriangle, Coffee, Info, Filter, Activity, FileDown } from 'lucide-react';
+import { MapPin, Calendar as CalendarIcon, AreaChart as AreaChartIcon, ExternalLink, Clock, Briefcase, CalendarOff, AlertTriangle, Coffee, Info, Filter, Activity, FileDown, Home } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SelectLabel } from '@/components/ui/select';
@@ -41,6 +41,7 @@ type Attendance = {
     locationLunchInLongitude?: number;
     status: string;
     isOutOfRange?: boolean;
+    isAtHome?: boolean;
     totalBreakDuration?: number;
 };
 
@@ -225,10 +226,26 @@ export default function AnalyticsPage() {
           if (att.checkInTime && !att.checkOutTime && isBefore(day, today)) {
               return { status: 'non-compliance', label: 'Non-Compliance', color: 'bg-orange-100 text-orange-700 border-orange-200' };
           }
+          
+          let label = att.status.toUpperCase();
+          let color = att.status === 'present' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200';
+          let icon = null;
+
+          if (att.isAtHome) {
+              label = "HOME";
+              color = "bg-blue-100 text-blue-700 border-blue-200";
+              icon = <Home className="size-2 mr-1" />;
+          } else if (att.isOutOfRange) {
+              label = "OUT OF RANGE";
+              color = "bg-orange-100 text-orange-700 border-orange-200";
+              icon = <AlertTriangle className="size-2 mr-1" />;
+          }
+
           return { 
               status: att.status, 
-              label: att.status.toUpperCase(), 
-              color: att.status === 'present' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200' 
+              label, 
+              color,
+              icon
           };
       }
 
@@ -308,7 +325,7 @@ export default function AnalyticsPage() {
         .sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0))
         .map(att => {
             const user = users?.find(u => u.id === att.employeeId);
-            const statusInfo = user ? getDayStatusLocal(user, att.checkInTime!.toDate()) : { label: '?', color: '' };
+            const statusInfo = user ? getDayStatusLocal(user, att.checkInTime!.toDate()) : { label: '?', color: '', icon: null };
             return {
                 date: att.checkInTime!.toDate(),
                 employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
@@ -565,8 +582,9 @@ export default function AnalyticsPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="py-4">
-                                            <Badge variant="outline" className={cn("rounded-full uppercase text-[9px] font-black tracking-widest", row.status.color)}>
-                                                {row.status.label}
+                                            <Badge variant="outline" className={cn("rounded-full uppercase text-[9px] font-black tracking-widest gap-1", (row.status as any).color)}>
+                                                {(row.status as any).icon}
+                                                {(row.status as any).label}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="py-4">
@@ -627,4 +645,3 @@ function StatCard({ label, value, icon: Icon, color }: { label: string, value: s
         </Card>
     );
 }
-
