@@ -67,7 +67,7 @@ export function DailyMonitorWidget() {
   const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[], nudgeType?: 'missing_login' | 'missing_logout' } | null>(null);
 
   const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
-  const { data: currentUserData } = useDoc(userDocRef);
+  const { data: currentUserData } = useDoc(currentUserDocRef);
   
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
