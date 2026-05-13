@@ -442,7 +442,7 @@ export function DailyMonitorWidget() {
                     <Building2 className="h-10 w-10 animate-pulse text-muted-foreground" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   <SheetTrigger asChild>
                     <UserListCard 
                         title="Present" 
@@ -483,16 +483,6 @@ export function DailyMonitorWidget() {
                         onClick={() => setSheetContent({title: "Absent Today", users: summary.absent, nudgeType: 'missing_login'})} 
                     />
                   </SheetTrigger>
-                   <SheetTrigger asChild>
-                    <UserListCard 
-                        title="On Leave" 
-                        users={summary.onLeave} 
-                        Icon={User} 
-                        iconColor="text-slate-600" 
-                        gradient="bg-gradient-to-br from-slate-500/10 to-white/50"
-                        onClick={() => setSheetContent({title: "On Leave", users: summary.onLeave})} 
-                    />
-                   </SheetTrigger>
                 </div>
             )}
             </CardContent>

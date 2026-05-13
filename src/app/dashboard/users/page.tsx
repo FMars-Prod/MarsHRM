@@ -10,10 +10,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, addDocumentNonBlocking, updateDocumentNonBlocking, useStorage } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, collection, query, writeBatch, serverTimestamp } from "firebase/firestore";
+import { doc, collection, query, writeBatch, serverTimestamp, deleteDoc, where, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format, startOfDay, endOfDay } from "date-fns";
 
 const userSchema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -108,6 +109,31 @@ export default function UsersPage() {
     } catch (e: any) {
         toast({ variant: 'destructive', title: 'Dispatch Failed', description: e.message });
     }
+  };
+
+  const handleResetDay = async (userId: string) => {
+      const todayId = format(new Date(), 'yyyy-MM-dd');
+      const attRef = doc(firestore, `users/${userId}/attendances`, todayId);
+      
+      try {
+          // Delete attendance
+          await deleteDoc(attRef);
+
+          // Delete reports for today
+          const reportsRef = collection(firestore, `users/${userId}/reports`);
+          const todayStart = startOfDay(new Date());
+          const todayEnd = endOfDay(new Date());
+          const q = query(reportsRef, where('date', '>=', todayStart), where('date', '<=', todayEnd));
+          const snap = await getDocs(q);
+          
+          const batch = writeBatch(firestore);
+          snap.docs.forEach(d => batch.delete(d.ref));
+          await batch.commit();
+          
+          toast({ title: "Day Reset Completed", description: "Today's logs and reports have been purged for this user." });
+      } catch (err: any) {
+          toast({ variant: 'destructive', title: "Reset Failed", description: err.message });
+      }
   };
 
   const handleSignatureUpload = async (file: File) => {
@@ -317,6 +343,8 @@ export default function UsersPage() {
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); if(u.signatureUrl) setManualSignatureUrl(u.signatureUrl); setIsDialogOpen(true); }}><Edit className="mr-2 size-4" /> Edit Profile</DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href={`/dashboard/users/${u.id}`}><UserCircle className="mr-2 size-4" /> View Profile</Link></DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleResetDay(u.id)} className="text-orange-600"><RefreshCcw className="mr-2 size-4" /> Reset Day (Test)</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
