@@ -268,7 +268,6 @@ export function DailyMonitorWidget() {
     };
 
     reportText += createSection('Present', summary.present, true);
-    reportText += createSection('Logged in at Home', summary.atHome, true);
     reportText += createSection('Late', summary.late, true);
     reportText += createSection('Out of Range', summary.outOfRange, true);
     reportText += createSection('Absent', summary.absent);
@@ -370,7 +369,6 @@ export function DailyMonitorWidget() {
     };
     
     addSection('Present', summary.present, 'Present', true);
-    addSection('Logged in at Home', summary.atHome, 'At Home', true);
     addSection('Late', summary.late, 'Late', true);
     addSection('Out of Range', summary.outOfRange, 'Out of Range', true);
     addSection('Absent', summary.absent, 'Absent', false);
@@ -444,7 +442,7 @@ export function DailyMonitorWidget() {
                     <Building2 className="h-10 w-10 animate-pulse text-muted-foreground" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                   <SheetTrigger asChild>
                     <UserListCard 
                         title="Present" 
@@ -453,16 +451,6 @@ export function DailyMonitorWidget() {
                         iconColor="text-green-600" 
                         gradient="bg-gradient-to-br from-green-500/10 to-white/50"
                         onClick={() => setSheetContent({title: "Present (In-Office)", users: summary.present})} 
-                    />
-                  </SheetTrigger>
-                  <SheetTrigger asChild>
-                    <UserListCard 
-                        title="Logged at Home" 
-                        users={summary.atHome} 
-                        Icon={Home} 
-                        iconColor="text-blue-600" 
-                        gradient="bg-gradient-to-br from-blue-500/10 to-white/50"
-                        onClick={() => setSheetContent({title: "WFH Log-ins", users: summary.atHome})} 
                     />
                   </SheetTrigger>
                   <SheetTrigger asChild>
