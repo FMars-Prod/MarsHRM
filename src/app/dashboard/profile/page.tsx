@@ -176,12 +176,20 @@ export default function ProfilePage() {
         <div className="max-w-4xl mx-auto animate-fade-in-up pb-20">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-20 px-6 py-10">
                 <div className="relative group cursor-pointer" onClick={() => setIsAvatarDialogOpen(true)}>
-                    <div className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
-                        {employee.avatar ? <span className="text-6xl md:text-8xl">{employee.avatar}</span> : <AvatarFallback className="text-4xl">{employee.firstName?.[0]}{employee.lastName?.[0]}</AvatarFallback>}
+                    <Avatar className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
+                        {employee.avatar ? (
+                            <div className="flex items-center justify-center w-full h-full">
+                                <span className="text-6xl md:text-8xl">{employee.avatar}</span>
+                            </div>
+                        ) : (
+                            <AvatarFallback className="text-4xl">
+                                {employee.firstName?.[0]}{employee.lastName?.[0]}
+                            </AvatarFallback>
+                        )}
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                             <Smile className="size-10 text-white" />
                         </div>
-                    </div>
+                    </Avatar>
                 </div>
 
                 <div className="flex-1 space-y-6">
