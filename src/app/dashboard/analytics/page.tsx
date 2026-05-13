@@ -56,7 +56,7 @@ const userChartConfig = {
   breakHours: { label: "Break Time", color: "hsl(var(--accent))" },
 } satisfies ChartConfig;
 
-// Helper functions moved to module level to avoid initialization sequence issues
+// Helper functions
 const isWithinInterval = (start: Date, end: Date, range: {start: Date, end: Date}) => {
     return (start <= range.end && end >= range.start);
 };
@@ -305,35 +305,41 @@ export default function AnalyticsPage() {
 
   const gridData = React.useMemo(() => {
       const range = eachDayOfInterval({ start: dateRange.start, end: dateRange.end }).reverse();
-      if (selectedUserId !== 'all' && users) {
-          const user = users.find(u => u.id === selectedUserId);
-          if (!user) return [];
-          return range.map(day => {
-              const att = attendanceData.find(a => a.employeeId === user.id && isSameDay(a.checkInTime?.toDate() || new Date(0), day));
-              const statusInfo = getDayStatusLocal(user, day);
-              return {
-                  date: day,
-                  employeeName: `${user.firstName} ${user.lastName}`,
-                  employeeId: user.id,
-                  status: statusInfo,
-                  att
-              };
+      const expectedUsers = users?.filter(u => u.role !== 'CEO/Admin' && u.role !== 'HR Manager' && !u.isDemoAccount) || [];
+
+      // If viewing all, show every day and every expected user for that day
+      if (selectedUserId === 'all') {
+          const results: any[] = [];
+          range.forEach(day => {
+              expectedUsers.forEach(user => {
+                  const att = attendanceData.find(a => a.employeeId === user.id && isSameDay(a.checkInTime?.toDate() || new Date(0), day));
+                  const statusInfo = getDayStatusLocal(user, day);
+                  results.push({
+                      date: day,
+                      employeeName: `${user.firstName} ${user.lastName}`,
+                      employeeId: user.id,
+                      status: statusInfo,
+                      att
+                  });
+              });
           });
+          return results;
       }
 
-      return attendanceData
-        .sort((a, b) => (b.checkInTime?.toMillis() || 0) - (a.checkInTime?.toMillis() || 0))
-        .map(att => {
-            const user = users?.find(u => u.id === att.employeeId);
-            const statusInfo = user ? getDayStatusLocal(user, att.checkInTime!.toDate()) : { label: '?', color: '', icon: null };
-            return {
-                date: att.checkInTime!.toDate(),
-                employeeName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
-                employeeId: user?.id,
-                status: statusInfo,
-                att
-            };
-        });
+      // If viewing individual
+      const user = users?.find(u => u.id === selectedUserId);
+      if (!user) return [];
+      return range.map(day => {
+          const att = attendanceData.find(a => a.employeeId === user.id && isSameDay(a.checkInTime?.toDate() || new Date(0), day));
+          const statusInfo = getDayStatusLocal(user, day);
+          return {
+              date: day,
+              employeeName: `${user.firstName} ${user.lastName}`,
+              employeeId: user.id,
+              status: statusInfo,
+              att
+          };
+      });
   }, [selectedUserId, users, attendanceData, holidays, leaves, dateRange]);
 
   const handleExportPdf = () => {
@@ -422,7 +428,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Organizational Analytics" description="High-fidelity performance metrics with geofenced verification.">
+      <PageHeader title="Organizational Analytics" description="High-fidelity performance metrics with absentee identification and geofenced verification.">
         <div className="flex flex-wrap gap-2">
             {selectedUserId !== 'all' && (
                 <Button variant="outline" className="rounded-full h-11 bg-white/50" onClick={handleExportPdf}>
@@ -548,7 +554,7 @@ export default function AnalyticsPage() {
                     <Info className="size-5 text-primary" />
                     Granular Analytics Grid
                 </CardTitle>
-                <CardDescription>Verified log with time-stamped geolocation pins.</CardDescription>
+                <CardDescription>Verified log with time-stamped geolocation pins and absentee tracking.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
                 <div className="overflow-x-auto">

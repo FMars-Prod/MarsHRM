@@ -69,12 +69,12 @@ service cloud.firestore {
       allow delete: if isPrivileged();
 
       match /attendances/{attId} {
-        allow read: if isOwner(userId) || isPrivileged();
+        allow read: if isOwner(userId) || isPrivileged() || isTeamLead();
         allow write: if isOwner(userId) || isPrivileged();
       }
       
       match /reports/{reportId} {
-        allow read: if isOwner(userId) || isPrivileged();
+        allow read: if isOwner(userId) || isPrivileged() || isTeamLead();
         allow create: if isOwner(userId);
         allow delete: if isPrivileged();
       }
@@ -87,6 +87,16 @@ service cloud.firestore {
       match /readAnnouncements/{annId} {
         allow read, write: if isOwner(userId);
       }
+    }
+    
+    // Support collectionGroup queries for reports
+    match /{path=**}/reports/{reportId} {
+        allow read: if isSignedIn() && (isPrivileged() || isTeamLead() || isOwner(resource.data.employeeId));
+    }
+    
+    // Support collectionGroup queries for attendances
+    match /{path=**}/attendances/{attId} {
+        allow read: if isSignedIn() && (isPrivileged() || isTeamLead() || isOwner(resource.data.employeeId));
     }
 
     match /location_change_requests/{requestId} {
