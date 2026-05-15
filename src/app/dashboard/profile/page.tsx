@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -9,7 +10,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap, Lock, Users, CalendarDays, Grid, ShieldAlert } from "lucide-react";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap, Lock, Users, CalendarDays, Grid, ShieldAlert, FileBox } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,6 +88,9 @@ export default function ProfilePage() {
 
     const teamDocRef = useMemoFirebase(() => employee?.teamId ? doc(firestore, "teams", employee.teamId) : null, [employee, firestore]);
     const { data: teamData } = useDoc<any>(teamDocRef);
+
+    const docsQuery = useMemoFirebase(() => user ? collection(firestore, `users/${user.uid}/documents`) : null, [user, firestore]);
+    const { data: documents } = useCollection(docsQuery);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -213,12 +217,12 @@ export default function ProfilePage() {
                             <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Reports</p>
                         </div>
                         <div className="text-center md:text-left">
-                            <p className="font-black text-lg">{(employee.totalHours || 0).toFixed(1)}</p>
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Hours</p>
+                            <p className="font-black text-lg">{documents?.length || 0}</p>
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Documents</p>
                         </div>
                         <div className="text-center md:text-left">
-                            <p className="font-black text-lg">{employee.role}</p>
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Access</p>
+                            <p className="font-black text-lg">{(employee.totalHours || 0).toFixed(1)}</p>
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Hours</p>
                         </div>
                     </div>
 
@@ -241,11 +245,11 @@ export default function ProfilePage() {
                     <TabsTrigger value="feed" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                         <Grid className="size-4"/> Tactical Feed
                     </TabsTrigger>
+                    <TabsTrigger value="docs" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
+                        <FileBox className="size-4"/> Vault
+                    </TabsTrigger>
                     <TabsTrigger value="identity" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                         <ShieldCheck className="size-4"/> Digital Asset
-                    </TabsTrigger>
-                    <TabsTrigger value="location" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
-                        <LocateFixed className="size-4"/> Geofence
                     </TabsTrigger>
                 </TabsList>
 
@@ -282,6 +286,43 @@ export default function ProfilePage() {
                                             <div className="py-20 text-center flex flex-col items-center gap-3 opacity-30">
                                                 <FileText className="size-12" />
                                                 <p className="text-[10px] font-black uppercase">No Shift Logs Found</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="docs" className="mt-0">
+                         <Card className="border-none rounded-3xl shadow-sm bg-white/30 backdrop-blur-sm overflow-hidden">
+                            <CardHeader className="bg-muted/10 border-b">
+                                <CardTitle className="text-[10px] font-black uppercase opacity-60">Digital Asset Registry</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <ScrollArea className="h-[450px]">
+                                    <div className="divide-y divide-border/30">
+                                        {documents && documents.length > 0 ? documents.map(d => (
+                                            <div key={d.id} className="p-5 hover:bg-muted/20 transition-colors flex items-center justify-between group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="p-2.5 rounded-xl bg-blue-500/5 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                        <FileBox className="size-5" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-sm">{d.title}</p>
+                                                        <p className="text-[8px] uppercase font-black tracking-widest text-muted-foreground">Linked {formatIST(d.uploadedAt)}</p>
+                                                    </div>
+                                                </div>
+                                                <Button variant="ghost" size="sm" className="rounded-full font-bold uppercase text-[10px] gap-2" asChild>
+                                                    <Link href={d.link} target="_blank">
+                                                        Access <ExternalLink className="size-3" />
+                                                    </Link>
+                                                </Button>
+                                            </div>
+                                        )) : (
+                                            <div className="py-20 text-center flex flex-col items-center gap-3 opacity-30">
+                                                <FileBox className="size-12" />
+                                                <p className="text-[10px] font-black uppercase">No Digital Assets</p>
                                             </div>
                                         )}
                                     </div>
@@ -340,36 +381,6 @@ export default function ProfilePage() {
                                         </Tabs>
                                     </div>
                                 )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="location" className="mt-0">
-                        <Card className="border-none rounded-3xl shadow-sm bg-white/30 backdrop-blur-sm overflow-hidden">
-                            <CardHeader className="bg-muted/10 border-b">
-                                <CardTitle className="text-[10px] font-black uppercase opacity-60">Geofenced Operation Bases</CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-10">
-                                <div className="p-8 bg-primary/5 rounded-3xl border border-primary/10 flex flex-col md:flex-row items-center justify-between gap-6">
-                                    <div className="space-y-1 text-center md:text-left">
-                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Home Base Coordinate</p>
-                                        {employee?.homeLatitude ? (
-                                            <div className="mt-2 flex items-center gap-3">
-                                                <div className="p-2.5 rounded-xl bg-white shadow-sm border">
-                                                    <MapPin className="size-5 text-primary" />
-                                                </div>
-                                                <p className="text-lg font-black tracking-tighter text-foreground/80">
-                                                    {employee.homeLatitude.toFixed(4)}, {employee.homeLongitude.toFixed(4)}
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm font-bold text-orange-600 mt-2">Satellite Coordinate Not Provisioned</p>
-                                        )}
-                                    </div>
-                                    <Button variant="outline" size="sm" className="rounded-full h-10 px-6 font-bold uppercase text-[10px] tracking-widest border-primary/20 bg-white" asChild>
-                                        <Link href="/dashboard/location-requests">Request Update</Link>
-                                    </Button>
-                                </div>
                             </CardContent>
                         </Card>
                     </TabsContent>

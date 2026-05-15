@@ -6,8 +6,6 @@ service cloud.firestore {
     /**
      * CORE PHILOSOPHY
      * This ruleset implements a robust, role-based access control (RBAC) and ownership model for the GeoHRM system.
-     * It prioritizes high authorization security while maintaining flexibility for rapid prototyping by focusing 
-     * on identity and relationship validation rather than strict schema enforcement.
      */
 
     // --- Helper Functions ---
@@ -79,6 +77,11 @@ service cloud.firestore {
         allow delete: if isPrivileged();
       }
 
+      match /documents/{docId} {
+        allow read: if isOwner(userId) || isPrivileged() || isTeamLead();
+        allow write: if isOwner(userId) || isPrivileged();
+      }
+
       match /policy_acknowledgments/{ackId} {
         allow read: if isOwner(userId) || isPrivileged();
         allow create: if isOwner(userId);
@@ -135,21 +138,21 @@ service cloud.firestore {
     }
 
     match /leave_requests/{id} {
-      allow get, list: if isSignedIn(); // Restricted by application logic queries
+      allow get, list: if isSignedIn(); 
       allow create: if isSignedIn();
       allow update: if isPrivileged() || isTeamLead();
       allow delete: if isPrivileged();
     }
 
     match /issue_reports/{id} {
-      allow read: if isSignedIn(); // Restricted by application logic queries
+      allow read: if isSignedIn(); 
       allow create: if isSignedIn();
       allow update: if isPrivileged();
       allow delete: if isPrivileged();
     }
 
     match /payslips/{id} {
-      allow read: if isSignedIn(); // Restricted by application logic queries
+      allow read: if isSignedIn(); 
       allow write: if isPrivileged();
     }
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth } from 'date-fns';
-import { Grid, ShieldCheck, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Download, Save, ExternalLink, Clock, Users, MapPin, CalendarDays } from 'lucide-react';
+import { Grid, ShieldCheck, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Download, Save, ExternalLink, Clock, Users, MapPin, CalendarDays, FileBox } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +48,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const teamDocRef = useMemoFirebase(() => user?.teamId ? doc(firestore, "teams", user.teamId) : null, [user, firestore]);
   const { data: teamData } = useDoc<any>(teamDocRef);
+
+  const docsQuery = useMemoFirebase(() => userId ? collection(firestore, `users/${userId}/documents`) : null, [userId, firestore]);
+  const { data: documents } = useCollection(docsQuery);
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
@@ -116,7 +120,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             ['Work Hours', `${stats.workHours}h`], 
             ['Late Logs', stats.lateDays], 
             ['Leaves', stats.leaves], 
-            ['Total Reports', stats.reports]
+            ['Total Reports', stats.reports],
+            ['Documents Submitted', documents?.length || 0]
         ],
         theme: 'striped',
         headStyles: { fillColor: [107, 33, 168] }
@@ -133,9 +138,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     <div className="max-w-4xl mx-auto animate-fade-in-up pb-20">
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-20 px-6 py-10">
         <div className="relative group">
-          <div className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
+          <Avatar className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
               {user.avatar ? <span className="text-6xl md:text-8xl">{user.avatar}</span> : <AvatarFallback className="text-4xl">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>}
-          </div>
+          </Avatar>
         </div>
 
         <div className="flex-1 space-y-6">
@@ -161,16 +166,12 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
               <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Reports</p>
             </div>
             <div className="text-center md:text-left">
+              <p className="font-black text-lg">{documents?.length || 0}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Documents</p>
+            </div>
+            <div className="text-center md:text-left">
               <p className="font-black text-lg">{stats.workHours}</p>
               <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Hours</p>
-            </div>
-            <div className="text-center md:text-left">
-              <p className="font-black text-lg">{stats.lateDays}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Late Ops</p>
-            </div>
-            <div className="text-center md:text-left">
-              <p className="font-black text-lg">{stats.leaves}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Leaves</p>
             </div>
           </div>
 
@@ -196,11 +197,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <TabsTrigger value="reports" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
                 <FileText className="size-4"/> Intelligence
             </TabsTrigger>
-            <TabsTrigger value="compliance" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
-                <ShieldAlert className="size-4"/> Alerts
-            </TabsTrigger>
-            <TabsTrigger value="identity" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
-                <ShieldCheck className="size-4"/> Identity
+            <TabsTrigger value="docs" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
+                <FileBox className="size-4"/> Vault
             </TabsTrigger>
         </TabsList>
 
@@ -264,64 +262,37 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 </Card>
             </TabsContent>
 
-            <TabsContent value="compliance" className="mt-0">
+            <TabsContent value="docs" className="mt-0">
                 <Card className="border-none rounded-3xl shadow-sm bg-white/30 backdrop-blur-sm">
-                    <CardHeader className="bg-red-500/5 border-b">
-                        <CardTitle className="text-[10px] font-black uppercase text-red-600/60">Fleet Protocol Discrepancies</CardTitle>
+                    <CardHeader className="bg-muted/10 border-b">
+                        <CardTitle className="text-[10px] font-black uppercase opacity-60">Digital Asset Repository</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                         <ScrollArea className="h-[400px]">
-                            {complianceData && complianceData.length > 0 ? complianceData.map(c => (
-                                <div key={c.id} className="p-6 border-b border-border/30 last:border-none">
-                                    <Badge className={cn("rounded-full text-[8px] font-black uppercase mb-3", c.severity === 'Critical' ? 'bg-red-600' : 'bg-blue-500')}>
-                                        {c.severity} ALERT
-                                    </Badge>
-                                    <p className="text-xs text-muted-foreground mb-1 font-medium">Filed by {c.filedByName} • {format(c.timestamp.toDate(), 'PP p')}</p>
-                                    <p className="text-sm font-medium italic text-foreground/80 leading-relaxed">"{c.reason}"</p>
-                                </div>
-                            )) : (
-                                <div className="py-20 text-center flex flex-col items-center gap-3 opacity-30">
-                                    <ShieldCheck className="size-12" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Operating within parameters</p>
-                                </div>
-                            )}
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-
-            <TabsContent value="identity" className="mt-0">
-                <Card className="border-none rounded-3xl shadow-inner bg-secondary/10">
-                    <CardContent className="p-10 flex flex-col items-center text-center space-y-8">
-                        <h3 className="font-black uppercase text-[10px] tracking-[0.3em] text-primary/60">Identity Asset Repository</h3>
-                        <div className="w-full max-w-sm space-y-8">
-                            {user.signatureUrl ? (
-                                <div className="p-8 bg-white/80 rounded-3xl border-2 border-dashed border-primary/20 relative shadow-sm group">
-                                    <img src={user.signatureUrl} alt="Signature" className="h-24 object-contain grayscale invert mix-blend-multiply opacity-70 w-full" />
-                                    <div className="absolute top-2 right-2">
-                                        <Badge className="bg-green-100 text-green-700 text-[8px] uppercase font-black border-none">Verified</Badge>
+                            <div className="divide-y divide-border/30">
+                                {documents && documents.length > 0 ? documents.map(d => (
+                                    <div key={d.id} className="p-5 hover:bg-muted/20 transition-colors flex items-center justify-between group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-2.5 rounded-xl bg-blue-500/5 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                <FileBox className="size-5" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-sm">{d.title}</p>
+                                                <p className="text-[8px] uppercase font-black tracking-widest text-muted-foreground">Linked {format(d.uploadedAt.toDate(), 'PPP')}</p>
+                                            </div>
+                                        </div>
+                                        <Button variant="ghost" size="sm" asChild className="rounded-full text-[9px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Link href={d.link} target="_blank">Access Link <ExternalLink className="size-3 ml-1.5"/></Link>
+                                        </Button>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="aspect-video bg-white/40 rounded-3xl border-2 border-dashed border-muted/50 flex flex-col items-center justify-center opacity-40">
-                                    <MapPin className="size-8 mb-2 opacity-50" />
-                                    <p className="text-[10px] font-black uppercase">Identity asset missing</p>
-                                </div>
-                            )}
-                            {isAdmin && (
-                                <div className="flex gap-2 p-1 bg-white rounded-2xl ring-1 ring-border shadow-sm">
-                                    <Input 
-                                        value={manualSignatureUrl} 
-                                        onChange={e => setManualSignatureUrl(e.target.value)} 
-                                        placeholder="Sync direct URL..." 
-                                        className="h-12 border-none focus-visible:ring-0 shadow-none text-xs" 
-                                    />
-                                    <Button size="icon" className="h-12 w-12 rounded-xl shrink-0" onClick={handleManualSignatureSave}>
-                                        <Save className="size-5" />
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
+                                )) : (
+                                    <div className="py-20 text-center flex flex-col items-center gap-3 opacity-30">
+                                        <FileBox className="size-12" />
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em]">No Digital Assets</p>
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
                     </CardContent>
                 </Card>
             </TabsContent>

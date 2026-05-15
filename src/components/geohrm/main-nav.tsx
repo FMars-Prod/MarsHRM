@@ -30,6 +30,7 @@ import {
   LayoutTemplate,
   ShieldCheck,
   CalendarDays,
+  FileBox,
 } from "lucide-react";
 import React from "react";
 
@@ -48,6 +49,7 @@ const groups = [
     links: [
       { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/leave", label: "Leave", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
+      { href: "/dashboard/documents", label: "Documents", icon: FileBox, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/location-requests", label: "WFH Requests", icon: MapPin, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
       { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
