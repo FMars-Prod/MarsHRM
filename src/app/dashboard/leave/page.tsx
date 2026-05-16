@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown, MoreHorizontal, Trash2, History } from "lucide-react";
+import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown, MoreHorizontal, Trash2, History, Timer, MapPin, Briefcase } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import * as React from "react";
@@ -61,8 +61,10 @@ import { format, startOfToday, getDaysInMonth, getYear, getMonth, getDate, isBef
 import { useToast } from "@/hooks/use-toast";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 type LeaveStatus = 'Pending' | 'Pending HR Approval' | 'Approved' | 'Rejected' | 'Rejected by Team Lead' | 'Rejected by HR';
+type RequestCategory = 'Leave' | 'Hour Permission' | 'WFH';
 
 type LeaveRequest = {
   employeeId: string;
@@ -70,7 +72,10 @@ type LeaveRequest = {
   employeeJobTitle: string;
   startDate: any;
   endDate: any;
-  leaveType: string;
+  startTime?: string;
+  endTime?: string;
+  category: RequestCategory;
+  leaveType?: string;
   reason: string;
   status: LeaveStatus;
   approvedByTeamLeadId?: string | null;
@@ -203,6 +208,7 @@ export default function LeavePage() {
   const userRole = (userData as any)?.role || 'Member';
   const isUserAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
+  const [category, setCategory] = React.useState<RequestCategory>("Leave");
   const [leaveType, setLeaveType] = React.useState<string>("");
   const [reason, setReason] = React.useState("");
   const [isRequesting, setIsRequesting] = React.useState(false);
@@ -224,6 +230,9 @@ export default function LeavePage() {
   const [endDay, setEndDay] = React.useState<string | undefined>();
   const [endMonth, setEndMonth] = React.useState<string | undefined>();
   const [endYear, setEndYear] = React.useState<string | undefined>(currentYear.toString());
+
+  const [startTime, setStartTime] = React.useState("09:00");
+  const [endTime, setEndTime] = React.useState("17:00");
 
   const startDaysInMonth = (startYear && startMonth) ? getDaysInMonth(new Date(parseInt(startYear), parseInt(startMonth))) : 31;
   const endDaysInMonth = (endYear && endMonth) ? getDaysInMonth(new Date(parseInt(endYear), parseInt(endMonth))) : 31;
@@ -297,7 +306,7 @@ export default function LeavePage() {
 
   const handleDeleteRequest = (requestId: string) => {
     deleteDocumentNonBlocking(doc(firestore, 'leave_requests', requestId));
-    toast({ title: 'Leave Request Deleted' });
+    toast({ title: 'Request Deleted' });
   }
 
   const handleBulkDelete = () => {
@@ -355,19 +364,33 @@ export default function LeavePage() {
   }
 
   const handleCreateRequest = () => {
-    if (!user || !userData || !leaveType || !reason || !startDay || !startMonth || !startYear || !endDay || !endMonth || !endYear) {
+    if (!user || !userData || !reason || !startDay || !startMonth || !startYear) {
         toast({ variant: "destructive", title: "Missing Info" });
         return;
     }
+
+    if (category === "Leave" && !leaveType) {
+        toast({ variant: "destructive", title: "Select leave type" });
+        return;
+    }
+
     setIsRequesting(true);
     
     const fromDate = new Date(parseInt(startYear), parseInt(startMonth), parseInt(startDay));
-    const toDate = new Date(parseInt(endYear), parseInt(endMonth), parseInt(endDay));
+    let toDate = fromDate;
 
-    if (toDate < fromDate) {
-        toast({ variant: "destructive", title: "Invalid Dates" });
-        setIsRequesting(false);
-        return;
+    if (category !== "Hour Permission") {
+        if (!endDay || !endMonth || !endYear) {
+            toast({ variant: "destructive", title: "End date required" });
+            setIsRequesting(false);
+            return;
+        }
+        toDate = new Date(parseInt(endYear), parseInt(endMonth), parseInt(endDay));
+        if (toDate < fromDate) {
+            toast({ variant: "destructive", title: "Invalid date range" });
+            setIsRequesting(false);
+            return;
+        }
     }
 
     const userTeam = allTeams?.find(t => t.id === (userData as any).teamId);
@@ -383,10 +406,19 @@ export default function LeavePage() {
         employeeJobTitle: (userData as any).jobTitle,
         startDate: fromDate,
         endDate: toDate,
-        leaveType,
+        category,
         reason,
         status: initialStatus,
         createdAt: serverTimestamp(),
+    }
+
+    if (category === "Leave") {
+        newRequest.leaveType = leaveType;
+    }
+
+    if (category === "Hour Permission") {
+        newRequest.startTime = startTime;
+        newRequest.endTime = endTime;
     }
     
     addDocumentNonBlocking(collection(firestore, 'leave_requests'), newRequest)
@@ -394,37 +426,38 @@ export default function LeavePage() {
           toast({ title: "Request Submitted" });
           setLeaveType("");
           setReason("");
+          setCategory("Leave");
           setIsRequesting(false);
       })
       .catch(() => setIsRequesting(false));
   }
 
-  const formatDate = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'PP') : '';
+  const formatDateLabel = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'PP') : '';
 
   return (
     <>
       <PageHeader
-        title="Leave Management"
-        description="Request time off and track approvals."
+        title="Fleet Requests"
+        description="Manage leave, hour permissions, and WFH requests."
         className="animate-fade-in-up"
       >
         <div className="flex gap-2">
           {isUserAdmin && selectedIds.length > 0 && (
               <AlertDialog>
                   <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" className="gap-2">
+                      <Button variant="destructive" size="sm" className="gap-2 rounded-full">
                           <Trash2 className="size-4" />
-                          Delete ({selectedIds.length})
+                          Purge ({selectedIds.length})
                       </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent className="rounded-3xl">
                       <AlertDialogHeader>
-                          <AlertDialogTitle>Bulk Delete Requests</AlertDialogTitle>
-                          <AlertDialogDescription>Are you sure you want to delete {selectedIds.length} selected leave requests?</AlertDialogDescription>
+                          <AlertDialogTitle className="font-black uppercase tracking-tighter">Bulk Expunge Protocol</AlertDialogTitle>
+                          <AlertDialogDescription>Authorized personnel only. This will permanently remove {selectedIds.length} records.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete All</AlertDialogAction>
+                          <AlertDialogCancel className="rounded-full font-bold uppercase text-xs">Abort</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full font-bold uppercase text-xs">Confirm Purge</AlertDialogAction>
                       </AlertDialogFooter>
                   </AlertDialogContent>
               </AlertDialog>
@@ -434,149 +467,205 @@ export default function LeavePage() {
               variant={showMissed ? "secondary" : "outline"} 
               size="sm"
               onClick={() => setShowMissed(!showMissed)}
-              className="gap-2"
+              className="gap-2 rounded-full"
             >
               {showMissed ? <History className="size-4" /> : <Clock className="size-4" />}
-              {showMissed ? "Viewing Missed" : "Missed Leaves"}
+              {showMissed ? "Archive View" : "Past Requests"}
             </Button>
           )}
           {userRole === 'Member' && (
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" className="rounded-full shadow-lg">
                   <PlusCircle className="mr-2 size-4" />
                   New Request
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md rounded-3xl">
                 <DialogHeader>
-                  <DialogTitle>Leave Request</DialogTitle>
-                  <DialogDescription>Submit your time off details.</DialogDescription>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Strategic Request</DialogTitle>
+                  <DialogDescription>Submit your tactical shift adjustment.</DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-x-4 gap-y-2">
-                    <Label htmlFor="leaveType" className="text-left sm:text-right">Type</Label>
-                    <Select onValueChange={setLeaveType}>
-                        <SelectTrigger className="col-span-1 sm:col-span-3">
-                            <SelectValue placeholder="Select type" />
+                <div className="grid gap-6 py-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Request Category</Label>
+                    <Select value={category} onValueChange={(val: RequestCategory) => setCategory(val)}>
+                        <SelectTrigger className="rounded-xl h-11">
+                            <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="Vacation">Vacation</SelectItem>
-                            <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                            <SelectItem value="Personal">Personal</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
+                            <SelectItem value="Leave">Full Day Leave</SelectItem>
+                            <SelectItem value="Hour Permission">Hour Permission</SelectItem>
+                            <SelectItem value="WFH">Work From Home</SelectItem>
                         </SelectContent>
                     </Select>
                   </div>
+
+                  {category === "Leave" && (
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Classification</Label>
+                        <Select onValueChange={setLeaveType}>
+                            <SelectTrigger className="rounded-xl h-11">
+                                <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Vacation">Vacation</SelectItem>
+                                <SelectItem value="Sick Leave">Sick Leave</SelectItem>
+                                <SelectItem value="Personal">Personal</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                  )}
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
-                    <Label className="text-left sm:text-right pt-2">Start</Label>
-                    <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
-                      <Select onValueChange={setStartYear} value={startYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                      <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                      <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">{category === "Hour Permission" ? "Date" : "Start Date"}</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                      <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                      <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
-                    <Label className="text-left sm:text-right pt-2">End</Label>
-                    <div className="col-span-1 sm:col-span-3 grid grid-cols-3 gap-2">
-                      <Select onValueChange={setEndYear} value={endYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                      <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                      <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                  {category !== "Hour Permission" && (
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Date</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                            <Select onValueChange={setEndYear} value={endYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                        </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-x-4 gap-y-2">
-                    <Label htmlFor="reason" className="text-left sm:text-right pt-2">Reason</Label>
-                    <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} className="col-span-1 sm:col-span-3" />
+                  {category === "Hour Permission" && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Start Time</Label>
+                            <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="rounded-xl h-11" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Time</Label>
+                            <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="rounded-xl h-11" />
+                        </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Strategic Justification</Label>
+                    <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide contextual details for this request..." className="rounded-2xl min-h-[100px]" />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button onClick={handleCreateRequest} disabled={isRequesting}>Submit</Button>
+                  <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Request</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           )}
         </div>
       </PageHeader>
+
       <Sheet open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}>
-        <div className="border rounded-lg overflow-x-auto animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <div className="border rounded-2xl overflow-hidden bg-white/50 backdrop-blur-sm shadow-sm">
           <Table>
-            <TableHeader>
-              <TableRow>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="hover:bg-transparent border-none">
                 {isUserAdmin && (
-                  <TableHead className="w-[50px]">
+                  <TableHead className="w-[50px] py-4">
                     <Checkbox 
                       checked={selectedIds.length === displayLeaveRequests.length && displayLeaveRequests.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
                 )}
-                {(userRole !== 'Member') && <TableHead>Employee</TableHead>}
-                <TableHead>Dates</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {(userRole !== 'Member') && <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Fleet Member</TableHead>}
+                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Type</TableHead>
+                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Dates & Time</TableHead>
+                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Status</TableHead>
+                <TableHead className="text-right font-black uppercase tracking-tighter text-[10px] py-4">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-24 text-center">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Scanning satellite requests...</TableCell></TableRow>
               ) : displayLeaveRequests.length === 0 ? (
-                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-24 text-center text-muted-foreground">{showMissed ? "No missed records found." : "No upcoming leave records found."}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-32 text-center text-muted-foreground italic font-medium">{showMissed ? "No archived records found." : "No active requests in queue."}</TableCell></TableRow>
               ) : displayLeaveRequests.map((request) => (
-                  <TableRow key={request.id} className="bg-gradient-to-br from-primary/5 to-transparent">
+                  <TableRow key={request.id} className="border-border/50 group">
                     {isUserAdmin && (
-                      <TableCell>
+                      <TableCell className="py-4">
                         <Checkbox 
                           checked={selectedIds.includes(request.id)}
                           onCheckedChange={(checked) => handleSelectRow(request.id, !!checked)}
                         />
                       </TableCell>
                     )}
-                    {(userRole !== 'Member') && <TableCell className="font-medium">{request.employeeName}</TableCell>}
-                    <TableCell className="font-medium">{`${formatDate(request.startDate)} - ${formatDate(request.endDate)}`}</TableCell>
-                    <TableCell>{request.leaveType}</TableCell>
-                    <TableCell>
-                      <Badge variant='outline' className={cn(statusVariantMap[request.status])}>
+                    {(userRole !== 'Member') && (
+                        <TableCell className="py-4 font-bold">
+                            <div className="flex flex-col">
+                                <span>{request.employeeName}</span>
+                                <span className="text-[9px] text-muted-foreground font-medium uppercase">{request.employeeJobTitle}</span>
+                            </div>
+                        </TableCell>
+                    )}
+                    <TableCell className="py-4">
+                        <Badge variant="outline" className={cn(
+                            "rounded-full text-[9px] uppercase font-black tracking-widest gap-1 border-none",
+                            request.category === 'Hour Permission' ? 'bg-orange-100 text-orange-700' : 
+                            request.category === 'WFH' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                        )}>
+                            {request.category === 'Hour Permission' ? <Timer className="size-2.5"/> : 
+                             request.category === 'WFH' ? <MapPin className="size-2.5"/> : <Briefcase className="size-2.5"/>}
+                            {request.category}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-xs">
+                                {request.category === 'Hour Permission' ? format(request.startDate.toDate(), 'PP') : `${formatDateLabel(request.startDate)} - ${formatDateLabel(request.endDate)}`}
+                            </span>
+                            {request.category === 'Hour Permission' && (
+                                <span className="text-[9px] font-black text-primary uppercase tracking-widest">{request.startTime} - {request.endTime}</span>
+                            )}
+                        </div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge variant='outline' className={cn("rounded-full uppercase text-[9px] font-black tracking-widest", statusVariantMap[request.status])}>
                         {request.status.replace(/ by Team Lead| by HR/g, '')}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right py-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="rounded-xl">
                           <SheetTrigger asChild>
-                            <DropdownMenuItem onClick={() => setSelectedRequest(request)}>View Details</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedRequest(request)} className="font-bold text-xs uppercase tracking-tight"><Eye className="mr-2 h-3.5 w-3.5"/> Audit Details</DropdownMenuItem>
                           </SheetTrigger>
                            {userRole === 'Team Lead' && request.status === 'Pending' && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')}>Approve</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Endorse</DropdownMenuItem>
                           )}
                           {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && request.status === 'Pending HR Approval' && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')}>Final Approve</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Finalize Access</DropdownMenuItem>
                           )}
                           {isUserAdmin && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete Request
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive font-bold text-xs uppercase tracking-tight">
+                                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                  Expunge
                                 </DropdownMenuItem>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent className="rounded-3xl">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the leave request.
-                                  </AlertDialogDescription>
+                                  <AlertDialogTitle className="font-black uppercase tracking-tighter">Authorized Deletion</AlertDialogTitle>
+                                  <AlertDialogDescription>This action will permanently purge this request from the tactical archive.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteRequest(request.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                    Delete
+                                  <AlertDialogCancel className="rounded-full font-bold uppercase text-xs">Abort</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteRequest(request.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full font-bold uppercase text-xs">
+                                    Expunge Record
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -591,16 +680,37 @@ export default function LeavePage() {
           </Table>
         </div>
         {selectedRequest && (
-          <SheetContent>
-              <SheetHeader>
-                  <SheetTitle>Request Details</SheetTitle>
+          <SheetContent className="rounded-l-3xl border-none shadow-2xl">
+              <SheetHeader className="pb-6 border-b">
+                  <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">Request Intelligence</SheetTitle>
+                  <SheetDescription>ID: {selectedRequest.id.slice(0, 8)} • {selectedRequest.category} Submission</SheetDescription>
               </SheetHeader>
-              <Separator className="my-4" />
-              <div className="space-y-4">
-                  <div><p className="text-xs text-muted-foreground">Reason</p><p className="text-sm">{selectedRequest.reason}</p></div>
-                  <h4 className="font-semibold text-sm">Approval Tracker</h4>
-                  <LeaveStatusTracker request={selectedRequest} users={users} />
-              </div>
+              <ScrollArea className="h-full py-8 pr-4">
+                <div className="space-y-8">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Type</p><Badge variant="secondary" className="rounded-lg">{selectedRequest.category}</Badge></div>
+                        {selectedRequest.leaveType && <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Class</p><p className="font-bold">{selectedRequest.leaveType}</p></div>}
+                    </div>
+                    
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Tactical Window</p>
+                        <p className="font-bold text-sm">
+                            {selectedRequest.category === 'Hour Permission' ? format(selectedRequest.startDate.toDate(), 'PPPP') : `${formatDateLabel(selectedRequest.startDate)} — ${formatDateLabel(selectedRequest.endDate)}`}
+                        </p>
+                        {selectedRequest.category === 'Hour Permission' && (
+                            <p className="text-primary font-black uppercase text-xs tracking-widest mt-1">{selectedRequest.startTime} - {selectedRequest.endTime}</p>
+                        )}
+                    </div>
+
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Strategic Reason</p><p className="text-sm italic leading-relaxed">"{selectedRequest.reason}"</p></div>
+                    
+                    <Separator className="opacity-50" />
+                    
+                    <div className="space-y-4">
+                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] text-primary">Approval Satellite Tracker</h4>
+                        <LeaveStatusTracker request={selectedRequest} users={users} />
+                    </div>
+                </div>
+              </ScrollArea>
           </SheetContent>
         )}
       </Sheet>
