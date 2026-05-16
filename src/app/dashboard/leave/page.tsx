@@ -369,8 +369,8 @@ export default function LeavePage() {
         return;
     }
 
-    if (category === "Leave" && !leaveType) {
-        toast({ variant: "destructive", title: "Select leave type" });
+    if (!leaveType) {
+        toast({ variant: "destructive", title: "Select leave classification" });
         return;
     }
 
@@ -410,10 +410,7 @@ export default function LeavePage() {
         reason,
         status: initialStatus,
         createdAt: serverTimestamp(),
-    }
-
-    if (category === "Leave") {
-        newRequest.leaveType = leaveType;
+        leaveType: leaveType,
     }
 
     if (category === "Hour Permission") {
@@ -481,82 +478,82 @@ export default function LeavePage() {
                   New Request
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md rounded-3xl">
-                <DialogHeader>
+              <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden">
+                <DialogHeader className="p-6 pb-0">
                   <DialogTitle className="text-xl font-black uppercase tracking-tighter">Strategic Request</DialogTitle>
                   <DialogDescription>Submit your tactical shift adjustment.</DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-6 py-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Request Category</Label>
-                    <Select value={category} onValueChange={(val: RequestCategory) => setCategory(val)}>
-                        <SelectTrigger className="rounded-xl h-11">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Leave">Full Day Leave</SelectItem>
-                            <SelectItem value="Hour Permission">Hour Permission</SelectItem>
-                            <SelectItem value="WFH">Work From Home</SelectItem>
-                        </SelectContent>
-                    </Select>
-                  </div>
-
-                  {category === "Leave" && (
-                    <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Classification</Label>
-                        <Select onValueChange={setLeaveType}>
-                            <SelectTrigger className="rounded-xl h-11">
-                                <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Vacation">Vacation</SelectItem>
-                                <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                                <SelectItem value="Personal">Personal</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">{category === "Hour Permission" ? "Date" : "Start Date"}</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                      <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                      <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
-                    </div>
-                  </div>
-
-                  {category !== "Hour Permission" && (
-                    <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Date</Label>
-                        <div className="grid grid-cols-3 gap-2">
-                            <Select onValueChange={setEndYear} value={endYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                            <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                            <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
-                        </div>
-                    </div>
-                  )}
-
-                  {category === "Hour Permission" && (
-                    <div className="grid grid-cols-2 gap-4">
+                <ScrollArea className="max-h-[60vh]">
+                    <div className="grid gap-6 p-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Start Time</Label>
-                            <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="rounded-xl h-11" />
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Request Category</Label>
+                            <Select value={category} onValueChange={(val: RequestCategory) => setCategory(val)}>
+                                <SelectTrigger className="rounded-xl h-11">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Leave">Full Day Leave</SelectItem>
+                                    <SelectItem value="Hour Permission">Hour Permission</SelectItem>
+                                    <SelectItem value="WFH">Work From Home</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
+
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Time</Label>
-                            <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="rounded-xl h-11" />
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Classification</Label>
+                            <Select onValueChange={setLeaveType} value={leaveType}>
+                                <SelectTrigger className="rounded-xl h-11">
+                                    <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Vacation">Vacation</SelectItem>
+                                    <SelectItem value="Sick Leave">Sick Leave</SelectItem>
+                                    <SelectItem value="Personal">Personal</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">{category === "Hour Permission" ? "Date" : "Start Date"}</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                            <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                            </div>
+                        </div>
+
+                        {category !== "Hour Permission" && (
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Date</Label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <Select onValueChange={setEndYear} value={endYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                                    <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                                    <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                                </div>
+                            </div>
+                        )}
+
+                        {category === "Hour Permission" && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Start Time</Label>
+                                    <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="rounded-xl h-11" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Time</Label>
+                                    <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="rounded-xl h-11" />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Strategic Justification</Label>
+                            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide contextual details for this request..." className="rounded-2xl min-h-[100px]" />
                         </div>
                     </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Strategic Justification</Label>
-                    <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide contextual details for this request..." className="rounded-2xl min-h-[100px]" />
-                  </div>
-                </div>
-                <DialogFooter>
+                </ScrollArea>
+                <DialogFooter className="p-6 pt-0">
                   <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Request</Button>
                 </DialogFooter>
               </DialogContent>
