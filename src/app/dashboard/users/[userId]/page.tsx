@@ -28,6 +28,7 @@ type AttendanceRecord = {
   checkInTime?: Timestamp;
   checkOutTime?: Timestamp;
   status: 'present' | 'late' | 'absent' | 'on_leave';
+  totalBreakDuration?: number;
 };
 
 type ComplianceReport = { id: string; severity: string; reason: string; timestamp: Timestamp; filedByName: string; };
@@ -77,19 +78,28 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   }, [userId, firestore]);
 
   const stats = React.useMemo(() => {
-    if (!attendanceData) return { workHours: 0, lateDays: 0, leaves: 0, reports: 0 };
+    if (!attendanceData) return { workHours: "0.0", lateDays: 0, leaves: 0, reports: 0 };
     let totalSec = 0;
     let late = 0;
+    const now = new Date();
+    const startOfCurrentMonth = startOfMonth(now);
+
     attendanceData.forEach(r => {
-        if (r.checkInTime instanceof Timestamp && r.checkOutTime instanceof Timestamp) {
-            totalSec += differenceInSeconds(r.checkOutTime.toDate(), r.checkInTime.toDate());
+        const checkIn = r.checkInTime instanceof Timestamp ? r.checkInTime.toDate() : null;
+        if (checkIn && checkIn >= startOfCurrentMonth) {
+            if (r.checkOutTime instanceof Timestamp) {
+                totalSec += differenceInSeconds(r.checkOutTime.toDate(), checkIn) - (r.totalBreakDuration || 0);
+            }
+            if (r.status === 'late') late++;
         }
-        if (r.status === 'late') late++;
     });
     return { 
         workHours: (totalSec / 3600).toFixed(1), 
         lateDays: late, 
-        leaves: attendanceData.filter(a => a.status === 'on_leave').length, 
+        leaves: attendanceData.filter(a => {
+            const checkIn = a.checkInTime instanceof Timestamp ? a.checkInTime.toDate() : null;
+            return a.status === 'on_leave' && checkIn && checkIn >= startOfCurrentMonth;
+        }).length, 
         reports: userReports.length 
     };
   }, [attendanceData, userReports]);
@@ -117,10 +127,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         startY: 35,
         head: [['Metric', 'Value']],
         body: [
-            ['Work Hours', `${stats.workHours}h`], 
-            ['Late Logs', stats.lateDays], 
-            ['Leaves', stats.leaves], 
-            ['Total Reports', stats.reports],
+            ['Work Hours (Month)', `${stats.workHours}h`], 
+            ['Late Logs (Month)', stats.lateDays], 
+            ['Leaves (Month)', stats.leaves], 
+            ['Total Reports (Recent)', stats.reports],
             ['Documents Submitted', documents?.length || 0]
         ],
         theme: 'striped',
@@ -171,7 +181,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </div>
             <div className="text-center md:text-left">
               <p className="font-black text-lg">{stats.workHours}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Hours</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-widest">hours/mo</p>
             </div>
           </div>
 

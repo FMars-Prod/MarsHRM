@@ -30,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInSeconds } from "date-fns";
 
 const formatIST = (date: any) => {
     if (!date) return "N/A";
@@ -91,6 +91,27 @@ export default function ProfilePage() {
 
     const docsQuery = useMemoFirebase(() => user ? collection(firestore, `users/${user.uid}/documents`) : null, [user, firestore]);
     const { data: documents } = useCollection(docsQuery);
+
+    const monthStart = startOfMonth(new Date());
+    const monthEnd = endOfMonth(new Date());
+    
+    const attendanceQuery = useMemoFirebase(() => user ? query(
+        collection(firestore, `users/${user.uid}/attendances`),
+        where('checkInTime', '>=', Timestamp.fromDate(monthStart)),
+        where('checkInTime', '<=', Timestamp.fromDate(monthEnd))
+    ) : null, [user, firestore]);
+    const { data: attendanceData } = useCollection<any>(attendanceQuery);
+
+    const monthlyHours = React.useMemo(() => {
+        if (!attendanceData) return "0.0";
+        let totalSec = 0;
+        attendanceData.forEach(r => {
+            if (r.checkInTime && r.checkOutTime) {
+                totalSec += differenceInSeconds(r.checkOutTime.toDate(), r.checkInTime.toDate()) - (r.totalBreakDuration || 0);
+            }
+        });
+        return (totalSec / 3600).toFixed(1);
+    }, [attendanceData]);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -221,8 +242,8 @@ export default function ProfilePage() {
                             <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Documents</p>
                         </div>
                         <div className="text-center md:text-left">
-                            <p className="font-black text-lg">{(employee.totalHours || 0).toFixed(1)}</p>
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-widest">Hours</p>
+                            <p className="font-black text-lg">{monthlyHours}</p>
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-widest">hours/mo</p>
                         </div>
                     </div>
 
