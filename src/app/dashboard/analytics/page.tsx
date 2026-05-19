@@ -69,17 +69,19 @@ const isWithinLeave = (day: Date, leave: LeaveRequest) => {
 };
 
 const MapPinLink = ({ lat, lng, time }: { lat?: number, lng?: number, time?: string }) => {
-    if (!lat || !lng || !time) return <span className="text-muted-foreground/30">—</span>;
+    if (!time) return <span className="text-muted-foreground/30">—</span>;
     return (
         <div className="flex items-center gap-1.5 group">
             <span className="font-mono text-[10px] font-bold">{time}</span>
-            <Link 
-                href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`} 
-                target="_blank"
-                className="opacity-40 group-hover:opacity-100 transition-opacity"
-            >
-                <MapPin className="size-3 text-primary" />
-            </Link>
+            {lat && lng ? (
+                <Link 
+                    href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`} 
+                    target="_blank"
+                    className="opacity-40 group-hover:opacity-100 transition-opacity"
+                >
+                    <MapPin className="size-3 text-primary" />
+                </Link>
+            ) : null}
         </div>
     );
 };
