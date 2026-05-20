@@ -38,6 +38,40 @@ const roleLevels: Record<string, number> = {
     'Member': 4
 };
 
+const isUrl = (str?: string) => str && str.startsWith('http');
+
+const UserNode = ({ user, level, highlight }: { user: UserData, level: 'executive' | 'admin' | 'lead' | 'fleet', highlight?: boolean }) => (
+    <Card className={cn(
+        "border-none shadow-sm relative group transition-all h-full",
+        highlight ? "ring-2 ring-primary scale-105 z-10" : "opacity-95 hover:opacity-100",
+        level === 'executive' ? "bg-primary text-white" : 
+        level === 'admin' ? "bg-indigo-50 ring-1 ring-indigo-200" :
+        level === 'lead' ? "bg-white ring-1 ring-border/50" : 
+        "bg-white/50 ring-1 ring-border/50"
+    )}>
+        <CardContent className="p-4 flex items-center gap-4 h-full">
+            <Avatar className="size-12 ring-2 ring-white/20 shrink-0">
+                {user.avatar ? (
+                    isUrl(user.avatar) ? <AvatarImage src={user.avatar} className="object-cover" /> : <span className="text-2xl">{user.avatar}</span>
+                ) : <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>}
+            </Avatar>
+            <div className="flex-1 min-w-0">
+                <p className={cn("font-bold text-sm truncate", level === 'executive' ? "text-white" : "text-foreground")}>{user.firstName} {user.lastName}</p>
+                <p className={cn("text-[9px] font-black uppercase tracking-widest truncate", level === 'executive' ? "text-white/70" : "text-muted-foreground")}>{user.jobTitle}</p>
+            </div>
+            <Badge variant="outline" className={cn(
+                "rounded-full text-[8px] font-black uppercase tracking-widest border-none shrink-0", 
+                level === 'executive' ? "bg-white/20 text-white" : 
+                level === 'admin' ? "bg-indigo-600 text-white" :
+                level === 'lead' ? "bg-blue-600 text-white" :
+                "bg-muted text-muted-foreground"
+            )}>
+                {user.role === 'CEO/Admin' ? 'CEO' : user.role === 'HR Manager' ? 'Admin' : user.role === 'Team Lead' ? 'Lead' : 'Fleet'}
+            </Badge>
+        </CardContent>
+    </Card>
+);
+
 export default function OrgStructurePage() {
     const { user: currentUser } = useUser();
     const firestore = useFirestore();
@@ -51,52 +85,9 @@ export default function OrgStructurePage() {
     const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
     const { data: teams } = useCollection<Team>(teamsQuery);
 
-    const isUrl = (str?: string) => str && str.startsWith('http');
-
-    const UserNode = ({ user, level, highlight }: { user: UserData, level: 'executive' | 'admin' | 'lead' | 'fleet', highlight?: boolean }) => (
-        <Card className={cn(
-            "border-none shadow-sm relative group transition-all h-full",
-            highlight ? "ring-2 ring-primary scale-105 z-10" : "opacity-95 hover:opacity-100",
-            level === 'executive' ? "bg-primary text-white" : 
-            level === 'admin' ? "bg-indigo-50 ring-1 ring-indigo-200" :
-            level === 'lead' ? "bg-white ring-1 ring-border/50" : 
-            "bg-white/50 ring-1 ring-border/50"
-        )}>
-            <CardContent className="p-4 flex items-center gap-4 h-full">
-                <Avatar className="size-12 ring-2 ring-white/20 shrink-0">
-                    {user.avatar ? (
-                        isUrl(user.avatar) ? <AvatarImage src={user.avatar} className="object-cover" /> : <span className="text-2xl">{user.avatar}</span>
-                    ) : <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>}
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                    <p className={cn("font-bold text-sm truncate", level === 'executive' ? "text-white" : "text-foreground")}>{user.firstName} {user.lastName}</p>
-                    <p className={cn("text-[9px] font-black uppercase tracking-widest truncate", level === 'executive' ? "text-white/70" : "text-muted-foreground")}>{user.jobTitle}</p>
-                </div>
-                <Badge variant="outline" className={cn(
-                    "rounded-full text-[8px] font-black uppercase tracking-widest border-none shrink-0", 
-                    level === 'executive' ? "bg-white/20 text-white" : 
-                    level === 'admin' ? "bg-indigo-600 text-white" :
-                    level === 'lead' ? "bg-blue-600 text-white" :
-                    "bg-muted text-muted-foreground"
-                )}>
-                    {user.role === 'CEO/Admin' ? 'CEO' : user.role === 'HR Manager' ? 'Admin' : user.role === 'Team Lead' ? 'Lead' : 'Fleet'}
-                </Badge>
-            </CardContent>
-        </Card>
-    );
-
-    const isLoading = isUserLoading || usersLoading;
-
-    if (isLoading) return <div className="flex h-screen items-center justify-center"><Network className="size-12 animate-pulse text-muted-foreground opacity-20" /></div>;
-
     const userLevel = userData ? roleLevels[userData.role] || 4 : 4;
     const isLeadership = userLevel <= 2;
 
-    // Filter levels for display
-    const ceoLevel = users?.filter(u => u.role === 'CEO/Admin') || [];
-    const adminLevel = users?.filter(u => u.role === 'HR Manager') || [];
-    
-    // Logic to determine which teams to show
     const visibleTeams = React.useMemo(() => {
         if (!teams || !users) return [];
         if (isLeadership) return teams; // Admins/CEOs see all teams below them
@@ -106,6 +97,14 @@ export default function OrgStructurePage() {
         if (!userTeamId) return [];
         return teams.filter(t => t.id === userTeamId);
     }, [teams, userData, isLeadership, users]);
+
+    const isLoading = isUserLoading || usersLoading;
+
+    if (isLoading) return <div className="flex h-screen items-center justify-center"><Network className="size-12 animate-pulse text-muted-foreground opacity-20" /></div>;
+
+    // Filter levels for display
+    const ceoLevel = users?.filter(u => u.role === 'CEO/Admin') || [];
+    const adminLevel = users?.filter(u => u.role === 'HR Manager') || [];
 
     return (
         <div className="space-y-8 animate-fade-in-up max-w-6xl mx-auto pb-20">
