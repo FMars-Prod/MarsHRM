@@ -6,7 +6,7 @@ import { use } from 'react';
 import { notFound } from 'next/navigation';
 import { useFirestore, useMemoFirebase, useCollection, useDoc, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } from 'firebase/firestore';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth } from 'date-fns';
@@ -144,12 +144,22 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   if (isUserLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Syncing Satellite Profile...</div>;
   if (!user) return notFound();
 
+  const isAvatarUrl = user.avatar && user.avatar.startsWith('http');
+
   return (
     <div className="max-w-4xl mx-auto animate-fade-in-up pb-20">
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-20 px-6 py-10">
         <div className="relative group">
           <Avatar className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
-              {user.avatar ? <span className="text-6xl md:text-8xl">{user.avatar}</span> : <AvatarFallback className="text-4xl">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>}
+              {user.avatar ? (
+                  isAvatarUrl ? (
+                      <AvatarImage src={user.avatar} className="object-cover" />
+                  ) : (
+                      <span className="text-6xl md:text-8xl">{user.avatar}</span>
+                  )
+              ) : (
+                  <AvatarFallback className="text-4xl">{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
+              )}
           </Avatar>
         </div>
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -19,7 +20,7 @@ import type { WithId } from "@/firebase/firestore/use-collection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -112,6 +113,8 @@ export default function TeamsPage() {
         toast({ title: "Team Dissolved", description: "All members have been unassigned." });
     }
 
+    const isUrl = (str?: string) => str && str.startsWith('http');
+
     return (
         <>
             <PageHeader title="Organizational Units" description="Manage tactical team associations and leadership hierarchies.">
@@ -182,7 +185,13 @@ export default function TeamsPage() {
                                 return (
                                     <Link href={`/dashboard/users/${member.id}`} key={memberId} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-primary/5 transition-colors border group">
                                         <Avatar className="size-10 ring-1 ring-border group-hover:ring-primary/20 transition-all">
-                                            {member.avatar ? <span className="text-2xl">{member.avatar}</span> : <AvatarFallback>{member.firstName?.[0]}</AvatarFallback>}
+                                            {member.avatar ? (
+                                                isUrl(member.avatar) ? (
+                                                    <AvatarImage src={member.avatar} className="object-cover" />
+                                                ) : (
+                                                    <span className="text-2xl">{member.avatar}</span>
+                                                )
+                                            ) : <AvatarFallback>{member.firstName?.[0]}</AvatarFallback>}
                                         </Avatar>
                                         <div className="flex-1">
                                             <p className="font-bold text-sm group-hover:text-primary transition-colors">{member.firstName} {member.lastName}</p>

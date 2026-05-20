@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -77,14 +77,19 @@ export function UserNav({ user }: { user: User | null }) {
 
   const employeeName = employee ? `${(employee as any).firstName} ${(employee as any).lastName}` : user?.displayName || 'User';
   const employeeAvatar = (employee as any)?.avatar;
+  const isUrl = employeeAvatar && employeeAvatar.startsWith('http');
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full" disabled={isLoggingOut}>
-          <Avatar className={cn("h-10 w-10", employeeAvatar && "bg-transparent")}>
+          <Avatar className={cn("h-10 w-10", employeeAvatar && !isUrl && "bg-transparent")}>
             {employeeAvatar ? (
-                <span className="text-2xl">{employeeAvatar}</span>
+                isUrl ? (
+                    <AvatarImage src={employeeAvatar} className="object-cover" />
+                ) : (
+                    <span className="text-2xl">{employeeAvatar}</span>
+                )
             ) : (
             <AvatarFallback>
                 {employee ? `${(employee as any).firstName?.[0] || ''}${(employee as any).lastName?.[0] || ''}` : user?.email?.charAt(0)?.toUpperCase() || 'U'}

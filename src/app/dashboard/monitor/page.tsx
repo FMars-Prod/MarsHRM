@@ -8,7 +8,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, differenceInSeconds } from 'date-fns';
 import { UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, AlertTriangle, Utensils, LogIn, Phone, PieChart as PieChartIcon, MapPin, Activity, Clock, LogOut } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -130,6 +130,8 @@ export default function MonitorPage() {
       return <span className="font-mono text-[10px] font-bold">{format(d, 'p')}</span>;
   };
 
+  const isUrl = (str?: string) => str && str.startsWith('http');
+
   return (
     <div className="space-y-6">
       <PageHeader title="Real-Time Oversight" description="Tactical grid monitor with verified timestamps and nudge integration.">
@@ -174,8 +176,14 @@ export default function MonitorPage() {
                                 <TableRow key={i} className="border-border/50 group hover:bg-primary/5 transition-colors">
                                     <TableCell className="py-4">
                                         <Link href={`/dashboard/users/${row.user.id}`} className="flex items-center gap-3">
-                                            <Avatar className="size-8 ring-1 ring-border group-hover:ring-primary/20">
-                                                {row.user.avatar ? <span className="text-xl">{row.user.avatar}</span> : <AvatarFallback>{row.user.firstName?.[0]}</AvatarFallback>}
+                                            <Avatar className="size-8 ring-1 ring-border group-hover:ring-primary/20 transition-all">
+                                                {row.user.avatar ? (
+                                                    isUrl(row.user.avatar) ? (
+                                                        <AvatarImage src={row.user.avatar} className="object-cover" />
+                                                    ) : (
+                                                        <span className="text-xl">{row.user.avatar}</span>
+                                                    )
+                                                ) : <AvatarFallback>{row.user.firstName?.[0]}</AvatarFallback>}
                                             </Avatar>
                                             <div className="flex flex-col">
                                                 <span className="font-bold text-sm group-hover:text-primary transition-colors">{row.user.firstName} {row.user.lastName}</span>

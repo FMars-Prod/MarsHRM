@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
-import { Building2, User, UserCheck, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone, Home, MapPin } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Building2, User, UserCheck, UserCheck as UserCheckIcon, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone, Home, MapPin } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '../ui/button';
@@ -393,6 +393,8 @@ export function DailyMonitorWidget() {
     </Card>
   );
 
+  const isUrl = (str?: string) => str && str.startsWith('http');
+
   return (
     <Sheet onOpenChange={(isOpen) => !isOpen && setSheetContent(null)}>
         <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
@@ -447,7 +449,7 @@ export function DailyMonitorWidget() {
                     <UserListCard 
                         title="Present" 
                         users={summary.present} 
-                        Icon={UserCheck} 
+                        Icon={UserCheckIcon} 
                         iconColor="text-green-600" 
                         gradient="bg-gradient-to-br from-green-500/10 to-white/50"
                         onClick={() => setSheetContent({title: "Present (In-Office)", users: summary.present})} 
@@ -502,9 +504,14 @@ export function DailyMonitorWidget() {
                                 <div key={user.id} className="flex flex-col p-3 rounded-2xl hover:bg-muted transition-colors border group">
                                     <div className="flex items-center justify-between">
                                         <Link href={`/dashboard/users/${user.id}`} className="flex items-center gap-3 flex-1">
-                                            <Avatar className="h-9 w-9">
-                                                {user.avatar && <span className="text-xl">{user.avatar}</span>}
-                                                <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
+                                            <Avatar className="h-9 w-9 ring-1 ring-border group-hover:ring-primary/20 transition-all">
+                                                {user.avatar ? (
+                                                    isUrl(user.avatar) ? (
+                                                        <AvatarImage src={user.avatar} className="object-cover" />
+                                                    ) : (
+                                                        <span className="text-xl">{user.avatar}</span>
+                                                    )
+                                                ) : <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>}
                                             </Avatar>
                                             <div>
                                                 <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>

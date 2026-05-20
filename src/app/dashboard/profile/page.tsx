@@ -2,7 +2,7 @@
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth, useUser, useStorage } from "@/firebase";
@@ -10,7 +10,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap, Lock, Users, CalendarDays, Grid, ShieldAlert, FileBox } from "lucide-react";
+import { Edit, Smile, MapPin, LocateFixed, Clock, Camera, CheckCircle2, ShieldCheck, Save, History, ExternalLink, FileText, Zap, Lock, Users, CalendarDays, Grid, ShieldAlert, FileBox, Loader2, Image as ImageIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -80,6 +80,7 @@ export default function ProfilePage() {
     const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
     const [isAvatarDialogOpen, setIsAvatarDialogOpen] = React.useState(false);
     const [isUploadingSignature, setIsUploadingSignature] = React.useState(false);
+    const [isUploadingAvatar, setIsUploadingAvatar] = React.useState(false);
     const [manualSignatureUrl, setManualSignatureUrl] = React.useState("");
     const [userReports, setUserReports] = React.useState<any[]>([]);
 
@@ -155,15 +156,32 @@ export default function ProfilePage() {
         } finally { setIsSubmitting(false); }
     }
     
-    const handleAvatarUpdate = (emoji: string) => {
+    const handleAvatarEmojiUpdate = (emoji: string) => {
         if (!userDocRef) return;
         updateDocumentNonBlocking(userDocRef, { avatar: emoji });
-        toast({ title: "Avatar updated!" });
+        toast({ title: "Emoji Avatar synchronized!" });
         setIsAvatarDialogOpen(false);
     }
 
+    const handleAvatarImageUpload = async (file: File) => {
+        if (!user || !userDocRef || !storage) return;
+        setIsUploadingAvatar(true);
+        try {
+            const avatarRef = ref(storage, `avatars/${user.uid}/${Date.now()}-${file.name}`);
+            const snap = await uploadBytes(avatarRef, file);
+            const url = await getDownloadURL(snap.ref);
+            updateDocumentNonBlocking(userDocRef, { avatar: url });
+            toast({ title: "Identity Asset Saved", description: "Profile photo synchronized." });
+            setIsAvatarDialogOpen(false);
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: "Upload Error", description: e.message });
+        } finally {
+            setIsUploadingAvatar(false);
+        }
+    };
+
     const handleSignatureUpload = async (file: File) => {
-        if (!user || !userDocRef) return;
+        if (!user || !userDocRef || !storage) return;
         setIsUploadingSignature(true);
         try {
             const sigRef = ref(storage, `signatures/${user.uid}/${Date.now()}-${file.name}`);
@@ -174,7 +192,7 @@ export default function ProfilePage() {
                 signatureStatus: 'approved',
                 canUpdateSignature: false 
             });
-            toast({ title: "Identity Asset Saved" });
+            toast({ title: "Identity Certification Saved" });
         } catch (e: any) {
             toast({ variant: 'destructive', title: "Upload Error" });
         } finally {
@@ -189,8 +207,10 @@ export default function ProfilePage() {
             signatureStatus: 'approved',
             canUpdateSignature: false 
         });
-        toast({ title: "Identity URL Saved" });
+        toast({ title: "Certification URL Saved" });
     };
+
+    const isUrl = (str: string) => str && str.startsWith('http');
 
     if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Synchronizing Identity Hub...</div>;
     if (!employee) return <div className="p-10 text-center">No identity record found.</div>;
@@ -203,16 +223,20 @@ export default function ProfilePage() {
                 <div className="relative group cursor-pointer" onClick={() => setIsAvatarDialogOpen(true)}>
                     <Avatar className="size-24 md:size-36 rounded-full ring-4 ring-primary/20 ring-offset-4 overflow-hidden bg-muted flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-105">
                         {employee.avatar ? (
-                            <div className="flex items-center justify-center w-full h-full">
-                                <span className="text-6xl md:text-8xl">{employee.avatar}</span>
-                            </div>
+                            isUrl(employee.avatar) ? (
+                                <AvatarImage src={employee.avatar} className="object-cover" />
+                            ) : (
+                                <div className="flex items-center justify-center w-full h-full">
+                                    <span className="text-6xl md:text-8xl">{employee.avatar}</span>
+                                </div>
+                            )
                         ) : (
                             <AvatarFallback className="text-4xl">
                                 {employee.firstName?.[0]}{employee.lastName?.[0]}
                             </AvatarFallback>
                         )}
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Smile className="size-10 text-white" />
+                            <Camera className="size-10 text-white" />
                         </div>
                     </Avatar>
                 </div>
@@ -270,7 +294,7 @@ export default function ProfilePage() {
                         <FileBox className="size-4"/> Vault
                     </TabsTrigger>
                     <TabsTrigger value="identity" className="rounded-none h-full data-[state=active]:border-t-2 data-[state=active]:border-foreground px-0 bg-transparent flex gap-2 font-black uppercase text-[10px] tracking-widest transition-none">
-                        <ShieldCheck className="size-4"/> Digital Asset
+                        <ShieldCheck className="size-4"/> Certification
                     </TabsTrigger>
                 </TabsList>
 
@@ -355,7 +379,7 @@ export default function ProfilePage() {
                     <TabsContent value="identity" className="mt-0">
                         <Card className="border-none rounded-3xl shadow-sm bg-white/30 backdrop-blur-sm overflow-hidden">
                             <CardHeader className="bg-muted/10 border-b">
-                                <CardTitle className="text-[10px] font-black uppercase opacity-60">Identity Certification Asset</CardTitle>
+                                <CardTitle className="text-[10px] font-black uppercase opacity-60">Digital Signature Certification</CardTitle>
                             </CardHeader>
                             <CardContent className="p-10 flex flex-col items-center text-center space-y-8">
                                 {employee.signatureUrl ? (
@@ -363,12 +387,12 @@ export default function ProfilePage() {
                                         <div className="p-8 bg-white/80 rounded-3xl border-2 border-dashed border-primary/20 flex items-center justify-center shadow-sm relative group">
                                             <img src={employee.signatureUrl} alt="E-Signature" className="h-20 object-contain opacity-60 grayscale transition-all group-hover:grayscale-0" />
                                         </div>
-                                        <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[10px] uppercase font-black px-4 py-1.5"><CheckCircle2 className="size-3 mr-1.5"/> Identity Verified</Badge>
+                                        <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[10px] uppercase font-black px-4 py-1.5"><CheckCircle2 className="size-3 mr-1.5"/> Certification Verified</Badge>
                                     </div>
                                 ) : (
                                     <div className="aspect-video bg-white/40 rounded-3xl border-2 border-dashed border-muted/50 flex flex-col items-center justify-center opacity-40 w-full max-w-sm">
                                         <Camera className="size-8 mb-2" />
-                                        <p className="text-[10px] font-black uppercase">Identity asset missing</p>
+                                        <p className="text-[10px] font-black uppercase">Certification slot empty</p>
                                     </div>
                                 )}
                                 
@@ -376,7 +400,7 @@ export default function ProfilePage() {
                                     <div className="p-6 bg-primary/5 border border-primary/10 rounded-2xl flex flex-col items-center text-center gap-2 max-w-xs">
                                         <Lock className="size-5 text-primary opacity-40" />
                                         <p className="text-[10px] font-black uppercase text-primary tracking-widest">Protocol Locked</p>
-                                        <p className="text-[11px] text-muted-foreground leading-relaxed">Identity asset verified. Reach out to Executive Oversight (Admin) to initiate a secure re-upload session.</p>
+                                        <p className="text-[11px] text-muted-foreground leading-relaxed">Certification asset verified. Reach out to Executive Oversight (Admin) to initiate a secure re-upload session.</p>
                                     </div>
                                 ) : (
                                     <div className="w-full max-w-sm space-y-6">
@@ -389,7 +413,7 @@ export default function ProfilePage() {
                                                 <div className="relative group">
                                                     <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
                                                     <Button className="w-full rounded-2xl h-14 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20" disabled={isUploadingSignature}>
-                                                        {isUploadingSignature ? "Transmitting..." : "Upload Identity Asset"}
+                                                        {isUploadingSignature ? "Transmitting..." : "Upload Identity asset"}
                                                     </Button>
                                                 </div>
                                             </TabsContent>
@@ -409,32 +433,64 @@ export default function ProfilePage() {
             </Tabs>
 
             <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
-                <DialogContent className="rounded-3xl max-w-sm">
-                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Identity Avatar</DialogTitle></DialogHeader>
-                    <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                        {Object.entries(emojiCategories).map(([category, emojis]) => (
-                            <div key={category} className="mb-8">
-                                <h3 className="font-black text-[10px] uppercase tracking-[0.3em] mb-4 text-muted-foreground/60">{category}</h3>
-                                <div className="grid grid-cols-4 gap-3">
-                                    {emojis.map(emoji => (
-                                        <button 
-                                            key={emoji} 
-                                            onClick={() => handleAvatarUpdate(emoji)} 
-                                            className="text-4xl p-4 rounded-2xl hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20 transform hover:scale-110"
-                                        >
-                                            {emoji}
-                                        </button>
+                <DialogContent className="rounded-3xl sm:max-w-md p-0 overflow-hidden">
+                    <DialogHeader className="p-8 pb-4">
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Identity Profile Avatar</DialogTitle>
+                        <DialogDescription>Choose a tactical emoji or upload a high-fidelity photo.</DialogDescription>
+                    </DialogHeader>
+                    <Tabs defaultValue="emojis" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 bg-muted/20 h-12 rounded-none">
+                            <TabsTrigger value="emojis" className="text-[10px] font-black uppercase tracking-widest">Emojis</TabsTrigger>
+                            <TabsTrigger value="photo" className="text-[10px] font-black uppercase tracking-widest">Photo Upload</TabsTrigger>
+                        </TabsList>
+                        <div className="p-8">
+                            <TabsContent value="emojis" className="mt-0">
+                                <ScrollArea className="h-64 pr-4">
+                                    {Object.entries(emojiCategories).map(([category, emojis]) => (
+                                        <div key={category} className="mb-8 last:mb-0">
+                                            <h3 className="font-black text-[10px] uppercase tracking-[0.3em] mb-4 text-muted-foreground/60">{category}</h3>
+                                            <div className="grid grid-cols-4 gap-3">
+                                                {emojis.map(emoji => (
+                                                    <button 
+                                                        key={emoji} 
+                                                        onClick={() => handleAvatarEmojiUpdate(emoji)} 
+                                                        className="text-4xl p-3 rounded-2xl hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20 transform hover:scale-110"
+                                                    >
+                                                        {emoji}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     ))}
+                                </ScrollArea>
+                            </TabsContent>
+                            <TabsContent value="photo" className="mt-0">
+                                <div className="flex flex-col items-center gap-6 py-4 text-center">
+                                    <div className="p-6 rounded-3xl bg-primary/5 border-2 border-dashed border-primary/20">
+                                        <ImageIcon className="size-12 text-primary opacity-40 mx-auto mb-4" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-primary">Select Strategic Portrait</p>
+                                    </div>
+                                    <div className="relative w-full group">
+                                        <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleAvatarImageUpload(e.target.files[0])} disabled={isUploadingAvatar} />
+                                        <Button className="w-full rounded-2xl h-14 text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20" disabled={isUploadingAvatar}>
+                                            {isUploadingAvatar ? (
+                                                <><Loader2 className="size-4 mr-2 animate-spin"/> Transmitting...</>
+                                            ) : (
+                                                "Upload Profile Photo"
+                                            )}
+                                        </Button>
+                                    </div>
+                                    <p className="text-[9px] text-muted-foreground leading-relaxed">High-fidelity images are automatically synchronized across all operational modules.</p>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            </TabsContent>
+                        </div>
+                    </Tabs>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                 <DialogContent className="rounded-3xl sm:max-w-md">
-                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Profile</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Profile Configuration</DialogTitle></DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
                             <div className="grid grid-cols-2 gap-4">
