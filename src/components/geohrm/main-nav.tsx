@@ -25,8 +25,6 @@ import {
   BarChart2,
   FileText,
   Activity,
-  MapPin,
-  ClipboardList,
   LayoutTemplate,
   ShieldCheck,
   CalendarDays,

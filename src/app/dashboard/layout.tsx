@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
-import { isToday, startOfDay, endOfDay } from 'date-fns';
+import { isToday } from 'date-fns';
 import Image from 'next/image';
 import { AutomatedReportSender } from '@/components/geohrm/automated-report-sender';
 
@@ -113,7 +113,6 @@ export default function DashboardLayout({
     return events.filter(e => e.date && isToday(e.date.toDate())).length;
   }, [events]);
 
-  // Support Desk Badge Logic (Updates in last 24h)
   const ticketQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(collection(firestore, "issue_reports"), where("employeeId", "==", user.uid));
