@@ -129,30 +129,32 @@ export default function OrgStructurePage() {
                 <div className="space-y-12 w-full">
                     <div className="flex flex-col items-center">
                         <Badge className="bg-primary text-white font-black uppercase text-[8px] tracking-[0.3em] px-4 py-1.5 shadow-lg shadow-primary/20 mb-6">Level 1: Executive Command</Badge>
-                        <div className="grid gap-6 w-full">
+                        
+                        {/* Display all Executives (CEO, Senior Directors) in one row */}
+                        <div className="flex flex-wrap justify-center gap-8 mb-12 w-full">
                             {ceoLevel.map(u => (
-                                <div key={u.id} className="relative">
-                                    <UserNode user={u} level="executive" highlight={userData?.id === u.id} />
-                                    <div className="flex flex-col items-center mt-6">
-                                        <div className="w-px h-12 bg-border" />
-                                        <div className="w-full max-w-5xl h-px bg-border" />
-                                        <div className="flex flex-wrap justify-center gap-12 pt-12">
-                                            {/* Level 2: Admin Oversight (HR) branched from specific CEO if applicable, but for MVP we branch all Level 2s */}
-                                            {adminLevel.map(admin => (
-                                                <AdminBranch key={admin.id} admin={admin} teams={visibleTeams} users={users || []} currentUserData={userData} />
-                                            ))}
-                                            
-                                            {/* Teams reporting directly to Level 1 */}
-                                            {visibleTeams.filter(t => t.supervisorId === u.id).map(team => (
-                                                <div key={team.id} className="relative">
-                                                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-px h-12 bg-border" />
-                                                    <TeamUnitBlock team={team} users={users || []} currentUserData={userData} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
+                                <UserNode key={u.id} user={u} level="executive" highlight={userData?.id === u.id} />
                             ))}
+                        </div>
+
+                        {/* Single branch down to all Admins and Teams to prevent duplication */}
+                        <div className="flex flex-col items-center w-full">
+                            <div className="w-px h-12 bg-border" />
+                            <div className="w-full max-w-5xl h-px bg-border" />
+                            <div className="flex flex-wrap justify-center gap-12 pt-12">
+                                {/* Level 2: Admin Oversight (HR) */}
+                                {adminLevel.map(admin => (
+                                    <AdminBranch key={admin.id} admin={admin} teams={visibleTeams} users={users || []} currentUserData={userData} />
+                                ))}
+                                
+                                {/* Teams reporting directly to Level 1 Command */}
+                                {visibleTeams.filter(t => ceoLevel.some(ceo => ceo.id === t.supervisorId)).map(team => (
+                                    <div key={team.id} className="relative">
+                                        <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-px h-12 bg-border" />
+                                        <TeamUnitBlock team={team} users={users || []} currentUserData={userData} />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
