@@ -3,13 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * CORE PHILOSOPHY
-     * This ruleset implements a robust, role-based access control (RBAC) and ownership model for the GeoHRM system.
-     */
-
-    // --- Helper Functions ---
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -19,115 +12,74 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/system_roles_admin/$(request.auth.uid));
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/system_roles_admin/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'CEO/Admin'
+      );
     }
 
     function isHR() {
-      return isSignedIn() && exists(/databases/$(database)/documents/system_roles_hr/$(request.auth.uid));
-    }
-
-    function isTeamLead() {
-      return isSignedIn() && exists(/databases/$(database)/documents/system_roles_teamlead/$(request.auth.uid));
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/system_roles_hr/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'HR Manager'
+      );
     }
 
     function isPrivileged() {
       return isAdmin() || isHR();
     }
 
-    // --- System Role Markers (Read-Only for Verification) ---
-
-    match /system_roles_admin/{employeeId} {
-      allow read: if isSignedIn();
-      allow write: if false;
-    }
-
-    match /system_roles_hr/{employeeId} {
-      allow read: if isSignedIn();
-      allow write: if false;
-    }
-
-    match /system_roles_teamlead/{employeeId} {
-      allow read: if isSignedIn();
-      allow write: if false;
-    }
-
-    // --- Employees ---
-
     match /employees/{employeeId} {
       allow get, list: if isSignedIn();
       allow create: if isOwner(employeeId);
-      allow update: if (isOwner(employeeId) || isPrivileged()) && resource != null;
-      allow delete: if isPrivileged() && resource != null;
+      allow update: if isOwner(employeeId) || isPrivileged();
+      allow delete: if isPrivileged();
     }
 
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwner(userId);
-      allow update: if (isOwner(userId) || isPrivileged());
+      allow create: if isOwner(userId) || isPrivileged();
+      allow update: if isOwner(userId) || isPrivileged();
       allow delete: if isPrivileged();
 
       match /attendances/{attId} {
-        allow read: if isOwner(userId) || isPrivileged() || isTeamLead();
+        allow read: if isOwner(userId) || isPrivileged();
         allow write: if isOwner(userId) || isPrivileged();
       }
       
       match /reports/{reportId} {
-        allow read: if isOwner(userId) || isPrivileged() || isTeamLead();
+        allow read: if isOwner(userId) || isPrivileged();
         allow create: if isOwner(userId);
         allow delete: if isPrivileged();
       }
 
       match /documents/{docId} {
-        allow read: if isOwner(userId) || isPrivileged() || isTeamLead();
+        allow read: if isOwner(userId) || isPrivileged();
         allow write: if isOwner(userId) || isPrivileged();
       }
-
-      match /policy_acknowledgments/{ackId} {
-        allow read: if isOwner(userId) || isPrivileged();
-        allow create: if isOwner(userId);
-      }
-      
-      match /readAnnouncements/{annId} {
-        allow read, write: if isOwner(userId);
-      }
     }
     
-    // Support collectionGroup queries for reports
     match /{path=**}/reports/{reportId} {
-        allow read: if isSignedIn() && (isPrivileged() || isTeamLead() || isOwner(resource.data.employeeId));
+        allow read: if isSignedIn() && (isPrivileged() || resource.data.employeeId == request.auth.uid);
     }
     
-    // Support collectionGroup queries for attendances
     match /{path=**}/attendances/{attId} {
-        allow read: if isSignedIn() && (isPrivileged() || isTeamLead() || isOwner(resource.data.employeeId));
+        allow read: if isSignedIn() && (isPrivileged() || resource.data.employeeId == request.auth.uid);
     }
 
-    match /location_change_requests/{requestId} {
-      allow list: if isSignedIn() && (isPrivileged() || request.query.filters.employeeId == request.auth.uid);
-      allow get: if isSignedIn() && (isPrivileged() || resource.data.employeeId == request.auth.uid);
-      allow create: if isSignedIn() && request.resource.data.employeeId == request.auth.uid;
+    match /assets/{id} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    match /asset_requests/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
       allow update: if isPrivileged();
       allow delete: if isPrivileged();
     }
 
-    // --- Global Configuration ---
-
     match /settings/{id} {
-      allow read: if isSignedIn();
-      allow write: if isPrivileged();
-    }
-
-    match /announcements/{id} {
-      allow read: if isSignedIn();
-      allow write: if isPrivileged();
-    }
-
-    match /policies/{id} {
-      allow read: if isSignedIn();
-      allow write: if isPrivileged();
-    }
-
-    match /events/{id} {
       allow read: if isSignedIn();
       allow write: if isPrivileged();
     }
@@ -138,26 +90,22 @@ service cloud.firestore {
     }
 
     match /leave_requests/{id} {
-      allow get, list: if isSignedIn(); 
-      allow create: if isSignedIn();
-      allow update: if isPrivileged() || isTeamLead();
-      allow delete: if isPrivileged();
-    }
-
-    match /issue_reports/{id} {
       allow read: if isSignedIn(); 
       allow create: if isSignedIn();
       allow update: if isPrivileged();
       allow delete: if isPrivileged();
     }
 
-    match /payslips/{id} {
-      allow read: if isSignedIn(); 
+    match /announcements/{id} {
+      allow read: if isSignedIn();
       allow write: if isPrivileged();
     }
-
-    match /automated_reports/{id} {
-      allow read, write: if isPrivileged();
+    
+    match /issue_reports/{id} {
+      allow read: if isSignedIn(); 
+      allow create: if isSignedIn();
+      allow update: if isPrivileged();
+      allow delete: if isPrivileged();
     }
   }
 }

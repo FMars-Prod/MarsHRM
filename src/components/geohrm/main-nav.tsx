@@ -31,6 +31,9 @@ import {
   ShieldCheck,
   CalendarDays,
   FileBox,
+  Laptop,
+  Network,
+  Settings,
 } from "lucide-react";
 import React from "react";
 
@@ -41,7 +44,6 @@ const groups = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-      { href: "https://studio--studio-6104224101-c3e7e.us-central1.hosted.app/", label: "Core Team Report", icon: ClipboardList, roles: ['Team Lead', 'HR Manager', 'CEO/Admin'], isExternal: true },
     ]
   },
   {
@@ -50,9 +52,9 @@ const groups = [
       { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/leave", label: "Leave", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
       { href: "/dashboard/documents", label: "Documents", icon: FileBox, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/location-requests", label: "WFH Requests", icon: MapPin, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
       { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/org-structure", label: "Org. Structure", icon: Network, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
   },
   {
@@ -60,6 +62,7 @@ const groups = [
     links: [
       { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/monitor", label: "Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/assets", label: "Assets", icon: Laptop, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/payslips", label: "Payslips", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
   },
@@ -76,6 +79,7 @@ const groups = [
     label: "SYSTEM",
     links: [
       { href: "/dashboard/report-templates", label: "Report Templates", icon: LayoutTemplate, roles: ['HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/settings", label: "System Settings", icon: Settings, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/profile", label: "Profile", icon: User, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
   }
@@ -128,18 +132,11 @@ export function MainNav({
                   return (
                     <SidebarMenuItem key={link.href}>
                       <SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
-                        {link.isExternal ? (
-                          <a href={link.href} target="_blank" rel="noopener noreferrer">
-                            <link.icon />
-                            <span>{link.label}</span>
-                          </a>
-                        ) : (
-                          <Link href={link.href}>
-                            <link.icon />
-                            <span>{link.label}</span>
-                            {badgeCount > 0 && <SidebarMenuBadge>{badgeCount}</SidebarMenuBadge>}
-                          </Link>
-                        )}
+                        <Link href={link.href}>
+                          <link.icon />
+                          <span>{link.label}</span>
+                          {badgeCount > 0 && <SidebarMenuBadge>{badgeCount}</SidebarMenuBadge>}
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );

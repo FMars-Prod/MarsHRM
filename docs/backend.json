@@ -2,131 +2,54 @@
 {
   "entities": {
     "Employee": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Employee",
       "type": "object",
-      "description": "Represents an employee within the GeoHRM system, including their personal details, contact information, and HR-related data.",
+      "description": "Represents an employee within the GeoHRM system.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Employee entity."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the employee."
-"
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the employee."
-        },
-        "email": {
-          "type": "string",
-          "description": "The primary email address of the employee, used for communication and identification. (format: email)",
-          "format": "email"
-        },
-        "dateOfBirth": {
-          "type": "string",
-          "description": "The employee's date of birth. (format: date)",
-          "format": "date"
-        },
-        "hireDate": {
-          "type": "string",
-          "description": "The date the employee was hired. (format: date)",
-          "format": "date"
-        },
-        "employeeIdNumber": {
-          "type": "string",
-          "description": "An internal, HR-assigned identification number for the employee."
-        },
-        "contactNumber": {
-          "type": "string",
-          "description": "The employee's primary contact phone number."
-        },
-        "address": {
-          "type": "string",
-          "description": "The employee's residential address."
-        },
-        "roleId": {
-          "type": "string",
-          "description": "Reference to the Role assigned to the employee. (Relationship: Role 1:N Employee)"
-        },
-        "teamLeadId": {
-          "type": "string",
-          "description": "Reference to the Employee who is this employee's direct team lead. Nullable for top-level employees. (Relationship: Employee 1:N Employee)"
-        }
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["Member", "Team Lead", "HR Manager", "CEO/Admin"] },
+        "jobTitle": { "type": "string" },
+        "department": { "type": "string" },
+        "teamId": { "type": "string" },
+        "avatar": { "type": "string" }
       },
-      "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "email",
-        "hireDate",
-        "employeeIdNumber",
-        "roleId"
-      ]
+      "required": ["id", "firstName", "lastName", "email", "role"]
     },
-    "Document": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Document",
+    "Asset": {
+      "title": "Asset",
       "type": "object",
-      "description": "Represents a linked digital asset (e.g., Google Drive link) submitted by an employee.",
+      "description": "Physical company resources like laptops and devices.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Document."
-        },
-        "title": {
-          "type": "string",
-          "description": "A descriptive title for the document."
-        },
-        "link": {
-          "type": "string",
-          "description": "The external URL/link to the document (e.g., Google Drive)."
-        },
-        "employeeId": {
-          "type": "string",
-          "description": "Reference to the Employee owner."
-        },
-        "uploadedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The timestamp of submission."
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "specs": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["Available", "Assigned", "Maintenance"] },
+        "assignedToId": { "type": "string" }
       },
-      "required": ["id", "title", "link", "employeeId", "uploadedAt"]
+      "required": ["id", "name", "category", "status"]
     },
-    "Role": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Role",
+    "AssetRequest": {
+      "title": "AssetRequest",
       "type": "object",
-      "description": "Defines a user role within the GeoHRM system, dictating permissions and access levels.",
+      "description": "A request for a company asset.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Role entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The descriptive name of the role (e.g., Member, Team Lead, HR Manager, CEO/Admin)."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed explanation of the role's responsibilities and typical permissions."
-        }
+        "id": { "type": "string" },
+        "assetId": { "type": "string" },
+        "requesterId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected"] },
+        "reason": { "type": "string" },
+        "requestDate": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "description"
-      ]
+      "required": ["id", "assetId", "requesterId", "status"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
@@ -134,10 +57,21 @@
         "path": "/users/{userId}/documents/{documentId}",
         "definition": {
           "entityName": "Document",
-          "schema": {
-            "$ref": "#/backend/entities/Document"
-          },
-          "description": "Subcollection for employee-submitted digital asset links."
+          "description": "Subcollection for employee assets."
+        }
+      },
+      {
+        "path": "/assets/{assetId}",
+        "definition": {
+          "entityName": "Asset",
+          "description": "Global inventory of physical assets."
+        }
+      },
+      {
+        "path": "/asset_requests/{requestId}",
+        "definition": {
+          "entityName": "AssetRequest",
+          "description": "Global log of asset allocation requests."
         }
       }
     ]
