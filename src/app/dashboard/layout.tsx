@@ -130,6 +130,8 @@ export default function DashboardLayout({
     }).length;
   }, [userTickets]);
 
+  const totalNotifications = pendingLeaveCount + unreadAnnouncements + todaysEventsCount + pendingLocationRequestsCount + ticketUpdateCount;
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
@@ -165,7 +167,7 @@ export default function DashboardLayout({
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2">
-            <div className="bg-primary text-primary-foreground p-2 rounded-lg">
+            <div className="bg-primary text-primary-foreground p-3 rounded-lg">
               <Building2 className="h-6 w-6" />
             </div>
             <span className="font-headline text-lg font-semibold text-white">MarsHRM</span>
@@ -179,6 +181,7 @@ export default function DashboardLayout({
             todaysEventsCount={todaysEventsCount}
             pendingLocationRequestsCount={pendingLocationRequestsCount}
             ticketUpdateCount={ticketUpdateCount}
+            totalNotificationsCount={totalNotifications}
           />
         </SidebarContent>
         <SidebarFooter>

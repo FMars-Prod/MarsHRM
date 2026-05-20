@@ -41,7 +41,7 @@ const groups = [
   {
     label: "STRATEGIC HUB",
     links: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "totalNotificationsCount" },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
@@ -92,6 +92,7 @@ interface MainNavProps {
   todaysEventsCount?: number;
   pendingLocationRequestsCount?: number;
   ticketUpdateCount?: number;
+  totalNotificationsCount?: number;
 }
 
 export function MainNav({ 
@@ -101,6 +102,7 @@ export function MainNav({
   todaysEventsCount = 0,
   pendingLocationRequestsCount = 0,
   ticketUpdateCount = 0,
+  totalNotificationsCount = 0,
 }: MainNavProps) {
   const pathname = usePathname();
 
@@ -110,19 +112,25 @@ export function MainNav({
     todaysEventsCount,
     pendingLocationRequestsCount,
     ticketUpdateCount,
+    totalNotificationsCount,
   };
 
   return (
     <>
-      {groups.map((group) => {
+      {groups.map((group, index) => {
         const visibleLinks = group.links.filter(link => link.roles.includes(userRole));
         if (visibleLinks.length === 0) return null;
 
+        const sectionNumber = (index + 1).toString().padStart(2, '0');
+
         return (
           <SidebarGroup key={group.label}>
-            <SidebarGroupLabel className="text-[10px] font-black tracking-widest text-muted-foreground/60 px-4 py-2">
-              {group.label}
-            </SidebarGroupLabel>
+            <div className="px-4 py-2">
+                <span className="text-[9px] font-black text-primary/40 tracking-[0.3em] block mb-1">SECTION {sectionNumber}</span>
+                <SidebarGroupLabel className="text-[10px] font-black tracking-widest text-muted-foreground/60 p-0 h-auto">
+                    {group.label}
+                </SidebarGroupLabel>
+            </div>
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleLinks.map((link) => {
@@ -135,7 +143,11 @@ export function MainNav({
                         <Link href={link.href}>
                           <link.icon />
                           <span>{link.label}</span>
-                          {badgeCount > 0 && <SidebarMenuBadge>{badgeCount}</SidebarMenuBadge>}
+                          {badgeCount > 0 && (
+                            <SidebarMenuBadge className="bg-primary text-primary-foreground font-black rounded-full text-[9px] h-5 min-w-[1.25rem] flex items-center justify-center border-2 border-sidebar shadow-lg">
+                                {badgeCount}
+                            </SidebarMenuBadge>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
