@@ -8,10 +8,11 @@ import { collection, query, doc } from 'firebase/firestore';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ChevronRight, Users, ShieldCheck, UserCircle, Network, ArrowDown, ShieldAlert, Target } from 'lucide-react';
+import { ChevronRight, Users, ShieldCheck, UserCircle, Network, ArrowDown, ShieldAlert, Target, LayoutGrid } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 
 type UserData = {
     id: string;
@@ -30,6 +31,13 @@ type Team = {
     memberIds: string[];
 };
 
+const roleLevels: Record<string, number> = {
+    'CEO/Admin': 1,
+    'HR Manager': 2,
+    'Team Lead': 3,
+    'Member': 4
+};
+
 export default function OrgStructurePage() {
     const { user: currentUser } = useUser();
     const firestore = useFirestore();
@@ -43,53 +51,35 @@ export default function OrgStructurePage() {
     const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
     const { data: teams } = useCollection<Team>(teamsQuery);
 
-    const userTeam = React.useMemo(() => {
-        if (!userData || !teams) return null;
-        return teams.find(t => t.id === userData.teamId || t.memberIds?.includes(userData.id));
-    }, [userData, teams]);
-
-    const teamLead = React.useMemo(() => {
-        if (!userTeam || !users) return null;
-        return users.find(u => u.id === userTeam.teamLeadId);
-    }, [userTeam, users]);
-
-    // Command Tiers
-    const ceoLevel = React.useMemo(() => users?.filter(u => u.role === 'CEO/Admin') || [], [users]);
-    const adminLevel = React.useMemo(() => users?.filter(u => u.role === 'HR Manager') || [], [users]);
-
-    const teammates = React.useMemo(() => {
-        if (!userTeam || !users) return [];
-        return users.filter(u => userTeam.memberIds?.includes(u.id) && u.id !== userTeam.teamLeadId);
-    }, [userTeam, users]);
-
     const isUrl = (str?: string) => str && str.startsWith('http');
 
     const UserNode = ({ user, level, highlight }: { user: UserData, level: 'executive' | 'admin' | 'lead' | 'fleet', highlight?: boolean }) => (
         <Card className={cn(
-            "border-none shadow-sm relative group transition-all",
-            highlight ? "ring-2 ring-primary scale-105 z-10" : "opacity-90 grayscale-[20%] hover:grayscale-0",
+            "border-none shadow-sm relative group transition-all h-full",
+            highlight ? "ring-2 ring-primary scale-105 z-10" : "opacity-95 hover:opacity-100",
             level === 'executive' ? "bg-primary text-white" : 
             level === 'admin' ? "bg-indigo-50 ring-1 ring-indigo-200" :
             level === 'lead' ? "bg-white ring-1 ring-border/50" : 
             "bg-white/50 ring-1 ring-border/50"
         )}>
-            <CardContent className="p-4 flex items-center gap-4">
-                <Avatar className="size-12 ring-2 ring-white/20">
+            <CardContent className="p-4 flex items-center gap-4 h-full">
+                <Avatar className="size-12 ring-2 ring-white/20 shrink-0">
                     {user.avatar ? (
                         isUrl(user.avatar) ? <AvatarImage src={user.avatar} className="object-cover" /> : <span className="text-2xl">{user.avatar}</span>
                     ) : <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>}
                 </Avatar>
-                <div className="flex-1">
-                    <p className={cn("font-bold text-sm", level === 'executive' ? "text-white" : "text-foreground")}>{user.firstName} {user.lastName}</p>
-                    <p className={cn("text-[9px] font-black uppercase tracking-widest", level === 'executive' ? "text-white/70" : "text-muted-foreground")}>{user.jobTitle}</p>
+                <div className="flex-1 min-w-0">
+                    <p className={cn("font-bold text-sm truncate", level === 'executive' ? "text-white" : "text-foreground")}>{user.firstName} {user.lastName}</p>
+                    <p className={cn("text-[9px] font-black uppercase tracking-widest truncate", level === 'executive' ? "text-white/70" : "text-muted-foreground")}>{user.jobTitle}</p>
                 </div>
                 <Badge variant="outline" className={cn(
-                    "rounded-full text-[8px] font-black uppercase tracking-widest border-none", 
+                    "rounded-full text-[8px] font-black uppercase tracking-widest border-none shrink-0", 
                     level === 'executive' ? "bg-white/20 text-white" : 
                     level === 'admin' ? "bg-indigo-600 text-white" :
+                    level === 'lead' ? "bg-blue-600 text-white" :
                     "bg-muted text-muted-foreground"
                 )}>
-                    {user.role === 'CEO/Admin' ? 'CEO' : user.role === 'HR Manager' ? 'Admin' : 'Personnel'}
+                    {user.role === 'CEO/Admin' ? 'CEO' : user.role === 'HR Manager' ? 'Admin' : user.role === 'Team Lead' ? 'Lead' : 'Fleet'}
                 </Badge>
             </CardContent>
         </Card>
@@ -99,38 +89,56 @@ export default function OrgStructurePage() {
 
     if (isLoading) return <div className="flex h-screen items-center justify-center"><Network className="size-12 animate-pulse text-muted-foreground opacity-20" /></div>;
 
+    const userLevel = userData ? roleLevels[userData.role] || 4 : 4;
+    const isLeadership = userLevel <= 2;
+
+    // Filter levels for display
+    const ceoLevel = users?.filter(u => u.role === 'CEO/Admin') || [];
+    const adminLevel = users?.filter(u => u.role === 'HR Manager') || [];
+    
+    // Logic to determine which teams to show
+    const visibleTeams = React.useMemo(() => {
+        if (!teams || !users) return [];
+        if (isLeadership) return teams; // Admins/CEOs see all teams below them
+        
+        // Leads/Members only see their own team
+        const userTeamId = userData?.teamId;
+        if (!userTeamId) return [];
+        return teams.filter(t => t.id === userTeamId);
+    }, [teams, userData, isLeadership, users]);
+
     return (
-        <div className="space-y-8 animate-fade-in-up max-w-5xl mx-auto">
-            <PageHeader title="Reporting Hierarchy" description="Personalized tactical command structure mapping your professional reporting line." />
+        <div className="space-y-8 animate-fade-in-up max-w-6xl mx-auto pb-20">
+            <PageHeader title="Organizational Hierarchy" description="Strategic command structure mapping vertical reporting lines and tactical subordinates." />
 
             {userData && (
                 <Alert className="bg-primary/5 border-primary/20 shadow-sm rounded-3xl p-6">
                     <Target className="size-5 text-primary" />
-                    <AlertTitle className="text-primary font-black uppercase text-xs tracking-widest mb-1">Strategic Reporting Directive</AlertTitle>
+                    <AlertTitle className="text-primary font-black uppercase text-xs tracking-widest mb-1">Operational Command Directive</AlertTitle>
                     <AlertDescription className="text-sm font-medium">
-                        {userData.role === 'Member' ? (
-                            <>Operational Status: You report directly to <span className="text-primary font-bold">{teamLead ? `${teamLead.firstName} ${teamLead.lastName}` : 'Assigned Team Lead'}</span>.</>
-                        ) : userData.role === 'Team Lead' ? (
-                            <>Operational Status: You report directly to <span className="text-primary font-bold">Administrative Oversight (Admin)</span> and CEO.</>
+                        {userLevel === 4 ? (
+                            <>Reporting Protocol: You are assigned to the tactical fleet reporting to your <span className="text-primary font-bold">Operational Lead</span>.</>
+                        ) : userLevel === 3 ? (
+                            <>Reporting Protocol: You direct a tactical unit and report to <span className="text-primary font-bold">Administrative Oversight</span>.</>
                         ) : (
-                            <>Authority Confirmation: You represent the <span className="text-primary font-bold">Top-Tier Command Level</span>.</>
+                            <>Authority Confirmation: You represent the <span className="text-primary font-bold">Top-Tier Command Level</span> overseeing all operational branches.</>
                         )}
                     </AlertDescription>
                 </Alert>
             )}
 
-            <div className="space-y-12 pb-20 relative">
+            <div className="space-y-16 relative pt-4">
                 {/* Vertical Connector Line */}
                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-primary/20 via-border/50 to-transparent -translate-x-1/2 hidden md:block" />
 
                 {/* Level 1: CEO & Senior Directors */}
                 <div className="space-y-6">
-                    <div className="flex flex-col items-center gap-2">
-                        <Badge className="bg-primary text-white font-black uppercase text-[8px] tracking-[0.3em]">Command Level</Badge>
+                    <div className="flex flex-col items-center gap-2 relative">
+                        <Badge className="bg-primary text-white font-black uppercase text-[8px] tracking-[0.3em] px-4 py-1.5 shadow-lg shadow-primary/20">Level 1: Executive Command</Badge>
                     </div>
-                    <div className={cn("grid gap-4 max-w-2xl mx-auto", ceoLevel.length > 1 ? "md:grid-cols-2" : "grid-cols-1")}>
-                        {ceoLevel.map(user => (
-                            <UserNode key={user.id} user={user} level="executive" highlight={userData?.id === user.id} />
+                    <div className={cn("grid gap-4 max-w-3xl mx-auto", ceoLevel.length > 1 ? "md:grid-cols-2" : "grid-cols-1")}>
+                        {ceoLevel.map(u => (
+                            <UserNode key={u.id} user={u} level="executive" highlight={userData?.id === u.id} />
                         ))}
                     </div>
                 </div>
@@ -138,56 +146,77 @@ export default function OrgStructurePage() {
                 {/* Level 2: Admin (Formerly HR) */}
                 {adminLevel.length > 0 && (
                     <div className="space-y-6">
-                        <div className="flex flex-col items-center gap-2">
-                            <ArrowDown className="size-4 text-muted-foreground opacity-30" />
-                            <Badge className="bg-indigo-600 text-white font-black uppercase text-[8px] tracking-[0.3em]">Administrative Oversight</Badge>
+                        <div className="flex flex-col items-center gap-2 relative">
+                            <ArrowDown className="size-4 text-muted-foreground opacity-30 animate-bounce" />
+                            <Badge className="bg-indigo-600 text-white font-black uppercase text-[8px] tracking-[0.3em] px-4 py-1.5 shadow-lg shadow-indigo-600/20">Level 2: Administrative Oversight</Badge>
                         </div>
-                        <div className={cn("grid gap-4 max-w-2xl mx-auto", adminLevel.length > 1 ? "md:grid-cols-2" : "grid-cols-1")}>
-                            {adminLevel.map(user => (
-                                <UserNode key={user.id} user={user} level="admin" highlight={userData?.id === user.id} />
+                        <div className={cn("grid gap-4 max-w-3xl mx-auto", adminLevel.length > 1 ? "md:grid-cols-2" : "grid-cols-1")}>
+                            {adminLevel.map(u => (
+                                <UserNode key={u.id} user={u} level="admin" highlight={userData?.id === u.id} />
                             ))}
                         </div>
                     </div>
                 )}
 
-                {/* Team Lead Level */}
-                {teamLead && (
-                    <div className="space-y-6">
-                        <div className="flex flex-col items-center gap-2">
-                            <ArrowDown className="size-4 text-muted-foreground opacity-30" />
-                            <Badge className="bg-blue-600 text-white font-black uppercase text-[8px] tracking-[0.3em]">Operational Lead</Badge>
-                        </div>
-                        <div className="max-w-md mx-auto">
-                            <UserNode user={teamLead} level="lead" highlight={userData?.id === teamLead.id} />
-                        </div>
-                    </div>
-                )}
-
-                {/* Fleet / Peers Level */}
-                {teammates.length > 0 && (
-                    <div className="space-y-6">
-                        <div className="flex flex-col items-center gap-2">
-                            <ArrowDown className="size-4 text-muted-foreground opacity-30" />
-                            <Badge className="bg-muted text-muted-foreground font-black uppercase text-[8px] tracking-[0.3em]">
-                                {userTeam?.name || 'Tactical Fleet'}
+                {/* Level 3 & 4: Tactical Units (Leads & Their Fleet) */}
+                {visibleTeams.length > 0 && (
+                    <div className="space-y-10">
+                        <div className="flex flex-col items-center gap-2 relative">
+                            <ArrowDown className="size-4 text-muted-foreground opacity-30 animate-bounce" />
+                            <Badge className="bg-blue-600 text-white font-black uppercase text-[8px] tracking-[0.3em] px-4 py-1.5 shadow-lg shadow-blue-600/20">
+                                {isLeadership ? "Operational Fleet Hierarchy" : "My Tactical Unit"}
                             </Badge>
                         </div>
-                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-                            {teammates.map(member => (
-                                <UserNode key={member.id} user={member} level="fleet" highlight={userData?.id === member.id} />
-                            ))}
+                        
+                        <div className="grid gap-12">
+                            {visibleTeams.map(team => {
+                                const lead = users?.find(u => u.id === team.teamLeadId);
+                                const members = users?.filter(u => team.memberIds?.includes(u.id) && u.id !== team.teamLeadId) || [];
+                                
+                                return (
+                                    <div key={team.id} className="space-y-6 relative">
+                                        {/* Unit Container */}
+                                        <div className="max-w-4xl mx-auto bg-white/40 backdrop-blur-sm rounded-[3rem] p-8 border border-dashed border-border/50 ring-1 ring-border/20">
+                                            <div className="flex flex-col items-center gap-6">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-primary border-primary/20 bg-primary/5">
+                                                        <LayoutGrid className="size-3 mr-1.5" /> {team.name} Division
+                                                    </Badge>
+                                                </div>
+
+                                                {/* Lead Strategist Node */}
+                                                {lead && (
+                                                    <div className="w-full max-w-sm">
+                                                        <UserNode user={lead} level="lead" highlight={userData?.id === lead.id} />
+                                                    </div>
+                                                )}
+
+                                                {/* Unit Branch */}
+                                                {members.length > 0 && (
+                                                    <>
+                                                        <Separator className="w-20" />
+                                                        <div className="grid gap-4 w-full sm:grid-cols-2 md:grid-cols-3">
+                                                            {members.map(member => (
+                                                                <UserNode key={member.id} user={member} level="fleet" highlight={userData?.id === member.id} />
+                                                            ))}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
 
-                {/* If Admin viewing the page, show all others as a summary list if no specific team is found */}
-                {!teamLead && userData?.role !== 'Member' && userData?.role !== 'Team Lead' && (
+                {visibleTeams.length === 0 && userLevel <= 2 && (
                     <div className="text-center py-20 opacity-40 italic text-sm">
-                        Executive View: Global fleet oversight is managed via the Staff Registry module.
+                        No operational fleet units detected. Initialize teams via the Teams Management module.
                     </div>
                 )}
             </div>
         </div>
     );
 }
-
