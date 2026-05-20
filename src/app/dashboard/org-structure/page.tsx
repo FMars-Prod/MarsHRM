@@ -28,6 +28,7 @@ type Team = {
     id: string;
     name: string;
     teamLeadId: string;
+    supervisorId?: string;
     memberIds: string[];
 };
 
@@ -106,6 +107,12 @@ export default function OrgStructurePage() {
     const ceoLevel = users?.filter(u => u.role === 'CEO/Admin') || [];
     const adminLevel = users?.filter(u => u.role === 'HR Manager') || [];
 
+    const getTeamsForSupervisor = (sId: string) => {
+        return visibleTeams.filter(t => t.supervisorId === sId);
+    };
+
+    const unassignedTeams = visibleTeams.filter(t => !t.supervisorId || !users?.some(u => u.id === t.supervisorId));
+
     return (
         <div className="space-y-8 animate-fade-in-up max-w-6xl mx-auto pb-20">
             <PageHeader title="Organizational Hierarchy" description="Strategic command structure mapping vertical reporting lines and tactical subordinates." />
@@ -131,81 +138,69 @@ export default function OrgStructurePage() {
                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-primary/20 via-border/50 to-transparent -translate-x-1/2 hidden md:block" />
 
                 {/* Level 1: CEO & Senior Directors */}
-                <div className="space-y-6">
+                <div className="space-y-10">
                     <div className="flex flex-col items-center gap-2 relative">
                         <Badge className="bg-primary text-white font-black uppercase text-[8px] tracking-[0.3em] px-4 py-1.5 shadow-lg shadow-primary/20">Level 1: Executive Command</Badge>
                     </div>
-                    <div className={cn("grid gap-4 max-w-3xl mx-auto", ceoLevel.length > 1 ? "md:grid-cols-2" : "grid-cols-1")}>
-                        {ceoLevel.map(u => (
-                            <UserNode key={u.id} user={u} level="executive" highlight={userData?.id === u.id} />
-                        ))}
-                    </div>
+                    {ceoLevel.map(u => {
+                        const supervisedTeams = getTeamsForSupervisor(u.id);
+                        return (
+                            <div key={u.id} className="space-y-8">
+                                <div className="max-w-sm mx-auto">
+                                    <UserNode user={u} level="executive" highlight={userData?.id === u.id} />
+                                </div>
+                                {supervisedTeams.length > 0 && (
+                                    <div className="grid gap-8 pt-4">
+                                        {supervisedTeams.map(team => (
+                                            <TeamUnitBlock key={team.id} team={team} users={users || []} currentUserData={userData} />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
 
-                {/* Level 2: Admin (Formerly HR) */}
+                {/* Level 2: Admin */}
                 {adminLevel.length > 0 && (
-                    <div className="space-y-6">
+                    <div className="space-y-10">
                         <div className="flex flex-col items-center gap-2 relative">
                             <ArrowDown className="size-4 text-muted-foreground opacity-30 animate-bounce" />
                             <Badge className="bg-indigo-600 text-white font-black uppercase text-[8px] tracking-[0.3em] px-4 py-1.5 shadow-lg shadow-indigo-600/20">Level 2: Administrative Oversight</Badge>
                         </div>
-                        <div className={cn("grid gap-4 max-w-3xl mx-auto", adminLevel.length > 1 ? "md:grid-cols-2" : "grid-cols-1")}>
-                            {adminLevel.map(u => (
-                                <UserNode key={u.id} user={u} level="admin" highlight={userData?.id === u.id} />
-                            ))}
+                        <div className="grid gap-16">
+                            {adminLevel.map(u => {
+                                const supervisedTeams = getTeamsForSupervisor(u.id);
+                                return (
+                                    <div key={u.id} className="space-y-10">
+                                        <div className="max-w-sm mx-auto">
+                                            <UserNode user={u} level="admin" highlight={userData?.id === u.id} />
+                                        </div>
+                                        {supervisedTeams.length > 0 && (
+                                            <div className="grid gap-12 pt-4">
+                                                {supervisedTeams.map(team => (
+                                                    <TeamUnitBlock key={team.id} team={team} users={users || []} currentUserData={userData} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
 
-                {/* Level 3 & 4: Tactical Units (Leads & Their Fleet) */}
-                {visibleTeams.length > 0 && (
+                {/* Unassigned Teams (Default) */}
+                {unassignedTeams.length > 0 && isLeadership && (
                     <div className="space-y-10">
                         <div className="flex flex-col items-center gap-2 relative">
                             <ArrowDown className="size-4 text-muted-foreground opacity-30 animate-bounce" />
-                            <Badge className="bg-blue-600 text-white font-black uppercase text-[8px] tracking-[0.3em] px-4 py-1.5 shadow-lg shadow-blue-600/20">
-                                {isLeadership ? "Operational Fleet Hierarchy" : "My Tactical Unit"}
-                            </Badge>
+                            <Badge variant="outline" className="text-[8px] font-black uppercase tracking-[0.3em] px-4 py-1.5">General Operational Fleet</Badge>
                         </div>
-                        
                         <div className="grid gap-12">
-                            {visibleTeams.map(team => {
-                                const lead = users?.find(u => u.id === team.teamLeadId);
-                                const members = users?.filter(u => team.memberIds?.includes(u.id) && u.id !== team.teamLeadId) || [];
-                                
-                                return (
-                                    <div key={team.id} className="space-y-6 relative">
-                                        {/* Unit Container */}
-                                        <div className="max-w-4xl mx-auto bg-white/40 backdrop-blur-sm rounded-[3rem] p-8 border border-dashed border-border/50 ring-1 ring-border/20">
-                                            <div className="flex flex-col items-center gap-6">
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-primary border-primary/20 bg-primary/5">
-                                                        <LayoutGrid className="size-3 mr-1.5" /> {team.name} Division
-                                                    </Badge>
-                                                </div>
-
-                                                {/* Lead Strategist Node */}
-                                                {lead && (
-                                                    <div className="w-full max-w-sm">
-                                                        <UserNode user={lead} level="lead" highlight={userData?.id === lead.id} />
-                                                    </div>
-                                                )}
-
-                                                {/* Unit Branch */}
-                                                {members.length > 0 && (
-                                                    <>
-                                                        <Separator className="w-20" />
-                                                        <div className="grid gap-4 w-full sm:grid-cols-2 md:grid-cols-3">
-                                                            {members.map(member => (
-                                                                <UserNode key={member.id} user={member} level="fleet" highlight={userData?.id === member.id} />
-                                                            ))}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {unassignedTeams.map(team => (
+                                <TeamUnitBlock key={team.id} team={team} users={users || []} currentUserData={userData} />
+                            ))}
                         </div>
                     </div>
                 )}
@@ -214,6 +209,42 @@ export default function OrgStructurePage() {
                     <div className="text-center py-20 opacity-40 italic text-sm">
                         No operational fleet units detected. Initialize teams via the Teams Management module.
                     </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function TeamUnitBlock({ team, users, currentUserData }: { team: Team, users: UserData[], currentUserData?: UserData }) {
+    const lead = users.find(u => u.id === team.teamLeadId);
+    const members = users.filter(u => team.memberIds?.includes(u.id) && u.id !== team.teamLeadId);
+
+    return (
+        <div className="max-w-4xl mx-auto bg-white/40 backdrop-blur-sm rounded-[3rem] p-8 border border-dashed border-border/50 ring-1 ring-border/20 shadow-sm relative group hover:ring-primary/20 transition-all">
+            <div className="flex flex-col items-center gap-6">
+                <div className="flex flex-col items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest text-primary border-primary/20 bg-primary/5">
+                        <LayoutGrid className="size-3 mr-1.5" /> {team.name} Division
+                    </Badge>
+                </div>
+
+                {/* Lead Strategist Node */}
+                {lead && (
+                    <div className="w-full max-w-sm">
+                        <UserNode user={lead} level="lead" highlight={currentUserData?.id === lead.id} />
+                    </div>
+                )}
+
+                {/* Unit Branch */}
+                {members.length > 0 && (
+                    <>
+                        <Separator className="w-20" />
+                        <div className="grid gap-4 w-full sm:grid-cols-2 md:grid-cols-3">
+                            {members.map(member => (
+                                <UserNode key={member.id} user={member} level="fleet" highlight={currentUserData?.id === member.id} />
+                            ))}
+                        </div>
+                    </>
                 )}
             </div>
         </div>

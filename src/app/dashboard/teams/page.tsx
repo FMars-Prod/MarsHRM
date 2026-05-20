@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Users, Trash, Edit, MoreHorizontal, UserCheck, AlertCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Users, Trash, Edit, MoreHorizontal, UserCheck, AlertCircle, Trash2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from "@/firebase";
@@ -39,6 +39,7 @@ type Team = {
     id: string;
     name: string;
     teamLeadId: string;
+    supervisorId?: string; // The Admin/CEO this team reports to
     memberIds: string[];
 };
 
@@ -51,6 +52,7 @@ export default function TeamsPage() {
     const [editingTeam, setEditingTeam] = React.useState<WithId<Team> | null>(null);
     const [teamName, setTeamName] = React.useState("");
     const [teamLeadId, setTeamLeadId] = React.useState<string | undefined>();
+    const [supervisorId, setSupervisorId] = React.useState<string | undefined>("unassigned");
     const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([]);
     const [selectedTeamForSheet, setSelectedTeamForSheet] = React.useState<WithId<Team> | null>(null);
 
@@ -68,6 +70,12 @@ export default function TeamsPage() {
         return lead ? `${lead.firstName} ${lead.lastName}` : 'N/A';
     }
 
+    const getSupervisorName = (sId?: string) => {
+        if (!sId || sId === 'unassigned') return 'General Oversight';
+        const sup = users?.find(u => u.id === sId);
+        return sup ? `${sup.firstName} ${sup.lastName}` : 'General Oversight';
+    }
+
     const handleCreateOrUpdateTeam = async () => {
         if (!teamName || !teamLeadId) {
             toast({ variant: 'destructive', title: 'Missing Fields' });
@@ -76,16 +84,28 @@ export default function TeamsPage() {
 
         const batch = writeBatch(firestore);
         const allMemberIdsForTeam = Array.from(new Set([teamLeadId, ...selectedMemberIds]));
+        const finalSupervisorId = supervisorId === 'unassigned' ? null : supervisorId;
 
         if (editingTeam) {
             const teamRef = doc(firestore, 'teams', editingTeam.id);
-            batch.update(teamRef, { name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
+            batch.update(teamRef, { 
+                name: teamName, 
+                teamLeadId: teamLeadId, 
+                supervisorId: finalSupervisorId,
+                memberIds: allMemberIdsForTeam 
+            });
             editingTeam.memberIds?.filter(id => !allMemberIdsForTeam.includes(id)).forEach(id => batch.update(doc(firestore, 'users', id), { teamId: null }));
             allMemberIdsForTeam.forEach(memberId => batch.update(doc(firestore, 'users', memberId), { teamId: editingTeam.id }));
             toast({ title: 'Team Configuration Updated' });
         } else {
             const newTeamRef = doc(collection(firestore, 'teams'));
-            batch.set(newTeamRef, { id: newTeamRef.id, name: teamName, teamLeadId: teamLeadId, memberIds: allMemberIdsForTeam });
+            batch.set(newTeamRef, { 
+                id: newTeamRef.id, 
+                name: teamName, 
+                teamLeadId: teamLeadId, 
+                supervisorId: finalSupervisorId,
+                memberIds: allMemberIdsForTeam 
+            });
             allMemberIdsForTeam.forEach(memberId => batch.update(doc(firestore, 'users', memberId), { teamId: newTeamRef.id }));
             toast({ title: 'New Team Unit Dispatched' });
         }
@@ -94,6 +114,7 @@ export default function TeamsPage() {
         setEditingTeam(null);
         setTeamName("");
         setTeamLeadId(undefined);
+        setSupervisorId("unassigned");
         setSelectedMemberIds([]);
     }
 
@@ -115,6 +136,11 @@ export default function TeamsPage() {
 
     const isUrl = (str?: string) => str && str.startsWith('http');
 
+    // Supervisors can be Level 1 or 2 (CEO or Admin)
+    const potentialSupervisors = React.useMemo(() => {
+        return users?.filter(u => u.role === 'CEO/Admin' || u.role === 'HR Manager') || [];
+    }, [users]);
+
     return (
         <>
             <PageHeader title="Organizational Units" description="Manage tactical team associations and leadership hierarchies.">
@@ -128,17 +154,19 @@ export default function TeamsPage() {
                         <TableRow className="hover:bg-transparent border-none">
                             <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Team Unit</TableHead>
                             <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Lead Strategist</TableHead>
+                            <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Primary Supervisor</TableHead>
                             <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Fleet Size</TableHead>
                             <TableHead className="text-right font-black uppercase tracking-tighter text-[10px] py-4">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {teamsLoading ? (<TableRow><TableCell colSpan={4} className="h-32 text-center animate-pulse">Syncing Units...</TableCell></TableRow>) : teams?.length === 0 ? (
-                             <TableRow><TableCell colSpan={4} className="h-32 text-center text-muted-foreground italic">No tactical teams currently deployed.</TableCell></TableRow>
+                        {teamsLoading ? (<TableRow><TableCell colSpan={5} className="h-32 text-center animate-pulse">Syncing Units...</TableCell></TableRow>) : teams?.length === 0 ? (
+                             <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">No tactical teams currently deployed.</TableCell></TableRow>
                         ) : teams?.map(team => (
                             <TableRow key={team.id} className="border-border/50 hover:bg-primary/5 transition-colors">
                                 <TableCell className="font-bold py-4">{team.name}</TableCell>
                                 <TableCell className="font-medium text-xs text-primary">{getTeamLeadName(team.teamLeadId)}</TableCell>
+                                <TableCell className="font-medium text-[10px] uppercase text-muted-foreground">{getSupervisorName(team.supervisorId)}</TableCell>
                                 <TableCell><Badge variant="secondary" className="rounded-full font-bold">{team.memberIds.length}</Badge></TableCell>
                                 <TableCell className="text-right">
                                     <DropdownMenu>
@@ -147,7 +175,14 @@ export default function TeamsPage() {
                                             <DropdownMenuItem onClick={() => setSelectedTeamForSheet(team)}><Users className="mr-2 h-4 w-4"/> Review Fleet</DropdownMenuItem>
                                             {canManageAllTeams && (
                                                 <>
-                                                    <DropdownMenuItem onClick={() => { setEditingTeam(team); setTeamName(team.name); setTeamLeadId(team.teamLeadId); setSelectedMemberIds(team.memberIds.filter(id => id !== team.teamLeadId)); setIsDialogOpen(true); }}><Edit className="mr-2 h-4 w-4"/> Reconfigure</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => { 
+                                                        setEditingTeam(team); 
+                                                        setTeamName(team.name); 
+                                                        setTeamLeadId(team.teamLeadId); 
+                                                        setSupervisorId(team.supervisorId || "unassigned");
+                                                        setSelectedMemberIds(team.memberIds.filter(id => id !== team.teamLeadId)); 
+                                                        setIsDialogOpen(true); 
+                                                    }}><Edit className="mr-2 h-4 w-4"/> Reconfigure</DropdownMenuItem>
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                             <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Dissolve Team</DropdownMenuItem>
@@ -211,6 +246,21 @@ export default function TeamsPage() {
                     <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">{editingTeam ? 'Reconfigure Unit' : 'Dispatch New Team'}</DialogTitle></DialogHeader>
                     <div className="grid gap-6 py-4">
                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Unit Designation</Label><Input value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g., Tactical Growth Division" className="rounded-xl h-11" /></div>
+                        
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                                <ShieldCheck className="size-3" /> Primary Supervisor (Level 1/2)
+                            </Label>
+                            <Select value={supervisorId} onValueChange={setSupervisorId}>
+                                <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select Supervisor" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="unassigned">General Oversight (Default)</SelectItem>
+                                    {potentialSupervisors.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role === 'CEO/Admin' ? 'CEO' : 'Admin'})</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[9px] text-muted-foreground italic">Assigning a supervisor creates a vertical reporting branch in the Org structure.</p>
+                        </div>
+
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Lead Strategist</Label>
                             <Select value={teamLeadId} onValueChange={setTeamLeadId}>
