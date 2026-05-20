@@ -7,10 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
-import { collection, query, where, orderBy, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { format } from 'date-fns';
-import { FileBox, Plus, Trash2, ExternalLink, Link as LinkIcon, Edit, UserCircle, Search, FileUp, Loader2, FileText } from 'lucide-react';
+import { FileBox, Plus, Trash2, ExternalLink, Link as LinkIcon, Edit, UserCircle, Search, FileUp, Loader2, FileText, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 type DocumentLink = {
@@ -68,7 +68,7 @@ export default function DocumentsPage() {
 
         const payload = {
             title,
-            link: activeTab === 'link' ? link : link, // link state stores URL for both
+            link: link,
             employeeId: targetUserId,
             uploadedAt: serverTimestamp(),
             sourceType: activeTab as 'link' | 'file',
@@ -139,7 +139,7 @@ export default function DocumentsPage() {
                     <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if(!o) resetForm(); }}>
                         <DialogTrigger asChild>
                             <Button className="rounded-full h-11 shadow-lg">
-                                <Plus className="mr-2 h-4 w-4" /> Submit Asset
+                                <Plus className="size-4 mr-2" /> Submit Asset
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="rounded-3xl sm:max-w-md">
@@ -176,7 +176,7 @@ export default function DocumentsPage() {
                                                 <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} disabled={isUploading} />
                                                 <Button variant="outline" className="w-full h-14 rounded-xl border-dashed border-primary/40 font-bold uppercase text-[10px] gap-2" disabled={isUploading}>
                                                     {isUploading ? <Loader2 className="size-4 animate-spin"/> : <FileUp className="size-4" />}
-                                                    {link ? "Asset Selected (Click to change)" : "Select Professional Asset"}
+                                                    {link && activeTab === 'file' ? "Asset Selected (Click to change)" : "Select Professional Asset"}
                                                 </Button>
                                             </div>
                                             {link && activeTab === 'file' && <p className="text-[9px] text-green-600 font-bold uppercase text-center mt-2">File verified and ready for sync.</p>}
@@ -241,7 +241,7 @@ export default function DocumentsPage() {
                                                 "rounded-full text-[9px] uppercase font-black tracking-widest bg-white gap-1",
                                                 d.sourceType === 'file' ? "text-purple-600 border-purple-200" : "text-blue-600 border-blue-200"
                                             )}>
-                                                {d.sourceType === 'file' ? <ShieldCheck className="size-2" /> : <ExternalLink className="size-2" />}
+                                                {d.sourceType === 'file' ? <ShieldCheck className="size-2.5" /> : <ExternalLink className="size-2.5" />}
                                                 {d.sourceType === 'file' ? "Secure-File" : "Cloud-Base"}
                                             </Badge>
                                         </TableCell>
