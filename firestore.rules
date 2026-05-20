@@ -57,6 +57,14 @@ service cloud.firestore {
         allow read: if isOwner(userId) || isPrivileged();
         allow write: if isOwner(userId) || isPrivileged();
       }
+
+      match /readAnnouncements/{id} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /policy_acknowledgments/{id} {
+        allow read, write: if isOwner(userId);
+      }
     }
     
     match /{path=**}/reports/{reportId} {
@@ -103,6 +111,45 @@ service cloud.firestore {
     
     match /issue_reports/{id} {
       allow read: if isSignedIn(); 
+      allow create: if isSignedIn();
+      allow update: if isPrivileged();
+      allow delete: if isPrivileged();
+    }
+
+    match /events/{id} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged();
+      allow update: if isSignedIn();
+    }
+
+    match /holidays/{id} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    match /compliance_reports/{id} {
+      allow read, write: if isPrivileged();
+    }
+
+    match /payslips/{id} {
+      allow read: if isSignedIn() && (isPrivileged() || resource.data.employeeId == request.auth.uid);
+      allow write: if isPrivileged();
+    }
+
+    match /policies/{id} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    match /attendanceApprovalRequests/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isPrivileged();
+      allow delete: if isPrivileged();
+    }
+
+    match /location_change_requests/{id} {
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isPrivileged();
       allow delete: if isPrivileged();
