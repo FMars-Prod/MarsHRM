@@ -53,7 +53,9 @@ export default function OrgStructurePage() {
         return users.find(u => u.id === userTeam.teamLeadId);
     }, [userTeam, users]);
 
-    const admins = React.useMemo(() => users?.filter(u => u.role === 'CEO/Admin' || u.role === 'HR Manager') || [], [users]);
+    // Command Tiers
+    const ceoLevel = React.useMemo(() => users?.filter(u => u.role === 'CEO/Admin') || [], [users]);
+    const adminLevel = React.useMemo(() => users?.filter(u => u.role === 'HR Manager') || [], [users]);
 
     const teammates = React.useMemo(() => {
         if (!userTeam || !users) return [];
@@ -62,11 +64,12 @@ export default function OrgStructurePage() {
 
     const isUrl = (str?: string) => str && str.startsWith('http');
 
-    const UserNode = ({ user, level, highlight }: { user: UserData, level: 'executive' | 'lead' | 'fleet', highlight?: boolean }) => (
+    const UserNode = ({ user, level, highlight }: { user: UserData, level: 'executive' | 'admin' | 'lead' | 'fleet', highlight?: boolean }) => (
         <Card className={cn(
             "border-none shadow-sm relative group transition-all",
             highlight ? "ring-2 ring-primary scale-105 z-10" : "opacity-90 grayscale-[20%] hover:grayscale-0",
             level === 'executive' ? "bg-primary text-white" : 
+            level === 'admin' ? "bg-indigo-50 ring-1 ring-indigo-200" :
             level === 'lead' ? "bg-white ring-1 ring-border/50" : 
             "bg-white/50 ring-1 ring-border/50"
         )}>
@@ -80,8 +83,13 @@ export default function OrgStructurePage() {
                     <p className={cn("font-bold text-sm", level === 'executive' ? "text-white" : "text-foreground")}>{user.firstName} {user.lastName}</p>
                     <p className={cn("text-[9px] font-black uppercase tracking-widest", level === 'executive' ? "text-white/70" : "text-muted-foreground")}>{user.jobTitle}</p>
                 </div>
-                <Badge variant="outline" className={cn("rounded-full text-[8px] font-black uppercase tracking-widest border-none", level === 'executive' ? "bg-white/20 text-white" : "bg-muted text-muted-foreground")}>
-                    {user.role === 'CEO/Admin' ? 'CEO' : user.role === 'HR Manager' ? 'HR' : 'Personnel'}
+                <Badge variant="outline" className={cn(
+                    "rounded-full text-[8px] font-black uppercase tracking-widest border-none", 
+                    level === 'executive' ? "bg-white/20 text-white" : 
+                    level === 'admin' ? "bg-indigo-600 text-white" :
+                    "bg-muted text-muted-foreground"
+                )}>
+                    {user.role === 'CEO/Admin' ? 'CEO' : user.role === 'HR Manager' ? 'Admin' : 'Personnel'}
                 </Badge>
             </CardContent>
         </Card>
@@ -103,7 +111,7 @@ export default function OrgStructurePage() {
                         {userData.role === 'Member' ? (
                             <>Operational Status: You report directly to <span className="text-primary font-bold">{teamLead ? `${teamLead.firstName} ${teamLead.lastName}` : 'Assigned Team Lead'}</span>.</>
                         ) : userData.role === 'Team Lead' ? (
-                            <>Operational Status: You report directly to <span className="text-primary font-bold">Executive Oversight (CEO/Admin)</span>.</>
+                            <>Operational Status: You report directly to <span className="text-primary font-bold">Administrative Oversight (Admin)</span> and CEO.</>
                         ) : (
                             <>Authority Confirmation: You represent the <span className="text-primary font-bold">Top-Tier Command Level</span>.</>
                         )}
@@ -115,17 +123,32 @@ export default function OrgStructurePage() {
                 {/* Vertical Connector Line */}
                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-primary/20 via-border/50 to-transparent -translate-x-1/2 hidden md:block" />
 
-                {/* Executive Command */}
+                {/* Level 1: CEO & Senior Directors */}
                 <div className="space-y-6">
                     <div className="flex flex-col items-center gap-2">
                         <Badge className="bg-primary text-white font-black uppercase text-[8px] tracking-[0.3em]">Command Level</Badge>
                     </div>
-                    <div className={cn("grid gap-4 max-w-2xl mx-auto", admins.length > 1 ? "md:grid-cols-2" : "grid-cols-1")}>
-                        {admins.map(admin => (
-                            <UserNode key={admin.id} user={admin} level="executive" highlight={userData?.id === admin.id} />
+                    <div className={cn("grid gap-4 max-w-2xl mx-auto", ceoLevel.length > 1 ? "md:grid-cols-2" : "grid-cols-1")}>
+                        {ceoLevel.map(user => (
+                            <UserNode key={user.id} user={user} level="executive" highlight={userData?.id === user.id} />
                         ))}
                     </div>
                 </div>
+
+                {/* Level 2: Admin (Formerly HR) */}
+                {adminLevel.length > 0 && (
+                    <div className="space-y-6">
+                        <div className="flex flex-col items-center gap-2">
+                            <ArrowDown className="size-4 text-muted-foreground opacity-30" />
+                            <Badge className="bg-indigo-600 text-white font-black uppercase text-[8px] tracking-[0.3em]">Administrative Oversight</Badge>
+                        </div>
+                        <div className={cn("grid gap-4 max-w-2xl mx-auto", adminLevel.length > 1 ? "md:grid-cols-2" : "grid-cols-1")}>
+                            {adminLevel.map(user => (
+                                <UserNode key={user.id} user={user} level="admin" highlight={userData?.id === user.id} />
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Team Lead Level */}
                 {teamLead && (
@@ -167,3 +190,4 @@ export default function OrgStructurePage() {
         </div>
     );
 }
+
