@@ -141,13 +141,13 @@ export function MainNav({
                         <Link href={link.href}>
                           <link.icon />
                           <span>{link.label}</span>
-                          {badgeCount > 0 && (
-                            <SidebarMenuBadge className="bg-primary text-primary-foreground font-black rounded-full text-[9px] h-5 min-w-[1.25rem] flex items-center justify-center border-2 border-sidebar shadow-lg">
-                                {badgeCount}
-                            </SidebarMenuBadge>
-                          )}
                         </Link>
                       </SidebarMenuButton>
+                      {badgeCount > 0 && (
+                        <SidebarMenuBadge className="bg-primary text-primary-foreground font-black rounded-full text-[9px] h-5 min-w-[1.25rem] flex items-center justify-center border-2 border-sidebar shadow-lg">
+                            {badgeCount}
+                        </SidebarMenuBadge>
+                      )}
                     </SidebarMenuItem>
                   );
                 })}

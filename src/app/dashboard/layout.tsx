@@ -37,6 +37,9 @@ type SupportTicket = {
   employeeId: string;
   lastUpdatedDate?: Timestamp;
 }
+type AttendanceApprovalRequest = {
+  status: string;
+}
 
 export default function DashboardLayout({
   children,
@@ -95,6 +98,13 @@ export default function DashboardLayout({
   const { data: locationRequests } = useCollection<LocationRequest>(locationRequestsQuery);
   const pendingLocationRequestsCount = locationRequests?.length || 0;
 
+  const attRequestsQuery = useMemoFirebase(() => {
+    if (!isPrivileged || !user) return null;
+    return query(collection(firestore, "attendanceApprovalRequests"), where("status", "==", "Pending"));
+  }, [firestore, isPrivileged, user]);
+  const { data: attRequests } = useCollection<AttendanceApprovalRequest>(attRequestsQuery);
+  const pendingAttRequestsCount = attRequests?.length || 0;
+
   useEffect(() => {
     if (allAnnouncements && readAnnouncements) {
       const readIds = new Set(readAnnouncements.map(a => a.id));
@@ -129,7 +139,7 @@ export default function DashboardLayout({
     }).length;
   }, [userTickets]);
 
-  const totalNotifications = pendingLeaveCount + unreadAnnouncements + todaysEventsCount + pendingLocationRequestsCount + ticketUpdateCount;
+  const totalNotifications = pendingLeaveCount + unreadAnnouncements + todaysEventsCount + pendingLocationRequestsCount + ticketUpdateCount + pendingAttRequestsCount;
 
   useEffect(() => {
     if (!isUserLoading && !user) {
