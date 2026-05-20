@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -9,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Laptop, Plus, Trash2, Edit, Search, FileUp, Loader2, Package, CheckCircle2, XCircle, Info, UserCircle } from 'lucide-react';
+import { Laptop, Plus, Trash2, Edit, Search, FileUp, Loader2, Package, CheckCircle2, XCircle, Info, UserCircle, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +49,7 @@ export default function AssetsPage() {
     
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [isUploading, setIsUploading] = React.useState(false);
+    const [viewingAsset, setViewingAsset] = React.useState<Asset | null>(null);
     const [assetForm, setAssetForm] = React.useState<Partial<Asset>>({
         name: '', category: '', specs: '', status: 'Available', imageUrl: ''
     });
@@ -206,7 +206,23 @@ export default function AssetsPage() {
                                 {requestsLoading ? <TableRow><TableCell colSpan={5} className="h-32 text-center animate-pulse">Syncing satellite log...</TableCell></TableRow> : requests?.map(req => (
                                     <TableRow key={req.id}>
                                         <TableCell className="font-bold py-4">{req.requesterName}</TableCell>
-                                        <TableCell className="text-xs font-medium">{req.assetName}</TableCell>
+                                        <TableCell className="text-xs font-medium">
+                                            <div className="flex items-center gap-2">
+                                                {req.assetName}
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-7 w-7 rounded-full hover:bg-primary/10 text-primary" 
+                                                    onClick={() => {
+                                                        const asset = assets?.find(a => a.id === req.assetId);
+                                                        if (asset) setViewingAsset(asset);
+                                                        else toast({ variant: 'destructive', title: 'Asset record not found' });
+                                                    }}
+                                                >
+                                                    <Eye className="size-3.5" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="text-[10px] font-mono text-muted-foreground">{format(req.requestDate?.toDate() || new Date(), 'PP p')}</TableCell>
                                         <TableCell>
                                             <Badge variant="outline" className={cn("rounded-full font-black text-[8px] uppercase tracking-widest", req.status === 'Approved' ? 'text-green-600 border-green-200' : req.status === 'Pending' ? 'text-orange-600 border-orange-200' : 'text-red-600 border-red-200')}>
@@ -228,6 +244,50 @@ export default function AssetsPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            <Dialog open={!!viewingAsset} onOpenChange={o => !o && setViewingAsset(null)}>
+                <DialogContent className="rounded-3xl sm:max-w-lg p-0 overflow-hidden border-none shadow-2xl">
+                    <div className="aspect-video relative bg-muted">
+                        {viewingAsset?.imageUrl ? (
+                            <img src={viewingAsset.imageUrl} className="object-cover w-full h-full" />
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center opacity-20">
+                                <Package className="size-16" />
+                                <p className="text-[10px] font-black uppercase mt-2">No Visual Asset</p>
+                            </div>
+                        )}
+                        <Badge className={cn("absolute top-4 right-4 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg", viewingAsset?.status === 'Available' ? 'bg-green-600' : viewingAsset?.status === 'Assigned' ? 'bg-blue-600' : 'bg-orange-600')}>
+                            {viewingAsset?.status}
+                        </Badge>
+                    </div>
+                    <div className="p-8 space-y-6 bg-white">
+                        <DialogHeader className="text-left">
+                            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">{viewingAsset?.name}</DialogTitle>
+                            <DialogDescription className="text-xs font-black uppercase tracking-[0.2em] text-primary">{viewingAsset?.category} Intelligence</DialogDescription>
+                        </DialogHeader>
+                        
+                        <div className="space-y-4">
+                            <div className="p-5 bg-muted/30 rounded-2xl border border-dashed border-border/50">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">Technical Specifications</Label>
+                                <p className="text-sm font-medium italic leading-relaxed text-foreground/80">"{viewingAsset?.specs || 'No technical specifications provisioned.'}"</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                                    <Label className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Asset Reference</Label>
+                                    <p className="text-xs font-bold font-mono mt-1">#REF-{viewingAsset?.id.slice(0, 8).toUpperCase()}</p>
+                                </div>
+                                <div className="p-4 bg-muted/30 rounded-2xl border">
+                                    <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Unit Classification</Label>
+                                    <p className="text-xs font-bold mt-1 uppercase">{viewingAsset?.category}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Button onClick={() => setViewingAsset(null)} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Acknowledge Record</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
