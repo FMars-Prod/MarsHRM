@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Laptop, Plus, Trash2, Edit, Search, FileUp, Loader2, Package, CheckCircle2, XCircle, Info, UserCircle, Eye } from 'lucide-react';
+import { Laptop, Plus, Trash2, Edit, Search, FileUp, Loader2, Package, CheckCircle2, XCircle, Info, UserCircle, Eye, Timer } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -166,29 +166,39 @@ export default function AssetsPage() {
 
                 <TabsContent value="inventory" className="mt-6">
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {assetsLoading ? [...Array(4)].map((_, i) => <div key={i} className="h-64 bg-muted animate-pulse rounded-3xl" />) : assets?.map(asset => (
-                            <Card key={asset.id} className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden group">
-                                <div className="aspect-square bg-muted relative overflow-hidden">
-                                    {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><Package className="size-12" /></div>}
-                                    <Badge className={cn("absolute top-3 right-3 rounded-full font-black text-[8px] uppercase tracking-widest", asset.status === 'Available' ? 'bg-green-600' : asset.status === 'Assigned' ? 'bg-blue-600' : 'bg-orange-600')}>{asset.status}</Badge>
-                                </div>
-                                <CardHeader className="p-4">
-                                    <CardTitle className="text-sm font-bold truncate">{asset.name}</CardTitle>
-                                    <CardDescription className="text-[10px] uppercase font-black tracking-widest">{asset.category}</CardDescription>
-                                </CardHeader>
-                                <CardContent className="p-4 pt-0 space-y-3">
-                                    <p className="text-[10px] text-muted-foreground line-clamp-2 italic">"{asset.specs || 'No technical data provisioned.'}"</p>
-                                    {asset.status === 'Available' ? (
-                                        <Button onClick={() => handleRequestAsset(asset)} className="w-full h-9 rounded-xl font-black uppercase text-[9px] tracking-widest">Submit Requisition</Button>
-                                    ) : (
-                                        <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-xl">
-                                            <UserCircle className="size-4 opacity-40" />
-                                            <span className="text-[9px] font-black uppercase text-muted-foreground">Assigned to Fleet Member</span>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        ))}
+                        {assetsLoading ? [...Array(4)].map((_, i) => <div key={i} className="h-64 bg-muted animate-pulse rounded-3xl" />) : assets?.map(asset => {
+                            const hasPendingRequest = requests?.some(req => req.assetId === asset.id && req.requesterId === user?.uid && req.status === 'Pending');
+
+                            return (
+                                <Card key={asset.id} className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden group">
+                                    <div className="aspect-square bg-muted relative overflow-hidden">
+                                        {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><Package className="size-12" /></div>}
+                                        <Badge className={cn("absolute top-3 right-3 rounded-full font-black text-[8px] uppercase tracking-widest", asset.status === 'Available' ? 'bg-green-600' : asset.status === 'Assigned' ? 'bg-blue-600' : 'bg-orange-600')}>{asset.status}</Badge>
+                                    </div>
+                                    <CardHeader className="p-4">
+                                        <CardTitle className="text-sm font-bold truncate">{asset.name}</CardTitle>
+                                        <CardDescription className="text-[10px] uppercase font-black tracking-widest">{asset.category}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-4 pt-0 space-y-3">
+                                        <p className="text-[10px] text-muted-foreground line-clamp-2 italic">"{asset.specs || 'No technical data provisioned.'}"</p>
+                                        {asset.status === 'Available' ? (
+                                            hasPendingRequest ? (
+                                                <Button disabled className="w-full h-9 rounded-xl font-black uppercase text-[9px] tracking-widest bg-muted text-muted-foreground opacity-50">
+                                                    <Timer className="size-3 mr-2" /> Request Pending
+                                                </Button>
+                                            ) : (
+                                                <Button onClick={() => handleRequestAsset(asset)} className="w-full h-9 rounded-xl font-black uppercase text-[9px] tracking-widest">Submit Requisition</Button>
+                                            )
+                                        ) : (
+                                            <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-xl">
+                                                <UserCircle className="size-4 opacity-40" />
+                                                <span className="text-[9px] font-black uppercase text-muted-foreground">Assigned to Fleet Member</span>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
                     </div>
                 </TabsContent>
 
@@ -295,4 +305,3 @@ export default function AssetsPage() {
         </div>
     );
 }
-
