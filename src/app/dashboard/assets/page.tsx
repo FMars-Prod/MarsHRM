@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Asset = {
     id: string;
@@ -246,48 +248,51 @@ export default function AssetsPage() {
             </Tabs>
 
             <Dialog open={!!viewingAsset} onOpenChange={o => !o && setViewingAsset(null)}>
-                <DialogContent className="rounded-3xl sm:max-w-lg p-0 overflow-hidden border-none shadow-2xl">
-                    <div className="aspect-video relative bg-muted">
-                        {viewingAsset?.imageUrl ? (
-                            <img src={viewingAsset.imageUrl} className="object-cover w-full h-full" />
-                        ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center opacity-20">
-                                <Package className="size-16" />
-                                <p className="text-[10px] font-black uppercase mt-2">No Visual Asset</p>
-                            </div>
-                        )}
-                        <Badge className={cn("absolute top-4 right-4 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg", viewingAsset?.status === 'Available' ? 'bg-green-600' : viewingAsset?.status === 'Assigned' ? 'bg-blue-600' : 'bg-orange-600')}>
-                            {viewingAsset?.status}
-                        </Badge>
-                    </div>
-                    <div className="p-8 space-y-6 bg-white">
-                        <DialogHeader className="text-left">
-                            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">{viewingAsset?.name}</DialogTitle>
-                            <DialogDescription className="text-xs font-black uppercase tracking-[0.2em] text-primary">{viewingAsset?.category} Intelligence</DialogDescription>
-                        </DialogHeader>
-                        
-                        <div className="space-y-4">
-                            <div className="p-5 bg-muted/30 rounded-2xl border border-dashed border-border/50">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">Technical Specifications</Label>
-                                <p className="text-sm font-medium italic leading-relaxed text-foreground/80">"{viewingAsset?.specs || 'No technical specifications provisioned.'}"</p>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-                                    <Label className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Asset Reference</Label>
-                                    <p className="text-xs font-bold font-mono mt-1">#REF-{viewingAsset?.id.slice(0, 8).toUpperCase()}</p>
+                <DialogContent className="rounded-3xl sm:max-w-lg p-0 overflow-hidden border-none shadow-2xl max-h-[90vh]">
+                    <ScrollArea className="h-full max-h-[90vh]">
+                        <div className="aspect-video relative bg-muted">
+                            {viewingAsset?.imageUrl ? (
+                                <img src={viewingAsset.imageUrl} className="object-cover w-full h-full" />
+                            ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center opacity-20">
+                                    <Package className="size-16" />
+                                    <p className="text-[10px] font-black uppercase mt-2">No Visual Asset</p>
                                 </div>
-                                <div className="p-4 bg-muted/30 rounded-2xl border">
-                                    <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Unit Classification</Label>
-                                    <p className="text-xs font-bold mt-1 uppercase">{viewingAsset?.category}</p>
-                                </div>
-                            </div>
+                            )}
+                            <Badge className={cn("absolute top-4 right-4 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg", viewingAsset?.status === 'Available' ? 'bg-green-600' : viewingAsset?.status === 'Assigned' ? 'bg-blue-600' : 'bg-orange-600')}>
+                                {viewingAsset?.status}
+                            </Badge>
                         </div>
+                        <div className="p-8 space-y-6 bg-white">
+                            <DialogHeader className="text-left">
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">{viewingAsset?.name}</DialogTitle>
+                                <DialogDescription className="text-xs font-black uppercase tracking-[0.2em] text-primary">{viewingAsset?.category} Intelligence</DialogDescription>
+                            </DialogHeader>
+                            
+                            <div className="space-y-4">
+                                <div className="p-5 bg-muted/30 rounded-2xl border border-dashed border-border/50">
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">Technical Specifications</Label>
+                                    <p className="text-sm font-medium italic leading-relaxed text-foreground/80">"{viewingAsset?.specs || 'No technical specifications provisioned.'}"</p>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                                        <Label className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Asset Reference</Label>
+                                        <p className="text-xs font-bold font-mono mt-1">#REF-{viewingAsset?.id.slice(0, 8).toUpperCase()}</p>
+                                    </div>
+                                    <div className="p-4 bg-muted/30 rounded-2xl border">
+                                        <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Unit Classification</Label>
+                                        <p className="text-xs font-bold mt-1 uppercase">{viewingAsset?.category}</p>
+                                    </div>
+                                </div>
+                            </div>
 
-                        <Button onClick={() => setViewingAsset(null)} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Acknowledge Record</Button>
-                    </div>
+                            <Button onClick={() => setViewingAsset(null)} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Acknowledge Record</Button>
+                        </div>
+                    </ScrollArea>
                 </DialogContent>
             </Dialog>
         </div>
     );
 }
+
