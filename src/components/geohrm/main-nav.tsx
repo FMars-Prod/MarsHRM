@@ -132,7 +132,7 @@ export function MainNav({
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleLinks.map((link) => {
-                  const badgeCount = link.badgeKey ? badgeCounts[link.badgeKey] : 0;
+                  const badgeCount = link.badgeKey ? badgeCounts[link.badgeKey] : undefined;
                   const isActive = pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard');
                   
                   return (
@@ -143,7 +143,7 @@ export function MainNav({
                           <span>{link.label}</span>
                         </Link>
                       </SidebarMenuButton>
-                      {badgeCount > 0 && (
+                      {link.badgeKey && badgeCount !== undefined && (
                         <SidebarMenuBadge className="bg-primary text-primary-foreground font-black rounded-full text-[9px] h-5 min-w-[1.25rem] flex items-center justify-center border-2 border-sidebar shadow-lg">
                             {badgeCount}
                         </SidebarMenuBadge>
