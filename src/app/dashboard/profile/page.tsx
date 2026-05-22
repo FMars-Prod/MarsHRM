@@ -35,12 +35,18 @@ import Link from "next/link";
 import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, startOfDay } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import jsPDF from "jspdf";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
+    phoneNumber: z.string().min(1, "Phone is required"),
+    jobTitle: z.string().min(1, "Job title is required"),
+    department: z.string().min(1, "Department is required"),
     branch: z.string().min(1, "Branch is required"),
     shiftType: z.string().min(1, "Shift Type is required"),
+    employmentType: z.string().min(1, "Employment type is required"),
     password: z.string().optional(),
     confirmPassword: z.string().optional(),
 }).refine(data => {
@@ -127,7 +133,18 @@ export default function ProfilePage() {
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: { firstName: "", lastName: "", branch: "Chennai HQ", shiftType: "General Shift", password: "", confirmPassword: "" },
+        defaultValues: { 
+            firstName: "", 
+            lastName: "", 
+            phoneNumber: "",
+            jobTitle: "",
+            department: "",
+            branch: "Chennai HQ", 
+            shiftType: "General Shift", 
+            employmentType: "Employee",
+            password: "", 
+            confirmPassword: "" 
+        },
     });
 
     React.useEffect(() => {
@@ -135,8 +152,12 @@ export default function ProfilePage() {
             form.reset({ 
                 firstName: employee.firstName || '', 
                 lastName: employee.lastName || '', 
+                phoneNumber: employee.phoneNumber || '',
+                jobTitle: employee.jobTitle || '',
+                department: employee.department || '',
                 branch: employee.branch || 'Chennai HQ',
                 shiftType: employee.shiftType || 'General Shift',
+                employmentType: employee.employmentType || 'Employee',
                 password: '', 
                 confirmPassword: '' 
             });
@@ -162,12 +183,8 @@ export default function ProfilePage() {
         if (!user || !auth.currentUser) return;
         try {
             if (userDocRef) {
-                updateDocumentNonBlocking(userDocRef, { 
-                    firstName: data.firstName, 
-                    lastName: data.lastName,
-                    branch: data.branch,
-                    shiftType: data.shiftType
-                });
+                const { password, confirmPassword, ...updateData } = data;
+                updateDocumentNonBlocking(userDocRef, updateData);
             }
             await updateProfile(auth.currentUser, { displayName: `${data.firstName} ${data.lastName}` });
             if (data.password) await updatePassword(auth.currentUser, data.password);
@@ -200,6 +217,84 @@ export default function ProfilePage() {
         } finally {
             setIsUploadingAvatar(false);
         }
+    };
+
+    const handleDownloadIdCard = () => {
+        if (!employee) return;
+        const pdfDoc = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: [54, 86] // Standard ID card size CR80
+        });
+
+        // Background
+        pdfDoc.setFillColor(255, 255, 255);
+        pdfDoc.rect(0, 0, 54, 86, 'F');
+
+        // Header
+        pdfDoc.setFillColor(107, 33, 168); // Primary purple
+        pdfDoc.rect(0, 0, 54, 20, 'F');
+
+        // Corporate Labeling
+        pdfDoc.setTextColor(255, 255, 255);
+        pdfDoc.setFontSize(8);
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.text("MARSHRM", 27, 8, { align: 'center' });
+        pdfDoc.setFontSize(5);
+        pdfDoc.text("FortuMars AI Technologies", 27, 12, { align: 'center' });
+
+        // Identity Placeholder
+        pdfDoc.setFillColor(240, 240, 240);
+        pdfDoc.circle(27, 35, 10, 'F');
+        pdfDoc.setTextColor(107, 33, 168);
+        pdfDoc.setFontSize(10);
+        pdfDoc.text(`${employee.firstName[0]}${employee.lastName[0]}`, 27, 37, { align: 'center' });
+
+        // Tactical Data
+        pdfDoc.setTextColor(0, 0, 0);
+        pdfDoc.setFontSize(8);
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 52, { align: 'center' });
+        
+        pdfDoc.setFontSize(6);
+        pdfDoc.setFont('helvetica', 'normal');
+        pdfDoc.setTextColor(100);
+        pdfDoc.text(employee.jobTitle || 'Fleet Member', 27, 56, { align: 'center' });
+        
+        pdfDoc.setFontSize(5);
+        pdfDoc.text(employee.department || 'General Operations', 27, 59, { align: 'center' });
+
+        // Divider
+        pdfDoc.setDrawColor(220);
+        pdfDoc.line(10, 65, 44, 65);
+
+        // Professional Record
+        pdfDoc.setTextColor(0);
+        pdfDoc.setFontSize(4);
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.text("EMAIL:", 10, 70);
+        pdfDoc.setFont('helvetica', 'normal');
+        pdfDoc.text(employee.email || 'N/A', 20, 70);
+
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.text("PHONE:", 10, 73);
+        pdfDoc.setFont('helvetica', 'normal');
+        pdfDoc.text(employee.phoneNumber || 'N/A', 20, 73);
+
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.text("BRANCH:", 10, 76);
+        pdfDoc.setFont('helvetica', 'normal');
+        pdfDoc.text(employee.branch || 'N/A', 20, 76);
+
+        // Certification Footer
+        pdfDoc.setFillColor(107, 33, 168);
+        pdfDoc.rect(0, 82, 54, 4, 'F');
+        pdfDoc.setTextColor(255, 255, 255);
+        pdfDoc.setFontSize(3);
+        pdfDoc.text("Authorized Platform Identity - MarsHRM v1.0", 27, 84.5, { align: 'center' });
+
+        pdfDoc.save(`ID_CARD_${employee.firstName}_${employee.lastName}.pdf`);
+        toast({ title: "ID Card Transmitted", description: "Identity asset saved to device." });
     };
 
     const isUrl = (str: string) => str && str.startsWith('http');
@@ -260,8 +355,12 @@ export default function ProfilePage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
-                                            <DropdownMenuItem className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><Download className="size-3.5"/> Download ID Card</DropdownMenuItem>
-                                            <DropdownMenuItem className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><FileText className="size-3.5"/> Generate Report</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={handleDownloadIdCard} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer">
+                                                <Download className="size-3.5"/> Download ID Card
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer">
+                                                <FileText className="size-3.5"/> Generate Performance Report
+                                            </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
@@ -397,7 +496,7 @@ export default function ProfilePage() {
             </Dialog>
 
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
-                <DialogContent className="rounded-3xl sm:max-w-md">
+                <DialogContent className="rounded-3xl sm:max-w-xl">
                     <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Profile Config</DialogTitle></DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
@@ -410,6 +509,27 @@ export default function ProfilePage() {
                                 )} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Phone Number</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name="employmentType" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Employment Type</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent><SelectItem value="Employee">Employee</SelectItem><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Contract">Contract</SelectItem></SelectContent>
+                                        </Select>
+                                    </FormItem>
+                                )} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="jobTitle" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Job Title</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name="department" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Department</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                                )} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
                                 <FormField control={form.control} name="branch" render={({ field }) => (
                                     <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Branch</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                                 )} />
@@ -418,6 +538,14 @@ export default function ProfilePage() {
                                 )} />
                             </div>
                             <Separator />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="password" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">New Password (Optional)</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-11" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name="confirmPassword" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Confirm New Password</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-11" /></FormControl></FormItem>
+                                )} />
+                            </div>
                             <DialogFooter><Button type="submit" className="w-full rounded-2xl h-14 font-black uppercase tracking-widest" disabled={isSubmitting}>{isSubmitting ? "Transmitting..." : "Update Fleet Identity"}</Button></DialogFooter>
                         </form>
                     </Form>
