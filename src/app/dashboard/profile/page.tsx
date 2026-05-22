@@ -15,7 +15,7 @@ import {
     ExternalLink, FileText, Lock, Users, CalendarDays, 
     FileBox, Loader2, Image as ImageIcon, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
-    Laptop, CreditCard, Activity, TrendingUp, UserCheck, Clock
+    Laptop, CreditCard, Activity, TrendingUp, UserCheck, Clock, Building2
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -32,13 +32,15 @@ import { updateDocumentNonBlocking, useCollection } from "@/firebase";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInSeconds, addMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, startOfDay } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
+    branch: z.string().min(1, "Branch is required"),
+    shiftType: z.string().min(1, "Shift Type is required"),
     password: z.string().optional(),
     confirmPassword: z.string().optional(),
 }).refine(data => {
@@ -74,9 +76,6 @@ export default function ProfilePage() {
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
 
-    const teamDocRef = useMemoFirebase(() => employee?.teamId ? doc(firestore, "teams", employee.teamId) : null, [employee, firestore]);
-    const { data: teamData } = useDoc<any>(teamDocRef);
-
     const managerDocRef = useMemoFirebase(() => employee?.reportsToId ? doc(firestore, "users", employee.reportsToId) : null, [employee, firestore]);
     const { data: managerData } = useDoc<any>(managerDocRef);
 
@@ -95,6 +94,19 @@ export default function ProfilePage() {
         where('checkInTime', '<=', Timestamp.fromDate(monthEnd))
     ) : null, [user, firestore]);
     const { data: attendanceData } = useCollection<any>(attendanceQuery);
+
+    const todaysAttendance = React.useMemo(() => {
+        if (!attendanceData) return null;
+        return attendanceData.find(a => isToday(a.checkInTime.toDate()));
+    }, [attendanceData]);
+
+    const operationalStatus = React.useMemo(() => {
+        if (!todaysAttendance) return "Away";
+        if (todaysAttendance.checkOutTime) return "Off-Duty";
+        if (todaysAttendance.isAtHome) return "WFH (At Home)";
+        if (todaysAttendance.isOutOfRange) return "Remote (Field)";
+        return "In-Office";
+    }, [todaysAttendance]);
 
     const monthlyStats = React.useMemo(() => {
         if (!attendanceData) return { hours: "0.0", percentage: "0", count: 0 };
@@ -115,12 +127,19 @@ export default function ProfilePage() {
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: { firstName: "", lastName: "", password: "", confirmPassword: "" },
+        defaultValues: { firstName: "", lastName: "", branch: "Chennai HQ", shiftType: "General Shift", password: "", confirmPassword: "" },
     });
 
     React.useEffect(() => {
         if (employee) {
-            form.reset({ firstName: employee.firstName || '', lastName: employee.lastName || '', password: '', confirmPassword: '' });
+            form.reset({ 
+                firstName: employee.firstName || '', 
+                lastName: employee.lastName || '', 
+                branch: employee.branch || 'Chennai HQ',
+                shiftType: employee.shiftType || 'General Shift',
+                password: '', 
+                confirmPassword: '' 
+            });
         }
     }, [employee, form]);
 
@@ -143,7 +162,12 @@ export default function ProfilePage() {
         if (!user || !auth.currentUser) return;
         try {
             if (userDocRef) {
-                updateDocumentNonBlocking(userDocRef, { firstName: data.firstName, lastName: data.lastName });
+                updateDocumentNonBlocking(userDocRef, { 
+                    firstName: data.firstName, 
+                    lastName: data.lastName,
+                    branch: data.branch,
+                    shiftType: data.shiftType
+                });
             }
             await updateProfile(auth.currentUser, { displayName: `${data.firstName} ${data.lastName}` });
             if (data.password) await updatePassword(auth.currentUser, data.password);
@@ -169,7 +193,7 @@ export default function ProfilePage() {
             const snap = await uploadBytes(avatarRef, file);
             const url = await getDownloadURL(snap.ref);
             updateDocumentNonBlocking(userDocRef, { avatar: url });
-            toast({ title: "Identity Asset Saved", description: "Profile photo synchronized." });
+            toast({ title: "Identity Asset Saved" });
             setIsAvatarDialogOpen(false);
         } catch (e: any) {
             toast({ variant: 'destructive', title: "Upload Error", description: e.message });
@@ -208,7 +232,7 @@ export default function ProfilePage() {
                                         <Camera className="size-8 text-white" />
                                     </div>
                                 </Avatar>
-                                <div className="absolute bottom-4 right-4 h-5 w-5 bg-green-500 rounded-full border-4 border-white shadow-sm" />
+                                <div className={cn("absolute bottom-4 right-4 h-5 w-5 rounded-full border-4 border-white shadow-sm", operationalStatus === 'Away' ? 'bg-slate-300' : 'bg-green-500')} />
                             </div>
                         </div>
 
@@ -217,9 +241,9 @@ export default function ProfilePage() {
                                 <div className="space-y-1">
                                     <div className="flex items-center justify-center lg:justify-start gap-3">
                                         <h1 className="text-3xl font-bold tracking-tight text-foreground">{employee.firstName} {employee.lastName}</h1>
-                                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
-                                            Active
+                                        <Badge className={cn("border-none rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5", operationalStatus === 'Away' ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-700')}>
+                                            <div className={cn("h-1.5 w-1.5 rounded-full", operationalStatus === 'Away' ? 'bg-slate-400' : 'bg-blue-600 animate-pulse')} />
+                                            {operationalStatus}
                                         </Badge>
                                     </div>
                                     <p className="text-lg font-medium text-muted-foreground">{employee.jobTitle}</p>
@@ -247,7 +271,7 @@ export default function ProfilePage() {
                                 <DetailItem icon={Users} label="Employee ID" value={employee.employeeId || `MR-${employee.id.slice(0,6).toUpperCase()}`} />
                                 <DetailItem icon={Mail} label="Email" value={employee.email} />
                                 <DetailItem icon={Phone} label="Phone" value={employee.phoneNumber || "Not Provisioned"} />
-                                <DetailItem icon={MapPin} label="Location" value="Chennai, India" />
+                                <DetailItem icon={MapPin} label="Branch Location" value={employee.branch || "Chennai HQ"} />
                                 <DetailItem icon={CalendarDays} label="Joined On" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
                                 <DetailItem icon={Briefcase} label="Employment Type" value={employee.employmentType || "Full Time"} />
                             </div>
@@ -336,9 +360,9 @@ export default function ProfilePage() {
                         <SectionHeader title="Operational Context" />
                         <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4">
                             <InfoRow label="Department" value={employee.department || "General"} />
-                            <InfoRow label="Base Location" value="Chennai HQ" />
-                            <InfoRow label="Tactical Shift" value="General (09:30 - 18:30)" />
-                            <InfoRow label="Status" value="In-Office" isStatus />
+                            <InfoRow label="Operational Branch" value={employee.branch || "Chennai HQ"} icon={Building2} />
+                            <InfoRow label="Tactical Shift" value={employee.shiftType || "General Shift"} icon={Clock} />
+                            <InfoRow label="Status" value={operationalStatus} isStatus />
                         </Card>
                     </div>
                 </div>
@@ -384,6 +408,14 @@ export default function ProfilePage() {
                                 )} />
                                 <FormField control={form.control} name="lastName" render={({ field }) => (
                                     <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Last Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                                )} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="branch" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Branch</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                                )} />
+                                <FormField control={form.control} name="shiftType" render={({ field }) => (
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Shift Type</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                                 )} />
                             </div>
                             <Separator />
@@ -476,13 +508,16 @@ function AssetRow({ image, title, category }: any) {
     )
 }
 
-function InfoRow({ label, value, isStatus }: any) {
+function InfoRow({ label, value, isStatus, icon: Icon }: any) {
     return (
         <div className="flex items-center justify-between text-xs py-1">
-            <span className="font-medium text-muted-foreground text-[10px] uppercase tracking-wider">{label}</span>
+            <div className="flex items-center gap-2">
+                {Icon && <Icon className="size-3 text-muted-foreground/60" />}
+                <span className="font-medium text-muted-foreground text-[10px] uppercase tracking-wider">{label}</span>
+            </div>
             {isStatus ? (
                 <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    <div className={cn("h-1.5 w-1.5 rounded-full", value === 'Away' ? 'bg-slate-400' : 'bg-green-500')} />
                     <span className="font-bold text-foreground text-[10px]">{value}</span>
                 </div>
             ) : (

@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Eye, EyeOff, UserPlus, Home, Beaker, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2 } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, addDocumentNonBlocking, updateDocumentNonBlocking, useStorage } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, writeBatch, serverTimestamp, deleteDoc, where, getDocs, Timestamp } from "firebase/firestore";
@@ -36,6 +36,8 @@ const userSchema = z.object({
   phoneNumber: z.string().optional(),
   jobTitle: z.string().min(1, "Required"),
   department: z.string().min(1, "Required"),
+  branch: z.string().min(1, "Required"),
+  shiftType: z.string().min(1, "Required"),
   employmentType: z.enum(['Intern', 'Employee']),
   role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/Admin']),
   password: z.string().optional(),
@@ -67,6 +69,7 @@ export default function UsersPage() {
     resolver: zodResolver(userSchema),
     defaultValues: {
       firstName: "", lastName: "", email: "", phoneNumber: "", jobTitle: "", department: "",
+      branch: "Chennai HQ", shiftType: "General Shift",
       employmentType: "Intern", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
       homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5
     },
@@ -116,21 +119,16 @@ export default function UsersPage() {
       const attRef = doc(firestore, `users/${userId}/attendances`, todayId);
       
       try {
-          // Delete attendance
           await deleteDoc(attRef);
-
-          // Delete reports for today
           const reportsRef = collection(firestore, `users/${userId}/reports`);
           const todayStart = startOfDay(new Date());
           const todayEnd = endOfDay(new Date());
           const q = query(reportsRef, where('date', '>=', todayStart), where('date', '<=', todayEnd));
           const snap = await getDocs(q);
-          
           const batch = writeBatch(firestore);
           snap.docs.forEach(d => batch.delete(d.ref));
           await batch.commit();
-          
-          toast({ title: "Day Reset Completed", description: "Today's logs and reports have been purged for this user." });
+          toast({ title: "Day Reset Completed" });
       } catch (err: any) {
           toast({ variant: 'destructive', title: "Reset Failed", description: err.message });
       }
@@ -189,6 +187,12 @@ export default function UsersPage() {
                                 <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><Label>Job Title</Label><Input {...field}/></FormItem>)} />
                                 <FormField control={form.control} name="department" render={({ field }) => (<FormItem><Label>Department</Label><Input {...field}/></FormItem>)} />
                             </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="branch" render={({ field }) => (<FormItem><Label>Operational Branch</Label><Input {...field} placeholder="e.g. Kerala, Chennai HQ"/></FormItem>)} />
+                                <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label>Assigned Shift</Label><Input {...field} placeholder="e.g. General Shift"/></FormItem>)} />
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField control={form.control} name="employmentType" render={({ field }) => (
                                     <FormItem><Label>Employment Type</Label>
@@ -319,8 +323,8 @@ export default function UsersPage() {
           <TableHeader className="bg-muted/30">
             <TableRow>
               <TableHead className="text-[10px] font-black uppercase">Name</TableHead>
-              <TableHead className="text-[10px] font-black uppercase">WFH</TableHead>
-              <TableHead className="text-[10px] font-black uppercase">Type</TableHead>
+              <TableHead className="text-[10px] font-black uppercase">Branch</TableHead>
+              <TableHead className="text-[10px] font-black uppercase">Shift</TableHead>
               <TableHead className="text-[10px] font-black uppercase">Role</TableHead>
               <TableHead className="text-right text-[10px] font-black uppercase">Status</TableHead>
             </TableRow>
@@ -334,8 +338,8 @@ export default function UsersPage() {
                         {u.isDemoAccount && <Badge className="ml-2 bg-purple-100 text-purple-700 text-[8px] uppercase">Demo</Badge>}
                     </Link>
                 </TableCell>
-                <TableCell>{u.isWfhAllowed ? <Badge className="bg-blue-100 text-blue-700 uppercase text-[8px]">Enabled</Badge> : <Badge variant="outline" className="uppercase text-[8px]">Office Only</Badge>}</TableCell>
-                <TableCell className="text-xs">{u.employmentType}</TableCell>
+                <TableCell><Badge variant="outline" className="uppercase text-[8px]"><Building2 className="size-2 mr-1"/> {u.branch || 'Unassigned'}</Badge></TableCell>
+                <TableCell className="text-[10px] font-medium text-muted-foreground">{u.shiftType || 'General'}</TableCell>
                 <TableCell className="text-xs font-bold text-primary">{u.role}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>

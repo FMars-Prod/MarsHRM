@@ -14,7 +14,10 @@
         "jobTitle": { "type": "string" },
         "department": { "type": "string" },
         "teamId": { "type": "string" },
-        "avatar": { "type": "string" }
+        "avatar": { "type": "string" },
+        "branch": { "type": "string", "description": "Physical office branch or location." },
+        "shiftType": { "type": "string", "description": "The assigned work shift schedule." },
+        "reportsToId": { "type": "string" }
       },
       "required": ["id", "firstName", "lastName", "email", "role"]
     },
