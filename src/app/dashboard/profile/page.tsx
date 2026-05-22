@@ -268,7 +268,6 @@ export default function ProfilePage() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-12 pt-4">
-                                <DetailItem icon={Users} label="Employee ID" value={employee.employeeId || `MR-${employee.id.slice(0,6).toUpperCase()}`} />
                                 <DetailItem icon={Mail} label="Email" value={employee.email} />
                                 <DetailItem icon={Phone} label="Phone" value={employee.phoneNumber || "Not Provisioned"} />
                                 <DetailItem icon={MapPin} label="Branch Location" value={employee.branch || "Chennai HQ"} />
@@ -501,7 +500,7 @@ function AssetRow({ image, title, category }: any) {
             </div>
             <div className="flex-1 min-w-0">
                 <p className="font-bold text-xs truncate">{title}</p>
-                <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest">{category}</p>
+                <p className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest">{category}</p>
             </div>
             <Badge variant="outline" className="rounded-full text-[8px] font-black uppercase tracking-widest text-green-600 bg-green-50 border-none px-2.5">In Use</Badge>
         </div>
