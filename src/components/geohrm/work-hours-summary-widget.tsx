@@ -2,13 +2,15 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp } from 'firebase/firestore';
-import { startOfMonth, endOfMonth, differenceInSeconds, startOfWeek, endOfWeek, eachDayOfInterval, format, getDaysInMonth } from 'date-fns';
-import { Activity } from 'lucide-react';
+import { startOfMonth, endOfMonth, differenceInSeconds, startOfWeek, endOfWeek, eachDayOfInterval, format } from 'date-fns';
+import { Activity, TrendingUp, Zap, Clock } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type AttendanceRecord = {
   checkInTime?: Timestamp;
@@ -18,8 +20,8 @@ type AttendanceRecord = {
 
 const chartConfig = {
   hours: {
-    label: "Hours",
-    color: "hsl(var(--chart-1))",
+    label: "Work Volume",
+    color: "hsl(var(--primary))",
   },
 } satisfies React.ComponentProps<typeof ChartContainer>['config'];
 
@@ -79,11 +81,7 @@ export function WorkHoursSummaryWidget() {
             }));
         } else {
             const weeklyHours: { [week: string]: number } = {
-                "Week 1": 0,
-                "Week 2": 0,
-                "Week 3": 0,
-                "Week 4": 0,
-                "Week 5": 0,
+                "W1": 0, "W2": 0, "W3": 0, "W4": 0, "W5": 0,
             };
 
             attendanceData.forEach(rec => {
@@ -93,7 +91,7 @@ export function WorkHoursSummaryWidget() {
                     const weekNumber = Math.ceil(dayOfMonth / 7);
                     
                     if (weekNumber >= 1 && weekNumber <= 5) {
-                        const weekKey = `Week ${weekNumber}`;
+                        const weekKey = `W${weekNumber}`;
                         const workSeconds = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
                         weeklyHours[weekKey] += workSeconds / 3600;
                     }
@@ -107,66 +105,116 @@ export function WorkHoursSummaryWidget() {
         }
     }, [attendanceData, viewMode, start, end]);
 
+    const totalHours = React.useMemo(() => {
+        return chartData.reduce((acc, curr) => acc + curr.hours, 0).toFixed(1);
+    }, [chartData]);
+
+    const peakHours = React.useMemo(() => {
+        return Math.max(...chartData.map(d => d.hours), 0).toFixed(1);
+    }, [chartData]);
+
     return (
-        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm" style={{ animationDelay: '300ms' }}>
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                    <CardTitle className="font-headline flex items-center gap-2">
-                        <Activity className="size-5" />
-                        My Activity
-                    </CardTitle>
+        <Card className="animate-fade-in-up border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden h-full flex flex-col font-open-sans">
+            <CardHeader className="p-8 pb-4">
+                <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                            <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">
+                                Mission Intensity
+                            </CardTitle>
+                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[8px] font-black uppercase rounded-full px-2">
+                                <Zap className="size-2 mr-1 fill-primary" /> Tactical Pulse
+                            </Badge>
+                        </div>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">
+                            {viewMode === 'weekly' ? 'Current operational week audit' : 'Monthly fleet engagement summary'}
+                        </CardDescription>
+                    </div>
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'weekly' | 'monthly')}>
-                        <TabsList className="h-8 bg-white/50">
-                            <TabsTrigger value="weekly" className="h-6 px-2 text-xs">Weekly</TabsTrigger>
-                            <TabsTrigger value="monthly" className="h-6 px-2 text-xs">Monthly</TabsTrigger>
+                        <TabsList className="h-9 bg-muted/30 p-1 rounded-xl">
+                            <TabsTrigger value="weekly" className="h-7 px-3 text-[9px] font-black uppercase rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Week</TabsTrigger>
+                            <TabsTrigger value="monthly" className="h-7 px-3 text-[9px] font-black uppercase rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Month</TabsTrigger>
                         </TabsList>
                     </Tabs>
                 </div>
-                <CardDescription>
-                    Your work and break hours summary.
-                </CardDescription>
+
+                <div className="grid grid-cols-2 gap-4 mt-6">
+                    <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                        <p className="text-[8px] font-black uppercase text-primary/60 tracking-widest mb-1">Total Effort</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black tracking-tighter text-primary">{totalHours}</span>
+                            <span className="text-[10px] font-bold text-primary/40 uppercase">hrs</span>
+                        </div>
+                    </div>
+                    <div className="p-4 bg-muted/20 rounded-2xl border border-border/50">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest mb-1">Peak Intensity</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black tracking-tighter text-foreground/80">{peakHours}</span>
+                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase">hrs</span>
+                        </div>
+                    </div>
+                </div>
             </CardHeader>
-            <CardContent>
+
+            <CardContent className="p-8 pt-2 flex-1">
                 {isLoading ? (
-                    <div className="h-[200px] flex items-center justify-center">
-                        <p className="text-muted-foreground animate-pulse">Loading chart data...</p>
+                    <div className="h-full flex flex-col items-center justify-center py-10 opacity-30">
+                        <Clock className="size-8 animate-spin mb-4" />
+                        <p className="text-[10px] font-black uppercase tracking-widest">Syncing Records...</p>
                     </div>
                 ) : (
-                    <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-                        <BarChart
+                    <ChartContainer config={chartConfig} className="h-full w-full">
+                        <AreaChart
                             data={chartData}
-                            margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
-                            accessibilityLayer
+                            margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
                         >
-                            <CartesianGrid vertical={false} />
+                            <defs>
+                                <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.1} />
                             <XAxis
                                 dataKey="name"
                                 tickLine={false}
                                 axisLine={false}
-                                tickMargin={8}
-                                className="text-[0.65rem] sm:text-xs"
+                                tickMargin={12}
+                                className="text-[10px] font-black uppercase tracking-widest fill-muted-foreground/40"
                             />
                             <YAxis
                                 tickFormatter={(value) => `${value}h`}
-                                allowDecimals={false}
-                                className="text-xs"
+                                axisLine={false}
+                                tickLine={false}
+                                className="text-[9px] font-bold fill-muted-foreground/30"
                             />
                             <ChartTooltip
-                                cursor={false}
+                                cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }}
                                 content={<ChartTooltipContent 
-                                    formatter={(value) => `${value} hrs`}
-                                    indicator="dot"
+                                    formatter={(value) => `${value} Tactical Hours`}
+                                    indicator="line"
                                 />}
                             />
-                            <Bar
+                            <Area
+                                type="monotone"
                                 dataKey="hours"
-                                fill="var(--color-hours)"
-                                radius={4}
+                                stroke="hsl(var(--primary))"
+                                strokeWidth={3}
+                                fillOpacity={1}
+                                fill="url(#colorHours)"
+                                activeDot={{ r: 6, strokeWidth: 0, fill: 'hsl(var(--primary))' }}
                             />
-                        </BarChart>
+                        </AreaChart>
                     </ChartContainer>
                 )}
             </CardContent>
+            
+            <div className="px-8 pb-8 pt-0 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
+                    <TrendingUp className="size-3" /> Mission Velocity Audit
+                </div>
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse" />
+            </div>
         </Card>
     );
 }
