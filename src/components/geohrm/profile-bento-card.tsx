@@ -36,7 +36,6 @@ export function ProfileBentoCard() {
     const isUrl = employee.avatar && employee.avatar.startsWith('http');
     const roleName = employee.role || 'Member';
     const joinDate = employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A';
-    const tacticalId = employee.id ? `#ID-${employee.id.slice(0, 6).toUpperCase()}` : '';
 
     return (
         <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group transition-all duration-500 hover:shadow-2xl h-full font-open-sans">
@@ -63,7 +62,6 @@ export function ProfileBentoCard() {
                                 <div className="flex items-center justify-center md:justify-start gap-3 flex-wrap">
                                     <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-foreground">
                                         {employee.firstName} {employee.lastName}
-                                        <span className="ml-2 text-sm font-bold text-muted-foreground/40 font-mono">{tacticalId}</span>
                                     </h1>
                                     <Badge className="bg-primary/10 text-primary border-none rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest">Active Duty</Badge>
                                 </div>
