@@ -381,7 +381,7 @@ export default function TodoPage() {
                                         className={cn(
                                             "min-h-[120px] p-3 border-r border-b border-border/30 hover:bg-white transition-all cursor-pointer group flex flex-col gap-2 relative",
                                             !isCurrentMonth && "bg-muted/10 opacity-40 grayscale",
-                                            isToday(date) && "bg-primary/5 ring-1 ring-primary/20 inset-0 z-10"
+                                            isToday(date) && "bg-primary/10 ring-2 ring-primary inset-0 z-10"
                                         )}
                                         onClick={() => setDetailedDay(date)}
                                     >
@@ -399,10 +399,18 @@ export default function TodoPage() {
                                                 </Badge>
                                             )}
                                             {finishedTasks > 0 && (
-                                                <Badge className="bg-green-600 text-white text-[8px] font-black uppercase h-4 px-1.5 rounded-sm w-fit border-none">
+                                                <Badge className="bg-primary/40 text-primary-foreground text-[8px] font-black uppercase h-4 px-1.5 rounded-sm w-fit border-none">
                                                     {finishedTasks} Fin
                                                 </Badge>
                                             )}
+                                            <div className="flex flex-wrap gap-0.5 mt-1">
+                                                {dayTasks.slice(0, 8).map(t => {
+                                                    const theme = TASK_COLORS.find(c => c.id === t.colorId) || TASK_COLORS[0];
+                                                    return (
+                                                        <div key={t.id} className={cn("size-1 rounded-full", theme.circle)} />
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 );
