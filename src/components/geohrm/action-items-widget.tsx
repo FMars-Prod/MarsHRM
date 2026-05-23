@@ -8,6 +8,7 @@ import { collection, query, where, doc, getDocs, collectionGroup } from 'firebas
 import { subDays, endOfDay, format, startOfDay } from 'date-fns';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 type ActionItem = {
     id: string;
