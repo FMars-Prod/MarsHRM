@@ -71,11 +71,11 @@ export function DailyMonitorWidget() {
   const { data: currentUserData } = useDoc(currentUserDocRef);
   
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
-  const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
+  const { data: fleetUsers, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
 
   React.useEffect(() => {
     const fetchMonitorData = async () => {
-      if (!users || users.length === 0 || !firestore) {
+      if (!fleetUsers || fleetUsers.length === 0 || !firestore) {
         if (!usersLoading) {
             setSummary(prev => ({ ...prev, isLoading: false }));
         }
@@ -125,7 +125,7 @@ export function DailyMonitorWidget() {
         const outOfRangeUsers: UserData[] = [];
         const atHomeUsers: UserData[] = [];
 
-        users.forEach(u => {
+        fleetUsers.forEach(u => {
           const att = attendanceMap.get(u.id);
           if (att) {
               if (att.isAtHome) {
@@ -140,7 +140,7 @@ export function DailyMonitorWidget() {
           } else if (onLeaveTodayIds.has(u.id)) {
             onLeaveUsers.push(u);
           } else {
-            if ((u as any).role !== 'CEO/Admin' && (u as any).role !== 'HR Manager') {
+            if (u.role !== 'CEO/Admin' && u.role !== 'HR Manager') {
                absentUsers.push(u);
             }
           }
@@ -162,7 +162,7 @@ export function DailyMonitorWidget() {
     };
 
     fetchMonitorData();
-  }, [users, usersLoading, firestore]);
+  }, [fleetUsers, usersLoading, firestore]);
   
   const formatDuration = (seconds: number) => {
     if (seconds < 0) seconds = 0;
@@ -497,7 +497,7 @@ export function DailyMonitorWidget() {
                         {summary.present.slice(0, 3).map(u => (
                             <Avatar key={u.id} className="size-6 border-2 border-white ring-1 ring-border/20 shadow-sm">
                                 <AvatarImage src={u.avatar} />
-                                <AvatarFallback className="text-[8px] font-black">{u.firstName[0]}</AvatarFallback>
+                                <AvatarFallback className="text-[8px] font-black">{u.firstName?.[0]}</AvatarFallback>
                             </Avatar>
                         ))}
                         {summary.present.length > 3 && (
@@ -548,11 +548,11 @@ export function DailyMonitorWidget() {
                                                         ) : (
                                                             <div className="h-full w-full bg-primary/5 flex items-center justify-center text-2xl">{user.avatar}</div>
                                                         )
-                                                    ) : <AvatarFallback className="font-bold">{user.firstName[0]}{user.lastName[0]}</AvatarFallback>}
+                                                    ) : <AvatarFallback className="font-bold">{(user.firstName?.[0] || 'U')}{(user.lastName?.[0] || '')}</AvatarFallback>}
                                                 </Avatar>
                                                 <div>
-                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">{user.firstName} {user.lastName}</p>
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{user.jobTitle}</p>
+                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">{(user.firstName || 'Unknown')} {(user.lastName || '')}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{user.jobTitle || 'Fleet Member'}</p>
                                                 </div>
                                             </Link>
                                             <div className="flex gap-2">

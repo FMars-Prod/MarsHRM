@@ -342,7 +342,7 @@ export function AttendanceWidget() {
   const TrackingCard = ({ label, time, icon: Icon, subValue, active }: any) => (
     <div className={cn(
         "flex-1 p-5 rounded-[2rem] border transition-all duration-500", 
-        active ? "bg-white shadow-md ring-1 ring-primary/10 border-primary/20" : "bg-muted/10 border-transparent opacity-40 grayscale"
+        active ? "bg-white shadow-md ring-1 ring-border border-border/50" : "bg-muted/10 border-transparent opacity-40 grayscale"
     )}>
         <div className="flex flex-col items-center text-center gap-3">
             <div className={cn("p-2.5 rounded-2xl shadow-sm", active ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
@@ -362,7 +362,6 @@ export function AttendanceWidget() {
   return (
     <>
       <Card className="flex flex-col animate-fade-in-up border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden relative font-open-sans">
-        {/* Abstract Background Accents */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full -mr-40 -mt-40 blur-[80px]" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full -ml-32 -mb-32 blur-[80px]" />
         
@@ -414,10 +413,10 @@ export function AttendanceWidget() {
             </div>
 
             <div className="w-full grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl">
-                <TrackingCard label="Deployment" time={getMilestoneTime(todaysAttendance?.checkInTime)} icon={LogIn} subValue={todaysAttendance?.locationCheckInLatitude ? `${todaysAttendance.locationCheckInLatitude.toFixed(3)}, ${todaysAttendance.locationCheckInLongitude.toFixed(3)}` : undefined} active={!!todaysAttendance?.checkInTime} />
+                <TrackingCard label="Clock In" time={getMilestoneTime(todaysAttendance?.checkInTime)} icon={LogIn} subValue={todaysAttendance?.locationCheckInLatitude ? `${todaysAttendance.locationCheckInLatitude.toFixed(3)}, ${todaysAttendance.locationCheckInLongitude.toFixed(3)}` : undefined} active={!!todaysAttendance?.checkInTime} />
                 <TrackingCard label="Lunch Start" time={getMilestoneTime(todaysAttendance?.lunchOutTime)} icon={Utensils} active={!!todaysAttendance?.lunchOutTime} />
                 <TrackingCard label="Lunch End" time={getMilestoneTime(todaysAttendance?.lunchInTime)} icon={LogIn} active={!!todaysAttendance?.lunchInTime} />
-                <TrackingCard label="Deactivation" time={getMilestoneTime(todaysAttendance?.checkOutTime)} icon={LogOut} active={!!todaysAttendance?.checkOutTime} />
+                <TrackingCard label="Clock Out" time={getMilestoneTime(todaysAttendance?.checkOutTime)} icon={LogOut} active={!!todaysAttendance?.checkOutTime} />
             </div>
         </CardContent>
 
