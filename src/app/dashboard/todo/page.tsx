@@ -226,75 +226,83 @@ export default function TodoPage() {
                                 <Plus className="size-4 mr-2" /> Dispatch Mission
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-3xl sm:max-w-md">
-                            <DialogHeader>
+                        <DialogContent className="rounded-3xl sm:max-w-lg p-0 overflow-hidden">
+                            <DialogHeader className="p-8 pb-0">
                                 <DialogTitle className="text-xl font-black uppercase tracking-tighter">New Mission Objective</DialogTitle>
                                 <DialogDescription>Register a new task on the tactical board.</DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleAddTask} className="grid gap-6 py-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Objective Title</Label>
-                                    <Input value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="e.g., Finalize Q4 Security Audit" className="rounded-xl h-11" required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Contextual Details</Label>
-                                    <Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Provide additional information..." className="rounded-xl min-h-[80px]" />
-                                </div>
+                            <form onSubmit={handleAddTask} className="flex flex-col h-full max-h-[85vh]">
+                                <ScrollArea className="flex-1 px-8 py-6">
+                                    <div className="space-y-8">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Objective Title</Label>
+                                            <Input value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="e.g., Finalize Q4 Security Audit" className="rounded-xl h-11" required />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Contextual Details</Label>
+                                            <Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Provide additional information..." className="rounded-xl min-h-[80px]" />
+                                        </div>
 
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Palette className="size-3" /> Select Tactical Theme</Label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {TASK_COLORS.map(color => (
-                                            <button 
-                                                key={color.id}
-                                                type="button"
-                                                onClick={() => setSelectedColorId(color.id)}
-                                                className={cn(
-                                                    "size-8 rounded-full border-2 transition-all",
-                                                    color.id === selectedColorId ? "border-primary scale-110 shadow-md" : "border-transparent",
-                                                    color.bg
-                                                )}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-primary">Priority Tier</Label>
-                                        <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
-                                            <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="low">Low Priority</SelectItem>
-                                                <SelectItem value="medium">Standard</SelectItem>
-                                                <SelectItem value="high">Urgent / High</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-primary">Assign To</Label>
-                                        <Select value={assignedTo} onValueChange={setAssignedTo}>
-                                            <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="self">Myself</SelectItem>
-                                                {isAdmin && allUsers?.filter(u => u.id !== user?.uid).map(u => (
-                                                    <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
+                                        <div className="space-y-4">
+                                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Palette className="size-3" /> Select Tactical Theme</Label>
+                                            <div className="grid grid-cols-4 gap-3">
+                                                {TASK_COLORS.map(color => (
+                                                    <button 
+                                                        key={color.id}
+                                                        type="button"
+                                                        onClick={() => setSelectedColorId(color.id)}
+                                                        className={cn(
+                                                            "h-12 rounded-xl border-2 transition-all flex items-center justify-center group",
+                                                            color.id === selectedColorId ? "border-primary scale-105 shadow-md" : "border-transparent",
+                                                            color.bg
+                                                        )}
+                                                    >
+                                                        {color.id === selectedColorId && <CheckCircle2 className="size-4 text-primary" />}
+                                                    </button>
                                                 ))}
-                                            </SelectContent>
-                                        </Select>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Priority Tier</Label>
+                                                <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
+                                                    <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="low">Low Priority</SelectItem>
+                                                        <SelectItem value="medium">Standard</SelectItem>
+                                                        <SelectItem value="high">Urgent / High</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Assign To</Label>
+                                                <Select value={assignedTo} onValueChange={setAssignedTo}>
+                                                    <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="self">Myself</SelectItem>
+                                                        {isAdmin && allUsers?.filter(u => u.id !== user?.uid).map(u => (
+                                                            <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Due Date</Label>
+                                                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="rounded-xl h-11" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Target Time</Label>
+                                                <Input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} className="rounded-xl h-11" />
+                                            </div>
+                                        </div>
                                     </div>
+                                </ScrollArea>
+                                <div className="p-8 pt-0 mt-auto">
+                                    <Button type="submit" className="w-full rounded-full h-14 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Dispatch</Button>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-primary">Due Date</Label>
-                                        <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="rounded-xl h-11" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-primary">Target Time</Label>
-                                        <Input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} className="rounded-xl h-11" />
-                                    </div>
-                                </div>
-                                <Button type="submit" className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Dispatch</Button>
                             </form>
                         </DialogContent>
                     </Dialog>
