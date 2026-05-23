@@ -1,14 +1,16 @@
+
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { EventsWidget } from "@/components/geohrm/events-widget";
-import { PageHeader } from "@/components/geohrm/page-header";
 import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, query, orderBy, limit, where } from "firebase/firestore";
 import { WorkHoursSummaryWidget } from "@/components/geohrm/work-hours-summary-widget";
 import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
+import { ProfileBentoCard } from "@/components/geohrm/profile-bento-card";
+import { MissionHeatmapWidget } from "@/components/geohrm/mission-heatmap-widget";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ShieldAlert, MessageSquareWarning } from "lucide-react";
 import Link from "next/link";
@@ -19,7 +21,7 @@ export default function DashboardPage() {
   const firestore = useFirestore();
 
   const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
-  const { data: currentUserData } = useDoc(currentUserDocRef);
+  const { data: currentUserData } = useDoc(userDocRef);
   
   const userRole = (currentUserData as any)?.role;
   const isCEO = userRole === 'CEO/Admin';
@@ -46,15 +48,10 @@ export default function DashboardPage() {
   }, [userTickets]);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="Welcome back, here's your overview for today."
-        className="animate-fade-in-up"
-      />
-      
+    <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
+      {/* Dynamic Notifications */}
       {isCEO && hasCriticalAlert && (
-          <Alert className="mb-6 bg-red-50 border-red-200 animate-pulse">
+          <Alert className="mb-6 bg-red-50 border-red-200 animate-pulse rounded-2xl border-2">
               <ShieldAlert className="size-4 text-red-600" />
               <AlertTitle className="text-red-700 font-black uppercase text-xs tracking-widest">Protocol Alert: Executive Review Required</AlertTitle>
               <AlertDescription className="flex justify-between items-center mt-2">
@@ -65,7 +62,7 @@ export default function DashboardPage() {
       )}
 
       {recentTicketUpdates.length > 0 && (
-          <Alert className="mb-6 bg-blue-50 border-2 border-blue-200">
+          <Alert className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-2xl">
               <MessageSquareWarning className="size-4 text-blue-600" />
               <AlertTitle className="text-blue-700 font-black uppercase text-xs tracking-widest">Support Desk Update</AlertTitle>
               <AlertDescription className="flex justify-between items-center mt-2">
@@ -77,27 +74,40 @@ export default function DashboardPage() {
 
       <DashboardReminder />
 
+      {/* Hero Bento Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <div className="lg:col-span-8 animate-fade-in-up">
+              <ProfileBentoCard />
+          </div>
+          <div className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+              <MissionHeatmapWidget />
+          </div>
+      </div>
+
+      {/* Operational Bento Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+              <AttendanceWidget />
+          </div>
+      </div>
+
       {isAdminOrHR && (
-        <div className="mb-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <DailyMonitorWidget />
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          <AttendanceWidget />
-        </div>
-        
-        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <ActionItemsWidget />
         </div>
 
-        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-          <EventsWidget />
+        <div className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
+          <WorkHoursSummaryWidget />
         </div>
 
-        <div className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
-          <WorkHoursSummaryWidget />
+        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+          <EventsWidget />
         </div>
       </div>
     </div>
