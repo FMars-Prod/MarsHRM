@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -488,7 +487,7 @@ function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDel
                                         {todo.assignedByName.split(' ')[0]}
                                     </div>
                                 ) : (
-                                    <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Personal Objective</div>
+                                    <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Self Assigned Task</div>
                                 )}
                                 <Eye className="size-3.5 opacity-0 group-hover:opacity-40 transition-opacity" />
                             </div>
@@ -499,4 +498,3 @@ function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDel
         </Card>
     );
 }
-
