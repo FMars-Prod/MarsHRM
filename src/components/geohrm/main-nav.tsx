@@ -32,6 +32,7 @@ import {
   Laptop,
   Network,
   Settings,
+  ListTodo,
 } from "lucide-react";
 import React from "react";
 
@@ -40,6 +41,7 @@ const groups = [
     label: "STRATEGIC HUB",
     links: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "totalNotificationsCount" },
+      { href: "/dashboard/todo", label: "To-Do List", icon: ListTodo, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
@@ -132,7 +134,7 @@ export function MainNav({
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleLinks.map((link) => {
-                  const badgeCount = link.badgeKey ? badgeCounts[link.badgeKey] : undefined;
+                  const badgeCount = link.badgeKey ? badgeCounts[link.badgeKey] : 0;
                   const isActive = pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard');
                   
                   return (
@@ -143,7 +145,7 @@ export function MainNav({
                           <span>{link.label}</span>
                         </Link>
                       </SidebarMenuButton>
-                      {link.badgeKey && badgeCount !== undefined && (
+                      {link.badgeKey && (
                         <SidebarMenuBadge className="bg-primary text-primary-foreground font-black rounded-full text-[9px] h-5 min-w-[1.25rem] flex items-center justify-center border-2 border-sidebar shadow-lg">
                             {badgeCount}
                         </SidebarMenuBadge>

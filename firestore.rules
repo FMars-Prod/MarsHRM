@@ -58,6 +58,11 @@ service cloud.firestore {
         allow write: if isOwner(userId) || isPrivileged();
       }
 
+      match /todos/{todoId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+
       match /readAnnouncements/{id} {
         allow read, write: if isOwner(userId);
       }

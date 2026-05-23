@@ -55,5 +55,6 @@ export {
   Smile,
   Activity,
   RotateCcw,
-  UserPlus
+  UserPlus,
+  ListTodo
 } from "lucide-react";
