@@ -41,7 +41,7 @@ const groups = [
     label: "STRATEGIC HUB",
     links: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "totalNotificationsCount" },
-      { href: "/dashboard/todo", label: "To-Do List", icon: ListTodo, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/todo", label: "To-Do List", icon: ListTodo, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingTodoCount" },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
@@ -92,6 +92,7 @@ interface MainNavProps {
   todaysEventsCount?: number;
   pendingLocationRequestsCount?: number;
   ticketUpdateCount?: number;
+  pendingTodoCount?: number;
   totalNotificationsCount?: number;
 }
 
@@ -102,6 +103,7 @@ export function MainNav({
   todaysEventsCount = 0,
   pendingLocationRequestsCount = 0,
   ticketUpdateCount = 0,
+  pendingTodoCount = 0,
   totalNotificationsCount = 0,
 }: MainNavProps) {
   const pathname = usePathname();
@@ -112,6 +114,7 @@ export function MainNav({
     todaysEventsCount,
     pendingLocationRequestsCount,
     ticketUpdateCount,
+    pendingTodoCount,
     totalNotificationsCount,
   };
 
@@ -145,7 +148,7 @@ export function MainNav({
                           <span>{link.label}</span>
                         </Link>
                       </SidebarMenuButton>
-                      {link.badgeKey && (
+                      {link.badgeKey && badgeCount > 0 && (
                         <SidebarMenuBadge className="bg-primary text-primary-foreground font-black rounded-full text-[9px] h-5 min-w-[1.25rem] flex items-center justify-center border-2 border-sidebar shadow-lg">
                             {badgeCount}
                         </SidebarMenuBadge>
