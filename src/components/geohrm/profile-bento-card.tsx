@@ -8,7 +8,7 @@ import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { format, differenceInDays, differenceInMonths, differenceInYears } from 'date-fns';
-import { ShieldCheck, Mail, Phone, CalendarDays, MapPin, Target, Zap } from 'lucide-react';
+import { ShieldCheck, Mail, Phone, CalendarDays, MapPin, Target, Zap, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function ProfileBentoCard() {
@@ -35,9 +35,11 @@ export function ProfileBentoCard() {
     }
 
     const isUrl = employee.avatar && employee.avatar.startsWith('http');
+    const roleName = employee.role || 'Member';
+    const joinDate = employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A';
 
     return (
-        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group transition-all duration-500 hover:shadow-2xl">
+        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group transition-all duration-500 hover:shadow-2xl h-full">
             <div className="relative h-full">
                 {/* Visual Background Elements */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-20 -mt-20 blur-3xl transition-all duration-700 group-hover:bg-primary/10" />
@@ -86,8 +88,9 @@ export function ProfileBentoCard() {
 
                     <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-dashed pt-8 border-border/50">
                         <div className="flex -space-x-4">
-                            <ExperienceBadge label="Role Level" value={`Lvl ${employee.role === 'CEO/Admin' ? '1' : employee.role === 'HR Manager' ? '2' : employee.role === 'Team Lead' ? '3' : '4'}`} icon={ShieldCheck} color="bg-indigo-600" />
-                            <ExperienceBadge label="Fleet Tenure" value={experience} icon={CalendarDays} color="bg-primary" />
+                            <ExperienceBadge label="Authority" value={roleName} icon={ShieldCheck} color="bg-indigo-600" />
+                            <ExperienceBadge label="Commenced" value={joinDate} icon={CalendarDays} color="bg-emerald-600" />
+                            <ExperienceBadge label="Fleet Tenure" value={experience} icon={Clock} color="bg-primary" />
                         </div>
                         
                         <div className="flex gap-4">
