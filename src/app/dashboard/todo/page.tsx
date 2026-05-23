@@ -4,13 +4,13 @@ import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, where, Timestamp } from 'firebase/firestore';
-import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle, Palette } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar as CalendarIcon, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle, Palette, LayoutGrid, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isToday, isBefore, startOfDay, addDays } from 'date-fns';
+import { format, isToday, isBefore, startOfDay, addDays, isSameDay } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Calendar } from "@/components/ui/calendar";
 
 type Todo = {
     id: string;
@@ -59,10 +60,12 @@ export default function TodoPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     
+    const [viewMode, setViewMode] = React.useState<'grid' | 'calendar'>('grid');
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [viewFilter, setViewFilter] = React.useState<'active' | 'completed'>('active');
     const [selectedTodo, setSelectedTodo] = React.useState<Todo | null>(null);
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+    const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
 
     // Form States
     const [newTask, setNewTask] = React.useState('');
@@ -174,14 +177,51 @@ export default function TodoPage() {
         return groups.filter(g => g.items.length > 0);
     }, [displayTodos]);
 
+    const calendarFilteredTodos = React.useMemo(() => {
+        if (!selectedCalendarDate || !todos) return [];
+        return todos.filter(todo => {
+            if (!todo.dueDate) return false;
+            return isSameDay(todo.dueDate.toDate(), selectedCalendarDate);
+        });
+    }, [todos, selectedCalendarDate]);
+
     const toggleSelect = (id: string) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
+
+    const modifierDates = React.useMemo(() => {
+        const dates: Date[] = [];
+        todos?.forEach(t => {
+            if (t.dueDate) dates.push(t.dueDate.toDate());
+        });
+        return dates;
+    }, [todos]);
 
     return (
         <div className="space-y-8 animate-fade-in-up pb-20">
             <PageHeader title="Mission Objectives" description="Tactical task board with priority-based sticky notes.">
                 <div className="flex flex-wrap gap-3 items-center">
+                    <div className="flex bg-muted/50 p-1 rounded-full ring-1 ring-border/50">
+                        <Button 
+                            variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                            size="sm" 
+                            className="rounded-full font-black uppercase text-[9px] tracking-widest px-4 h-9"
+                            onClick={() => setViewMode('grid')}
+                        >
+                            <LayoutGrid className="size-3 mr-2" /> Grid
+                        </Button>
+                        <Button 
+                            variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} 
+                            size="sm" 
+                            className="rounded-full font-black uppercase text-[9px] tracking-widest px-4 h-9"
+                            onClick={() => setViewMode('calendar')}
+                        >
+                            <CalendarIcon className="size-3 mr-2" /> Calendar
+                        </Button>
+                    </div>
+
+                    <Separator orientation="vertical" className="h-8 hidden sm:block" />
+
                     {selectedIds.length > 0 && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -313,6 +353,86 @@ export default function TodoPage() {
                 <div className="py-32 text-center animate-pulse">
                     <Clock className="size-12 mx-auto text-primary/20 mb-4 animate-spin" />
                     <p className="font-black uppercase text-[10px] text-primary/60 tracking-[0.3em]">Syncing Tactical Grid...</p>
+                </div>
+            ) : viewMode === 'calendar' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    <Card className="lg:col-span-5 border-none ring-1 ring-border/50 rounded-[3rem] bg-white/50 backdrop-blur-sm overflow-hidden p-8 shadow-xl">
+                        <Calendar 
+                            mode="single"
+                            selected={selectedCalendarDate}
+                            onSelect={setSelectedCalendarDate}
+                            className="rounded-3xl border shadow-inner p-4 w-full bg-white"
+                            modifiers={{ hasTasks: modifierDates }}
+                            modifiersClassNames={{
+                                hasTasks: 'after:content-["•"] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:text-primary after:font-black after:text-lg'
+                            }}
+                        />
+                    </Card>
+
+                    <div className="lg:col-span-7 space-y-6">
+                        <div className="flex items-center justify-between px-2">
+                            <div>
+                                <h3 className="text-xl font-black uppercase tracking-tighter">Daily Objective Feed</h3>
+                                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                    {selectedCalendarDate ? format(selectedCalendarDate, 'PPPP') : 'No Date Selected'}
+                                </p>
+                            </div>
+                            <Badge variant="outline" className="rounded-full font-black uppercase text-[10px] px-3">
+                                {calendarFilteredTodos.length} Missions
+                            </Badge>
+                        </div>
+
+                        <ScrollArea className="h-[600px] pr-4">
+                            <div className="space-y-4">
+                                {calendarFilteredTodos.length > 0 ? calendarFilteredTodos.map(todo => (
+                                    <Card 
+                                        key={todo.id} 
+                                        className={cn(
+                                            "border-none ring-1 ring-border/50 rounded-3xl p-5 hover:shadow-lg transition-all cursor-pointer flex items-center justify-between group",
+                                            todo.completed ? "bg-slate-50 opacity-60" : "bg-white"
+                                        )}
+                                        onClick={() => setSelectedTodo(todo)}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div 
+                                                className={cn(
+                                                    "size-5 rounded-full border-2 flex items-center justify-center transition-all",
+                                                    todo.completed ? "bg-green-600 border-green-600 text-white" : "border-muted-foreground/20"
+                                                )}
+                                                onClick={(e) => { e.stopPropagation(); toggleComplete(todo); }}
+                                            >
+                                                {todo.completed && <Check className="size-3" />}
+                                            </div>
+                                            <div>
+                                                <p className={cn("font-bold text-sm", todo.completed && "line-through opacity-50")}>{todo.task}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <Badge className={cn(
+                                                        "text-[8px] font-black uppercase px-2 py-0 border-none rounded-full",
+                                                        todo.priority === 'high' ? "bg-red-100 text-red-700" :
+                                                        todo.priority === 'medium' ? "bg-amber-100 text-amber-700" :
+                                                        "bg-blue-100 text-blue-700"
+                                                    )}>
+                                                        {todo.priority}
+                                                    </Badge>
+                                                    {todo.assignedBy !== user?.uid && (
+                                                        <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60">
+                                                            From: {todo.assignedByName.split(' ')[0]}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ChevronRight className="size-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                    </Card>
+                                )) : (
+                                    <div className="py-20 text-center flex flex-col items-center justify-center gap-4 opacity-30">
+                                        <ListTodo className="size-12" />
+                                        <p className="font-black uppercase text-xs tracking-widest">No missions for this date.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </div>
                 </div>
             ) : displayTodos.length > 0 ? (
                 <div className="space-y-12">
