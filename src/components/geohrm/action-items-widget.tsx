@@ -116,8 +116,8 @@ export function ActionItemsWidget() {
                         items.push({
                             id: `compliance-${data.employeeId}-${doc.id}`,
                             type: 'compliance',
-                            title: `Compliance Alert: ${name}`,
-                            description: `Failed to clock out on ${format(yesterday, 'MMM d')}.`,
+                            title: `Compliance: ${name}`,
+                            description: `No Log-Out on ${format(yesterday, 'MMM d')}`,
                             href: `/dashboard/analytics?userId=${data.employeeId}`
                         });
                     }
@@ -137,7 +137,7 @@ export function ActionItemsWidget() {
             items.push({
                 id: `leave-${leave.id}`,
                 type: 'leave',
-                title: `Leave Request: ${leave.employeeName}`,
+                title: `Leave: ${leave.employeeName}`,
                 description: `Status: ${leave.status}`,
                 href: '/dashboard/leave'
             });
@@ -146,8 +146,8 @@ export function ActionItemsWidget() {
             items.push({
                 id: `policy-${policy.id}`,
                 type: 'policy',
-                title: `New Policy: ${policy.title}`,
-                description: `Awaiting acknowledgment`,
+                title: `Policy: ${policy.title}`,
+                description: `Pending Acknowledgment`,
                 href: '/dashboard/policies'
             });
         });
@@ -155,7 +155,7 @@ export function ActionItemsWidget() {
             items.push({
                 id: `issue-${issue.id}`,
                 type: 'issue',
-                title: `Issue: ${issue.title}`,
+                title: `Ticket: ${issue.title}`,
                 description: `Status: ${issue.status}`,
                 href: '/dashboard/issues'
             });
@@ -166,54 +166,76 @@ export function ActionItemsWidget() {
     const isLoading = leavesLoading || policiesLoading || acksLoading || issuesLoading;
     
     const iconMap = {
-        leave: <CalendarOff className="h-5 w-5 text-blue-500" />,
-        policy: <ShieldCheck className="h-5 w-5 text-yellow-500" />,
-        issue: <MessageSquareWarning className="h-5 w-5 text-red-500" />,
-        compliance: <ShieldAlert className="h-5 w-5 text-orange-500" />
+        leave: <CalendarOff className="size-4" />,
+        policy: <ShieldCheck className="size-4" />,
+        issue: <MessageSquareWarning className="size-4" />,
+        compliance: <ShieldAlert className="size-4" />
     };
 
     return (
-        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm h-full">
-            <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                    <List className="size-5" />
-                    Action Items
-                </CardTitle>
-                <CardDescription>Notifications requiring attention.</CardDescription>
+        <Card className="animate-fade-in-up border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden h-full flex flex-col font-open-sans">
+            <CardHeader className="p-8 pb-4">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                        <CardTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-2 text-primary">
+                            <List className="size-5" /> Tactical Queue
+                        </CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">Pending fleet operations</CardDescription>
+                    </div>
+                    {actionItems.length > 0 && (
+                        <Badge className="bg-primary text-white font-black text-[10px] rounded-full px-3 py-1">
+                            {actionItems.length} ACTIVE
+                        </Badge>
+                    )}
+                </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-8 pt-4 flex-1">
                 {isLoading ? (
                     <div className="space-y-4">
-                        {[...Array(2)].map((_, i) => (
-                            <div key={i} className="flex items-center gap-4">
-                                <div className="h-10 w-10 rounded-lg bg-muted animate-pulse" />
-                                <div className="space-y-2 flex-1">
-                                    <div className="h-4 w-3/4 rounded-md bg-muted animate-pulse" />
-                                    <div className="h-3 w-1/2 rounded-md bg-muted animate-pulse" />
-                                </div>
-                            </div>
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="h-16 rounded-2xl bg-muted animate-pulse" />
                         ))}
                     </div>
                 ) : actionItems.length > 0 ? (
-                    <div className="space-y-3">
-                        {actionItems.slice(0, 5).map(item => (
-                            <Link href={item.href} key={item.id} className="flex items-center justify-between p-2 rounded-md hover:bg-white/50 transition-all duration-300 group">
-                                <div className="flex items-center gap-3">
-                                    <div className={cn("p-2 rounded-lg", item.type === 'compliance' ? 'bg-orange-100' : 'bg-muted')}>
-                                        {iconMap[item.type]}
+                    <ScrollArea className="h-full pr-4 -mr-4">
+                        <div className="space-y-3 pb-4">
+                            {actionItems.map(item => (
+                                <Link href={item.href} key={item.id} className="block group">
+                                    <div className={cn(
+                                        "flex items-center justify-between p-4 rounded-[1.5rem] border-2 transition-all duration-300 hover:shadow-md",
+                                        item.type === 'compliance' ? "bg-orange-50/50 border-orange-100/50 hover:border-orange-200" :
+                                        item.type === 'leave' ? "bg-blue-50/50 border-blue-100/50 hover:border-blue-200" :
+                                        item.type === 'policy' ? "bg-yellow-50/50 border-yellow-100/50 hover:border-yellow-200" :
+                                        "bg-red-50/50 border-red-100/50 hover:border-red-200"
+                                    )}>
+                                        <div className="flex items-center gap-4">
+                                            <div className={cn(
+                                                "p-2.5 rounded-xl shadow-sm",
+                                                item.type === 'compliance' ? "bg-orange-500 text-white" :
+                                                item.type === 'leave' ? "bg-blue-500 text-white" :
+                                                item.type === 'policy' ? "bg-yellow-500 text-white" :
+                                                "bg-red-500 text-white"
+                                            )}>
+                                                {iconMap[item.type]}
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="font-black text-xs uppercase tracking-tight text-foreground/80">{item.title}</p>
+                                                <p className="text-[9px] font-bold opacity-60 uppercase tracking-[0.15em]">{item.description}</p>
+                                            </div>
+                                        </div>
+                                        <div className="p-1.5 rounded-full bg-white shadow-sm border border-border/50 group-hover:bg-primary group-hover:text-white group-hover:scale-110 transition-all">
+                                            <ArrowRight className="size-3" />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-semibold text-sm">{item.title}</p>
-                                        <p className="text-xs text-muted-foreground">{item.description}</p>
-                                    </div>
-                                </div>
-                                <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </Link>
-                        ))}
-                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </ScrollArea>
                 ) : (
-                    <div className="text-center text-muted-foreground py-6">
-                        <p>No pending items.</p>
+                    <div className="flex flex-col items-center justify-center text-center py-20 opacity-30 grayscale">
+                        <ShieldCheck className="size-12 mb-4" />
+                        <p className="font-black uppercase text-[10px] tracking-[0.3em]">Operational Grid Clear</p>
+                        <p className="text-[10px] font-bold uppercase mt-1">No pending actions found</p>
                     </div>
                 )}
             </CardContent>
