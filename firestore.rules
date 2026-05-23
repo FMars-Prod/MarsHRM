@@ -161,5 +161,15 @@ service cloud.firestore {
       allow update: if isPrivileged();
       allow delete: if isPrivileged();
     }
+
+    match /folders/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /vault_assets/{id} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
   }
 }

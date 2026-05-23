@@ -5,11 +5,10 @@ import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { FileBox, Plus, Trash2, ExternalLink, Link as LinkIcon, Edit, UserCircle, Search, FileUp, Loader2, FileText, ShieldCheck } from 'lucide-react';
+import { FolderPlus, Plus, Trash2, ExternalLink, Link as LinkIcon, Edit, UserCircle, Search, FileUp, Loader2, FileText, ShieldCheck, ChevronRight, Folder, Download, Users, Share2, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,15 +19,39 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 
-type DocumentLink = {
+type FolderData = {
     id: string;
+    name: string;
+    ownerId: string;
+    ownerName: string;
+    color: 'blue' | 'purple' | 'emerald' | 'amber' | 'rose';
+    sharedWithTeams: string[];
+    sharedWithUids: string[];
+    createdAt: any;
+};
+
+type VaultAsset = {
+    id: string;
+    folderId: string | null;
+    ownerId: string;
+    ownerName: string;
     title: string;
     link: string;
-    employeeId: string;
     uploadedAt: any;
     sourceType: 'link' | 'file';
     fileName?: string;
+};
+
+const FOLDER_COLORS = {
+    blue: 'bg-blue-500/10 border-blue-500/20 text-blue-700',
+    purple: 'bg-purple-500/10 border-purple-500/20 text-purple-700',
+    emerald: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700',
+    amber: 'bg-amber-500/10 border-amber-500/20 text-amber-700',
+    rose: 'bg-rose-500/10 border-rose-500/20 text-rose-700',
 };
 
 export default function DocumentsPage() {
@@ -37,66 +60,132 @@ export default function DocumentsPage() {
     const storage = useStorage();
     const { toast } = useToast();
     
-    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-    const [editingDoc, setEditingUserDoc] = React.useState<DocumentLink | null>(null);
-    const [title, setTitle] = React.useState("");
-    const [link, setLink] = React.useState("");
-    const [selectedUserId, setSelectedUserId] = React.useState<string>("me");
-    const [isUploading, setIsUploading] = React.useState(false);
+    // Navigation State
+    const [currentFolderId, setCurrentFolderId] = React.useState<string | null>(null);
+
+    // Dialog States
+    const [isFolderDialogOpen, setIsFolderDialogOpen] = React.useState(false);
+    const [isAssetDialogOpen, setIsAssetDialogOpen] = React.useState(false);
+    const [isShareDialogOpen, setIsShareDialogOpen] = React.useState(false);
+
+    // Form States
+    const [folderName, setFolderName] = React.useState("");
+    const [folderColor, setFolderColor] = React.useState<FolderData['color']>('blue');
+    const [assetTitle, setAssetTitle] = React.useState("");
+    const [assetLink, setAssetLink] = React.useState("");
     const [activeTab, setActiveTab] = React.useState<string>("link");
+    const [isUploading, setIsUploading] = React.useState(false);
 
-    const currentUserDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
-    const { data: currentUserData } = useDoc<any>(currentUserDocRef);
-    const isPrivileged = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
+    // Sharing States
+    const [sharingFolder, setSharingFolder] = React.useState<FolderData | null>(null);
+    const [selectedTeamIds, setSelectedTeamIds] = React.useState<string[]>([]);
+    const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
 
+    const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+    const { data: userData } = useDoc<any>(userDocRef);
+    const isPrivileged = userData?.role === 'HR Manager' || userData?.role === 'CEO/Admin';
+
+    // Fetch Global Data for Selection
+    const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
+    const { data: allTeams } = useCollection<any>(teamsQuery);
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
-    const { data: users } = useCollection<any>(usersQuery);
+    const { data: allUsers } = useCollection<any>(usersQuery);
 
-    const targetUserId = selectedUserId === 'me' ? user?.uid : selectedUserId;
+    // Fetch Folders
+    const foldersQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        // In a real app, we'd use complex OR queries or local filtering
+        return query(collection(firestore, 'folders'), orderBy('createdAt', 'desc'));
+    }, [firestore, user]);
+    const { data: rawFolders, isLoading: foldersLoading } = useCollection<FolderData>(foldersQuery);
 
-    const docsQuery = useMemoFirebase(() => {
-        if (!targetUserId) return null;
-        return query(collection(firestore, `users/${targetUserId}/documents`), orderBy('uploadedAt', 'desc'));
-    }, [firestore, targetUserId]);
+    // Fetch Assets
+    const assetsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(collection(firestore, 'vault_assets'), orderBy('uploadedAt', 'desc'));
+    }, [firestore, user]);
+    const { data: rawAssets, isLoading: assetsLoading } = useCollection<VaultAsset>(assetsQuery);
 
-    const { data: documents, isLoading } = useCollection<DocumentLink>(docsQuery);
+    // Local Filtering for permissions and current path
+    const filteredFolders = React.useMemo(() => {
+        if (!rawFolders || !user || !userData) return [];
+        return rawFolders.filter(f => {
+            const isOwner = f.ownerId === user.uid;
+            const isSharedWithMe = f.sharedWithUids?.includes(user.uid);
+            const isSharedWithMyTeam = userData.teamId && f.sharedWithTeams?.includes(userData.teamId);
+            return isOwner || isSharedWithMe || isSharedWithMyTeam || isPrivileged;
+        });
+    }, [rawFolders, user, userData, isPrivileged]);
 
-    const handleSaveDocument = async () => {
-        if (!title || (!link && activeTab === 'link') || !user) {
+    const displayFolders = React.useMemo(() => {
+        // Folders are always root level in this logic, but you could nest them
+        if (currentFolderId) return [];
+        return filteredFolders;
+    }, [filteredFolders, currentFolderId]);
+
+    const displayAssets = React.useMemo(() => {
+        if (!rawAssets) return [];
+        return rawAssets.filter(a => a.folderId === currentFolderId).filter(a => {
+            // Simplified permission: if you see the folder, you see the assets
+            if (currentFolderId) return true;
+            // Root assets
+            return a.ownerId === user?.uid || isPrivileged;
+        });
+    }, [rawAssets, currentFolderId, user, isPrivileged]);
+
+    const currentFolder = React.useMemo(() => {
+        return rawFolders?.find(f => f.id === currentFolderId);
+    }, [rawFolders, currentFolderId]);
+
+    const handleCreateFolder = async () => {
+        if (!folderName.trim() || !user || !userData) return;
+        const payload = {
+            name: folderName,
+            color: folderColor,
+            ownerId: user.uid,
+            ownerName: `${userData.firstName} ${userData.lastName}`,
+            sharedWithTeams: [],
+            sharedWithUids: [],
+            createdAt: serverTimestamp(),
+        };
+        await addDocumentNonBlocking(collection(firestore, 'folders'), payload);
+        toast({ title: 'Tactical Folder Provisioned' });
+        setIsFolderDialogOpen(false);
+        setFolderName("");
+    };
+
+    const handleSaveAsset = async () => {
+        if (!assetTitle || (!assetLink && activeTab === 'link') || !user || !userData) {
             toast({ variant: 'destructive', title: 'Missing Information' });
             return;
         }
 
         const payload = {
-            title,
-            link: link,
-            employeeId: targetUserId,
+            folderId: currentFolderId,
+            ownerId: user.uid,
+            ownerName: `${userData.firstName} ${userData.lastName}`,
+            title: assetTitle,
+            link: assetLink,
             uploadedAt: serverTimestamp(),
             sourceType: activeTab as 'link' | 'file',
         };
 
-        if (editingDoc) {
-            updateDocumentNonBlocking(doc(firestore, `users/${targetUserId}/documents`, editingDoc.id), payload);
-            toast({ title: 'Document Updated' });
-        } else {
-            addDocumentNonBlocking(collection(firestore, `users/${targetUserId}/documents`), payload);
-            toast({ title: 'Document Asset Synchronized' });
-        }
-
-        setIsDialogOpen(false);
-        resetForm();
+        await addDocumentNonBlocking(collection(firestore, 'vault_assets'), payload);
+        toast({ title: 'Mission Asset Synchronized' });
+        setIsAssetDialogOpen(false);
+        resetAssetForm();
     };
 
     const handleFileUpload = async (file: File) => {
         if (!user || !storage) return;
         setIsUploading(true);
         try {
-            const fileRef = ref(storage, `documents/${user.uid}/${Date.now()}-${file.name}`);
+            const fileRef = ref(storage, `vault/${user.uid}/${Date.now()}-${file.name}`);
             const snapshot = await uploadBytes(fileRef, file);
             const url = await getDownloadURL(snapshot.ref);
-            setLink(url);
-            if (!title) setTitle(file.name);
-            toast({ title: "Asset Transmitted", description: "File uploaded to secure vault." });
+            setAssetLink(url);
+            if (!assetTitle) setAssetTitle(file.name);
+            toast({ title: "Binary Transmitted", description: "File encrypted and stored." });
         } catch (error: any) {
             toast({ variant: "destructive", title: "Transmission Failed", description: error.message });
         } finally {
@@ -104,40 +193,67 @@ export default function DocumentsPage() {
         }
     };
 
-    const resetForm = () => {
-        setTitle("");
-        setLink("");
-        setEditingUserDoc(null);
+    const handleUpdateSharing = async () => {
+        if (!sharingFolder) return;
+        const folderRef = doc(firestore, 'folders', sharingFolder.id);
+        await updateDocumentNonBlocking(folderRef, {
+            sharedWithTeams: selectedTeamIds,
+            sharedWithUids: selectedUserIds
+        });
+        toast({ title: "Fleet Access Updated" });
+        setIsShareDialogOpen(false);
+    };
+
+    const resetAssetForm = () => {
+        setAssetTitle("");
+        setAssetLink("");
         setActiveTab("link");
     };
 
-    const handleEdit = (docLink: DocumentLink) => {
-        setEditingUserDoc(docLink);
-        setTitle(docLink.title);
-        setLink(docLink.link);
-        setActiveTab(docLink.sourceType || "link");
-        setIsDialogOpen(true);
-    };
-
     return (
-        <div className="space-y-6">
-            <PageHeader title="Digital Document Vault" description="Manage and audit professional cloud asset links and secure file uploads.">
+        <div className="space-y-6 animate-fade-in-up">
+            <PageHeader title="Digital Document Vault" description="Manage and audit professional cloud assets, project folders, and secure uploads.">
                 <div className="flex gap-2">
-                    {isPrivileged && (
-                        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                            <SelectTrigger className="w-[220px] rounded-full h-11 bg-white/50">
-                                <Search className="size-4 mr-2 opacity-50" />
-                                <SelectValue placeholder="Filter Fleet" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="me">My Documents</SelectItem>
-                                {users?.filter(u => u.id !== user?.uid).map(u => (
-                                    <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                    <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if(!o) resetForm(); }}>
+                    <Dialog open={isFolderDialogOpen} onOpenChange={setIsFolderDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="rounded-full h-11 bg-white/50 border-none ring-1 ring-border/50 shadow-sm">
+                                <FolderPlus className="size-4 mr-2" /> New Folder
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="rounded-3xl sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Create Tactical Folder</DialogTitle>
+                                <DialogDescription>Establish a new intelligence container for your sector.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-6 py-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-primary">Project Designation</Label>
+                                    <Input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="e.g., Project Alpha Development" className="rounded-xl h-11" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-primary">Visual Identity</Label>
+                                    <div className="grid grid-cols-5 gap-2">
+                                        {(Object.keys(FOLDER_COLORS) as Array<keyof typeof FOLDER_COLORS>).map(c => (
+                                            <button
+                                                key={c}
+                                                onClick={() => setFolderColor(c)}
+                                                className={cn(
+                                                    "h-10 rounded-xl transition-all border-2",
+                                                    folderColor === c ? "border-primary scale-105" : "border-transparent",
+                                                    FOLDER_COLORS[c].split(' ')[0]
+                                                )}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={handleCreateFolder} className="w-full rounded-full h-12 font-black uppercase shadow-xl shadow-primary/20">Initialize Container</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isAssetDialogOpen} onOpenChange={setIsAssetDialogOpen}>
                         <DialogTrigger asChild>
                             <Button className="rounded-full h-11 shadow-lg">
                                 <Plus className="size-4 mr-2" /> Submit Asset
@@ -145,129 +261,217 @@ export default function DocumentsPage() {
                         </DialogTrigger>
                         <DialogContent className="rounded-3xl sm:max-w-md">
                             <DialogHeader>
-                                <DialogTitle className="text-xl font-black uppercase tracking-tighter">
-                                    {editingDoc ? 'Update Digital Asset' : 'Sync New Document'}
-                                </DialogTitle>
-                                <DialogDescription>Provision professional intelligence to the secure fleet vault.</DialogDescription>
+                                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Sync Mission Intelligence</DialogTitle>
+                                <DialogDescription>
+                                    {currentFolderId ? `Uploading to: ${currentFolder?.name}` : "Provisioning to root vault."}
+                                </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-6 py-4">
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-black uppercase text-primary">Asset Title</Label>
-                                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Q4 Performance Portfolio" className="rounded-xl h-11" />
+                                    <Input value={assetTitle} onChange={e => setAssetTitle(e.target.value)} placeholder="e.g., Tactical Briefing PDF" className="rounded-xl h-11" />
                                 </div>
-
                                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                                     <TabsList className="grid w-full grid-cols-2 h-11 rounded-xl bg-muted/30 p-1">
                                         <TabsTrigger value="link" className="text-[10px] font-black uppercase rounded-lg">Cloud Link</TabsTrigger>
-                                        <TabsTrigger value="file" className="text-[10px] font-black uppercase rounded-lg">File Upload</TabsTrigger>
+                                        <TabsTrigger value="file" className="text-[10px] font-black uppercase rounded-lg">Binary Upload</TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="link" className="pt-4 space-y-4">
                                         <div className="space-y-2">
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground">Repository URL</Label>
                                             <div className="flex gap-2">
                                                 <LinkIcon className="size-5 mt-3 text-muted-foreground shrink-0" />
-                                                <Input value={link} onChange={e => setLink(e.target.value)} placeholder="https://drive.google.com/..." className="rounded-xl h-11" />
+                                                <Input value={assetLink} onChange={e => setAssetLink(e.target.value)} placeholder="https://drive.google.com/..." className="rounded-xl h-11" />
                                             </div>
                                         </div>
                                     </TabsContent>
                                     <TabsContent value="file" className="pt-4 space-y-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Secure Upload</Label>
-                                            <div className="relative group">
-                                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} disabled={isUploading} />
-                                                <Button variant="outline" className="w-full h-14 rounded-xl border-dashed border-primary/40 font-bold uppercase text-[10px] gap-2" disabled={isUploading}>
-                                                    {isUploading ? <Loader2 className="size-4 animate-spin"/> : <FileUp className="size-4" />}
-                                                    {link && activeTab === 'file' ? "Asset Selected (Click to change)" : "Select Professional Asset"}
-                                                </Button>
-                                            </div>
-                                            {link && activeTab === 'file' && <p className="text-[9px] text-green-600 font-bold uppercase text-center mt-2">File verified and ready for sync.</p>}
+                                        <div className="relative group">
+                                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} disabled={isUploading} />
+                                            <Button variant="outline" className="w-full h-14 rounded-xl border-dashed border-primary/40 font-bold uppercase text-[10px] gap-2" disabled={isUploading}>
+                                                {isUploading ? <Loader2 className="size-4 animate-spin"/> : <FileUp className="size-4" />}
+                                                {assetLink && activeTab === 'file' ? "Asset Selected" : "Select Binary Mission Data"}
+                                            </Button>
                                         </div>
                                     </TabsContent>
                                 </Tabs>
                             </div>
                             <DialogFooter>
-                                <Button onClick={handleSaveDocument} disabled={isUploading || !link} className="w-full rounded-full h-12 font-black uppercase shadow-xl shadow-primary/20">Authorize Sync</Button>
+                                <Button onClick={handleSaveAsset} disabled={isUploading || !assetLink} className="w-full rounded-full h-12 font-black uppercase">Finalize Synchronization</Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
                 </div>
             </PageHeader>
 
-            <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
-                <CardHeader className="bg-muted/10 border-b flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle className="text-lg font-headline flex items-center gap-2">
-                            <FileBox className="size-5 text-primary" />
-                            Tactical Asset Registry
-                        </CardTitle>
-                        <CardDescription>Consolidated record of linked and uploaded professional documentation.</CardDescription>
-                    </div>
-                    {selectedUserId !== 'me' && (
-                        <Button variant="outline" size="sm" className="rounded-full font-bold uppercase text-[10px]" asChild>
-                            <Link href={`/dashboard/users/${selectedUserId}`}>
-                                <UserCircle className="size-3.5 mr-1.5" /> View Fleet Profile
-                            </Link>
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center gap-2 px-2">
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={cn("rounded-full text-[10px] font-black uppercase tracking-widest", !currentFolderId && "text-primary")}
+                    onClick={() => setCurrentFolderId(null)}
+                >
+                    Tactical Vault
+                </Button>
+                {currentFolderId && (
+                    <>
+                        <ChevronRight className="size-3 opacity-30" />
+                        <Badge variant="secondary" className="rounded-full px-3 py-1 font-black text-[10px] uppercase bg-primary/10 text-primary border-none">
+                            {currentFolder?.name} Sector
+                        </Badge>
+                        <Separator className="flex-1" />
+                        <Button variant="ghost" size="icon" onClick={() => setCurrentFolderId(null)} className="h-8 w-8 rounded-full">
+                            <ArrowLeft className="size-4" />
                         </Button>
-                    )}
-                </CardHeader>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader className="bg-muted/30">
-                            <TableRow className="hover:bg-transparent border-none">
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Asset Title</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Linked At</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Intelligence Source</TableHead>
-                                <TableHead className="text-right font-black uppercase tracking-tighter text-[10px] py-4">Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow><TableCell colSpan={4} className="h-32 text-center animate-pulse font-bold uppercase text-xs text-muted-foreground">Scanning Vault Registry...</TableCell></TableRow>
-                            ) : documents && documents.length > 0 ? (
-                                documents.map(d => (
-                                    <TableRow key={d.id} className="border-border/50 group">
-                                        <TableCell className="py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-primary/5 text-primary">
-                                                    {d.sourceType === 'file' ? <FileText className="size-4" /> : <LinkIcon className="size-4" />}
-                                                </div>
-                                                <p className="font-bold text-sm group-hover:text-primary transition-colors">{d.title}</p>
+                    </>
+                )}
+            </div>
+
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {/* Folders (Only shown at root) */}
+                {!currentFolderId && displayFolders.map(f => (
+                    <Card 
+                        key={f.id} 
+                        className="group border-none ring-1 ring-border/50 shadow-sm hover:shadow-xl transition-all duration-300 rounded-[2rem] overflow-hidden cursor-pointer bg-white"
+                        onClick={() => setCurrentFolderId(f.id)}
+                    >
+                        <div className={cn("h-12 flex items-end px-6", FOLDER_COLORS[f.color] || FOLDER_COLORS.blue)}>
+                            <div className="w-16 h-4 bg-white/40 rounded-t-xl" />
+                        </div>
+                        <CardHeader className="p-6">
+                            <div className="flex items-start justify-between">
+                                <div className="space-y-1">
+                                    <CardTitle className="text-lg font-black uppercase tracking-tighter truncate max-w-[180px]">{f.name}</CardTitle>
+                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Modified: {format(f.createdAt?.toDate() || new Date(), 'dd MMM yyyy')}</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
+                                        onClick={(e) => { e.stopPropagation(); setSharingFolder(f); setSelectedTeamIds(f.sharedWithTeams || []); setSelectedUserIds(f.sharedWithUids || []); setIsShareDialogOpen(true); }}
+                                    >
+                                        <Share2 className="size-3.5" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={(e) => { e.stopPropagation(); deleteDocumentNonBlocking(doc(firestore, 'folders', f.id)); }}>
+                                        <Trash2 className="size-3.5" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-6 pt-0 flex items-center justify-between">
+                            <div className="flex -space-x-2">
+                                <div className="size-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">{f.ownerName[0]}</div>
+                                {(f.sharedWithUids?.length || 0) > 0 && <div className="size-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">+{f.sharedWithUids.length}</div>}
+                            </div>
+                            <Folder className="size-5 opacity-20" />
+                        </CardContent>
+                    </Card>
+                ))}
+
+                {/* Assets (Files/Links) */}
+                {displayAssets.map(a => (
+                    <Card key={a.id} className="group border-none ring-1 ring-border/50 shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden">
+                        <CardHeader className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className={cn("p-3 rounded-2xl", a.sourceType === 'file' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600")}>
+                                    {a.sourceType === 'file' ? <FileText className="size-5" /> : <LinkIcon className="size-5" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <CardTitle className="text-sm font-bold truncate">{a.title}</CardTitle>
+                                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{a.sourceType === 'file' ? 'Secure File' : 'Cloud Link'}</p>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="px-6 pb-6 pt-0 space-y-4">
+                            <div className="p-3 bg-muted/20 rounded-2xl border border-dashed border-border/50 space-y-2">
+                                <div className="flex justify-between items-center text-[8px] font-black uppercase text-muted-foreground">
+                                    <span>Source: {a.ownerName}</span>
+                                    <span>{format(a.uploadedAt?.toDate() || new Date(), 'dd/MM/yy')}</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button asChild className="flex-1 rounded-xl h-10 font-bold uppercase text-[9px] tracking-widest">
+                                    <Link href={a.link} target="_blank" download={a.sourceType === 'file'}>
+                                        {a.sourceType === 'file' ? <Download className="size-3 mr-2" /> : <ExternalLink className="size-3 mr-2" />}
+                                        {a.sourceType === 'file' ? 'Download' : 'Access Link'}
+                                    </Link>
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-destructive hover:bg-red-50" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'vault_assets', a.id))}>
+                                    <Trash2 className="size-4" />
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+
+                {/* Loading State */}
+                {(foldersLoading || assetsLoading) && [...Array(4)].map((_, i) => (
+                    <Card key={i} className="h-48 rounded-[2rem] bg-muted animate-pulse border-none shadow-none" />
+                ))}
+
+                {/* Empty State */}
+                {!foldersLoading && !assetsLoading && displayFolders.length === 0 && displayAssets.length === 0 && (
+                    <div className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-30">
+                        <Folder className="size-16 mb-4" />
+                        <p className="font-black uppercase text-xs tracking-[0.3em]">Operational Grid Clear</p>
+                        <p className="text-[10px] uppercase font-bold mt-2">No synchronized assets in this sector.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Sharing Dialog */}
+            <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+                <DialogContent className="rounded-3xl sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Fleet Distribution Protocol</DialogTitle>
+                        <DialogDescription>Select tactical teams or specific officials for shared access to "{sharingFolder?.name}".</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[60vh] py-4">
+                        <div className="space-y-8 px-1">
+                            <div className="space-y-4">
+                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Users className="size-3" /> Team Authorization</Label>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {allTeams?.map(t => (
+                                        <div key={t.id} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-colors border border-border/50">
+                                            <Checkbox 
+                                                id={`team-${t.id}`} 
+                                                checked={selectedTeamIds.includes(t.id)} 
+                                                onCheckedChange={c => setSelectedTeamIds(prev => c ? [...prev, t.id] : prev.filter(id => id !== t.id))} 
+                                            />
+                                            <Label htmlFor={`team-${t.id}`} className="font-bold text-xs uppercase cursor-pointer flex-1">{t.name}</Label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <Separator className="opacity-50" />
+                            <div className="space-y-4">
+                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><UserCircle className="size-3" /> Personnel Access</Label>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {allUsers?.filter(u => u.id !== user?.uid).map(u => (
+                                        <div key={u.id} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-colors border border-border/50">
+                                            <Checkbox 
+                                                id={`user-${u.id}`} 
+                                                checked={selectedUserIds.includes(u.id)} 
+                                                onCheckedChange={c => setSelectedUserIds(prev => c ? [...prev, u.id] : prev.filter(id => id !== u.id))} 
+                                            />
+                                            <div className="flex-1 cursor-pointer" onClick={() => setSelectedUserIds(prev => selectedUserIds.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id])}>
+                                                <p className="font-bold text-xs uppercase">{u.firstName} {u.lastName}</p>
+                                                <p className="text-[9px] text-muted-foreground font-black uppercase tracking-tighter">{u.jobTitle}</p>
                                             </div>
-                                        </TableCell>
-                                        <TableCell className="py-4">
-                                            <span className="font-medium text-xs text-muted-foreground">{d.uploadedAt ? format(d.uploadedAt.toDate(), 'MMM d, p') : '...'}</span>
-                                        </TableCell>
-                                        <TableCell className="py-4">
-                                            <Badge variant="outline" className={cn(
-                                                "rounded-full text-[9px] uppercase font-black tracking-widest bg-white gap-1",
-                                                d.sourceType === 'file' ? "text-purple-600 border-purple-200" : "text-blue-600 border-blue-200"
-                                            )}>
-                                                {d.sourceType === 'file' ? <ShieldCheck className="size-2.5" /> : <ExternalLink className="size-2.5" />}
-                                                {d.sourceType === 'file' ? "Secure-File" : "Cloud-Base"}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right py-4">
-                                            <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="icon" className="text-blue-600 rounded-full h-8 w-8" asChild>
-                                                    <Link href={d.link} target="_blank"><ExternalLink className="size-4" /></Link>
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="text-muted-foreground rounded-full h-8 w-8" onClick={() => handleEdit(d)}>
-                                                    <Edit className="size-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="text-destructive rounded-full h-8 w-8" onClick={() => deleteDocumentNonBlocking(doc(firestore, `users/${targetUserId}/documents`, d.id))}>
-                                                    <Trash2 className="size-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={4} className="h-32 text-center text-muted-foreground italic">No digital assets synchronized in this sector.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollArea>
+                    <DialogFooter>
+                        <Button onClick={handleUpdateSharing} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Authorize Distribution</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
