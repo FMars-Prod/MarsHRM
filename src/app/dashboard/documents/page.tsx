@@ -94,7 +94,6 @@ export default function DocumentsPage() {
     // Fetch Folders
     const foldersQuery = useMemoFirebase(() => {
         if (!user) return null;
-        // In a real app, we'd use complex OR queries or local filtering
         return query(collection(firestore, 'folders'), orderBy('createdAt', 'desc'));
     }, [firestore, user]);
     const { data: rawFolders, isLoading: foldersLoading } = useCollection<FolderData>(foldersQuery);
@@ -118,20 +117,14 @@ export default function DocumentsPage() {
     }, [rawFolders, user, userData, isPrivileged]);
 
     const displayFolders = React.useMemo(() => {
-        // Folders are always root level in this logic, but you could nest them
         if (currentFolderId) return [];
         return filteredFolders;
     }, [filteredFolders, currentFolderId]);
 
     const displayAssets = React.useMemo(() => {
         if (!rawAssets) return [];
-        return rawAssets.filter(a => a.folderId === currentFolderId).filter(a => {
-            // Simplified permission: if you see the folder, you see the assets
-            if (currentFolderId) return true;
-            // Root assets
-            return a.ownerId === user?.uid || isPrivileged;
-        });
-    }, [rawAssets, currentFolderId, user, isPrivileged]);
+        return rawAssets.filter(a => a.folderId === currentFolderId);
+    }, [rawAssets, currentFolderId]);
 
     const currentFolder = React.useMemo(() => {
         return rawFolders?.find(f => f.id === currentFolderId);
@@ -155,8 +148,8 @@ export default function DocumentsPage() {
     };
 
     const handleSaveAsset = async () => {
-        if (!assetTitle || (!assetLink && activeTab === 'link') || !user || !userData) {
-            toast({ variant: 'destructive', title: 'Missing Information' });
+        if (!assetTitle || (!assetLink && activeTab === 'link') || !user || !userData || !currentFolderId) {
+            toast({ variant: 'destructive', title: 'Action Restricted', description: 'Assets must be provisioned within a tactical folder.' });
             return;
         }
 
@@ -212,95 +205,97 @@ export default function DocumentsPage() {
 
     return (
         <div className="space-y-6 animate-fade-in-up">
-            <PageHeader title="Digital Document Vault" description="Manage and audit professional cloud assets, project folders, and secure uploads.">
+            <PageHeader title="Digital Document Vault" description="Manage and audit professional cloud assets and secure project folders.">
                 <div className="flex gap-2">
-                    <Dialog open={isFolderDialogOpen} onOpenChange={setIsFolderDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" className="rounded-full h-11 bg-white/50 border-none ring-1 ring-border/50 shadow-sm">
-                                <FolderPlus className="size-4 mr-2" /> New Folder
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="rounded-3xl sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Create Tactical Folder</DialogTitle>
-                                <DialogDescription>Establish a new intelligence container for your sector.</DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-6 py-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Project Designation</Label>
-                                    <Input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="e.g., Project Alpha Development" className="rounded-xl h-11" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Visual Identity</Label>
-                                    <div className="grid grid-cols-5 gap-2">
-                                        {(Object.keys(FOLDER_COLORS) as Array<keyof typeof FOLDER_COLORS>).map(c => (
-                                            <button
-                                                key={c}
-                                                onClick={() => setFolderColor(c)}
-                                                className={cn(
-                                                    "h-10 rounded-xl transition-all border-2",
-                                                    folderColor === c ? "border-primary scale-105" : "border-transparent",
-                                                    FOLDER_COLORS[c].split(' ')[0]
-                                                )}
-                                            />
-                                        ))}
+                    {!currentFolderId ? (
+                        <Dialog open={isFolderDialogOpen} onOpenChange={setIsFolderDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="rounded-full h-11 bg-white/50 border-none ring-1 ring-border/50 shadow-sm">
+                                    <FolderPlus className="size-4 mr-2" /> New Folder
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="rounded-3xl sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle className="text-xl font-black uppercase tracking-tighter">Create Tactical Folder</DialogTitle>
+                                    <DialogDescription>Establish a new intelligence container for your sector.</DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-6 py-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-primary">Project Designation</Label>
+                                        <Input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="e.g., Project Alpha Development" className="rounded-xl h-11" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-primary">Visual Identity</Label>
+                                        <div className="grid grid-cols-5 gap-2">
+                                            {(Object.keys(FOLDER_COLORS) as Array<keyof typeof FOLDER_COLORS>).map(c => (
+                                                <button
+                                                    key={c}
+                                                    onClick={() => setFolderColor(c)}
+                                                    className={cn(
+                                                        "h-10 rounded-xl transition-all border-2",
+                                                        folderColor === c ? "border-primary scale-105" : "border-transparent",
+                                                        FOLDER_COLORS[c].split(' ')[0]
+                                                    )}
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <DialogFooter>
-                                <Button onClick={handleCreateFolder} className="w-full rounded-full h-12 font-black uppercase shadow-xl shadow-primary/20">Initialize Container</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-
-                    <Dialog open={isAssetDialogOpen} onOpenChange={setIsAssetDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="rounded-full h-11 shadow-lg">
-                                <Plus className="size-4 mr-2" /> Submit Asset
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="rounded-3xl sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Sync Mission Intelligence</DialogTitle>
-                                <DialogDescription>
-                                    {currentFolderId ? `Uploading to: ${currentFolder?.name}` : "Provisioning to root vault."}
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-6 py-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Asset Title</Label>
-                                    <Input value={assetTitle} onChange={e => setAssetTitle(e.target.value)} placeholder="e.g., Tactical Briefing PDF" className="rounded-xl h-11" />
-                                </div>
-                                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                                    <TabsList className="grid w-full grid-cols-2 h-11 rounded-xl bg-muted/30 p-1">
-                                        <TabsTrigger value="link" className="text-[10px] font-black uppercase rounded-lg">Cloud Link</TabsTrigger>
-                                        <TabsTrigger value="file" className="text-[10px] font-black uppercase rounded-lg">Binary Upload</TabsTrigger>
-                                    </TabsList>
-                                    <TabsContent value="link" className="pt-4 space-y-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Repository URL</Label>
-                                            <div className="flex gap-2">
-                                                <LinkIcon className="size-5 mt-3 text-muted-foreground shrink-0" />
-                                                <Input value={assetLink} onChange={e => setAssetLink(e.target.value)} placeholder="https://drive.google.com/..." className="rounded-xl h-11" />
+                                <DialogFooter>
+                                    <Button onClick={handleCreateFolder} className="w-full rounded-full h-12 font-black uppercase shadow-xl shadow-primary/20">Initialize Container</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    ) : (
+                        <Dialog open={isAssetDialogOpen} onOpenChange={setIsAssetDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="rounded-full h-11 shadow-lg">
+                                    <Plus className="size-4 mr-2" /> Submit Asset
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="rounded-3xl sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle className="text-xl font-black uppercase tracking-tighter">Sync Mission Intelligence</DialogTitle>
+                                    <DialogDescription>
+                                        Uploading to Sector: <span className="font-bold text-primary">{currentFolder?.name}</span>
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-6 py-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-primary">Asset Title</Label>
+                                        <Input value={assetTitle} onChange={e => setAssetTitle(e.target.value)} placeholder="e.g., Tactical Briefing PDF" className="rounded-xl h-11" />
+                                    </div>
+                                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                                        <TabsList className="grid w-full grid-cols-2 h-11 rounded-xl bg-muted/30 p-1">
+                                            <TabsTrigger value="link" className="text-[10px] font-black uppercase rounded-lg">Cloud Link</TabsTrigger>
+                                            <TabsTrigger value="file" className="text-[10px] font-black uppercase rounded-lg">Binary Upload</TabsTrigger>
+                                        </TabsList>
+                                        <TabsContent value="link" className="pt-4 space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Repository URL</Label>
+                                                <div className="flex gap-2">
+                                                    <LinkIcon className="size-5 mt-3 text-muted-foreground shrink-0" />
+                                                    <Input value={assetLink} onChange={e => setAssetLink(e.target.value)} placeholder="https://drive.google.com/..." className="rounded-xl h-11" />
+                                                </div>
                                             </div>
-                                        </div>
-                                    </TabsContent>
-                                    <TabsContent value="file" className="pt-4 space-y-4">
-                                        <div className="relative group">
-                                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} disabled={isUploading} />
-                                            <Button variant="outline" className="w-full h-14 rounded-xl border-dashed border-primary/40 font-bold uppercase text-[10px] gap-2" disabled={isUploading}>
-                                                {isUploading ? <Loader2 className="size-4 animate-spin"/> : <FileUp className="size-4" />}
-                                                {assetLink && activeTab === 'file' ? "Asset Selected" : "Select Binary Mission Data"}
-                                            </Button>
-                                        </div>
-                                    </TabsContent>
-                                </Tabs>
-                            </div>
-                            <DialogFooter>
-                                <Button onClick={handleSaveAsset} disabled={isUploading || !assetLink} className="w-full rounded-full h-12 font-black uppercase">Finalize Synchronization</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                                        </TabsContent>
+                                        <TabsContent value="file" className="pt-4 space-y-4">
+                                            <div className="relative group">
+                                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} disabled={isUploading} />
+                                                <Button variant="outline" className="w-full h-14 rounded-xl border-dashed border-primary/40 font-bold uppercase text-[10px] gap-2" disabled={isUploading}>
+                                                    {isUploading ? <Loader2 className="size-4 animate-spin"/> : <FileUp className="size-4" />}
+                                                    {assetLink && activeTab === 'file' ? "Asset Selected" : "Select Binary Mission Data"}
+                                                </Button>
+                                            </div>
+                                        </TabsContent>
+                                    </Tabs>
+                                </div>
+                                <DialogFooter>
+                                    <Button onClick={handleSaveAsset} disabled={isUploading || !assetLink} className="w-full rounded-full h-12 font-black uppercase">Finalize Synchronization</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
                 </div>
             </PageHeader>
 
@@ -320,8 +315,8 @@ export default function DocumentsPage() {
                         <Badge variant="secondary" className="rounded-full px-3 py-1 font-black text-[10px] uppercase bg-primary/10 text-primary border-none">
                             {currentFolder?.name} Sector
                         </Badge>
-                        <Separator className="flex-1" />
-                        <Button variant="ghost" size="icon" onClick={() => setCurrentFolderId(null)} className="h-8 w-8 rounded-full">
+                        <Separator className="flex-1 opacity-0" />
+                        <Button variant="ghost" size="icon" onClick={() => setCurrentFolderId(null)} className="h-8 w-8 rounded-full hover:bg-primary/5">
                             <ArrowLeft className="size-4" />
                         </Button>
                     </>
@@ -371,8 +366,8 @@ export default function DocumentsPage() {
                     </Card>
                 ))}
 
-                {/* Assets (Files/Links) */}
-                {displayAssets.map(a => (
+                {/* Assets (Files/Links) - Only shown when inside a folder */}
+                {currentFolderId && displayAssets.map(a => (
                     <Card key={a.id} className="group border-none ring-1 ring-border/50 shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden">
                         <CardHeader className="p-6">
                             <div className="flex items-center gap-4">
@@ -417,7 +412,9 @@ export default function DocumentsPage() {
                     <div className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-30">
                         <Folder className="size-16 mb-4" />
                         <p className="font-black uppercase text-xs tracking-[0.3em]">Operational Grid Clear</p>
-                        <p className="text-[10px] uppercase font-bold mt-2">No synchronized assets in this sector.</p>
+                        <p className="text-[10px] uppercase font-bold mt-2">
+                            {currentFolderId ? "This folder is empty. Provision assets via the header." : "Create your first tactical folder to start organizing assets."}
+                        </p>
                     </div>
                 )}
             </div>
