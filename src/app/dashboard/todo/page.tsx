@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -8,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, where, Timestamp } from 'firebase/firestore';
-import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar, User, AlertTriangle, Filter, Check, X, ShieldCheck } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -18,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 
 type Todo = {
     id: string;
@@ -25,6 +25,7 @@ type Todo = {
     description?: string;
     completed: boolean;
     createdAt: any;
+    completedAt?: any;
     priority: 'low' | 'medium' | 'high';
     assignedBy: string;
     assignedByName: string;
@@ -46,6 +47,7 @@ export default function TodoPage() {
     
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [viewFilter, setViewFilter] = React.useState<'active' | 'completed'>('active');
+    const [selectedTodo, setSelectedTodo] = React.useState<Todo | null>(null);
 
     // Form States
     const [newTask, setNewTask] = React.useState('');
@@ -109,7 +111,8 @@ export default function TodoPage() {
     const toggleComplete = (todo: Todo) => {
         if (!user) return;
         updateDocumentNonBlocking(doc(firestore, `users/${user.uid}/todos`, todo.id), {
-            completed: !todo.completed
+            completed: !todo.completed,
+            completedAt: !todo.completed ? serverTimestamp() : null
         });
     };
 
@@ -140,7 +143,7 @@ export default function TodoPage() {
                             className="rounded-lg font-black uppercase text-[9px] tracking-widest px-4"
                             onClick={() => setViewFilter('completed')}
                         >
-                            Archived
+                            Archive
                         </Button>
                     </div>
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -218,7 +221,8 @@ export default function TodoPage() {
                             todo={todo} 
                             currentUserId={user?.uid} 
                             onToggle={() => toggleComplete(todo)} 
-                            onDelete={() => deleteTask(todo.id)} 
+                            onDelete={() => deleteTask(todo.id)}
+                            onOpenDetails={() => setSelectedTodo(todo)}
                         />
                     ))}
                 </div>
@@ -230,11 +234,78 @@ export default function TodoPage() {
                     </p>
                 </div>
             )}
+
+            <Dialog open={!!selectedTodo} onOpenChange={o => !o && setSelectedTodo(null)}>
+                <DialogContent className="rounded-3xl sm:max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-2 mb-2">
+                             {selectedTodo && (
+                                <Badge className={cn(
+                                    "rounded-full text-[8px] font-black uppercase tracking-widest border-none",
+                                    selectedTodo.priority === 'high' ? "bg-red-100 text-red-700" :
+                                    selectedTodo.priority === 'medium' ? "bg-amber-100 text-amber-700" :
+                                    "bg-blue-100 text-blue-700"
+                                )}>
+                                    {selectedTodo.priority} Priority
+                                </Badge>
+                             )}
+                             {selectedTodo?.completed && (
+                                <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[8px] font-black uppercase">Mission Success</Badge>
+                             )}
+                        </div>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter">{selectedTodo?.task}</DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="py-6 space-y-6">
+                        {selectedTodo?.description && (
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Details</Label>
+                                <p className="text-sm font-medium leading-relaxed">{selectedTodo.description}</p>
+                            </div>
+                        )}
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Registered</Label>
+                                <p className="text-xs font-bold">{selectedTodo?.createdAt ? format(selectedTodo.createdAt.toDate(), 'PP p') : 'N/A'}</p>
+                            </div>
+                            {selectedTodo?.dueDate && (
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Target Deadline</Label>
+                                    <p className="text-xs font-bold text-primary">{format(selectedTodo.dueDate.toDate(), 'PP p')}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <Separator />
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Assigned By</Label>
+                                <div className="flex items-center gap-2">
+                                    <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{selectedTodo?.assignedByName[0]}</div>
+                                    <p className="text-xs font-bold">{selectedTodo?.assignedByName}</p>
+                                </div>
+                            </div>
+                            {selectedTodo?.completedAt && (
+                                <div className="space-y-1 text-right">
+                                    <Label className="text-[10px] font-black uppercase text-green-600">Completed At</Label>
+                                    <p className="text-xs font-black text-green-700">{format(selectedTodo.completedAt.toDate(), 'PP p')}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" className="w-full rounded-full h-12 font-black uppercase tracking-widest" onClick={() => setSelectedTodo(null)}>Close Briefing</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
 
-function StickyNote({ todo, currentUserId, onToggle, onDelete }: { todo: Todo, currentUserId?: string, onToggle: () => void, onDelete: () => void }) {
+function StickyNote({ todo, currentUserId, onToggle, onDelete, onOpenDetails }: { todo: Todo, currentUserId?: string, onToggle: () => void, onDelete: () => void, onOpenDetails: () => void }) {
     const isAssignedByOther = todo.assignedBy !== currentUserId;
     
     // Priority Styles
@@ -242,17 +313,17 @@ function StickyNote({ todo, currentUserId, onToggle, onDelete }: { todo: Todo, c
         high: "bg-[#FEF2F2] border-red-200 text-red-900 ring-red-500/10",
         medium: "bg-[#FFFBEB] border-amber-200 text-amber-900 ring-amber-500/10",
         low: "bg-[#EFF6FF] border-blue-200 text-blue-900 ring-blue-500/10",
-        completed: "bg-slate-50 border-slate-200 text-slate-400 opacity-80 grayscale"
+        completed: "bg-slate-50 border-slate-200 text-slate-400 opacity-80"
     };
 
     const currentStyle = todo.completed ? styles.completed : styles[todo.priority];
 
     return (
         <Card className={cn(
-            "relative group border-2 rounded-[2rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 overflow-hidden",
+            "relative group border-2 rounded-[2rem] shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden cursor-pointer",
             currentStyle
-        )}>
-            <div className="absolute top-4 right-4 flex gap-1">
+        )} onClick={onOpenDetails}>
+            <div className="absolute top-4 right-4 flex gap-1 z-20" onClick={e => e.stopPropagation()}>
                 {todo.completed ? (
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50" onClick={onDelete}>
                         <Trash2 className="size-3.5" />
@@ -269,9 +340,9 @@ function StickyNote({ todo, currentUserId, onToggle, onDelete }: { todo: Todo, c
                 <div className="space-y-2">
                     <div className="flex items-start gap-3">
                         <button 
-                            onClick={onToggle}
+                            onClick={(e) => { e.stopPropagation(); onToggle(); }}
                             className={cn(
-                                "mt-1 size-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0",
+                                "mt-1 size-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 z-20",
                                 todo.completed ? "bg-green-500 border-green-500 text-white" : "border-current/20 hover:border-current"
                             )}
                         >
@@ -284,37 +355,47 @@ function StickyNote({ todo, currentUserId, onToggle, onDelete }: { todo: Todo, c
                             {todo.task}
                         </h3>
                     </div>
-                    {todo.description && (
-                        <p className={cn("text-xs font-medium leading-relaxed opacity-70", todo.completed && "line-through")}>
+                    {todo.description && !todo.completed && (
+                        <p className="text-[11px] font-medium leading-relaxed line-clamp-2 opacity-60">
                             {todo.description}
                         </p>
                     )}
                 </div>
 
                 <div className="pt-4 space-y-3 border-t border-current/10">
-                    {todo.dueDate && (
-                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
-                            <Clock className="size-3 opacity-60" />
-                            <span>Due: {format(todo.dueDate.toDate(), 'MMM d, p')}</span>
+                    {todo.completed ? (
+                        <div className="space-y-1">
+                             <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-green-600">
+                                <CheckCircle2 className="size-3" /> SUCCESSFUL COMPLETION
+                            </div>
+                            {todo.completedAt && (
+                                <p className="text-[8px] font-bold opacity-60">FINISHED: {format(todo.completedAt.toDate(), 'p, MMM d')}</p>
+                            )}
                         </div>
+                    ) : (
+                        <>
+                            {todo.dueDate && (
+                                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
+                                    <Clock className="size-3 opacity-60" />
+                                    <span>Due: {format(todo.dueDate.toDate(), 'MMM d, p')}</span>
+                                </div>
+                            )}
+                            
+                            <div className="flex items-center justify-between">
+                                {isAssignedByOther ? (
+                                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/50 text-[8px] font-black uppercase border border-current/10">
+                                        <User className="size-2.5" />
+                                        From: {todo.assignedByName.split(' ')[0]}
+                                    </div>
+                                ) : (
+                                    <div className="text-[8px] font-black uppercase tracking-widest opacity-40">Personal Mission</div>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Eye className="size-3" />
+                                </Button>
+                            </div>
+                        </>
                     )}
-                    
-                    <div className="flex items-center justify-between">
-                        {isAssignedByOther ? (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/50 text-[8px] font-black uppercase border border-current/10">
-                                <User className="size-2.5" />
-                                From: {todo.assignedByName.split(' ')[0]}
-                            </div>
-                        ) : (
-                            <div className="text-[8px] font-black uppercase tracking-widest opacity-40">Personal Mission</div>
-                        )}
-                        
-                        {todo.completed && (
-                            <div className="flex items-center gap-1 text-green-600 font-black uppercase text-[8px] tracking-widest">
-                                <CheckCircle2 className="size-3" /> SUCCESS
-                            </div>
-                        )}
-                    </div>
                 </div>
             </CardContent>
         </Card>
