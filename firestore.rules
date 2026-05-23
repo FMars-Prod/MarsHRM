@@ -59,8 +59,10 @@ service cloud.firestore {
       }
 
       match /todos/{todoId} {
-        allow read: if isOwner(userId);
-        allow write: if isOwner(userId);
+        allow read: if isOwner(userId) || resource.data.assignedBy == request.auth.uid;
+        allow create: if isSignedIn() && (isOwner(userId) || request.resource.data.assignedBy == request.auth.uid);
+        allow update: if isOwner(userId) || resource.data.assignedBy == request.auth.uid;
+        allow delete: if (isOwner(userId) || resource.data.assignedBy == request.auth.uid);
       }
 
       match /readAnnouncements/{id} {
