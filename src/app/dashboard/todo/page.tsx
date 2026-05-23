@@ -7,10 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, where, Timestamp } from 'firebase/firestore';
-import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isToday, isBefore, startOfDay, addDays } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,6 +18,8 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 type Todo = {
     id: string;
@@ -48,6 +50,7 @@ export default function TodoPage() {
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [viewFilter, setViewFilter] = React.useState<'active' | 'completed'>('active');
     const [selectedTodo, setSelectedTodo] = React.useState<Todo | null>(null);
+    const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 
     // Form States
     const [newTask, setNewTask] = React.useState('');
@@ -116,34 +119,90 @@ export default function TodoPage() {
         });
     };
 
-    const deleteTask = (id: string) => {
+    const deleteTasks = (ids: string[]) => {
         if (!user) return;
-        deleteDocumentNonBlocking(doc(firestore, `users/${user.uid}/todos`, id));
-        toast({ title: "Objective Purged", description: "Record removed from board." });
+        ids.forEach(id => {
+            deleteDocumentNonBlocking(doc(firestore, `users/${user.uid}/todos`, id));
+        });
+        setSelectedIds([]);
+        toast({ title: "Objectives Purged", description: `${ids.length} records removed from board.` });
     };
 
     const displayTodos = todos?.filter(t => viewFilter === 'completed' ? t.completed : !t.completed) || [];
+    
+    const activeCount = todos?.filter(t => !t.completed).length || 0;
+    const archiveCount = todos?.filter(t => t.completed).length || 0;
+
+    const groupedTodos = React.useMemo(() => {
+        const today = startOfDay(new Date());
+        const groups: { title: string; items: Todo[] }[] = [
+            { title: "Overdue", items: [] },
+            { title: "Today", items: [] },
+            { title: "Upcoming / Someday", items: [] }
+        ];
+
+        displayTodos.forEach(todo => {
+            if (!todo.dueDate) {
+                groups[2].items.push(todo);
+                return;
+            }
+            const due = todo.dueDate.toDate();
+            if (isBefore(due, today)) {
+                groups[0].items.push(todo);
+            } else if (isToday(due)) {
+                groups[1].items.push(todo);
+            } else {
+                groups[2].items.push(todo);
+            }
+        });
+
+        return groups.filter(g => g.items.length > 0);
+    }, [displayTodos]);
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
 
     return (
         <div className="space-y-8 animate-fade-in-up pb-20">
             <PageHeader title="Mission Objectives" description="Tactical task board with priority-based sticky notes.">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-3 items-center">
+                    {selectedIds.length > 0 && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm" className="rounded-full h-11 px-6 shadow-lg animate-fade-in-up">
+                                    <Trash2 className="size-4 mr-2" /> Delete Selected ({selectedIds.length})
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-3xl">
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle className="font-black uppercase tracking-tighter">Confirm Purge</AlertDialogTitle>
+                                    <AlertDialogDescription>This will permanently remove {selectedIds.length} records from your tactical grid. This action is irreversible.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel className="rounded-full font-bold text-xs uppercase">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteTasks(selectedIds)} className="rounded-full font-bold text-xs uppercase bg-red-600">Purge Data</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+
                     <div className="flex bg-muted/50 p-1 rounded-xl ring-1 ring-border/50">
                         <Button 
                             variant={viewFilter === 'active' ? 'secondary' : 'ghost'} 
                             size="sm" 
                             className="rounded-lg font-black uppercase text-[9px] tracking-widest px-4"
-                            onClick={() => setViewFilter('active')}
+                            onClick={() => { setViewFilter('active'); setSelectedIds([]); }}
                         >
-                            Active Sector
+                            Active Sector ({activeCount})
                         </Button>
                         <Button 
                             variant={viewFilter === 'completed' ? 'secondary' : 'ghost'} 
                             size="sm" 
                             className="rounded-lg font-black uppercase text-[9px] tracking-widest px-4"
-                            onClick={() => setViewFilter('completed')}
+                            onClick={() => { setViewFilter('completed'); setSelectedIds([]); }}
                         >
-                            Archive
+                            Archive ({archiveCount})
                         </Button>
                     </div>
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -214,16 +273,28 @@ export default function TodoPage() {
                     <p className="font-black uppercase text-[10px] text-primary/60 tracking-[0.3em]">Syncing Tactical Grid...</p>
                 </div>
             ) : displayTodos.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {displayTodos.map(todo => (
-                        <StickyNote 
-                            key={todo.id} 
-                            todo={todo} 
-                            currentUserId={user?.uid} 
-                            onToggle={() => toggleComplete(todo)} 
-                            onDelete={() => deleteTask(todo.id)}
-                            onOpenDetails={() => setSelectedTodo(todo)}
-                        />
+                <div className="space-y-12">
+                    {groupedTodos.map(group => (
+                        <div key={group.title} className="space-y-6">
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground shrink-0">{group.title} ({group.items.length})</h3>
+                                <Separator className="flex-1 opacity-50" />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {group.items.map(todo => (
+                                    <StickyNote 
+                                        key={todo.id} 
+                                        todo={todo} 
+                                        currentUserId={user?.uid} 
+                                        isSelected={selectedIds.includes(todo.id)}
+                                        onSelect={() => toggleSelect(todo.id)}
+                                        onToggle={() => toggleComplete(todo)} 
+                                        onDelete={() => deleteTasks([todo.id])}
+                                        onOpenDetails={() => setSelectedTodo(todo)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     ))}
                 </div>
             ) : (
@@ -289,7 +360,7 @@ export default function TodoPage() {
                             </div>
                             {selectedTodo?.completedAt && (
                                 <div className="space-y-1 text-right">
-                                    <Label className="text-[10px] font-black uppercase text-green-600">Completed At</Label>
+                                    <Label className="text-[10px] font-black uppercase text-green-600">Finished At</Label>
                                     <p className="text-xs font-black text-green-700">{format(selectedTodo.completedAt.toDate(), 'PP p')}</p>
                                 </div>
                             )}
@@ -305,7 +376,7 @@ export default function TodoPage() {
     );
 }
 
-function StickyNote({ todo, currentUserId, onToggle, onDelete, onOpenDetails }: { todo: Todo, currentUserId?: string, onToggle: () => void, onDelete: () => void, onOpenDetails: () => void }) {
+function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDelete, onOpenDetails }: any) {
     const isAssignedByOther = todo.assignedBy !== currentUserId;
     
     // Priority Styles
@@ -316,60 +387,58 @@ function StickyNote({ todo, currentUserId, onToggle, onDelete, onOpenDetails }: 
         completed: "bg-slate-50 border-slate-200 text-slate-400 opacity-80"
     };
 
-    const currentStyle = todo.completed ? styles.completed : styles[todo.priority];
+    const currentStyle = todo.completed ? styles.completed : styles[todo.priority as 'low' | 'medium' | 'high'];
 
     return (
         <Card className={cn(
-            "relative group border-2 rounded-[2rem] shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden cursor-pointer",
-            currentStyle
+            "relative group border-2 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden cursor-pointer",
+            currentStyle,
+            isSelected && "ring-2 ring-primary ring-offset-2 scale-[0.98]"
         )} onClick={onOpenDetails}>
-            <div className="absolute top-4 right-4 flex gap-1 z-20" onClick={e => e.stopPropagation()}>
-                {todo.completed ? (
+            
+            <div className="absolute top-5 right-5 flex items-center gap-2 z-20" onClick={e => e.stopPropagation()}>
+                <Checkbox checked={isSelected} onCheckedChange={onSelect} className="h-5 w-5 rounded-lg border-2 border-current/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                {todo.completed && (
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50" onClick={onDelete}>
                         <Trash2 className="size-3.5" />
                     </Button>
-                ) : (
-                    <div className={cn(
-                        "size-2 rounded-full animate-pulse",
-                        todo.priority === 'high' ? "bg-red-500" : todo.priority === 'medium' ? "bg-amber-500" : "bg-blue-500"
-                    )} />
                 )}
             </div>
 
-            <CardContent className="p-7 space-y-4">
+            <CardContent className="p-8 space-y-4">
                 <div className="space-y-2">
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-4">
                         <button 
                             onClick={(e) => { e.stopPropagation(); onToggle(); }}
                             className={cn(
-                                "mt-1 size-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 z-20",
-                                todo.completed ? "bg-green-500 border-green-500 text-white" : "border-current/20 hover:border-current"
+                                "mt-1.5 size-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 z-20",
+                                todo.completed ? "bg-green-600 border-green-600 text-white" : "border-current/20 hover:border-current"
                             )}
                         >
-                            {todo.completed && <Check className="size-3" />}
+                            {todo.completed && <Check className="size-3.5" />}
                         </button>
                         <h3 className={cn(
-                            "text-base font-black tracking-tight leading-tight",
+                            "text-lg font-black tracking-tight leading-tight",
                             todo.completed && "line-through opacity-50"
                         )}>
                             {todo.task}
                         </h3>
                     </div>
                     {todo.description && !todo.completed && (
-                        <p className="text-[11px] font-medium leading-relaxed line-clamp-2 opacity-60">
+                        <p className="text-xs font-medium leading-relaxed line-clamp-2 opacity-60 pl-10">
                             {todo.description}
                         </p>
                     )}
                 </div>
 
-                <div className="pt-4 space-y-3 border-t border-current/10">
+                <div className="pt-6 space-y-4 border-t border-current/10 ml-10">
                     {todo.completed ? (
                         <div className="space-y-1">
-                             <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-green-600">
-                                <CheckCircle2 className="size-3" /> SUCCESSFUL COMPLETION
+                             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-green-600">
+                                <CheckCircle2 className="size-3" /> FINISHED
                             </div>
                             {todo.completedAt && (
-                                <p className="text-[8px] font-bold opacity-60">FINISHED: {format(todo.completedAt.toDate(), 'p, MMM d')}</p>
+                                <p className="text-[9px] font-bold opacity-60">STAMPED: {format(todo.completedAt.toDate(), 'p, MMM d')}</p>
                             )}
                         </div>
                     ) : (
@@ -377,22 +446,20 @@ function StickyNote({ todo, currentUserId, onToggle, onDelete, onOpenDetails }: 
                             {todo.dueDate && (
                                 <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
                                     <Clock className="size-3 opacity-60" />
-                                    <span>Due: {format(todo.dueDate.toDate(), 'MMM d, p')}</span>
+                                    <span className={cn(isBefore(todo.dueDate.toDate(), new Date()) && "text-red-600")}>Due: {format(todo.dueDate.toDate(), 'MMM d, p')}</span>
                                 </div>
                             )}
                             
                             <div className="flex items-center justify-between">
                                 {isAssignedByOther ? (
-                                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/50 text-[8px] font-black uppercase border border-current/10">
-                                        <User className="size-2.5" />
-                                        From: {todo.assignedByName.split(' ')[0]}
+                                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/50 text-[9px] font-black uppercase border border-current/10">
+                                        <User className="size-3" />
+                                        {todo.assignedByName.split(' ')[0]}
                                     </div>
                                 ) : (
-                                    <div className="text-[8px] font-black uppercase tracking-widest opacity-40">Personal Mission</div>
+                                    <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Private Mission</div>
                                 )}
-                                <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Eye className="size-3" />
-                                </Button>
+                                <Eye className="size-3.5 opacity-0 group-hover:opacity-40 transition-opacity" />
                             </div>
                         </>
                     )}
