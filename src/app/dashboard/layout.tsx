@@ -199,6 +199,7 @@ export default function DashboardLayout({
             unreadAnnouncementsCount={unreadAnnouncements}
             todaysEventsCount={todaysEventsCount}
             pendingLocationRequestsCount={pendingLocationRequestsCount}
+            pendingAttRequestsCount={pendingAttRequestsCount}
             ticketUpdateCount={ticketUpdateCount}
             pendingTodoCount={pendingTodoCount}
             totalNotificationsCount={totalNotifications}

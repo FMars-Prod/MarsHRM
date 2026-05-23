@@ -33,6 +33,8 @@ import {
   Network,
   Settings,
   ListTodo,
+  MapPinned,
+  UserCheck,
 } from "lucide-react";
 import React from "react";
 
@@ -50,6 +52,8 @@ const groups = [
     label: "WORKFORCE",
     links: [
       { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/attendance-requests", label: "Range Approvals", icon: UserCheck, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingAttRequestsCount" },
+      { href: "/dashboard/location-requests", label: "WFH Precision", icon: MapPinned, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
       { href: "/dashboard/leave", label: "Leave", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
       { href: "/dashboard/documents", label: "Documents", icon: FileBox, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
@@ -91,6 +95,7 @@ interface MainNavProps {
   unreadAnnouncementsCount?: number;
   todaysEventsCount?: number;
   pendingLocationRequestsCount?: number;
+  pendingAttRequestsCount?: number;
   ticketUpdateCount?: number;
   pendingTodoCount?: number;
   totalNotificationsCount?: number;
@@ -102,6 +107,7 @@ export function MainNav({
   unreadAnnouncementsCount = 0,
   todaysEventsCount = 0,
   pendingLocationRequestsCount = 0,
+  pendingAttRequestsCount = 0,
   ticketUpdateCount = 0,
   pendingTodoCount = 0,
   totalNotificationsCount = 0,
@@ -113,6 +119,7 @@ export function MainNav({
     unreadAnnouncementsCount,
     todaysEventsCount,
     pendingLocationRequestsCount,
+    pendingAttRequestsCount,
     ticketUpdateCount,
     pendingTodoCount,
     totalNotificationsCount,
