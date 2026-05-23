@@ -7,10 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, where, Timestamp } from 'firebase/firestore';
-import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar as CalendarIcon, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle, Palette, LayoutGrid, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar as CalendarIcon, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle, Palette, LayoutGrid, ChevronRight, ChevronLeft, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isToday, isBefore, startOfDay, addDays, isSameDay } from 'date-fns';
+import { format, isToday, isBefore, startOfDay, addDays, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,7 +20,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Calendar } from "@/components/ui/calendar";
 
 type Todo = {
     id: string;
@@ -65,7 +64,10 @@ export default function TodoPage() {
     const [viewFilter, setViewFilter] = React.useState<'active' | 'completed'>('active');
     const [selectedTodo, setSelectedTodo] = React.useState<Todo | null>(null);
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
-    const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
+    
+    // Calendar Specific States
+    const [currentMonthDate, setCurrentMonthDate] = React.useState(new Date());
+    const [detailedDay, setDetailedDay] = React.useState<Date | null>(null);
 
     // Form States
     const [newTask, setNewTask] = React.useState('');
@@ -119,7 +121,6 @@ export default function TodoPage() {
 
         addDocumentNonBlocking(collection(firestore, `users/${targetUserId}/todos`), todoPayload);
 
-        // Reset
         setNewTask('');
         setNewDesc('');
         setDueDate('');
@@ -177,25 +178,18 @@ export default function TodoPage() {
         return groups.filter(g => g.items.length > 0);
     }, [displayTodos]);
 
-    const calendarFilteredTodos = React.useMemo(() => {
-        if (!selectedCalendarDate || !todos) return [];
-        return todos.filter(todo => {
-            if (!todo.dueDate) return false;
-            return isSameDay(todo.dueDate.toDate(), selectedCalendarDate);
-        });
-    }, [todos, selectedCalendarDate]);
-
     const toggleSelect = (id: string) => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
 
-    const modifierDates = React.useMemo(() => {
-        const dates: Date[] = [];
-        todos?.forEach(t => {
-            if (t.dueDate) dates.push(t.dueDate.toDate());
-        });
-        return dates;
-    }, [todos]);
+    // Calendar UI Grid Logic
+    const calendarDays = React.useMemo(() => {
+        const monthStart = startOfMonth(currentMonthDate);
+        const monthEnd = endOfMonth(monthStart);
+        const startDate = startOfWeek(monthStart);
+        const endDate = endOfWeek(monthEnd);
+        return eachDayOfInterval({ start: startDate, end: endDate });
+    }, [currentMonthDate]);
 
     return (
         <div className="space-y-8 animate-fade-in-up pb-20">
@@ -216,7 +210,7 @@ export default function TodoPage() {
                             className="rounded-full font-black uppercase text-[9px] tracking-widest px-4 h-9"
                             onClick={() => setViewMode('calendar')}
                         >
-                            <CalendarIcon className="size-3 mr-2" /> Calendar
+                            <CalendarDays className="size-3 mr-2" /> Calendar
                         </Button>
                     </div>
 
@@ -355,84 +349,138 @@ export default function TodoPage() {
                     <p className="font-black uppercase text-[10px] text-primary/60 tracking-[0.3em]">Syncing Tactical Grid...</p>
                 </div>
             ) : viewMode === 'calendar' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    <Card className="lg:col-span-5 border-none ring-1 ring-border/50 rounded-[3rem] bg-white/50 backdrop-blur-sm overflow-hidden p-8 shadow-xl">
-                        <Calendar 
-                            mode="single"
-                            selected={selectedCalendarDate}
-                            onSelect={setSelectedCalendarDate}
-                            className="rounded-3xl border shadow-inner p-4 w-full bg-white"
-                            modifiers={{ hasTasks: modifierDates }}
-                            modifiersClassNames={{
-                                hasTasks: 'after:content-["•"] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:text-primary after:font-black after:text-lg'
-                            }}
-                        />
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                        <div className="flex items-center gap-4">
+                            <h2 className="text-2xl font-black uppercase tracking-tighter text-primary">{format(currentMonthDate, 'MMMM yyyy')}</h2>
+                            <div className="flex bg-white rounded-full ring-1 ring-border/50 p-1">
+                                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8" onClick={() => setCurrentMonthDate(subMonths(currentMonthDate, 1))}><ChevronLeft className="size-4"/></Button>
+                                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8" onClick={() => setCurrentMonthDate(addMonths(currentMonthDate, 1))}><ChevronRight className="size-4"/></Button>
+                            </div>
+                        </div>
+                        <Badge variant="outline" className="rounded-full font-black uppercase text-[10px] h-9 px-4 bg-white">Monthly Command Hub</Badge>
+                    </div>
+
+                    <Card className="border-none ring-1 ring-border/50 rounded-[2.5rem] bg-white/50 backdrop-blur-sm shadow-xl overflow-hidden">
+                        <div className="grid grid-cols-7 bg-muted/30 border-b">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fr', 'Sat'].map(day => (
+                                <div key={day} className="py-4 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{day}</div>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-7">
+                            {calendarDays.map((date, i) => {
+                                const dayTasks = todos?.filter(t => t.dueDate && isSameDay(t.dueDate.toDate(), date)) || [];
+                                const isCurrentMonth = format(date, 'M') === format(currentMonthDate, 'M');
+                                const activeTasks = dayTasks.filter(t => !t.completed).length;
+                                const finishedTasks = dayTasks.filter(t => t.completed).length;
+
+                                return (
+                                    <div 
+                                        key={i} 
+                                        className={cn(
+                                            "min-h-[120px] p-3 border-r border-b border-border/30 hover:bg-white transition-all cursor-pointer group flex flex-col gap-2 relative",
+                                            !isCurrentMonth && "bg-muted/10 opacity-40 grayscale",
+                                            isToday(date) && "bg-primary/5 ring-1 ring-primary/20 inset-0 z-10"
+                                        )}
+                                        onClick={() => setDetailedDay(date)}
+                                    >
+                                        <span className={cn(
+                                            "text-xs font-black",
+                                            isToday(date) ? "text-primary scale-125 block mb-1" : "text-muted-foreground/40"
+                                        )}>
+                                            {format(date, 'd')}
+                                        </span>
+                                        
+                                        <div className="flex flex-col gap-1 mt-auto">
+                                            {activeTasks > 0 && (
+                                                <Badge className="bg-primary text-white text-[8px] font-black uppercase h-4 px-1.5 rounded-sm w-fit border-none">
+                                                    {activeTasks} Active
+                                                </Badge>
+                                            )}
+                                            {finishedTasks > 0 && (
+                                                <Badge className="bg-green-600 text-white text-[8px] font-black uppercase h-4 px-1.5 rounded-sm w-fit border-none">
+                                                    {finishedTasks} Fin
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </Card>
 
-                    <div className="lg:col-span-7 space-y-6">
-                        <div className="flex items-center justify-between px-2">
-                            <div>
-                                <h3 className="text-xl font-black uppercase tracking-tighter">Daily Objective Feed</h3>
-                                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                                    {selectedCalendarDate ? format(selectedCalendarDate, 'PPPP') : 'No Date Selected'}
-                                </p>
-                            </div>
-                            <Badge variant="outline" className="rounded-full font-black uppercase text-[10px] px-3">
-                                {calendarFilteredTodos.length} Missions
-                            </Badge>
-                        </div>
-
-                        <ScrollArea className="h-[600px] pr-4">
-                            <div className="space-y-4">
-                                {calendarFilteredTodos.length > 0 ? calendarFilteredTodos.map(todo => (
-                                    <Card 
-                                        key={todo.id} 
-                                        className={cn(
-                                            "border-none ring-1 ring-border/50 rounded-3xl p-5 hover:shadow-lg transition-all cursor-pointer flex items-center justify-between group",
-                                            todo.completed ? "bg-slate-50 opacity-60" : "bg-white"
-                                        )}
-                                        onClick={() => setSelectedTodo(todo)}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div 
-                                                className={cn(
-                                                    "size-5 rounded-full border-2 flex items-center justify-center transition-all",
-                                                    todo.completed ? "bg-green-600 border-green-600 text-white" : "border-muted-foreground/20"
-                                                )}
-                                                onClick={(e) => { e.stopPropagation(); toggleComplete(todo); }}
-                                            >
-                                                {todo.completed && <Check className="size-3" />}
-                                            </div>
-                                            <div>
-                                                <p className={cn("font-bold text-sm", todo.completed && "line-through opacity-50")}>{todo.task}</p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <Badge className={cn(
-                                                        "text-[8px] font-black uppercase px-2 py-0 border-none rounded-full",
-                                                        todo.priority === 'high' ? "bg-red-100 text-red-700" :
-                                                        todo.priority === 'medium' ? "bg-amber-100 text-amber-700" :
-                                                        "bg-blue-100 text-blue-700"
-                                                    )}>
-                                                        {todo.priority}
-                                                    </Badge>
-                                                    {todo.assignedBy !== user?.uid && (
-                                                        <span className="text-[9px] font-black uppercase text-muted-foreground opacity-60">
-                                                            From: {todo.assignedByName.split(' ')[0]}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <ChevronRight className="size-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                                    </Card>
-                                )) : (
-                                    <div className="py-20 text-center flex flex-col items-center justify-center gap-4 opacity-30">
-                                        <ListTodo className="size-12" />
-                                        <p className="font-black uppercase text-xs tracking-widest">No missions for this date.</p>
+                    <Dialog open={!!detailedDay} onOpenChange={o => !o && setDetailedDay(null)}>
+                        <DialogContent className="rounded-[3rem] sm:max-w-2xl p-0 overflow-hidden border-none shadow-2xl">
+                            <DialogHeader className="p-10 pb-4">
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="space-y-1">
+                                        <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Daily Briefing</DialogTitle>
+                                        <DialogDescription className="text-xs font-black uppercase tracking-widest opacity-60">
+                                            {detailedDay ? format(detailedDay, 'PPPP') : ''}
+                                        </DialogDescription>
                                     </div>
-                                )}
+                                    <Badge variant="outline" className="rounded-full h-10 px-6 font-black uppercase text-[10px] bg-primary/5 text-primary border-primary/20">
+                                        {todos?.filter(t => detailedDay && t.dueDate && isSameDay(t.dueDate.toDate(), detailedDay)).length || 0} Missions
+                                    </Badge>
+                                </div>
+                            </DialogHeader>
+                            <ScrollArea className="h-[500px] px-10 py-6 bg-secondary/10">
+                                <div className="space-y-4 pb-10">
+                                    {todos?.filter(t => detailedDay && t.dueDate && isSameDay(t.dueDate.toDate(), detailedDay)).length ? (
+                                        todos.filter(t => detailedDay && t.dueDate && isSameDay(t.dueDate.toDate(), detailedDay)).map(todo => (
+                                            <Card 
+                                                key={todo.id} 
+                                                className={cn(
+                                                    "border-none ring-1 ring-border/50 rounded-[2rem] p-6 hover:shadow-xl transition-all cursor-pointer flex items-center justify-between group bg-white",
+                                                    todo.completed && "opacity-60 grayscale"
+                                                )}
+                                                onClick={() => setSelectedTodo(todo)}
+                                            >
+                                                <div className="flex items-center gap-5">
+                                                    <div 
+                                                        className={cn(
+                                                            "size-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                                            todo.completed ? "bg-green-600 border-green-600 text-white" : "border-muted-foreground/20"
+                                                        )}
+                                                        onClick={(e) => { e.stopPropagation(); toggleComplete(todo); }}
+                                                    >
+                                                        {todo.completed && <Check className="size-4" />}
+                                                    </div>
+                                                    <div>
+                                                        <p className={cn("font-bold text-lg", todo.completed && "line-through")}>{todo.task}</p>
+                                                        <div className="flex items-center gap-3 mt-1.5">
+                                                            <Badge className={cn(
+                                                                "text-[9px] font-black uppercase px-2.5 py-0.5 border-none rounded-full",
+                                                                todo.priority === 'high' ? "bg-red-100 text-red-700" :
+                                                                todo.priority === 'medium' ? "bg-amber-100 text-amber-700" :
+                                                                "bg-blue-100 text-blue-700"
+                                                            )}>
+                                                                {todo.priority} Priority
+                                                            </Badge>
+                                                            {todo.assignedBy !== user?.uid && (
+                                                                <span className="text-[10px] font-black uppercase text-muted-foreground opacity-60">
+                                                                    Command: {todo.assignedByName.split(' ')[0]}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight className="size-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                            </Card>
+                                        ))
+                                    ) : (
+                                        <div className="py-20 text-center flex flex-col items-center justify-center gap-4 opacity-30 grayscale">
+                                            <ListTodo className="size-16" />
+                                            <p className="font-black uppercase text-sm tracking-[0.2em]">Tactical Grid Clear</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </ScrollArea>
+                            <div className="p-10 pt-6 border-t bg-white">
+                                <Button variant="outline" className="w-full rounded-full h-14 font-black uppercase tracking-widest shadow-lg" onClick={() => setDetailedDay(null)}>Acknowledge Schedule</Button>
                             </div>
-                        </ScrollArea>
-                    </div>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             ) : displayTodos.length > 0 ? (
                 <div className="space-y-12">
@@ -469,12 +517,12 @@ export default function TodoPage() {
             )}
 
             <Dialog open={!!selectedTodo} onOpenChange={o => !o && setSelectedTodo(null)}>
-                <DialogContent className="rounded-3xl sm:max-w-md">
+                <DialogContent className="rounded-[3rem] sm:max-w-md p-8 border-none shadow-2xl">
                     <DialogHeader>
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-4">
                              {selectedTodo && (
                                 <Badge className={cn(
-                                    "rounded-full text-[8px] font-black uppercase tracking-widest border-none",
+                                    "rounded-full text-[9px] font-black uppercase tracking-widest border-none px-3 py-1",
                                     selectedTodo.priority === 'high' ? "bg-red-100 text-red-700" :
                                     selectedTodo.priority === 'medium' ? "bg-amber-100 text-amber-700" :
                                     "bg-blue-100 text-blue-700"
@@ -483,46 +531,46 @@ export default function TodoPage() {
                                 </Badge>
                              )}
                              {selectedTodo?.completed && (
-                                <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[8px] font-black uppercase">Mission Success</Badge>
+                                <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[9px] font-black uppercase px-3 py-1">Mission Success</Badge>
                              )}
                         </div>
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter">{selectedTodo?.task}</DialogTitle>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary leading-tight">{selectedTodo?.task}</DialogTitle>
                     </DialogHeader>
                     
-                    <div className="py-6 space-y-6">
+                    <div className="py-6 space-y-8">
                         {selectedTodo?.description && (
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Details</Label>
-                                <p className="text-sm font-medium leading-relaxed">{selectedTodo.description}</p>
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Contextual Briefing</Label>
+                                <p className="text-sm font-medium leading-relaxed italic text-foreground/80">"{selectedTodo.description}"</p>
                             </div>
                         )}
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-8">
                             <div className="space-y-1">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Registered</Label>
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Intelligence Sync</Label>
                                 <p className="text-xs font-bold">{selectedTodo?.createdAt ? format(selectedTodo.createdAt.toDate(), 'PP p') : 'N/A'}</p>
                             </div>
                             {selectedTodo?.dueDate && (
                                 <div className="space-y-1">
-                                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Target Deadline</Label>
-                                    <p className="text-xs font-bold text-primary">{format(selectedTodo.dueDate.toDate(), 'PP p')}</p>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Tactical Deadline</Label>
+                                    <p className="text-xs font-black text-primary uppercase">{format(selectedTodo.dueDate.toDate(), 'PP p')}</p>
                                 </div>
                             )}
                         </div>
 
-                        <Separator />
+                        <Separator className="opacity-50" />
 
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Assigned By</Label>
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Command Source</Label>
                                 <div className="flex items-center gap-2">
-                                    <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{selectedTodo?.assignedByName[0]}</div>
-                                    <p className="text-xs font-bold">{selectedTodo?.assignedByName}</p>
+                                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-black text-primary border border-primary/20">{selectedTodo?.assignedByName[0]}</div>
+                                    <p className="text-sm font-bold text-foreground/80">{selectedTodo?.assignedByName}</p>
                                 </div>
                             </div>
                             {selectedTodo?.completedAt && (
                                 <div className="space-y-1 text-right">
-                                    <Label className="text-[10px] font-black uppercase text-green-600">Finished At</Label>
+                                    <Label className="text-[10px] font-black uppercase text-green-600 tracking-widest">Mission Finish</Label>
                                     <p className="text-xs font-black text-green-700">{format(selectedTodo.completedAt.toDate(), 'PP p')}</p>
                                 </div>
                             )}
@@ -530,7 +578,7 @@ export default function TodoPage() {
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" className="w-full rounded-full h-12 font-black uppercase tracking-widest" onClick={() => setSelectedTodo(null)}>Close Briefing</Button>
+                        <Button variant="outline" className="w-full rounded-full h-14 font-black uppercase tracking-widest shadow-lg border-2" onClick={() => setSelectedTodo(null)}>Conclude Briefing</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -541,7 +589,6 @@ export default function TodoPage() {
 function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDelete, onOpenDetails }: any) {
     const isAssignedByOther = todo.assignedBy !== currentUserId;
     
-    // Find theme or fall back to priority logic
     const theme = TASK_COLORS.find(c => c.id === todo.colorId) || 
                   (todo.priority === 'high' ? TASK_COLORS[0] : todo.priority === 'medium' ? TASK_COLORS[1] : TASK_COLORS[2]);
 
