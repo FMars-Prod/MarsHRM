@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -410,74 +411,69 @@ export default function TodoPage() {
                     </Card>
 
                     <Dialog open={!!detailedDay} onOpenChange={o => !o && setDetailedDay(null)}>
-                        <DialogContent className="rounded-[3rem] sm:max-w-2xl p-0 overflow-hidden border-none shadow-2xl">
-                            <DialogHeader className="p-10 pb-4">
+                        <DialogContent className="rounded-[2rem] sm:max-w-lg p-0 overflow-hidden border-none shadow-2xl">
+                            <DialogHeader className="p-6 pb-4">
                                 <div className="flex items-center justify-between w-full">
                                     <div className="space-y-1">
-                                        <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Daily Briefing</DialogTitle>
-                                        <DialogDescription className="text-xs font-black uppercase tracking-widest opacity-60">
+                                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Daily Briefing</DialogTitle>
+                                        <DialogDescription className="text-[10px] font-black uppercase tracking-widest opacity-60">
                                             {detailedDay ? format(detailedDay, 'PPPP') : ''}
                                         </DialogDescription>
                                     </div>
-                                    <Badge variant="outline" className="rounded-full h-10 px-6 font-black uppercase text-[10px] bg-primary/5 text-primary border-primary/20">
+                                    <Badge variant="outline" className="rounded-full h-8 px-4 font-black uppercase text-[9px] bg-primary/5 text-primary border-primary/20">
                                         {todos?.filter(t => detailedDay && t.dueDate && isSameDay(t.dueDate.toDate(), detailedDay)).length || 0} Missions
                                     </Badge>
                                 </div>
                             </DialogHeader>
-                            <ScrollArea className="h-[500px] px-10 py-6 bg-secondary/10">
-                                <div className="space-y-4 pb-10">
+                            <ScrollArea className="h-[350px] px-6 py-4 bg-secondary/5">
+                                <div className="space-y-4 pb-6">
                                     {todos?.filter(t => detailedDay && t.dueDate && isSameDay(t.dueDate.toDate(), detailedDay)).length ? (
                                         todos.filter(t => detailedDay && t.dueDate && isSameDay(t.dueDate.toDate(), detailedDay)).map(todo => (
                                             <Card 
                                                 key={todo.id} 
                                                 className={cn(
-                                                    "border-none ring-1 ring-border/50 rounded-[2rem] p-6 hover:shadow-xl transition-all cursor-pointer flex items-center justify-between group bg-white",
+                                                    "border-none ring-1 ring-border/50 rounded-2xl p-4 hover:shadow-lg transition-all cursor-pointer flex items-center justify-between group bg-white",
                                                     todo.completed && "opacity-60 grayscale"
                                                 )}
                                                 onClick={() => setSelectedTodo(todo)}
                                             >
-                                                <div className="flex items-center gap-5">
+                                                <div className="flex items-center gap-4">
                                                     <div 
                                                         className={cn(
-                                                            "size-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                                            "size-5 rounded-full border-2 flex items-center justify-center transition-all",
                                                             todo.completed ? "bg-green-600 border-green-600 text-white" : "border-muted-foreground/20"
                                                         )}
                                                         onClick={(e) => { e.stopPropagation(); toggleComplete(todo); }}
                                                     >
-                                                        {todo.completed && <Check className="size-4" />}
+                                                        {todo.completed && <Check className="size-3" />}
                                                     </div>
                                                     <div>
-                                                        <p className={cn("font-bold text-lg", todo.completed && "line-through")}>{todo.task}</p>
-                                                        <div className="flex items-center gap-3 mt-1.5">
+                                                        <p className={cn("font-bold text-sm", todo.completed && "line-through")}>{todo.task}</p>
+                                                        <div className="flex items-center gap-2 mt-1">
                                                             <Badge className={cn(
-                                                                "text-[9px] font-black uppercase px-2.5 py-0.5 border-none rounded-full",
+                                                                "text-[8px] font-black uppercase px-2 py-0 border-none rounded-full",
                                                                 todo.priority === 'high' ? "bg-red-100 text-red-700" :
                                                                 todo.priority === 'medium' ? "bg-amber-100 text-amber-700" :
                                                                 "bg-blue-100 text-blue-700"
                                                             )}>
                                                                 {todo.priority} Priority
                                                             </Badge>
-                                                            {todo.assignedBy !== user?.uid && (
-                                                                <span className="text-[10px] font-black uppercase text-muted-foreground opacity-60">
-                                                                    Command: {todo.assignedByName.split(' ')[0]}
-                                                                </span>
-                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <ChevronRight className="size-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                                <ChevronRight className="size-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                                             </Card>
                                         ))
                                     ) : (
-                                        <div className="py-20 text-center flex flex-col items-center justify-center gap-4 opacity-30 grayscale">
-                                            <ListTodo className="size-16" />
-                                            <p className="font-black uppercase text-sm tracking-[0.2em]">Tactical Grid Clear</p>
+                                        <div className="py-12 text-center flex flex-col items-center justify-center gap-3 opacity-30 grayscale">
+                                            <ListTodo className="size-10" />
+                                            <p className="font-black uppercase text-[10px] tracking-[0.2em]">Tactical Grid Clear</p>
                                         </div>
                                     )}
                                 </div>
                             </ScrollArea>
-                            <div className="p-10 pt-6 border-t bg-white">
-                                <Button variant="outline" className="w-full rounded-full h-14 font-black uppercase tracking-widest shadow-lg" onClick={() => setDetailedDay(null)}>Acknowledge Schedule</Button>
+                            <div className="p-6 pt-4 border-t bg-white">
+                                <Button variant="outline" className="w-full rounded-full h-12 font-black uppercase text-[10px] tracking-widest shadow-md" onClick={() => setDetailedDay(null)}>Acknowledge Schedule</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
