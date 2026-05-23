@@ -51,13 +51,13 @@ const ShiftHeaderFields = () => {
         <div className="grid grid-cols-2 gap-6 mb-8">
             <FormField control={control} name="logInTime" render={({ field }) => (
                 <FormItem>
-                    <FormLabel className="text-xs uppercase font-bold text-muted-foreground">Shift Log-In</FormLabel>
+                    <FormLabel className="text-xs uppercase font-bold text-muted-foreground">Log-In Time</FormLabel>
                     <FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl>
                 </FormItem>
             )} />
             <FormField control={control} name="logOutTime" render={({ field }) => (
                 <FormItem>
-                    <FormLabel className="text-xs uppercase font-bold text-muted-foreground">Shift Log-Out</FormLabel>
+                    <FormLabel className="text-xs uppercase font-bold text-muted-foreground">Log-Out Time</FormLabel>
                     <FormControl><Input type="time" {...field} className="rounded-xl h-11" /></FormControl>
                 </FormItem>
             )} />
@@ -71,7 +71,7 @@ const ExecutionPlanFields = () => {
         <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden mt-8">
             <CardHeader className="bg-muted/10 py-3">
                 <CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">
-                    <Target className="size-4" /> 5️⃣ Pipeline & Planning (T+1)
+                    <Target className="size-4" /> 5️⃣ Planning (T+1)
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
@@ -84,7 +84,7 @@ const ExecutionPlanFields = () => {
                     )} />
                     <FormField control={control} name="interventionTrigger" render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Intervention Trigger</FormLabel>
+                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Support Required</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent>
@@ -99,13 +99,13 @@ const ExecutionPlanFields = () => {
                 </div>
                 <FormField control={control} name="pendingDeliverables" render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Pending Deliverables</FormLabel>
+                        <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Pending Tasks</FormLabel>
                         <FormControl><Textarea {...field} placeholder="List items requiring attention..." className="rounded-xl min-h-[80px]" /></FormControl>
                     </FormItem>
                 )} />
                 <FormField control={control} name="criticalPathTomorrow" render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">T+1 Critical Path Action</FormLabel>
+                        <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Tomorrow's Main Goal</FormLabel>
                         <FormControl><Textarea {...field} placeholder="The single most important objective for tomorrow." className="rounded-xl min-h-[80px]" /></FormControl>
                     </FormItem>
                 )} />
@@ -139,7 +139,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             const snapshot = await uploadBytes(storageRef, file);
             const url = await getDownloadURL(snapshot.ref);
             setValue(fieldName, url);
-            toast({ title: "Recording Sync Success", description: "Audio asset provisioned." });
+            toast({ title: "Upload Success", description: "Audio file uploaded." });
         } catch (error: any) {
             toast({ variant: "destructive", title: "Storage Error", description: error.message });
         } finally {
@@ -158,7 +158,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             {!isNested && <ShiftHeaderFields />}
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Results</CardTitle></CardHeader>
                 <CardContent className="space-y-8 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                         <div className="md:col-span-8 space-y-6">
@@ -191,12 +191,12 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                         <div className="md:col-span-4 space-y-6">
                             <Card className="bg-white border-none ring-2 ring-primary/20 shadow-xl rounded-3xl overflow-hidden">
                                 <div className="p-4 bg-primary text-white text-center">
-                                    <p className="text-[10px] font-black uppercase tracking-widest">Tactical Results</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Daily Performance</p>
                                 </div>
                                 <CardContent className="p-6 space-y-6">
                                     <FormField control={control} name="potentialClients" render={({ field }) => (
                                         <FormItem className="text-center">
-                                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Potential Client</FormLabel>
+                                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Potential Clients</FormLabel>
                                             <FormControl><Input type="number" min="0" {...field} className="h-14 text-3xl font-black text-center border-2 border-primary/20 rounded-2xl focus:border-primary" /></FormControl>
                                         </FormItem>
                                     )} />
@@ -217,23 +217,23 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                 <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField control={control} name="revenueCollected" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">NET Revenue Collected</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Revenue Collected</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
                         <FormField control={control} name="committedRevenue" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Committed NET Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Committed Revenue</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
                         <FormField control={control} name="pipelineValue" render={({ field }) => (
                             <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Pipeline Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
                         <FormField control={control} name="revenueVariance" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Revenue Variance Reason</FormLabel><FormControl><Input {...field} placeholder="NIL" className="rounded-xl h-11" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Revenue Notes</FormLabel><FormControl><Input {...field} placeholder="Reason for variance, if any" className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
                     </div>
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><ShieldCheck className="size-4" /> 3️⃣ High-Value Engagements</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><ShieldCheck className="size-4" /> 3️⃣ Key Engagements</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField control={control} name="quotationsReleased" render={({ field }) => (
@@ -244,33 +244,33 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                         )} />
                     </div>
                     <FormField control={control} name="clientWin" render={({ field }) => (
-                        <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Client Win Highlight</FormLabel><FormControl><Textarea {...field} placeholder="NIL" className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
+                        <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Client Win Highlight</FormLabel><FormControl><Textarea {...field} placeholder="Details of any successful deal" className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
                     )} />
                     <FormField control={control} name="strategicLearning" render={({ field }) => (
-                        <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Strategic Learning</FormLabel><FormControl><Textarea {...field} placeholder="NIL" className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
+                        <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Key Learnings</FormLabel><FormControl><Textarea {...field} placeholder="What did you learn today?" className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
                     )} />
                 </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence Log</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><PhoneCall className="size-4" /> 4️⃣ Call Logs</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">
                     <FormField control={control} name="totalCallRecordings" render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[9px] uppercase font-bold text-primary">Today's Total Call Recording Drive Link</FormLabel>
-                            <FormControl><Input {...field} placeholder="Paste Drive link here..." className="rounded-xl h-11" /></FormControl>
+                            <FormLabel className="text-[9px] uppercase font-bold text-primary">Call Recording Folder Link</FormLabel>
+                            <FormControl><Input {...field} placeholder="Paste shared drive link here..." className="rounded-xl h-11" /></FormControl>
                         </FormItem>
                     )} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Best Call Recording</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Best Call File</Label>
                             <Input type="file" accept="audio/*" className="h-11 rounded-xl cursor-pointer bg-white" onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'bestCallRecording', setIsUploadingBest)} disabled={isUploadingBest} />
-                            {isUploadingBest && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Syncing audio...</div>}
+                            {isUploadingBest && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Uploading...</div>}
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Worst Call Recording</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Worst Call File</Label>
                             <Input type="file" accept="audio/*" className="h-11 rounded-xl cursor-pointer bg-white" onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'worstCallRecording', setIsUploadingWorst)} disabled={isUploadingWorst} />
-                            {isUploadingWorst && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Syncing audio...</div>}
+                            {isUploadingWorst && <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase animate-pulse"><Loader2 className="size-3 animate-spin"/> Uploading...</div>}
                         </div>
                     </div>
                 </CardContent>
@@ -299,7 +299,7 @@ const MarketingMatrixTable = () => {
 
     return (
         <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
-            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest">Marketing Pipeline Matrix</CardTitle></CardHeader>
+            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest">Marketing Matrix</CardTitle></CardHeader>
             <CardContent className="pt-6">
                 <div className="border rounded-2xl overflow-hidden bg-white/50">
                     <Table>
@@ -323,7 +323,7 @@ const MarketingMatrixTable = () => {
                                 </TableRow>
                             ))}
                             <TableRow className="bg-muted/10">
-                                <TableCell className="text-xs font-black uppercase py-4 text-primary">Category Total</TableCell>
+                                <TableCell className="text-xs font-black uppercase py-4 text-primary">Total</TableCell>
                                 {totals.map((t, i) => (
                                     <TableCell key={i} className="text-center font-black text-sm text-primary">{t}</TableCell>
                                 ))}
@@ -362,22 +362,22 @@ const TechnicalProjectItem = ({ index, control }: { index: number, control: any 
                     </FormItem>
                 )} />
                 <FormField control={control} name={`technicalProjects.${index}.statusPercent`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Status (%)</FormLabel><FormControl><Input type="number" min="0" max="100" {...field} className="rounded-xl" /></FormControl></FormItem>
+                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Progress (%)</FormLabel><FormControl><Input type="number" min="0" max="100" {...field} className="rounded-xl" /></FormControl></FormItem>
                 )} />
             </div>
             <FormField control={control} name={`technicalProjects.${index}.description`} render={({ field }) => (
-                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Shift Implementation Detail</FormLabel><FormControl><Textarea {...field} className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
+                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Work Details</FormLabel><FormControl><Textarea {...field} className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
             )} />
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
                 <FormField control={control} name={`technicalProjects.${index}.isCompleted`} render={({ field }) => (
                     <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                         <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        <FormLabel className="text-[10px] font-black uppercase">Yes Completed</FormLabel>
+                        <FormLabel className="text-[10px] font-black uppercase">Task Completed</FormLabel>
                     </FormItem>
                 )} />
                 {isCompleted && (
                     <FormField control={control} name={`technicalProjects.${index}.liveLink`} render={({ field }) => (
-                        <FormItem className="flex-1"><FormControl><Input {...field} placeholder="Paste live project link..." className="rounded-xl h-9" /></FormControl></FormItem>
+                        <FormItem className="flex-1"><FormControl><Input {...field} placeholder="Project or demo link" className="rounded-xl h-9" /></FormControl></FormItem>
                     )} />
                 )}
             </div>
@@ -434,10 +434,10 @@ const TechnicalFields = () => {
         <div className="space-y-8">
             <ShiftHeaderFields />
             <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><PhoneCall className="size-4"/> 1️⃣ Tactical Client Engagements</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><PhoneCall className="size-4"/> 1️⃣ Client Engagements</CardTitle></CardHeader>
                 <CardContent className="pt-6 space-y-6">
                     <FormField control={control} name="clientMeetingsCount" render={({ field }) => (
-                        <FormItem className="max-w-[200px]"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">No. of Client Meetings</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                        <FormItem className="max-w-[200px]"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Number of Meetings</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                     )} />
                     <div className="space-y-4">
                         {meetingFields.map((field, index) => (
@@ -448,7 +448,7 @@ const TechnicalFields = () => {
             </Card>
 
             <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Briefcase className="size-4"/> 2️⃣ Sprint Module Pipeline</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Briefcase className="size-4"/> 2️⃣ Task Progress</CardTitle></CardHeader>
                 <CardContent className="pt-6 space-y-6">
                     <FormField control={control} name="projectsWorkedCount" render={({ field }) => (
                         <FormItem className="max-w-[200px]"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Total Projects Worked</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
@@ -462,7 +462,7 @@ const TechnicalFields = () => {
             </Card>
 
             <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Brain className="size-4"/> 3️⃣ Tactical Knowledge Assets</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Brain className="size-4"/> 3️⃣ Learnings & Notes</CardTitle></CardHeader>
                 <CardContent className="pt-6 space-y-6">
                     <div className="flex gap-2">
                         <Input value={learningInput} onChange={e => setLearningRegistryInput(e.target.value)} placeholder="What did you learn today?" className="rounded-xl h-11" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addLearning())} />
@@ -489,7 +489,7 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
     return (
         <div className="space-y-8">
             <div className="space-y-4">
-                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Conversion</div>
+                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Results</div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-6 bg-primary text-white rounded-3xl shadow-xl flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span><span className="text-4xl font-black">{efficiency.toFixed(2)}%</span></div>
                     <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients</span><span className="text-3xl font-black">{potential}</span></div>
@@ -504,14 +504,14 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-green-600 font-black uppercase text-[10px] tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue & Impact</div>
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">NET Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
-                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed NET</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
+                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Revenue Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
+                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed Revenue</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
                 </div>
             </div>
             <div className="p-4 bg-primary/5 rounded-2xl space-y-4">
                 <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence</p>
                 <div className="grid gap-4">
-                    {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> Today's Total Call Recording Drive Link</Link></Button>}
+                    {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> View Call Recordings Folder</Link></Button>}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[['Best Call', report.bestCallRecording, 'text-green-600'], ['Worst Call', report.worstCallRecording, 'text-red-600']].map(([l, v, c], i) => v && (
                             <div key={i} className="p-3 bg-white rounded-xl ring-1 ring-border/50 space-y-2"><p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", c)}><Mic className="size-3"/> {l}</p><audio controls className="w-full h-8 scale-90 -ml-2"><source src={v} /></audio></div>
@@ -536,7 +536,7 @@ const MarketingAuditDetail = ({ report }: { report: any }) => {
                         {['Approved', 'Pending', 'Rejected'].map(status => (
                             <TableRow key={status}><TableCell className="text-xs font-black uppercase py-4">{status}</TableCell>{deliverables.map(d => (<TableCell key={d.key} className="text-center font-bold">{report[`${d.key}${status}`] || 0}</TableCell>))}</TableRow>
                         ))}
-                        <TableRow className="bg-muted/10"><TableCell className="text-xs font-black uppercase py-4 text-primary">Category Total</TableCell>{totals.map((t, i) => (<TableCell key={i} className="text-center font-black text-sm text-primary">{t}</TableCell>))}</TableRow>
+                        <TableRow className="bg-muted/10"><TableCell className="text-xs font-black uppercase py-4 text-primary">Total</TableCell>{totals.map((t, i) => (<TableCell key={i} className="text-center font-black text-sm text-primary">{t}</TableCell>))}</TableRow>
                     </TableBody>
                 </Table>
             </div>
@@ -546,17 +546,17 @@ const MarketingAuditDetail = ({ report }: { report: any }) => {
 
 const TechnicalAuditDetail = ({ report }: { report: any }) => (
     <div className="space-y-8">
-        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4"/> Tactical Engagements</p>
+        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4"/> Client Engagements</p>
             <div className="grid grid-cols-1 gap-3">{report.technicalMeetings?.map((m: any, i: number) => (
                 <div key={i} className="p-3 bg-white rounded-xl border flex items-center justify-between"><div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div><Badge variant="outline" className="text-[8px] uppercase font-black">{m.status}</Badge></div>
             )) || <p className="text-xs italic text-muted-foreground">No engagements logged.</p>}</div>
         </div>
-        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Briefcase className="size-4"/> Sprint Progress</p>
+        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Briefcase className="size-4"/> Task Progress</p>
             <div className="grid grid-cols-1 gap-4">{report.technicalProjects?.map((p: any, i: number) => (
-                <Card key={i} className="p-4 border-none ring-1 ring-border/50 bg-white"><div className="flex justify-between items-start mb-3"><div><p className="font-bold text-sm">{p.projectName}</p><p className="text-[10px] uppercase text-muted-foreground">{p.type}</p></div><div className="text-right"><p className="text-lg font-black text-primary">{p.statusPercent}%</p><p className="text-[8px] uppercase font-bold text-muted-foreground">Coverage</p></div></div><p className="text-xs italic text-muted-foreground mb-3">"{p.description}"</p>{p.isCompleted && p.liveLink && <Button variant="ghost" size="sm" className="w-full h-8 text-[9px] font-bold uppercase gap-2 bg-primary/5 text-primary" asChild><Link href={p.liveLink} target="_blank"><LinkIcon className="size-3"/> Live Deployment Proof</Link></Button>}</Card>
+                <Card key={i} className="p-4 border-none ring-1 ring-border/50 bg-white"><div className="flex justify-between items-start mb-3"><div><p className="font-bold text-sm">{p.projectName}</p><p className="text-[10px] uppercase text-muted-foreground">{p.type}</p></div><div className="text-right"><p className="text-lg font-black text-primary">{p.statusPercent}%</p><p className="text-[8px] uppercase font-bold text-muted-foreground">Progress</p></div></div><p className="text-xs italic text-muted-foreground mb-3">"{p.description}"</p>{p.isCompleted && p.liveLink && <Button variant="ghost" size="sm" className="w-full h-8 text-[9px] font-bold uppercase gap-2 bg-primary/5 text-primary" asChild><Link href={p.liveLink} target="_blank"><LinkIcon className="size-3"/> View Project</Link></Button>}</Card>
             )) || <p className="text-xs italic text-muted-foreground">No projects logged.</p>}</div>
         </div>
-        <div className="space-y-3"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Brain className="size-4"/> Knowledge Assets</p>
+        <div className="space-y-3"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Brain className="size-4"/> Notes & Learnings</p>
             <div className="flex flex-wrap gap-2">{report.learnedToday?.map((l: string, i: number) => <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-full text-[10px] font-bold">{l}</Badge>) || <p className="text-xs italic text-muted-foreground">No learnings recorded.</p>}</div>
         </div>
     </div>
@@ -609,7 +609,7 @@ export default function ReportsPage() {
         coldCalls: "0", linkedinOutreach: "0", emailsSent: "0", followUps: "0", potentialClients: "0", 
         revenueCollected: "0", committedRevenue: "0", pipelineValue: "0", revenueVariance: "NIL",
         quotationsReleased: "0", meetingsSecured: "0", clientWin: "NIL", strategicLearning: "NIL",
-        bestCallRecording: "", worstCallRecording: "", totalCallRecordings: "https://drive.google.com/drive/folders/13M3L_52j1ceP1QlXHoBEty5rAowdFVtm",
+        bestCallRecording: "", worstCallRecording: "", totalCallRecordings: "",
         logInTime: "", logOutTime: "",
         technicalMeetings: [], clientMeetingsCount: "0",
         technicalProjects: [], projectsWorkedCount: "0",
@@ -642,7 +642,7 @@ export default function ReportsPage() {
     await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
     setDocumentNonBlocking(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
 
-    toast({ title: "Strategic Submission Confirmed", description: "Shift conclusion registered." });
+    toast({ title: "Report Submitted", description: "Your daily report has been saved." });
     setIsAddDialogOpen(false);
   };
 
@@ -650,7 +650,7 @@ export default function ReportsPage() {
       if (!isPrivileged) return;
       const reportRef = doc(firestore, `users/${report.employeeId}/reports`, report.id);
       deleteDocumentNonBlocking(reportRef);
-      toast({ title: "Report Expunged" });
+      toast({ title: "Report Deleted" });
       setSelectedReportForReview(null);
       if (selectedUser) {
         setUserReports(prev => prev.filter(r => r.id !== report.id));
@@ -664,7 +664,7 @@ export default function ReportsPage() {
       pdfDoc.text("FortuMars AI Technologies & Business Solutions.", pdfDoc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
       pdfDoc.setFontSize(12);
       pdfDoc.setTextColor(100);
-      pdfDoc.text(`${report.reportType} Tactical Audit Report`, pdfDoc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+      pdfDoc.text(`${report.reportType} Daily Report`, pdfDoc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
       pdfDoc.setFontSize(10);
       pdfDoc.setTextColor(0);
       pdfDoc.text(`Employee: ${report.employeeName}`, 14, 45);
@@ -674,14 +674,14 @@ export default function ReportsPage() {
 
       const tableData: any[] = [];
       if (report.reportType === 'Business' || report.reportType === 'Digital Marketing') {
-          tableData.push(['Cold Calls', report.coldCalls], ['LinkedIn', report.linkedinOutreach], ['Emails', report.emailsSent], ['Follow-ups', report.followUps], ['Potential Client', report.potentialClients], ['Revenue Collected', `$${report.revenueCollected}`]);
+          tableData.push(['Cold Calls', report.coldCalls], ['LinkedIn', report.linkedinOutreach], ['Emails', report.emailsSent], ['Follow-ups', report.followUps], ['Potential Clients', report.potentialClients], ['Revenue Collected', `$${report.revenueCollected}`]);
       }
       autoTable(pdfDoc, { startY: 70, head: [['Metric', 'Value']], body: tableData, theme: 'striped', headStyles: { fillColor: [107, 33, 168] } });
       const finalY = (pdfDoc as any).lastAutoTable.finalY + 15;
       pdfDoc.setFontSize(11);
-      pdfDoc.text("T+1 Strategic Planning:", 14, finalY);
+      pdfDoc.text("Planning for Tomorrow:", 14, finalY);
       pdfDoc.setFontSize(9);
-      pdfDoc.text(`Critical Path: ${report.criticalPathTomorrow || 'NIL'}`, 14, finalY + 10);
+      pdfDoc.text(`Main Goal: ${report.criticalPathTomorrow || 'NIL'}`, 14, finalY + 10);
       pdfDoc.save(`${report.employeeName}_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
   };
 
@@ -694,7 +694,7 @@ export default function ReportsPage() {
           const snap = await getDocs(q);
           setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err: any) {
-          toast({ variant: 'destructive', title: 'Intelligence Sync Failed', description: err.message });
+          toast({ variant: 'destructive', title: 'Sync Failed', description: err.message });
       } finally {
           setIsReportsLoading(false);
       }
@@ -702,42 +702,42 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={isLeadOrHigher ? "Strategic Fleet Log" : "My Shift Log"} description="Comprehensive verification of tactical submissions.">
+      <PageHeader title={isLeadOrHigher ? "Team Reports" : "My Reports"} description="View and submit daily work reports.">
           {!hasReportedToday ? (
-            <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-full h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4"/> Shift Form</Button>
+            <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-full h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4"/> New Report</Button>
           ) : (
             <Badge className="h-11 px-6 bg-green-100 text-green-700 border-none rounded-full font-bold uppercase tracking-widest"><CheckCircle2 className="size-4 mr-2" /> Reported Today</Badge>
           )}
       </PageHeader>
       
       {!isLeadOrHigher && (
-          <div className="space-y-4"><div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><History className="size-4" /> My Recent Tactics</div>
+          <div className="space-y-4"><div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><History className="size-4" /> Recent Reports</div>
               <div className="grid gap-3">{myRecentReports?.map(r => (
-                  <Card key={r.id} className="p-4 hover:bg-muted/50 cursor-pointer flex items-center justify-between border-none ring-1 ring-border/50" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4"><div className="p-2 rounded-xl bg-primary/10 text-primary"><Clock className="size-4" /></div><div><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Log</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
+                  <Card key={r.id} className="p-4 hover:bg-muted/50 cursor-pointer flex items-center justify-between border-none ring-1 ring-border/50" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4"><div className="p-2 rounded-xl bg-primary/10 text-primary"><Clock className="size-4" /></div><div><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Report</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
               ))}</div>
           </div>
       )}
 
       {isLeadOrHigher && (
-        <><div className="relative mb-6"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input placeholder="Search staff members..." className="pl-10 h-11 rounded-xl bg-white/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
-          <div className="border rounded-2xl overflow-hidden bg-white/50 shadow-sm"><Table><TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[10px] font-black uppercase">Fleet Official</TableHead><TableHead className="text-[10px] font-black uppercase">Role</TableHead><TableHead className="text-right text-[10px] font-black uppercase">Action</TableHead></TableRow></TableHeader>
-                <TableBody>{users?.filter(u => u.firstName?.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (<TableRow key={u.id} className="border-border/50 hover:bg-muted/5 transition-colors"><TableCell className="font-bold py-4"><Link href={`/dashboard/users/${u.id}`} className="hover:text-primary transition-colors flex items-center gap-2">{u.firstName} {u.lastName}</Link></TableCell><TableCell className="text-[10px] font-black uppercase text-muted-foreground">{u.jobTitle}</TableCell><TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-[10px]" onClick={() => handleReviewUser(u)}>Review Intelligence</Button></TableCell></TableRow>))}</TableBody></Table></div>
+        <><div className="relative mb-6"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input placeholder="Search employees..." className="pl-10 h-11 rounded-xl bg-white/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
+          <div className="border rounded-2xl overflow-hidden bg-white/50 shadow-sm"><Table><TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[10px] font-black uppercase">Employee</TableHead><TableHead className="text-[10px] font-black uppercase">Job Title</TableHead><TableHead className="text-right text-[10px] font-black uppercase">Action</TableHead></TableRow></TableHeader>
+                <TableBody>{users?.filter(u => u.firstName?.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (<TableRow key={u.id} className="border-border/50 hover:bg-muted/5 transition-colors"><TableCell className="font-bold py-4"><Link href={`/dashboard/users/${u.id}`} className="hover:text-primary transition-colors flex items-center gap-2">{u.firstName} {u.lastName}</Link></TableCell><TableCell className="text-[10px] font-black uppercase text-muted-foreground">{u.jobTitle}</TableCell><TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-[10px]" onClick={() => handleReviewUser(u)}>View Reports</Button></TableCell></TableRow>))}</TableBody></Table></div>
         </>
       )}
 
-      <Dialog open={!!selectedUser} onOpenChange={o => !o && setSelectedUser(null)}><DialogContent className="max-w-2xl rounded-3xl"><DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Tactical History: {selectedUser?.firstName}</DialogTitle></DialogHeader><ScrollArea className="max-h-[60vh] pr-4"><div className="space-y-3 py-4">
+      <Dialog open={!!selectedUser} onOpenChange={o => !o && setSelectedUser(null)}><DialogContent className="max-w-2xl rounded-3xl"><DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Report History: {selectedUser?.firstName}</DialogTitle></DialogHeader><ScrollArea className="max-h-[60vh] pr-4"><div className="space-y-3 py-4">
         {isReportsLoading ? (
-            <div className="py-10 text-center animate-pulse uppercase font-black text-xs">Scanning satellite archives...</div>
+            <div className="py-10 text-center animate-pulse uppercase font-black text-xs">Loading records...</div>
         ) : userReports.length > 0 ? userReports.map(r => (
-            <Card key={r.id} className="p-4 hover:bg-muted/50 cursor-pointer flex items-center justify-between border-none ring-1 ring-border/10" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4"><div className="p-2 rounded-xl bg-primary/10 text-primary"><Clock className="size-4" /></div><div><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Log</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
+            <Card key={r.id} className="p-4 hover:bg-muted/50 cursor-pointer flex items-center justify-between border-none ring-1 ring-border/10" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4"><div className="p-2 rounded-xl bg-primary/10 text-primary"><Clock className="size-4" /></div><div><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Report</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
         )) : (
-            <div className="py-10 text-center text-muted-foreground italic text-sm">No intelligence records found for this official.</div>
+            <div className="py-10 text-center text-muted-foreground italic text-sm">No reports found for this employee.</div>
         )}</div></ScrollArea></DialogContent></Dialog>
 
       <Dialog open={!!selectedReportForReview} onOpenChange={o => !o && setSelectedReportForReview(null)}>
           <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-              <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center"><div><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Audit Detail</DialogTitle><p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p></div><div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary" onClick={() => handleDownloadPdf(selectedReportForReview)}><FileDown className="size-3 mr-1.5" /> Download Report</Button>
+              <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center"><div><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Report Details</DialogTitle><p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p></div><div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary" onClick={() => handleDownloadPdf(selectedReportForReview)}><FileDown className="size-3 mr-1.5" /> Download PDF</Button>
                   {isPrivileged && (
                       <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -745,29 +745,29 @@ export default function ReportsPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                               <AlertDialogHeader>
-                                  <AlertDialogTitle>Expunge Strategic Log?</AlertDialogTitle>
-                                  <AlertDialogDescription>This action will permanently remove this tactical submission from the fleet records.</AlertDialogDescription>
+                                  <AlertDialogTitle>Delete Report?</AlertDialogTitle>
+                                  <AlertDialogDescription>This will permanently remove this report from the records.</AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                   <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteReport(selectedReportForReview)} className="rounded-full font-bold uppercase text-[10px] bg-red-600">Confirm Deletion</AlertDialogAction>
+                                  <AlertDialogAction onClick={() => handleDeleteReport(selectedReportForReview)} className="rounded-full font-bold uppercase text-[10px] bg-red-600">Confirm Delete</AlertDialogAction>
                               </AlertDialogFooter>
                           </AlertDialogContent>
                       </AlertDialog>
                   )}
                   <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest h-8">{selectedReportForReview?.reportType}</Badge></div></DialogHeader>
-              <ScrollArea className="flex-1 p-8 bg-secondary/10"><div className="space-y-8 pb-10"><div className="grid grid-cols-2 gap-6"><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reporting Official</p><p className="font-bold text-lg">{selectedReportForReview?.employeeName}</p></div><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Designation</p><p className="font-bold text-lg">{selectedReportForReview?.employeeJobTitle}</p></div></div><Separator />
+              <ScrollArea className="flex-1 p-8 bg-secondary/10"><div className="space-y-8 pb-10"><div className="grid grid-cols-2 gap-6"><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Employee</p><p className="font-bold text-lg">{selectedReportForReview?.employeeName}</p></div><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Job Title</p><p className="font-bold text-lg">{selectedReportForReview?.employeeJobTitle}</p></div></div><Separator />
                       {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetail report={selectedReportForReview} />}
-                      <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> 5️⃣ Pipeline & Planning (T+1)</CardTitle></CardHeader><CardContent className="pt-6 space-y-4"><div className="grid grid-cols-2 gap-4"><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Meetings Tomorrow</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Intervention</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div></div><div><p className="text-sm italic">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p></div></CardContent></Card>
-                      <div className="pt-10 flex flex-col items-center text-center space-y-6"><div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">{selectedReportForReview?.signatureUrl ? (<img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />) : (<span className="font-mono text-[10px] italic opacity-60">Digital Verification via Platform</span>)}</div><div className="space-y-1"><p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p><Separator className="w-10 mx-auto my-2" /><p className="text-[8px] font-mono text-muted-foreground italic">Submitted {formatIST(selectedReportForReview?.date)}</p></div></div></div></ScrollArea></DialogContent>
+                      <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> 5️⃣ Planning (T+1)</CardTitle></CardHeader><CardContent className="pt-6 space-y-4"><div className="grid grid-cols-2 gap-4"><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Meetings Tomorrow</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Support</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div></div><div><p className="text-sm italic">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p></div></CardContent></Card>
+                      <div className="pt-10 flex flex-col items-center text-center space-y-6"><div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">{selectedReportForReview?.signatureUrl ? (<img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />) : (<span className="font-mono text-[10px] italic opacity-60">Digital Signature Verified</span>)}</div><div className="space-y-1"><p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p><Separator className="w-10 mx-auto my-2" /><p className="text-[8px] font-mono text-muted-foreground italic">Submitted {formatIST(selectedReportForReview?.date)}</p></div></div></div></ScrollArea></DialogContent>
       </Dialog>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}><DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl"><FormProvider {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 bg-secondary/30">
-                    <DialogHeader className="p-8 pb-6 border-b bg-white/80 backdrop-blur-md"><div className="flex items-center gap-3"><div className="p-3 rounded-2xl bg-primary/10 text-primary"><Briefcase className="size-6" /></div><div><DialogTitle className="text-2xl font-black uppercase tracking-tighter">Daily {currentTemplateId} Submission</DialogTitle><DialogDescription className="text-xs font-bold">{formatIST(new Date())}</DialogDescription></div></div></DialogHeader>
-                    <ScrollArea className="flex-1"><div className="p-8 space-y-8"><div className="space-y-6"><Label className="text-[10px] font-black uppercase tracking-widest text-primary">Tactical Analytics Template</Label>{currentTemplateId === 'Technical' ? <TechnicalFields /> : currentTemplateId === 'Digital Marketing' ? <DigitalMarketingFields /> : <BusinessFields />}</div><Separator /><div className="space-y-6"><Label className="text-[10px] font-black uppercase text-primary">Strategic Certification</Label><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl><FormLabel className="text-sm font-bold">I certify that this submission represents a verified and accurate account of my tactical shift output.</FormLabel></FormItem>)} /></div></div></ScrollArea>
-                    <div className="p-6 border-t bg-white/80 backdrop-blur-md"><DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col"><Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard Log</Button><Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px] shadow-lg shadow-primary/20">Finalize Intelligence</Button></DialogFooter></div>
+                    <DialogHeader className="p-8 pb-6 border-b bg-white/80 backdrop-blur-md"><div className="flex items-center gap-3"><div className="p-3 rounded-2xl bg-primary/10 text-primary"><Briefcase className="size-6" /></div><div><DialogTitle className="text-2xl font-black uppercase tracking-tighter">Daily {currentTemplateId} Report</DialogTitle><DialogDescription className="text-xs font-bold">{formatIST(new Date())}</DialogDescription></div></div></DialogHeader>
+                    <ScrollArea className="flex-1"><div className="p-8 space-y-8"><div className="space-y-6"><Label className="text-[10px] font-black uppercase tracking-widest text-primary">Report Form</Label>{currentTemplateId === 'Technical' ? <TechnicalFields /> : currentTemplateId === 'Digital Marketing' ? <DigitalMarketingFields /> : <BusinessFields />}</div><Separator /><div className="space-y-6"><Label className="text-[10px] font-black uppercase text-primary">Confirmation</Label><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl><FormLabel className="text-sm font-bold">I certify that the information provided in this report is accurate and reflects my work for the day.</FormLabel></FormItem>)} /></div></div></ScrollArea>
+                    <div className="p-6 border-t bg-white/80 backdrop-blur-md"><DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col"><Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button><Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px] shadow-lg shadow-primary/20">Submit Report</Button></DialogFooter></div>
                 </form></FormProvider></DialogContent></Dialog>
     </div>
   );

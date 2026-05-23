@@ -195,7 +195,7 @@ export function AttendanceWidget() {
       setTotalBreakTime(updatedTotalBreakTime);
       setCurrentBreakStartTime(null);
       setStatus("in");
-      toast({ title: "Ops Resumed" });
+      toast({ title: "Work Resumed" });
   }, [currentBreakStartTime, totalBreakTime, status, getTodaysAttendanceRef, toast]);
 
   const handleLunch = () => {
@@ -224,7 +224,7 @@ export function AttendanceWidget() {
               }
               setCurrentBreakStartTime(nowBreak);
               setStatus("lunch");
-              toast({ title: "L-OUT Recorded" });
+              toast({ title: "Lunch Break Started" });
           }
         },
         () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "GPS Required" }); },
@@ -238,7 +238,7 @@ export function AttendanceWidget() {
       } else {
           setCurrentBreakStartTime(new Date());
           setStatus("short_break");
-          toast({ title: "Short Break Active" });
+          toast({ title: "Break Started" });
       }
   }
   
@@ -359,8 +359,8 @@ export function AttendanceWidget() {
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
               <div>
-                  <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Precision Attendance</CardTitle>
-                  <CardDescription>High-accuracy geofenced tracking active.</CardDescription>
+                  <CardTitle className="font-headline flex items-center gap-2 text-primary"><Clock className="size-5" /> Attendance Tracking</CardTitle>
+                  <CardDescription>Real-time location-based tracking.</CardDescription>
               </div>
           </div>
         </CardHeader>
@@ -369,21 +369,21 @@ export function AttendanceWidget() {
             <div className="space-y-1">
                 <div className={cn("inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-4", status === "in" ? (isLate() ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700") : "bg-muted text-muted-foreground")}>
                     {status === "in" && (isLate() ? <Clock className="size-3" /> : <Briefcase className="size-3" />)}
-                    {status === 'in' ? (isLate() ? 'Late Operations' : 'Active Shift') : 'Ready to Start'}
+                    {status === 'in' ? (isLate() ? 'Late Log-in' : 'On Shift') : 'Ready to Start'}
                 </div>
                 {lastClockInTime && <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2"><LogIn className="size-3" /> Logged In At: <span className="text-primary">{format(lastClockInTime, 'p')}</span></p>}
                 <div className="text-7xl font-black font-mono tabular-nums tracking-tighter text-primary drop-shadow-sm py-2">{formatTime(workTimer)}</div>
                 {(status === "lunch" || status === "short_break") && (
                   <div className="flex flex-col items-center gap-3">
-                    <div className="flex flex-col items-center animate-pulse"><span className="text-[10px] font-black uppercase text-orange-600 tracking-widest flex items-center gap-1.5"><Coffee className="size-3"/> Current Break</span><div className="text-2xl font-bold font-mono tabular-nums text-orange-600">{formatTime(breakTimer)}</div></div>
-                    <div className="px-4 py-1 rounded-full bg-orange-50 border border-orange-100"><p className="text-[9px] font-black text-orange-700 uppercase tracking-widest">Total Break Duration: {formatTime(totalBreakTime + breakTimer)}</p></div>
+                    <div className="flex flex-col items-center animate-pulse"><span className="text-[10px] font-black uppercase text-orange-600 tracking-widest flex items-center gap-1.5"><Coffee className="size-3"/> On Break</span><div className="text-2xl font-bold font-mono tabular-nums text-orange-600">{formatTime(breakTimer)}</div></div>
+                    <div className="px-4 py-1 rounded-full bg-orange-50 border border-orange-100"><p className="text-[9px] font-black text-orange-700 uppercase tracking-widest">Total Break: {formatTime(totalBreakTime + breakTimer)}</p></div>
                   </div>
                 )}
             </div>
             <div className="w-full max-w-3xl flex gap-3 px-2">
                 <TrackingCard label="Log In" time={getMilestoneTime(todaysAttendance?.checkInTime)} icon={LogIn} subValue={todaysAttendance?.locationCheckInLatitude ? `${todaysAttendance.locationCheckInLatitude.toFixed(4)}, ${todaysAttendance.locationCheckInLongitude.toFixed(4)}` : undefined} active={!!todaysAttendance?.checkInTime} />
-                <TrackingCard label="L-Out" time={getMilestoneTime(todaysAttendance?.lunchOutTime)} icon={Utensils} active={!!todaysAttendance?.lunchOutTime} />
-                <TrackingCard label="L-In" time={getMilestoneTime(todaysAttendance?.lunchInTime)} icon={LogIn} active={!!todaysAttendance?.lunchInTime} />
+                <TrackingCard label="Lunch Out" time={getMilestoneTime(todaysAttendance?.lunchOutTime)} icon={Utensils} active={!!todaysAttendance?.lunchOutTime} />
+                <TrackingCard label="Lunch In" time={getMilestoneTime(todaysAttendance?.lunchInTime)} icon={LogIn} active={!!todaysAttendance?.lunchInTime} />
                 <TrackingCard label="Log-Out" time={getMilestoneTime(todaysAttendance?.checkOutTime)} icon={LogOut} active={!!todaysAttendance?.checkOutTime} />
             </div>
         </CardContent>
@@ -392,11 +392,11 @@ export function AttendanceWidget() {
           {status === 'out' && !hasClockedOutToday && <Button onClick={handleClockIn} className="w-full max-w-[280px] rounded-full h-14 text-lg font-black uppercase tracking-widest shadow-xl bg-primary text-white">Start Shift</Button>}
           {status !== 'out' && (
               <div className="flex flex-col sm:flex-row gap-4 w-full max-w-[600px] justify-center">
-                  {status === "in" && (<>{!todaysAttendance?.lunchInTime && <Button onClick={handleLunch} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white">L-OUT</Button>}<Button onClick={handleShortBreak} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white">Short Break</Button></>)}
-                  {status === "lunch" && <Button onClick={handleLunch} className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-primary text-white">L-IN</Button>}
+                  {status === "in" && (<>{!todaysAttendance?.lunchInTime && <Button onClick={handleLunch} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white">Lunch Out</Button>}<Button onClick={handleShortBreak} variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-white">Short Break</Button></>)}
+                  {status === "lunch" && <Button onClick={handleLunch} className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-primary text-white">Lunch In</Button>}
                   {status === "short_break" && <Button onClick={handleShortBreak} className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest bg-primary text-white">Resume</Button>}
-                  <AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md">Finish Day</Button></AlertDialogTrigger>
-                      <AlertDialogContent className="rounded-3xl"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Shift Conclusion</AlertDialogTitle><AlertDialogDescription>Synchronize final strategic logs.</AlertDialogDescription></AlertDialogHeader>
+                  <AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" className="rounded-full h-12 flex-1 font-bold uppercase tracking-widest shadow-md">End Shift</Button></AlertDialogTrigger>
+                      <AlertDialogContent className="rounded-3xl"><AlertDialogHeader><AlertDialogTitle className="text-xl font-black uppercase">Finish Shift</AlertDialogTitle><AlertDialogDescription>Submit your daily report and finish your shift.</AlertDialogDescription></AlertDialogHeader>
                           <AlertDialogFooter><AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Resume</AlertDialogCancel><AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px]">Confirm & Finish</AlertDialogAction></AlertDialogFooter>
                       </AlertDialogContent>
                   </AlertDialog>
@@ -405,8 +405,8 @@ export function AttendanceWidget() {
         </CardFooter>
 
         <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
-          <DialogContent className="rounded-3xl"><div className="flex flex-col items-center text-center gap-4 py-4"><div className="p-4 rounded-full bg-orange-100 text-orange-600"><MapPinned className="size-8" /></div><div className="space-y-1"><h3 className="text-xl font-black uppercase tracking-tighter">Satellite Discrepancy</h3><p className="text-sm text-muted-foreground">Device operating outside geofence.</p></div></div>
-              <div className="grid gap-4 py-2"><Label htmlFor="reason" className="font-bold text-[10px] uppercase text-primary">Mandatory Strategic Justification</Label><Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Reason for remote access..." className="rounded-2xl min-h-[120px]" /></div>
+          <DialogContent className="rounded-3xl"><div className="flex flex-col items-center text-center gap-4 py-4"><div className="p-4 rounded-full bg-orange-100 text-orange-600"><MapPinned className="size-8" /></div><div className="space-y-1"><h3 className="text-xl font-black uppercase tracking-tighter">Location Out of Range</h3><p className="text-sm text-muted-foreground">You are currently outside the designated office area.</p></div></div>
+              <div className="grid gap-4 py-2"><Label htmlFor="reason" className="font-bold text-[10px] uppercase text-primary">Reason for Remote Access</Label><Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Please explain why you are clocking in from a remote location..." className="rounded-2xl min-h-[120px]" /></div>
               <div className="flex gap-3 mt-4"><Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="outline" className="flex-1 rounded-full font-bold uppercase text-[10px]">Cancel</Button><Button onClick={() => { if(!outOfRangeReason) { toast({variant: 'destructive', title: 'Reason Required'}); return; } if(outOfRangeAction) outOfRangeAction(); setIsOutOfRangeReasonDialogOpen(false); }} className="flex-1 rounded-full font-bold uppercase text-[10px] bg-primary text-white">Certify & Proceed</Button></div>
           </DialogContent>
         </Dialog>

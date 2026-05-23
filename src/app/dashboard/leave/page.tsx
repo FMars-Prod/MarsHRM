@@ -434,7 +434,7 @@ export default function LeavePage() {
   return (
     <>
       <PageHeader
-        title="Fleet Requests"
+        title="Leave Requests"
         description="Manage leave, hour permissions, and WFH requests."
         className="animate-fade-in-up"
       >
@@ -444,17 +444,17 @@ export default function LeavePage() {
                   <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" className="gap-2 rounded-full">
                           <Trash2 className="size-4" />
-                          Purge ({selectedIds.length})
+                          Delete ({selectedIds.length})
                       </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent className="rounded-3xl">
                       <AlertDialogHeader>
-                          <AlertDialogTitle className="font-black uppercase tracking-tighter">Bulk Expunge Protocol</AlertDialogTitle>
-                          <AlertDialogDescription>Authorized personnel only. This will permanently remove {selectedIds.length} records.</AlertDialogDescription>
+                          <AlertDialogTitle className="font-black uppercase tracking-tighter">Confirm Deletion</AlertDialogTitle>
+                          <AlertDialogDescription>This will permanently remove {selectedIds.length} records. This action cannot be undone.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                          <AlertDialogCancel className="rounded-full font-bold uppercase text-xs">Abort</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full font-bold uppercase text-xs">Confirm Purge</AlertDialogAction>
+                          <AlertDialogCancel className="rounded-full font-bold uppercase text-xs">Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full font-bold uppercase text-xs">Confirm Delete</AlertDialogAction>
                       </AlertDialogFooter>
                   </AlertDialogContent>
               </AlertDialog>
@@ -480,13 +480,13 @@ export default function LeavePage() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden">
                 <DialogHeader className="p-6 pb-0">
-                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Strategic Request</DialogTitle>
-                  <DialogDescription>Submit your tactical shift adjustment.</DialogDescription>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">New Request</DialogTitle>
+                  <DialogDescription>Please provide the details for your request.</DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh]">
                     <div className="grid gap-6 p-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Request Category</Label>
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Request Type</Label>
                             <Select value={category} onValueChange={(val: RequestCategory) => setCategory(val)}>
                                 <SelectTrigger className="rounded-xl h-11">
                                     <SelectValue />
@@ -548,13 +548,13 @@ export default function LeavePage() {
                         )}
 
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Strategic Justification</Label>
-                            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide contextual details for this request..." className="rounded-2xl min-h-[100px]" />
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason / Description</Label>
+                            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Please explain the reason for this request..." className="rounded-2xl min-h-[100px]" />
                         </div>
                     </div>
                 </ScrollArea>
                 <DialogFooter className="p-6 pt-0">
-                  <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Request</Button>
+                  <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Submit Request</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -575,7 +575,7 @@ export default function LeavePage() {
                     />
                   </TableHead>
                 )}
-                {(userRole !== 'Member') && <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Fleet Member</TableHead>}
+                {(userRole !== 'Member') && <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Employee</TableHead>}
                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Type</TableHead>
                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Dates & Time</TableHead>
                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Status</TableHead>
@@ -584,7 +584,7 @@ export default function LeavePage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Scanning satellite requests...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Loading requests...</TableCell></TableRow>
               ) : displayLeaveRequests.length === 0 ? (
                   <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-32 text-center text-muted-foreground italic font-medium">{showMissed ? "No archived records found." : "No active requests in queue."}</TableCell></TableRow>
               ) : displayLeaveRequests.map((request) => (
@@ -638,31 +638,31 @@ export default function LeavePage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-xl">
                           <SheetTrigger asChild>
-                            <DropdownMenuItem onClick={() => setSelectedRequest(request)} className="font-bold text-xs uppercase tracking-tight"><Eye className="mr-2 h-3.5 w-3.5"/> Audit Details</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedRequest(request)} className="font-bold text-xs uppercase tracking-tight"><Eye className="mr-2 h-3.5 w-3.5"/> View Details</DropdownMenuItem>
                           </SheetTrigger>
                            {userRole === 'Team Lead' && request.status === 'Pending' && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Endorse</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Approve</DropdownMenuItem>
                           )}
                           {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && request.status === 'Pending HR Approval' && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Finalize Access</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Finalize</DropdownMenuItem>
                           )}
                           {isUserAdmin && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive font-bold text-xs uppercase tracking-tight">
                                   <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                  Expunge
+                                  Delete
                                 </DropdownMenuItem>
                               </AlertDialogTrigger>
                               <AlertDialogContent className="rounded-3xl">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle className="font-black uppercase tracking-tighter">Authorized Deletion</AlertDialogTitle>
-                                  <AlertDialogDescription>This action will permanently purge this request from the tactical archive.</AlertDialogDescription>
+                                  <AlertDialogTitle className="font-black uppercase tracking-tighter">Delete Request</AlertDialogTitle>
+                                  <AlertDialogDescription>This will permanently remove this request from the records.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel className="rounded-full font-bold uppercase text-xs">Abort</AlertDialogCancel>
+                                  <AlertDialogCancel className="rounded-full font-bold uppercase text-xs">Cancel</AlertDialogCancel>
                                   <AlertDialogAction onClick={() => handleDeleteRequest(request.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full font-bold uppercase text-xs">
-                                    Expunge Record
+                                    Confirm Delete
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -679,7 +679,7 @@ export default function LeavePage() {
         {selectedRequest && (
           <SheetContent className="rounded-l-3xl border-none shadow-2xl">
               <SheetHeader className="pb-6 border-b">
-                  <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">Request Intelligence</SheetTitle>
+                  <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">Request Details</SheetTitle>
                   <SheetDescription>ID: {selectedRequest.id.slice(0, 8)} • {selectedRequest.category} Submission</SheetDescription>
               </SheetHeader>
               <ScrollArea className="h-full py-8 pr-4">
@@ -689,7 +689,7 @@ export default function LeavePage() {
                         {selectedRequest.leaveType && <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Class</p><p className="font-bold">{selectedRequest.leaveType}</p></div>}
                     </div>
                     
-                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Tactical Window</p>
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Date / Time Period</p>
                         <p className="font-bold text-sm">
                             {selectedRequest.category === 'Hour Permission' ? format(selectedRequest.startDate.toDate(), 'PPPP') : `${formatDateLabel(selectedRequest.startDate)} — ${formatDateLabel(selectedRequest.endDate)}`}
                         </p>
@@ -698,12 +698,12 @@ export default function LeavePage() {
                         )}
                     </div>
 
-                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Strategic Reason</p><p className="text-sm italic leading-relaxed">"{selectedRequest.reason}"</p></div>
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reason</p><p className="text-sm italic leading-relaxed">"{selectedRequest.reason}"</p></div>
                     
                     <Separator className="opacity-50" />
                     
                     <div className="space-y-4">
-                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] text-primary">Approval Satellite Tracker</h4>
+                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] text-primary">Approval Status</h4>
                         <LeaveStatusTracker request={selectedRequest} users={users} />
                     </div>
                 </div>
