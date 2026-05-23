@@ -5,8 +5,8 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
-import { format, startOfDay, endOfDay, isWithinInterval, subDays, differenceInSeconds } from 'date-fns';
-import { Building2, User, UserCheck, UserCheck as UserCheckIcon, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone, Home, MapPin } from 'lucide-react';
+import { format, startOfDay, endOfDay, isWithinInterval, differenceInSeconds } from 'date-fns';
+import { Building2, User, UserCheck, UserCheck as UserCheckIcon, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone, Home, MapPin, ChevronRight, LayoutGrid, Activity, ShieldCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -17,7 +17,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { cn } from '@/lib/utils';
-
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 type UserData = {
   id: string;
@@ -64,7 +65,7 @@ export function DailyMonitorWidget() {
     isLoading: true,
   });
   const [attendanceRecords, setAttendanceRecords] = React.useState<Map<string, AttendanceRecord>>(new Map());
-  const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[], nudgeType?: 'missing_login' | 'missing_logout' } | null>(null);
+  const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[], nudgeType?: 'missing_login' | 'missing_logout', color: string } | null>(null);
 
   const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
   const { data: currentUserData } = useDoc(currentUserDocRef);
@@ -379,17 +380,20 @@ export function DailyMonitorWidget() {
     pdfDoc.save(`daily_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
-  const UserListCard = ({ title, users, Icon, iconColor, onClick, gradient }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; onClick: () => void; gradient: string }) => (
-    <Card className={cn("hover:bg-muted/50 transition-all duration-300 cursor-pointer hover:shadow-md border-none ring-1 ring-border/50", gradient)} onClick={onClick}>
-      <CardHeader className="p-4">
-        <CardTitle className="flex items-center gap-3">
-            <div className={cn("p-2 rounded-lg bg-white/50", iconColor)}>
+  const UserListCard = ({ title, users, Icon, iconColor, onClick, gradient, description }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; onClick: () => void; gradient: string; description: string }) => (
+    <Card className={cn("group hover:bg-muted/50 transition-all duration-500 cursor-pointer hover:shadow-xl border-none ring-1 ring-border/50 rounded-[2rem] overflow-hidden", gradient)} onClick={onClick}>
+      <CardHeader className="p-6 pb-2">
+        <div className="flex items-center justify-between">
+            <div className={cn("p-3 rounded-2xl shadow-sm transition-transform group-hover:scale-110", iconColor)}>
                 <Icon className="h-5 w-5" />
             </div>
-            <span className="text-sm font-medium">{title}</span>
-            <span className="ml-auto text-xl font-bold">{users.length}</span>
-        </CardTitle>
+            <span className="text-3xl font-black tracking-tighter">{users.length}</span>
+        </div>
       </CardHeader>
+      <CardContent className="p-6 pt-2">
+          <p className="text-sm font-black uppercase tracking-tight text-foreground/80">{title}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mt-1">{description}</p>
+      </CardContent>
     </Card>
   );
 
@@ -397,161 +401,217 @@ export function DailyMonitorWidget() {
 
   return (
     <Sheet onOpenChange={(isOpen) => !isOpen && setSheetContent(null)}>
-        <Card className="animate-fade-in-up bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm">
-            <CardHeader className="pb-4">
-                <div className="flex items-start justify-between gap-4">
-                    <div>
-                        <CardTitle className="font-headline text-xl">Daily Team Monitor</CardTitle>
-                        <CardDescription>A real-time overview of your team's status for today, {format(new Date(), 'MMMM d')}.</CardDescription>
+        <Card className="animate-fade-in-up bg-white border-none shadow-xl rounded-[2.5rem] overflow-hidden font-open-sans">
+            <CardHeader className="p-8 pb-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                    <div className="space-y-1">
+                        <CardTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-2.5 text-primary">
+                            <Activity className="size-5" /> Fleet Oversight Monitor
+                        </CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">
+                            Operational grid status: {format(new Date(), 'EEEE, dd MMMM')}
+                        </CardDescription>
                     </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" disabled={summary.isLoading} className="bg-white/50">
-                                <Share2 className="mr-2 h-4 w-4" />
-                                Share / Export
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={handleExport}>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download CSV
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleExportPdf}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Download PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuLabel>Share Summary via</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleShare('email')}>
-                                <Mail className="mr-2 h-4 w-4"/> 
-                                Email
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
-                                <MessageSquare className="mr-2 h-4 w-4"/>
-                                WhatsApp
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleShare('teams')}>
-                                <Users className="mr-2 h-4 w-4"/>
-                                Microsoft Teams
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" disabled={summary.isLoading} className="rounded-xl h-10 px-5 font-black uppercase text-[10px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50 flex-1 sm:flex-none">
+                                    <Share2 className="mr-2 h-3.5 w-3.5" />
+                                    Dispatch Report
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-xl p-2 w-64">
+                                <DropdownMenuItem onClick={handleExport} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><Download className="size-3.5" /> Sector Audit CSV</DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleExportPdf} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><FileText className="size-3.5" /> Sector Audit PDF</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase opacity-40">Tactical Sharing</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleShare('email')} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><Mail className="size-3.5"/> Email Registry</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleShare('whatsapp')} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><MessageSquare className="size-3.5"/> WhatsApp Comms</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleShare('teams')} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><Users className="size-3.5"/> MS Teams Channel</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
             </CardHeader>
-            <CardContent>
-            {summary.isLoading ? (
-                <div className="flex h-32 items-center justify-center">
-                    <Building2 className="h-10 w-10 animate-pulse text-muted-foreground" />
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  <SheetTrigger asChild>
-                    <UserListCard 
-                        title="Present" 
-                        users={summary.present} 
-                        Icon={UserCheckIcon} 
-                        iconColor="text-green-600" 
-                        gradient="bg-gradient-to-br from-green-500/10 to-white/50"
-                        onClick={() => setSheetContent({title: "Present (In-Office)", users: summary.present})} 
-                    />
-                  </SheetTrigger>
-                  <SheetTrigger asChild>
-                    <UserListCard 
-                        title="Late" 
-                        users={summary.late} 
-                        Icon={UserX} 
-                        iconColor="text-yellow-600" 
-                        gradient="bg-gradient-to-br from-yellow-500/10 to-white/50"
-                        onClick={() => setSheetContent({title: "Arrived Late", users: summary.late})} 
-                    />
-                  </SheetTrigger>
-                  <SheetTrigger asChild>
-                    <UserListCard 
-                        title="Out of Range" 
-                        users={summary.outOfRange} 
-                        Icon={AlertTriangle} 
-                        iconColor="text-orange-600" 
-                        gradient="bg-gradient-to-br from-orange-500/10 to-white/50"
-                        onClick={() => setSheetContent({title: "Out of Range", users: summary.outOfRange})} 
-                    />
-                  </SheetTrigger>
-                  <SheetTrigger asChild>
-                    <UserListCard 
-                        title="Absent" 
-                        users={summary.absent} 
-                        Icon={UserRoundX} 
-                        iconColor="text-red-600" 
-                        gradient="bg-gradient-to-br from-red-500/10 to-white/50"
-                        onClick={() => setSheetContent({title: "Absent Today", users: summary.absent, nudgeType: 'missing_login'})} 
-                    />
-                  </SheetTrigger>
-                </div>
-            )}
+
+            <CardContent className="p-8 pt-4">
+                {summary.isLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="h-32 rounded-[2rem] bg-muted animate-pulse" />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <SheetTrigger asChild>
+                            <UserListCard 
+                                title="Onsite Fleet" 
+                                users={summary.present} 
+                                Icon={UserCheckIcon} 
+                                iconColor="bg-emerald-500 text-white" 
+                                gradient="bg-gradient-to-br from-emerald-50/50 to-white/50"
+                                description="Units verified at HQ sector"
+                                onClick={() => setSheetContent({title: "ONSITE FLEET", users: summary.present, color: "text-emerald-600"})} 
+                            />
+                        </SheetTrigger>
+                        <SheetTrigger asChild>
+                            <UserListCard 
+                                title="Late Deployment" 
+                                users={summary.late} 
+                                Icon={Clock} 
+                                iconColor="bg-amber-500 text-white" 
+                                gradient="bg-gradient-to-br from-amber-50/50 to-white/50"
+                                description="Delayed shift activation"
+                                onClick={() => setSheetContent({title: "LATE DEPLOYMENT", users: summary.late, color: "text-amber-600"})} 
+                            />
+                        </SheetTrigger>
+                        <SheetTrigger asChild>
+                            <UserListCard 
+                                title="Remote Base" 
+                                users={summary.outOfRange} 
+                                Icon={MapPin} 
+                                iconColor="bg-sky-500 text-white" 
+                                gradient="bg-gradient-to-br from-sky-50/50 to-white/50"
+                                description="Field or remote operations"
+                                onClick={() => setSheetContent({title: "REMOTE BASE", users: summary.outOfRange, color: "text-sky-600"})} 
+                            />
+                        </SheetTrigger>
+                        <SheetTrigger asChild>
+                            <UserListCard 
+                                title="Off-Grid" 
+                                users={summary.absent} 
+                                Icon={UserRoundX} 
+                                iconColor="bg-rose-500 text-white" 
+                                gradient="bg-gradient-to-br from-rose-50/50 to-white/50"
+                                description="Missing shift login"
+                                onClick={() => setSheetContent({title: "OFF-GRID UNITS", users: summary.absent, nudgeType: 'missing_login', color: "text-rose-600"})} 
+                            />
+                        </SheetTrigger>
+                    </div>
+                )}
             </CardContent>
+
+            <div className="px-8 pb-8 pt-0 border-t border-dashed border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
+                <div className="flex items-center gap-3 pt-6">
+                    <div className="flex -space-x-2">
+                        {summary.present.slice(0, 3).map(u => (
+                            <Avatar key={u.id} className="size-6 border-2 border-white ring-1 ring-border/20 shadow-sm">
+                                <AvatarImage src={u.avatar} />
+                                <AvatarFallback className="text-[8px] font-black">{u.firstName[0]}</AvatarFallback>
+                            </Avatar>
+                        ))}
+                        {summary.present.length > 3 && (
+                            <div className="size-6 rounded-full bg-muted border-2 border-white ring-1 ring-border/20 flex items-center justify-center text-[7px] font-black">
+                                +{summary.present.length - 3}
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        {summary.present.length} units online in current sector
+                    </p>
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[8px] font-black uppercase rounded-full px-3 h-6">
+                        <ShieldCheck className="size-2.5 mr-1.5" /> Tactical Verification Active
+                    </Badge>
+                </div>
+            </div>
         </Card>
 
         {sheetContent && (
-            <SheetContent className="flex flex-col">
-                <SheetHeader>
-                    <SheetTitle>{sheetContent.title} ({sheetContent.users.length})</SheetTitle>
+            <SheetContent className="flex flex-col rounded-l-[3rem] border-none shadow-2xl w-full sm:max-w-lg p-0 overflow-hidden font-open-sans">
+                <SheetHeader className="p-8 border-b bg-white/80 backdrop-blur-md">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <SheetTitle className={cn("text-2xl font-black uppercase tracking-tighter", sheetContent.color)}>{sheetContent.title}</SheetTitle>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Fleet Roster Audit • {format(new Date(), 'PP')}</p>
+                        </div>
+                        <Badge variant="outline" className="rounded-full h-8 px-4 font-black uppercase text-[10px] bg-muted/20 border-none">
+                            {sheetContent.users.length} Records
+                        </Badge>
+                    </div>
                 </SheetHeader>
-                <ScrollArea className="flex-1 -mx-6">
-                  <div className="py-4 px-6 space-y-3">
+                <ScrollArea className="flex-1 bg-secondary/5">
+                  <div className="p-8 space-y-4">
                      {sheetContent.users.length > 0 ? (
                         sheetContent.users.map(user => {
                             const rec = attendanceRecords.get(user.id);
                             return (
-                                <div key={user.id} className="flex flex-col p-3 rounded-2xl hover:bg-muted transition-colors border group">
-                                    <div className="flex items-center justify-between">
-                                        <Link href={`/dashboard/users/${user.id}`} className="flex items-center gap-3 flex-1">
-                                            <Avatar className="h-9 w-9 ring-1 ring-border group-hover:ring-primary/20 transition-all">
-                                                {user.avatar ? (
-                                                    isUrl(user.avatar) ? (
-                                                        <AvatarImage src={user.avatar} className="object-cover" />
-                                                    ) : (
-                                                        <span className="text-xl">{user.avatar}</span>
-                                                    )
-                                                ) : <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>}
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>
-                                                <p className="text-xs text-muted-foreground">{user.jobTitle}</p>
+                                <Card key={user.id} className="border-none ring-1 ring-border/50 rounded-2xl hover:shadow-lg transition-all duration-300 group overflow-hidden bg-white">
+                                    <div className="p-5 flex flex-col gap-4">
+                                        <div className="flex items-center justify-between">
+                                            <Link href={`/dashboard/users/${user.id}`} className="flex items-center gap-4 flex-1">
+                                                <Avatar className="h-12 w-12 rounded-xl ring-1 ring-border group-hover:ring-primary/20 transition-all shadow-sm">
+                                                    {user.avatar ? (
+                                                        isUrl(user.avatar) ? (
+                                                            <AvatarImage src={user.avatar} className="object-cover" />
+                                                        ) : (
+                                                            <div className="h-full w-full bg-primary/5 flex items-center justify-center text-2xl">{user.avatar}</div>
+                                                        )
+                                                    ) : <AvatarFallback className="font-bold">{user.firstName[0]}{user.lastName[0]}</AvatarFallback>}
+                                                </Avatar>
+                                                <div>
+                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">{user.firstName} {user.lastName}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{user.jobTitle}</p>
+                                                </div>
+                                            </Link>
+                                            <div className="flex gap-2">
+                                                {rec?.locationCheckInLatitude && (
+                                                    <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-primary hover:bg-primary/10 shadow-sm border">
+                                                        <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
+                                                            <MapPin className="h-4 w-4" />
+                                                        </Link>
+                                                    </Button>
+                                                )}
+                                                {sheetContent.nudgeType && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-9 w-9 rounded-xl text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm border border-green-100"
+                                                        onClick={() => handleNudgeWhatsApp(user, sheetContent.nudgeType)}
+                                                    >
+                                                        <Phone className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                             </div>
-                                        </Link>
-                                        <div className="flex gap-2">
-                                            {rec?.locationCheckInLatitude && (
-                                                <Button asChild variant="ghost" size="icon" className="text-primary hover:bg-primary/10">
-                                                    <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
-                                                        <MapPin className="h-4 w-4" />
-                                                    </Link>
-                                                </Button>
-                                            )}
-                                            {sheetContent.nudgeType && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                    onClick={() => handleNudgeWhatsApp(user, sheetContent.nudgeType)}
-                                                    title="Nudge via WhatsApp"
-                                                >
-                                                    <Phone className="h-4 w-4" />
-                                                </Button>
-                                            )}
                                         </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-3 pt-2">
+                                            <div className="p-3 bg-muted/20 rounded-xl space-y-1">
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest">Shift Activation</p>
+                                                <p className="font-mono text-xs font-bold text-foreground/80">{rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</p>
+                                            </div>
+                                            <div className="p-3 bg-muted/20 rounded-xl space-y-1">
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest">Shift Concluded</p>
+                                                <p className="font-mono text-xs font-bold text-foreground/80">{rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</p>
+                                            </div>
+                                        </div>
+
+                                        {rec?.checkInNotes && (
+                                            <div className="mt-1 flex gap-3 p-4 rounded-xl bg-orange-50/30 border border-orange-100/50">
+                                                <FileText className="size-4 text-orange-600 shrink-0" />
+                                                <p className="text-[11px] italic font-medium leading-relaxed text-orange-900/70 line-clamp-2">
+                                                    "{rec.checkInNotes}"
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
-                                    {rec?.checkInNotes && (
-                                        <p className="mt-2 text-[10px] italic text-muted-foreground bg-white/50 p-2 rounded-lg border border-dashed">
-                                            "{rec.checkInNotes}"
-                                        </p>
-                                    )}
-                                </div>
+                                </Card>
                             );
                         })
                     ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">No employees in this category.</p>
+                        <div className="py-20 text-center opacity-30 grayscale flex flex-col items-center">
+                            <LayoutGrid className="size-12 mb-4" />
+                            <p className="font-black uppercase text-[11px] tracking-[0.3em]">Sector Empty</p>
+                        </div>
                     )}
                   </div>
                 </ScrollArea>
+                <div className="p-8 border-t bg-white">
+                    <Button variant="outline" className="w-full rounded-full h-14 font-black uppercase text-[10px] tracking-widest shadow-lg" asChild>
+                        <Link href="/dashboard/analytics">Download Sector Audit</Link>
+                    </Button>
+                </div>
             </SheetContent>
         )}
     </Sheet>
