@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Inter, Space_Grotesk, Open_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,10 @@ const fontBody = Inter({ subsets: ["latin"], variable: "--font-body" });
 const fontHeadline = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-headline",
+});
+const fontOpenSans = Open_Sans({
+  subsets: ["latin"],
+  variable: "--font-open-sans",
 });
 
 export const metadata: Metadata = {
@@ -29,7 +33,8 @@ export default function RootLayout({
         className={cn(
           "font-body antialiased",
           fontBody.variable,
-          fontHeadline.variable
+          fontHeadline.variable,
+          fontOpenSans.variable
         )}
       >
         <FirebaseClientProvider>

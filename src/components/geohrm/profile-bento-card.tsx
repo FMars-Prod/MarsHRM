@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -37,9 +36,10 @@ export function ProfileBentoCard() {
     const isUrl = employee.avatar && employee.avatar.startsWith('http');
     const roleName = employee.role || 'Member';
     const joinDate = employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A';
+    const tacticalId = employee.id ? `#ID-${employee.id.slice(0, 6).toUpperCase()}` : '';
 
     return (
-        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group transition-all duration-500 hover:shadow-2xl h-full">
+        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group transition-all duration-500 hover:shadow-2xl h-full font-open-sans">
             <div className="relative h-full">
                 {/* Visual Background Elements */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-20 -mt-20 blur-3xl transition-all duration-700 group-hover:bg-primary/10" />
@@ -61,7 +61,10 @@ export function ProfileBentoCard() {
                         <div className="flex-1 space-y-4 text-center md:text-left">
                             <div className="space-y-1">
                                 <div className="flex items-center justify-center md:justify-start gap-3 flex-wrap">
-                                    <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-foreground">{employee.firstName} {employee.lastName}</h1>
+                                    <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-foreground">
+                                        {employee.firstName} {employee.lastName}
+                                        <span className="ml-2 text-sm font-bold text-muted-foreground/40 font-mono">{tacticalId}</span>
+                                    </h1>
                                     <Badge className="bg-primary/10 text-primary border-none rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest">Active Duty</Badge>
                                 </div>
                                 <p className="text-xl font-medium text-muted-foreground">{employee.jobTitle}</p>
@@ -76,6 +79,12 @@ export function ProfileBentoCard() {
                                     <Target className="size-3.5 text-accent" />
                                     <span className="text-[11px] font-bold uppercase tracking-tight">{employee.department} Unit</span>
                                 </div>
+                                {employee.shiftType && (
+                                    <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-xl border border-border/50">
+                                        <Clock className="size-3.5 text-indigo-500" />
+                                        <span className="text-[11px] font-bold uppercase tracking-tight">{employee.shiftType}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

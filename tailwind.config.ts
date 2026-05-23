@@ -21,6 +21,7 @@ export default {
       fontFamily: {
         body: ["var(--font-body)", ...fontFamily.sans],
         headline: ["var(--font-headline)", ...fontFamily.sans],
+        "open-sans": ["var(--font-open-sans)", ...fontFamily.sans],
       },
       colors: {
         border: "hsl(var(--border))",
