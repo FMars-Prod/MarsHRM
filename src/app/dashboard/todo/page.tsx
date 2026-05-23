@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -7,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc, where, Timestamp } from 'firebase/firestore';
-import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle, Palette } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format, isToday, isBefore, startOfDay, addDays } from 'date-fns';
@@ -33,6 +34,7 @@ type Todo = {
     assignedByName: string;
     assignedTo: string;
     dueDate?: any;
+    colorId?: string;
 };
 
 type UserData = {
@@ -41,6 +43,17 @@ type UserData = {
     lastName: string;
     role: string;
 };
+
+const TASK_COLORS = [
+    { id: 'rose', bg: 'bg-[#FEF2F2]', border: 'border-rose-200', text: 'text-rose-900', ring: 'ring-rose-500/10', circle: 'bg-rose-500' },
+    { id: 'amber', bg: 'bg-[#FFFBEB]', border: 'border-amber-200', text: 'text-amber-900', ring: 'ring-amber-500/10', circle: 'bg-amber-500' },
+    { id: 'sky', bg: 'bg-[#EFF6FF]', border: 'border-sky-200', text: 'text-sky-900', ring: 'ring-sky-500/10', circle: 'bg-sky-500' },
+    { id: 'emerald', bg: 'bg-[#F0FDF4]', border: 'border-emerald-200', text: 'text-emerald-900', ring: 'ring-emerald-500/10', circle: 'bg-emerald-500' },
+    { id: 'violet', bg: 'bg-[#FAF5FF]', border: 'border-violet-200', text: 'text-violet-900', ring: 'ring-violet-500/10', circle: 'bg-violet-500' },
+    { id: 'flamingo', bg: 'bg-[#FDF2F8]', border: 'border-pink-200', text: 'text-pink-900', ring: 'ring-pink-500/10', circle: 'bg-pink-500' },
+    { id: 'indigo', bg: 'bg-[#EEF2FF]', border: 'border-indigo-200', text: 'text-indigo-900', ring: 'ring-indigo-500/10', circle: 'bg-indigo-500' },
+    { id: 'teal', bg: 'bg-[#F0FDFA]', border: 'border-teal-200', text: 'text-teal-900', ring: 'ring-teal-500/10', circle: 'bg-teal-500' },
+];
 
 export default function TodoPage() {
     const { user } = useUser();
@@ -56,6 +69,7 @@ export default function TodoPage() {
     const [newTask, setNewTask] = React.useState('');
     const [newDesc, setNewDesc] = React.useState('');
     const [priority, setPriority] = React.useState<'low' | 'medium' | 'high'>('medium');
+    const [selectedColorId, setSelectedColorId] = React.useState<string>(TASK_COLORS[Math.floor(Math.random() * TASK_COLORS.length)].id);
     const [assignedTo, setAssignedTo] = React.useState<string>('self');
     const [dueDate, setDueDate] = React.useState<string>('');
     const [dueTime, setDueTime] = React.useState<string>('');
@@ -94,6 +108,7 @@ export default function TodoPage() {
             completed: false,
             createdAt: serverTimestamp(),
             priority,
+            colorId: selectedColorId,
             assignedBy: user.uid,
             assignedByName: `${currentUserData.firstName} ${currentUserData.lastName}`,
             assignedTo: targetUserId,
@@ -107,6 +122,7 @@ export default function TodoPage() {
         setNewDesc('');
         setDueDate('');
         setDueTime('');
+        setSelectedColorId(TASK_COLORS[Math.floor(Math.random() * TASK_COLORS.length)].id);
         setIsAddOpen(false);
         toast({ title: "Objective Dispatched", description: assignedTo === 'self' ? "Added to your board." : `Assigned to ${targetUserName}.` });
     };
@@ -225,6 +241,25 @@ export default function TodoPage() {
                                     <Label className="text-[10px] font-black uppercase text-primary">Contextual Details</Label>
                                     <Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Provide additional information..." className="rounded-xl min-h-[80px]" />
                                 </div>
+
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Palette className="size-3" /> Select Tactical Theme</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {TASK_COLORS.map(color => (
+                                            <button 
+                                                key={color.id}
+                                                type="button"
+                                                onClick={() => setSelectedColorId(color.id)}
+                                                className={cn(
+                                                    "size-8 rounded-full border-2 transition-all",
+                                                    color.id === selectedColorId ? "border-primary scale-110 shadow-md" : "border-transparent",
+                                                    color.bg
+                                                )}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label className="text-[10px] font-black uppercase text-primary">Priority Tier</Label>
@@ -379,20 +414,16 @@ export default function TodoPage() {
 function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDelete, onOpenDetails }: any) {
     const isAssignedByOther = todo.assignedBy !== currentUserId;
     
-    // Priority Styles
-    const styles = {
-        high: "bg-[#FEF2F2] border-red-200 text-red-900 ring-red-500/10",
-        medium: "bg-[#FFFBEB] border-amber-200 text-amber-900 ring-amber-500/10",
-        low: "bg-[#EFF6FF] border-blue-200 text-blue-900 ring-blue-500/10",
-        completed: "bg-slate-50 border-slate-200 text-slate-400 opacity-80"
-    };
+    // Find theme or fall back to priority logic
+    const theme = TASK_COLORS.find(c => c.id === todo.colorId) || 
+                  (todo.priority === 'high' ? TASK_COLORS[0] : todo.priority === 'medium' ? TASK_COLORS[1] : TASK_COLORS[2]);
 
-    const currentStyle = todo.completed ? styles.completed : styles[todo.priority as 'low' | 'medium' | 'high'];
+    const completedStyle = "bg-slate-50 border-slate-200 text-slate-400 opacity-80";
 
     return (
         <Card className={cn(
             "relative group border-2 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden cursor-pointer",
-            currentStyle,
+            todo.completed ? completedStyle : cn(theme.bg, theme.border, theme.text, theme.ring),
             isSelected && "ring-2 ring-primary ring-offset-2 scale-[0.98]"
         )} onClick={onOpenDetails}>
             
@@ -457,7 +488,7 @@ function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDel
                                         {todo.assignedByName.split(' ')[0]}
                                     </div>
                                 ) : (
-                                    <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Private Mission</div>
+                                    <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Personal Objective</div>
                                 )}
                                 <Eye className="size-3.5 opacity-0 group-hover:opacity-40 transition-opacity" />
                             </div>
@@ -468,3 +499,4 @@ function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDel
         </Card>
     );
 }
+
