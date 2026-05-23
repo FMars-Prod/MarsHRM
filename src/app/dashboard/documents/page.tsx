@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { FolderPlus, Plus, Trash2, ExternalLink, Link as LinkIcon, Edit, UserCircle, Search, FileUp, Loader2, FileText, ShieldCheck, ChevronRight, Folder, Download, Users, Share2, ArrowLeft } from 'lucide-react';
+import { FolderPlus, Plus, Trash2, ExternalLink, Link as LinkIcon, Edit, UserCircle, Search, FileUp, Loader2, FileText, ShieldCheck, ChevronRight, Folder, Download, Users, Share2, ArrowLeft, Files } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,6 +53,14 @@ const FOLDER_COLORS = {
     amber: 'bg-amber-500/10 border-amber-500/20 text-amber-700',
     rose: 'bg-rose-500/10 border-rose-500/20 text-rose-700',
 };
+
+const FOLDER_BG_ACTIVE = {
+    blue: 'bg-blue-600 text-white',
+    purple: 'bg-purple-600 text-white',
+    emerald: 'bg-emerald-600 text-white',
+    amber: 'bg-amber-600 text-white',
+    rose: 'bg-rose-600 text-white',
+}
 
 export default function DocumentsPage() {
     const { user } = useUser();
@@ -326,45 +334,53 @@ export default function DocumentsPage() {
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {/* Folders (Only shown at root) */}
-                {!currentFolderId && displayFolders.map(f => (
-                    <Card 
-                        key={f.id} 
-                        className="group border-none ring-1 ring-border/50 shadow-sm hover:shadow-xl transition-all duration-300 rounded-[2rem] overflow-hidden cursor-pointer bg-white"
-                        onClick={() => setCurrentFolderId(f.id)}
-                    >
-                        <div className={cn("h-12 flex items-end px-6", FOLDER_COLORS[f.color] || FOLDER_COLORS.blue)}>
-                            <div className="w-16 h-4 bg-white/40 rounded-t-xl" />
-                        </div>
-                        <CardHeader className="p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="space-y-1">
-                                    <CardTitle className="text-lg font-black uppercase tracking-tighter truncate max-w-[180px]">{f.name}</CardTitle>
-                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Modified: {format(f.createdAt?.toDate() || new Date(), 'dd MMM yyyy')}</p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
-                                        onClick={(e) => { e.stopPropagation(); setSharingFolder(f); setSelectedTeamIds(f.sharedWithTeams || []); setSelectedUserIds(f.sharedWithUids || []); setIsShareDialogOpen(true); }}
-                                    >
-                                        <Share2 className="size-3.5" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={(e) => { e.stopPropagation(); deleteDocumentNonBlocking(doc(firestore, 'folders', f.id)); }}>
-                                        <Trash2 className="size-3.5" />
-                                    </Button>
-                                </div>
+                {!currentFolderId && displayFolders.map(f => {
+                    const assetCount = rawAssets?.filter(a => a.folderId === f.id).length || 0;
+
+                    return (
+                        <Card 
+                            key={f.id} 
+                            className="group border-none ring-1 ring-border/50 shadow-sm hover:shadow-xl transition-all duration-300 rounded-[2rem] overflow-hidden cursor-pointer bg-white"
+                            onClick={() => setCurrentFolderId(f.id)}
+                        >
+                            <div className={cn("h-12 flex items-end justify-between px-6", FOLDER_COLORS[f.color] || FOLDER_COLORS.blue)}>
+                                <div className="w-16 h-4 bg-white/40 rounded-t-xl" />
+                                <Badge variant="secondary" className="mb-2 rounded-full px-2 py-0 h-5 font-black text-[8px] uppercase tracking-widest bg-white/50 border-none flex gap-1 items-center">
+                                    <Files className="size-2" />
+                                    {assetCount}
+                                </Badge>
                             </div>
-                        </CardHeader>
-                        <CardContent className="p-6 pt-0 flex items-center justify-between">
-                            <div className="flex -space-x-2">
-                                <div className="size-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">{f.ownerName[0]}</div>
-                                {(f.sharedWithUids?.length || 0) > 0 && <div className="size-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">+{f.sharedWithUids.length}</div>}
-                            </div>
-                            <Folder className="size-5 opacity-20" />
-                        </CardContent>
-                    </Card>
-                ))}
+                            <CardHeader className="p-6">
+                                <div className="flex items-start justify-between">
+                                    <div className="space-y-1">
+                                        <CardTitle className="text-lg font-black uppercase tracking-tighter truncate max-w-[180px]">{f.name}</CardTitle>
+                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Modified: {format(f.createdAt?.toDate() || new Date(), 'dd MMM yyyy')}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
+                                            onClick={(e) => { e.stopPropagation(); setSharingFolder(f); setSelectedTeamIds(f.sharedWithTeams || []); setSelectedUserIds(f.sharedWithUids || []); setIsShareDialogOpen(true); }}
+                                        >
+                                            <Share2 className="size-3.5" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={(e) => { e.stopPropagation(); deleteDocumentNonBlocking(doc(firestore, 'folders', f.id)); }}>
+                                            <Trash2 className="size-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-6 pt-0 flex items-center justify-between">
+                                <div className="flex -space-x-2">
+                                    <div className="size-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">{f.ownerName[0]}</div>
+                                    {(f.sharedWithUids?.length || 0) > 0 && <div className="size-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">+{f.sharedWithUids.length}</div>}
+                                </div>
+                                <Folder className="size-5 opacity-20" />
+                            </CardContent>
+                        </Card>
+                    );
+                })}
 
                 {/* Assets (Files/Links) - Only shown when inside a folder */}
                 {currentFolderId && displayAssets.map(a => (
@@ -472,3 +488,4 @@ export default function DocumentsPage() {
         </div>
     );
 }
+
