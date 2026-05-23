@@ -9,6 +9,7 @@ import { subDays, endOfDay, format, startOfDay } from 'date-fns';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type ActionItem = {
     id: string;
