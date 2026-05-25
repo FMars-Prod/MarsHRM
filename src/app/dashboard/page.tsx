@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
@@ -64,13 +63,13 @@ export default function DashboardPage() {
               <span className="text-[10px] font-black uppercase tracking-[0.3em]">{format(new Date(), 'EEEE, MMMM dd')}</span>
           </div>
           <h1 className="text-4xl font-black tracking-tighter">
-              {greeting}, <span className="text-primary">{currentUserData?.firstName || 'Strategist'}</span>
+              {greeting} {currentUserData?.firstName || 'Strategist'}
           </h1>
           <p className="text-sm font-medium text-muted-foreground">Welcome to the tactical grid. Your fleet operations are synchronized.</p>
       </div>
 
       {/* Dynamic Notifications */}
-      {isCEO && hasCriticalAlert && (latestCompliance?.[0]) && (
+      {isCEO && hasCriticalAlert && latestCompliance?.[0] && (
           <Alert className="mb-6 bg-red-50 border-red-200 animate-pulse rounded-2xl border-2">
               <ShieldAlert className="size-4 text-red-600" />
               <AlertTitle className="text-red-700 font-black uppercase text-xs tracking-widest">Protocol Alert: Executive Review Required</AlertTitle>
@@ -94,7 +93,6 @@ export default function DashboardPage() {
 
       <DashboardReminder />
 
-      {/* Hero Bento Row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           <div className="lg:col-span-8 animate-fade-in-up">
               <ProfileBentoCard />
@@ -104,7 +102,6 @@ export default function DashboardPage() {
           </div>
       </div>
 
-      {/* Operational Bento Row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <AttendanceWidget />

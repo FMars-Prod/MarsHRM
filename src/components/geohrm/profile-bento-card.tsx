@@ -18,15 +18,16 @@ export function ProfileBentoCard() {
     const { data: employee, isLoading } = useDoc<any>(userDocRef);
 
     const experience = React.useMemo(() => {
-        if (!employee?.hireDate) return "New Recruit";
+        if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
         const now = new Date();
         const years = differenceInYears(now, start);
         const months = differenceInMonths(now, start) % 12;
+        const totalDays = differenceInDays(now, start);
         
-        if (years > 0) return `${years} Year ${months > 0 ? `${months}m` : ''} Veteran`;
-        if (months > 0) return `${months} Month Specialist`;
-        return `${differenceInDays(now, start)} Day Trainee`;
+        if (years > 0) return `${years} yr ${months > 0 ? `${months} mo` : ''}`;
+        if (months > 0) return `${months} mo`;
+        return `${totalDays} ${totalDays === 1 ? 'day' : 'days'}`;
     }, [employee]);
 
     if (isLoading || !employee) {
@@ -40,7 +41,6 @@ export function ProfileBentoCard() {
     return (
         <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group transition-all duration-500 hover:shadow-2xl h-full font-open-sans">
             <div className="relative h-full">
-                {/* Visual Background Elements */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-20 -mt-20 blur-3xl transition-all duration-700 group-hover:bg-primary/10" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/5 rounded-full -ml-20 -mb-20 blur-3xl" />
                 
