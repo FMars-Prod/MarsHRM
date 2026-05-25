@@ -27,7 +27,7 @@ export function ProfileBentoCard() {
         
         if (years > 0) return `${years} yr ${months > 0 ? `${months} mo` : ''}`;
         if (months > 0) return `${months} mo`;
-        return `${totalDays} Day`;
+        return `${totalDays} day`;
     }, [employee]);
 
     if (isLoading || !employee) {

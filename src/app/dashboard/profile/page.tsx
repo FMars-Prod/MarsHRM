@@ -640,6 +640,7 @@ function TimelineItem({ icon: Icon, color, title, time, desc }: any) {
                 <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
             </div>
         </div>
+    )
 }
 
 function DocRow({ title, date, link }: any) {
