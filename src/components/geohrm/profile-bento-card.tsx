@@ -25,7 +25,7 @@ export function ProfileBentoCard() {
         const months = differenceInMonths(now, start) % 12;
         const totalDays = differenceInDays(now, start);
         
-        if (years > 0) return `${years} yr ${months > 0 ? `${months} mo` : ''}`;
+        if (years > 0) return `${years} yr ${months > 0 ? `${months} mo` : ''}`.trim();
         if (months > 0) return `${months} mo`;
         return `${totalDays} day`;
     }, [employee]);
