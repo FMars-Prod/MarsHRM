@@ -1,10 +1,10 @@
+
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { EventsWidget } from "@/components/geohrm/events-widget";
 import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
-import { TodoWidget } from "@/components/geohrm/todo-widget";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, query, orderBy, limit, where } from "firebase/firestore";
 import { WorkHoursSummaryWidget } from "@/components/geohrm/work-hours-summary-widget";
@@ -117,13 +117,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-4">
+      <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <ActionItemsWidget />
-        </div>
-
-        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '450ms' }}>
-          <TodoWidget />
         </div>
 
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>

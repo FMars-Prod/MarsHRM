@@ -32,7 +32,6 @@ import {
   Laptop,
   Network,
   Settings,
-  ListTodo,
   MapPinned,
   UserCheck,
 } from "lucide-react";
@@ -43,7 +42,6 @@ const groups = [
     label: "STRATEGIC HUB",
     links: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "totalNotificationsCount" },
-      { href: "/dashboard/todo", label: "To-Do List", icon: ListTodo, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingTodoCount" },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
@@ -97,7 +95,6 @@ interface MainNavProps {
   pendingLocationRequestsCount?: number;
   pendingAttRequestsCount?: number;
   ticketUpdateCount?: number;
-  pendingTodoCount?: number;
   totalNotificationsCount?: number;
 }
 
@@ -109,7 +106,6 @@ export function MainNav({
   pendingLocationRequestsCount = 0,
   pendingAttRequestsCount = 0,
   ticketUpdateCount = 0,
-  pendingTodoCount = 0,
   totalNotificationsCount = 0,
 }: MainNavProps) {
   const pathname = usePathname();
@@ -121,7 +117,6 @@ export function MainNav({
     pendingLocationRequestsCount,
     pendingAttRequestsCount,
     ticketUpdateCount,
-    pendingTodoCount,
     totalNotificationsCount,
   };
 

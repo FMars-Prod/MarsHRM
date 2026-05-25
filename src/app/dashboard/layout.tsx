@@ -40,9 +40,6 @@ type SupportTicket = {
 type AttendanceApprovalRequest = {
   status: string;
 }
-type TodoItem = {
-  completed: boolean;
-}
 
 export default function DashboardLayout({
   children,
@@ -142,14 +139,7 @@ export default function DashboardLayout({
     }).length;
   }, [userTickets]);
 
-  const todosQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(firestore, `users/${user.uid}/todos`), where("completed", "==", false));
-  }, [firestore, user]);
-  const { data: todos } = useCollection<TodoItem>(todosQuery);
-  const pendingTodoCount = todos?.length || 0;
-
-  const totalNotifications = pendingLeaveCount + unreadAnnouncements + todaysEventsCount + pendingLocationRequestsCount + ticketUpdateCount + pendingAttRequestsCount + pendingTodoCount;
+  const totalNotifications = pendingLeaveCount + unreadAnnouncements + todaysEventsCount + pendingLocationRequestsCount + ticketUpdateCount + pendingAttRequestsCount;
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -201,7 +191,6 @@ export default function DashboardLayout({
             pendingLocationRequestsCount={pendingLocationRequestsCount}
             pendingAttRequestsCount={pendingAttRequestsCount}
             ticketUpdateCount={ticketUpdateCount}
-            pendingTodoCount={pendingTodoCount}
             totalNotificationsCount={totalNotifications}
           />
         </SidebarContent>
