@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Ticket, CheckCircle2, Clock, Activity } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Ticket, CheckCircle2, Clock, Activity, ShieldCheck, UserCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,7 @@ type SupportTicket = {
   submissionDate: any;
   category: string;
   lastUpdatedDate?: any;
+  resolvedByName?: string;
 };
 
 const CATEGORIES = ["Mac Laptop Issue", "Windows Laptop Issue", "Chair Broken", "ID Card Broken", "Others"];
@@ -52,14 +53,14 @@ export default function TicketsPage() {
   const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
-  const isAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+  const isAdminOrHR = userRole === 'HR Manager' || userRole === 'CEO/Admin';
   
   const ticketsQuery = useMemoFirebase(() => {
       if (!user) return null;
       const base = collection(firestore, "issue_reports");
-      if (isAdmin) return query(base, orderBy("submissionDate", "desc"));
+      if (isAdminOrHR) return query(base, orderBy("submissionDate", "desc"));
       return query(base, where("employeeId", "==", user.uid), orderBy("submissionDate", "desc"));
-  }, [firestore, user, isAdmin]);
+  }, [firestore, user, isAdminOrHR]);
 
   const { data: tickets, isLoading } = useCollection<SupportTicket>(ticketsQuery);
 
@@ -86,11 +87,23 @@ export default function TicketsPage() {
 
   const handleUpdateStatus = (ticketId: string, newStatus: TicketStatus) => {
     const ticketRef = doc(firestore, 'issue_reports', ticketId);
-    updateDocumentNonBlocking(ticketRef, {
+    const updateData: any = {
       status: newStatus,
       lastUpdatedDate: serverTimestamp()
-    });
+    };
+
+    if (newStatus === 'Resolved' && userData) {
+        updateData.resolvedByName = `${(userData as any).firstName} ${(userData as any).lastName}`;
+    }
+
+    updateDocumentNonBlocking(ticketRef, updateData);
     toast({ title: `Ticket status updated to ${newStatus}` });
+  };
+
+  const handleDeleteTicket = (ticketId: string) => {
+      deleteDocumentNonBlocking(doc(firestore, 'issue_reports', ticketId));
+      toast({ title: "Ticket Record Deleted" });
+      setSelectedTicket(null);
   };
 
   return (
@@ -160,7 +173,8 @@ export default function TicketsPage() {
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setSelectedTicket(t)}><Ticket className="mr-2 size-4"/> View Ticket</DropdownMenuItem>
-                        {isAdmin && (
+                        
+                        {isAdminOrHR && (
                             <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuLabel className="text-[10px] font-black uppercase">Management Controls</DropdownMenuLabel>
@@ -172,8 +186,25 @@ export default function TicketsPage() {
                                         <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'Resolved')}>Resolved</DropdownMenuItem>
                                     </DropdownMenuSubContent>
                                 </DropdownMenuSub>
-                                <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(firestore, 'issue_reports', t.id))} className="text-destructive"><Trash2 className="mr-2 size-4" /> Purge</DropdownMenuItem>
                             </>
+                        )}
+
+                        {(isAdminOrHR || t.employeeId === user?.uid) && t.status === 'Resolved' && (
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 size-4" /> Purge Record</DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Support Ticket?</AlertDialogTitle>
+                                        <AlertDialogDescription>Resolution has been verified. This will permanently remove the ticket from the tactical log.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteTicket(t.id)} className="bg-red-600 text-white rounded-full font-bold uppercase text-[10px]">Confirm Purge</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -198,7 +229,28 @@ export default function TicketsPage() {
                         {selectedTicket?.status.toUpperCase()}
                     </Badge>
                 </div>
-                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Description</p><p className="text-sm whitespace-pre-wrap">{selectedTicket?.description}</p></div>
+                
+                {selectedTicket?.resolvedByName && (
+                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-green-600 text-white"><ShieldCheck className="size-4" /></div>
+                        <div>
+                            <p className="text-[9px] font-black uppercase text-green-700">Resolution Authenticated By</p>
+                            <p className="text-sm font-bold text-green-900">{selectedTicket.resolvedByName}</p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Description</p><p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">{selectedTicket?.description}</p></div>
+                
+                <Separator />
+                
+                <div className="space-y-1">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase">Submitted By</p>
+                    <div className="flex items-center gap-2">
+                        <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary border border-primary/20">{selectedTicket?.submittedBy[0]}</div>
+                        <p className="text-sm font-bold">{selectedTicket?.submittedBy}</p>
+                    </div>
+                </div>
             </div>
         </SheetContent>
       </Sheet>

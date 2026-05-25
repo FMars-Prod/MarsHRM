@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -119,7 +120,7 @@ export function ActionItemsWidget() {
                             id: `compliance-${data.employeeId}-${doc.id}`,
                             type: 'compliance',
                             title: `Compliance: ${name}`,
-                            description: `No Log-Out on ${format(yesterday, 'MMM d')}`,
+                            description: `No Clock-Out on ${format(yesterday, 'MMM d')}`,
                             href: `/dashboard/analytics?userId=${data.employeeId}`
                         });
                     }

@@ -32,7 +32,7 @@ import { updateDocumentNonBlocking, useCollection } from "@/firebase";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, startOfDay, differenceInDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, startOfDay, differenceInDays, differenceInMonths, differenceInYears } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -135,7 +135,12 @@ export default function ProfilePage() {
         if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
         const now = new Date();
+        const years = differenceInYears(now, start);
+        const months = differenceInMonths(now, start) % 12;
         const totalDays = differenceInDays(now, start);
+        
+        if (years > 0) return `${years} yr ${months > 0 ? `${months} mo` : ''}`;
+        if (months > 0) return `${months} mo`;
         return `${totalDays} ${totalDays === 1 ? 'day' : 'days'}`;
     }, [employee]);
 
