@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
@@ -115,7 +114,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <ActionItemsWidget />
         </div>
@@ -123,10 +122,12 @@ export default function DashboardPage() {
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
           <WorkHoursSummaryWidget />
         </div>
-
-        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
-          <EventsWidget />
-        </div>
+      </div>
+      
+      <div className="grid gap-6">
+          <div className="animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+            <EventsWidget />
+          </div>
       </div>
     </div>
   );

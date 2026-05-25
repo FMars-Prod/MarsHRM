@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -141,7 +140,7 @@ export default function ProfilePage() {
         
         if (years > 0) return `${years} yr ${months > 0 ? `${months} mo` : ''}`;
         if (months > 0) return `${months} mo`;
-        return `${totalDays} ${totalDays === 1 ? 'day' : 'days'}`;
+        return `${totalDays} Day`;
     }, [employee]);
 
     const form = useForm<ProfileFormValues>({
@@ -641,7 +640,6 @@ function TimelineItem({ icon: Icon, color, title, time, desc }: any) {
                 <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
             </div>
         </div>
-    )
 }
 
 function DocRow({ title, date, link }: any) {

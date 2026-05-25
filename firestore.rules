@@ -7,6 +7,10 @@ service cloud.firestore {
       allow get, list: if true;
     }
     
+    match /{path=**}/issue_reports/{issue_reportsId} {
+      allow get, list: if true;
+    }
+    
     match /{document=**} {
       allow read, write: if true;
     }
