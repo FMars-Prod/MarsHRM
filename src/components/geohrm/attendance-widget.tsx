@@ -1,6 +1,6 @@
-
 "use client";
 
+import * as React from "react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -54,8 +54,8 @@ const getDistanceInKm = (loc1: Location, loc2: Location) => {
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(loc1.latitude * (Math.PI / 180)) *
       Math.cos(loc2.latitude * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+      Math.sin(Lon / 2) *
+      Math.sin(Lon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -94,8 +94,9 @@ export function AttendanceWidget() {
   );
   const { data: globalLocationData } = useDoc<any>(globalLocationDocRef);
   
-  // Geofence Hierarchy: User Home (if WFH) > Assigned Branch > Global Location
   const activeGeofence = React.useMemo(() => {
+    // If WFH is allowed and they are at home, that's handled in proceedWithClockIn
+    // Here we define the office boundary
     return {
         lat: branchData?.latitude || globalLocationData?.latitude || 13.0827,
         lng: branchData?.longitude || globalLocationData?.longitude || 80.2707,
@@ -395,7 +396,7 @@ export function AttendanceWidget() {
                     status === "in" ? (isLate() ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700") : "bg-muted text-muted-foreground"
                 )}>
                     <div className={cn("size-2 rounded-full", status === 'in' ? (isLate() ? 'bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.5)]' : 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]') : 'bg-slate-400')} />
-                    {status === 'in' ? (isLate() ? 'Late Log-in Detected' : 'Operational Status: On Shift') : 'Ready for Deployment'}
+                    {status === 'in' ? (isLate() ? 'Late Clock-in Detected' : 'Operational Status: On Shift') : 'Ready for Deployment'}
                 </div>
                 
                 <div className="py-4">
@@ -433,7 +434,7 @@ export function AttendanceWidget() {
           <div className="w-full max-w-3xl pt-8 border-t border-dashed border-border/50">
             {status === 'out' && !hasClockedOutToday && (
                 <Button onClick={handleClockIn} className="w-full h-16 rounded-[2rem] text-xl font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/25 bg-primary text-white hover:scale-[1.02] active:scale-[0.98] transition-all">
-                    Initiate Deployment
+                    Clock In
                 </Button>
             )}
             
@@ -467,7 +468,7 @@ export function AttendanceWidget() {
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive" className="rounded-2xl h-14 flex-1 font-black uppercase text-[11px] tracking-widest shadow-xl shadow-red-500/20">
-                                Conclude Shift
+                                Clock Out
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="rounded-[2rem] p-8 border-none shadow-2xl">
@@ -479,7 +480,7 @@ export function AttendanceWidget() {
                             </AlertDialogHeader>
                             <AlertDialogFooter className="mt-8 gap-3">
                                 <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px] h-11 border-2">Return to Post</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px] h-11 bg-red-600 shadow-lg shadow-red-600/20">Finalize & Sign-Out</AlertDialogAction>
+                                <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px] h-11 bg-red-600 shadow-lg shadow-red-600/20">Finalize & Clock Out</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
