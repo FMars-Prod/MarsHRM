@@ -30,8 +30,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
-import { useDoc } from "@/firebase/firestore/use-doc";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc } from "@/firebase";
 import { doc, serverTimestamp, Timestamp, collection } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
 import { format, parse, isAfter } from "date-fns";
@@ -44,8 +43,6 @@ interface Location {
   latitude: number;
   longitude: number;
   maxDistanceKm?: number;
-  shiftStartTime?: string;
-  shiftEndTime?: string;
 }
 
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
@@ -85,14 +82,26 @@ export function AttendanceWidget() {
   const userRole = (userData as any)?.role || 'Member';
   const isAdminOrCEO = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
-  const officeLocationDocRef = useMemoFirebase(
+  const branchDocRef = useMemoFirebase(
+    () => userData?.branchId ? doc(firestore, 'branches', userData.branchId) : null,
+    [userData, firestore]
+  );
+  const { data: branchData } = useDoc<any>(branchDocRef);
+
+  const globalLocationDocRef = useMemoFirebase(
     () => doc(firestore, "settings", "location"),
     [firestore]
   );
-  const { data: officeLocationData } = useDoc<Location>(officeLocationDocRef);
+  const { data: globalLocationData } = useDoc<any>(globalLocationDocRef);
   
-  const officeLocation = officeLocationData;
-  const maxDistanceKm = officeLocation?.maxDistanceKm || 2;
+  // Geofence Hierarchy: User Home (if WFH) > Assigned Branch > Global Location
+  const activeGeofence = React.useMemo(() => {
+    return {
+        lat: branchData?.latitude || globalLocationData?.latitude || 13.0827,
+        lng: branchData?.longitude || globalLocationData?.longitude || 80.2707,
+        radius: branchData?.radius || globalLocationData?.maxDistanceKm || 0.5
+    };
+  }, [branchData, globalLocationData]);
 
   const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
@@ -204,11 +213,11 @@ export function AttendanceWidget() {
     navigator.geolocation.getCurrentPosition(
         (position) => {
           const userLocation = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-          const dist = officeLocation ? getDistanceInKm(userLocation, officeLocation) : 0;
+          const dist = getDistanceInKm(userLocation, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
           setIsVerifyingLocation(false);
           
           if (status === "lunch") {
-              if (officeLocation && dist > maxDistanceKm && !isAdminOrCEO) {
+              if (dist > activeGeofence.radius && !isAdminOrCEO) {
                   setOutOfRangeAction(() => () => proceedWithBreakEnd(userLocation, dist, outOfRangeReason));
                   setIsOutOfRangeReasonDialogOpen(true);
               } else {
@@ -246,8 +255,8 @@ export function AttendanceWidget() {
   const proceedWithClockIn = (userLocation: Location, dist: number, reason?: string) => {
       const nowClock = new Date();
       let attendanceStatus: 'present' | 'late' = 'present';
-      if (officeLocation?.shiftStartTime) {
-          const shiftStart = parse(officeLocation.shiftStartTime, 'HH:mm', new Date());
+      if (globalLocationData?.shiftStartTime) {
+          const shiftStart = parse(globalLocationData.shiftStartTime, 'HH:mm', new Date());
           if (isAfter(nowClock, shiftStart)) attendanceStatus = 'late';
       }
 
@@ -295,11 +304,11 @@ export function AttendanceWidget() {
             setIsVerifyingLocation(false);
             if (isAdminOrCEO) { proceedWithClockIn(userLoc, 0); return; }
 
-            const officeDist = officeLocation ? getDistanceInKm(userLoc, officeLocation) : Infinity;
+            const officeDist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
             const isAtHome = userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
                              getDistanceInKm(userLoc, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5);
 
-            if (officeDist <= maxDistanceKm || isAtHome) { 
+            if (officeDist <= activeGeofence.radius || isAtHome) { 
                 proceedWithClockIn(userLoc, officeDist); 
                 return; 
             }
@@ -334,8 +343,8 @@ export function AttendanceWidget() {
   };
 
   const isLate = () => {
-    if (!lastClockInTime || !officeLocation?.shiftStartTime) return false;
-    const shiftStart = parse(officeLocation.shiftStartTime, 'HH:mm', lastClockInTime);
+    if (!lastClockInTime || !globalLocationData?.shiftStartTime) return false;
+    const shiftStart = parse(globalLocationData.shiftStartTime, 'HH:mm', lastClockInTime);
     return isAfter(lastClockInTime, shiftStart);
   };
 

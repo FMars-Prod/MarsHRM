@@ -36,7 +36,7 @@ const userSchema = z.object({
   phoneNumber: z.string().optional(),
   jobTitle: z.string().min(1, "Required"),
   department: z.string().min(1, "Required"),
-  branch: z.string().min(1, "Required"),
+  branchId: z.string().optional(),
   shiftType: z.string().min(1, "Required"),
   employmentType: z.enum(['Intern', 'Employee']),
   role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/Admin']),
@@ -65,11 +65,14 @@ export default function UsersPage() {
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
   const { data: users, isLoading } = useCollection<any>(usersQuery);
 
+  const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
+  const { data: branches } = useCollection<any>(branchesQuery);
+
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       firstName: "", lastName: "", email: "", phoneNumber: "", jobTitle: "", department: "",
-      branch: "Chennai HQ", shiftType: "General Shift",
+      branchId: undefined, shiftType: "General Shift",
       employmentType: "Intern", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
       homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5
     },
@@ -168,6 +171,10 @@ export default function UsersPage() {
       setEditingUser({ ...editingUser, canUpdateSignature: true });
   };
 
+  const getBranchName = (bId?: string) => {
+      return branches?.find(b => b.id === bId)?.name || 'Unassigned';
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Staff Management" description="Global registry of active and tactical team members.">
@@ -189,7 +196,10 @@ export default function UsersPage() {
                             </div>
                             
                             <div className="grid grid-cols-2 gap-4">
-                                <FormField control={form.control} name="branch" render={({ field }) => (<FormItem><Label>Operational Branch</Label><Input {...field} placeholder="e.g. Kerala, Chennai HQ"/></FormItem>)} />
+                                <FormField control={form.control} name="branchId" render={({ field }) => (
+                                    <FormItem><Label>Operational Branch</Label>
+                                    <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent>{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></FormItem>
+                                )} />
                                 <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label>Assigned Shift</Label><Input {...field} placeholder="e.g. General Shift"/></FormItem>)} />
                             </div>
 
@@ -338,7 +348,7 @@ export default function UsersPage() {
                         {u.isDemoAccount && <Badge className="ml-2 bg-purple-100 text-purple-700 text-[8px] uppercase">Demo</Badge>}
                     </Link>
                 </TableCell>
-                <TableCell><Badge variant="outline" className="uppercase text-[8px]"><Building2 className="size-2 mr-1"/> {u.branch || 'Unassigned'}</Badge></TableCell>
+                <TableCell><Badge variant="outline" className="uppercase text-[8px]"><Building2 className="size-2 mr-1"/> {getBranchName(u.branchId)}</Badge></TableCell>
                 <TableCell className="text-[10px] font-medium text-muted-foreground">{u.shiftType || 'General'}</TableCell>
                 <TableCell className="text-xs font-bold text-primary">{u.role}</TableCell>
                 <TableCell className="text-right">

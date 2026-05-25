@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -33,6 +34,7 @@ import {
   Settings,
   MapPinned,
   UserCheck,
+  Building2,
 } from "lucide-react";
 import React from "react";
 
@@ -54,6 +56,7 @@ const groups = [
       { href: "/dashboard/leave", label: "Leave", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
       { href: "/dashboard/documents", label: "Documents", icon: FileBox, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/branches", label: "Branches", icon: Building2, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/org-structure", label: "Org. Structure", icon: Network, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]

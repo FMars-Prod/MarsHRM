@@ -32,7 +32,7 @@ import { updateDocumentNonBlocking, useCollection } from "@/firebase";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, startOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, startOfDay, differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -130,6 +130,14 @@ export default function ProfilePage() {
             count: presentDays
         };
     }, [attendanceData]);
+
+    const experience = React.useMemo(() => {
+        if (!employee?.hireDate) return "N/A";
+        const start = new Date(employee.hireDate);
+        const now = new Date();
+        const totalDays = differenceInDays(now, start);
+        return `${totalDays} ${totalDays === 1 ? 'day' : 'days'}`;
+    }, [employee]);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -372,6 +380,30 @@ export default function ProfilePage() {
                                 <DetailItem icon={MapPin} label="Branch Location" value={employee.branch || "Chennai HQ"} />
                                 <DetailItem icon={CalendarDays} label="Joined On" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
                                 <DetailItem icon={Briefcase} label="Employment Type" value={employee.employmentType || "Full Time"} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-dashed pt-8 border-border/50">
+                        <div className="flex -space-x-4">
+                            <ExperienceBadge label="Authority" value={employee.role || 'Member'} icon={ShieldCheck} color="bg-indigo-600" />
+                            <ExperienceBadge label="Commenced" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} icon={CalendarDays} color="bg-emerald-600" />
+                            <ExperienceBadge label="Fleet Tenure" value={experience} icon={Clock} color="bg-primary" />
+                        </div>
+                        
+                        <div className="flex gap-4">
+                            <div className="text-center sm:text-right">
+                                <p className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Tactical Comms</p>
+                                <div className="flex gap-2 mt-1">
+                                    <a href={`mailto:${employee.email}`} className="p-2.5 rounded-xl bg-muted/50 hover:bg-primary hover:text-white transition-all duration-300">
+                                        <Mail className="size-4" />
+                                    </a>
+                                    {employee.phoneNumber && (
+                                        <a href={`tel:${employee.phoneNumber}`} className="p-2.5 rounded-xl bg-muted/50 hover:bg-accent hover:text-white transition-all duration-300">
+                                            <Phone className="size-4" />
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -650,6 +682,20 @@ function InfoRow({ label, value, isStatus, icon: Icon }: any) {
             ) : (
                 <span className="font-bold text-foreground text-right">{value}</span>
             )}
+        </div>
+    )
+}
+
+function ExperienceBadge({ label, value, icon: Icon, color }: any) {
+    return (
+        <div className="group/badge relative flex items-center gap-3 bg-white ring-1 ring-border/50 shadow-sm rounded-2xl p-2 px-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <div className={cn("p-2 rounded-xl text-white shadow-sm", color)}>
+                <Icon className="size-4" />
+            </div>
+            <div>
+                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest leading-none mb-0.5">{label}</p>
+                <p className="text-xs font-black whitespace-nowrap">{value}</p>
+            </div>
         </div>
     )
 }

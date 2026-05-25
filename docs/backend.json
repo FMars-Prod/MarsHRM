@@ -14,12 +14,30 @@
         "jobTitle": { "type": "string" },
         "department": { "type": "string" },
         "teamId": { "type": "string" },
+        "branchId": { "type": "string" },
         "avatar": { "type": "string" },
-        "branch": { "type": "string", "description": "Physical office branch or location." },
-        "shiftType": { "type": "string", "description": "The assigned work shift schedule." },
-        "reportsToId": { "type": "string" }
+        "shiftType": { "type": "string" },
+        "reportsToId": { "type": "string" },
+        "isWfhAllowed": { "type": "boolean" },
+        "homeLatitude": { "type": "number" },
+        "homeLongitude": { "type": "number" },
+        "homeRadius": { "type": "number" }
       },
       "required": ["id", "firstName", "lastName", "email", "role"]
+    },
+    "Branch": {
+      "title": "Branch",
+      "type": "object",
+      "description": "A physical office location with geofencing data.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "radius": { "type": "number" }
+      },
+      "required": ["id", "name", "latitude", "longitude"]
     },
     "Asset": {
       "title": "Asset",
@@ -57,10 +75,17 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}/documents/{documentId}",
+        "path": "/branches/{branchId}",
         "definition": {
-          "entityName": "Document",
-          "description": "Subcollection for employee assets."
+          "entityName": "Branch",
+          "description": "Registry of office branches."
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "Employee",
+          "description": "Global user registry."
         }
       },
       {
