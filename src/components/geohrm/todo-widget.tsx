@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
 
 type Todo = {
     id: string;
@@ -18,15 +19,6 @@ type Todo = {
     priority: 'low' | 'medium' | 'high';
     dueDate?: any;
     colorId?: string;
-};
-
-const TASK_THEMES: Record<string, string> = {
-    rose: 'bg-rose-500',
-    amber: 'bg-amber-500',
-    sky: 'bg-sky-500',
-    emerald: 'bg-emerald-500',
-    violet: 'bg-violet-500',
-    indigo: 'bg-indigo-500'
 };
 
 export function TodoWidget() {

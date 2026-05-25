@@ -577,11 +577,11 @@ export function DailyMonitorWidget() {
                                         
                                         <div className="grid grid-cols-2 gap-3 pt-2">
                                             <div className="p-3 bg-muted/20 rounded-xl space-y-1">
-                                                <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest">Shift Activation</p>
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest">Clock In</p>
                                                 <p className="font-mono text-xs font-bold text-foreground/80">{rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</p>
                                             </div>
                                             <div className="p-3 bg-muted/20 rounded-xl space-y-1">
-                                                <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest">Shift Concluded</p>
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest">Clock Out</p>
                                                 <p className="font-mono text-xs font-bold text-foreground/80">{rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</p>
                                             </div>
                                         </div>

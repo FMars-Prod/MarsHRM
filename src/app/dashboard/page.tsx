@@ -21,7 +21,7 @@ export default function DashboardPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
 
-  const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
+  const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
   const { data: currentUserData } = useDoc(currentUserDocRef);
   
   const userRole = (currentUserData as any)?.role;
