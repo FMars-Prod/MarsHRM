@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -288,17 +287,17 @@ export function DailyMonitorWidget() {
     window.open(url, '_blank');
   };
 
-  const handleNudgeWhatsApp = (user: UserData, nudgeType?: 'missing_login' | 'missing_logout') => {
-      if (!user.phoneNumber) {
+  const handleNudgeWhatsApp = (member: UserData, nudgeType?: 'missing_login' | 'missing_logout') => {
+      if (!member.phoneNumber) {
           toast({ variant: 'destructive', title: 'No phone number', description: 'Please add a phone number in User Management.' });
           return;
       }
       
       const message = nudgeType === 'missing_login' 
-        ? `Hello ${user.firstName}, you haven't clocked in today. Please log in to MarsHRM now.`
-        : `Hello ${user.firstName}, please don't forget to update your work report and clock out.`;
+        ? `Hello ${member.firstName}, you haven't clocked in today. Please log in to MarsHRM now.`
+        : `Hello ${member.firstName}, please don't forget to update your work report and clock out.`;
       
-      const cleanNumber = user.phoneNumber.replace(/\D/g, '');
+      const cleanNumber = member.phoneNumber.replace(/\D/g, '');
       const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank');
   };
@@ -534,25 +533,25 @@ export function DailyMonitorWidget() {
                 <ScrollArea className="flex-1 bg-secondary/5">
                   <div className="p-8 space-y-4">
                      {sheetContent.users.length > 0 ? (
-                        sheetContent.users.map(user => {
-                            const rec = attendanceRecords.get(user.id);
+                        sheetContent.users.map(member => {
+                            const rec = attendanceRecords.get(member.id);
                             return (
-                                <Card key={user.id} className="border-none ring-1 ring-border/50 rounded-2xl hover:shadow-lg transition-all duration-300 group overflow-hidden bg-white">
+                                <Card key={member.id} className="border-none ring-1 ring-border/50 rounded-2xl hover:shadow-lg transition-all duration-300 group overflow-hidden bg-white">
                                     <div className="p-5 flex flex-col gap-4">
                                         <div className="flex items-center justify-between">
-                                            <Link href={`/dashboard/users/${user.id}`} className="flex items-center gap-4 flex-1">
+                                            <Link href={`/dashboard/users/${member.id}`} className="flex items-center gap-4 flex-1">
                                                 <Avatar className="h-12 w-12 rounded-xl ring-1 ring-border group-hover:ring-primary/20 transition-all shadow-sm">
-                                                    {user.avatar ? (
-                                                        isUrl(user.avatar) ? (
-                                                            <AvatarImage src={user.avatar} className="object-cover" />
+                                                    {member.avatar ? (
+                                                        isUrl(member.avatar) ? (
+                                                            <AvatarImage src={member.avatar} className="object-cover" />
                                                         ) : (
-                                                            <div className="h-full w-full bg-primary/5 flex items-center justify-center text-2xl">{user.avatar}</div>
+                                                            <div className="h-full w-full bg-primary/5 flex items-center justify-center text-2xl">{member.avatar}</div>
                                                         )
-                                                    ) : <AvatarFallback className="font-bold">{(user.firstName?.[0] || 'U')}{(user.lastName?.[0] || '')}</AvatarFallback>}
+                                                    ) : <AvatarFallback className="font-bold">{(member.firstName?.[0] || 'U')}{(member.lastName?.[0] || '')}</AvatarFallback>}
                                                 </Avatar>
                                                 <div>
-                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">{(user.firstName || 'Unknown')} {(user.lastName || '')}</p>
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{user.jobTitle || 'Fleet Member'}</p>
+                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">{(member.firstName || 'Unknown')} {(member.lastName || '')}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{member.jobTitle || 'Fleet Member'}</p>
                                                 </div>
                                             </Link>
                                             <div className="flex gap-2">
@@ -568,7 +567,7 @@ export function DailyMonitorWidget() {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-9 w-9 rounded-xl text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm border border-green-100"
-                                                        onClick={() => handleNudgeWhatsApp(user, sheetContent.nudgeType)}
+                                                        onClick={() => handleNudgeWhatsApp(member, sheetContent.nudgeType)}
                                                     >
                                                         <Phone className="h-4 w-4" />
                                                     </Button>
