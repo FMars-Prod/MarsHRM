@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -14,7 +15,7 @@ import {
     ExternalLink, FileText, Lock, Users, CalendarDays, 
     FileBox, Loader2, Image as ImageIcon, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
-    Laptop, CreditCard, Activity, TrendingUp, UserCheck, Clock, Building2
+    Laptop, CreditCard, Activity, TrendingUp, UserCheck, Clock, Building2, MessageSquareWarning
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -90,6 +91,12 @@ export default function ProfilePage() {
     const assetsQuery = useMemoFirebase(() => user ? query(collection(firestore, "assets"), where("assignedToId", "==", user.uid)) : null, [user, firestore]);
     const { data: assignedAssets } = useCollection(assetsQuery);
 
+    const ticketsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(collection(firestore, "issue_reports"), where("employeeId", "==", user.uid));
+    }, [user, firestore]);
+    const { data: userTickets } = useCollection(ticketsQuery);
+
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
     
@@ -134,13 +141,8 @@ export default function ProfilePage() {
         if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
         const now = new Date();
-        const years = differenceInYears(now, start);
-        const months = differenceInMonths(now, start) % 12;
         const totalDays = differenceInDays(now, start);
-        
-        if (years > 0) return `${years} yr ${months > 0 ? `${months} mo` : ''}`.trim();
-        if (months > 0) return `${months} mo`;
-        return `${totalDays} day`;
+        return `${totalDays} Day`;
     }, [employee]);
 
     const form = useForm<ProfileFormValues>({
@@ -419,7 +421,7 @@ export default function ProfilePage() {
                 <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count} / 22 Days`} icon={UserCheck} iconColor="text-green-600" bgColor="bg-green-50" />
                 <MetricCard label="Documents" value={`${documents?.length || 0} Assets`} sub="Secure Repository" icon={FileBox} iconColor="text-blue-600" bgColor="bg-blue-50" />
                 <MetricCard label="Work Hours" value={`${monthlyStats.hours}h`} sub="MTD Net Volume" icon={Clock} iconColor="text-orange-600" bgColor="bg-orange-50" />
-                <MetricCard label="Payroll" value="Paid" sub={format(new Date(), 'MMM yyyy')} icon={CreditCard} iconColor="text-pink-600" bgColor="bg-pink-50" status="active" />
+                <MetricCard label="Support Desk" value={`${userTickets?.length || 0} Tickets`} sub="Maintenance Logs" icon={MessageSquareWarning} iconColor="text-pink-600" bgColor="bg-pink-50" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
@@ -640,7 +642,6 @@ function TimelineItem({ icon: Icon, color, title, time, desc }: any) {
                 <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
             </div>
         </div>
-    )
 }
 
 function DocRow({ title, date, link }: any) {

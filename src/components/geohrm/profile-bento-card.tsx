@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -21,13 +22,8 @@ export function ProfileBentoCard() {
         if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
         const now = new Date();
-        const years = differenceInYears(now, start);
-        const months = differenceInMonths(now, start) % 12;
         const totalDays = differenceInDays(now, start);
-        
-        if (years > 0) return `${years} yr ${months > 0 ? `${months} mo` : ''}`.trim();
-        if (months > 0) return `${months} mo`;
-        return `${totalDays} day`;
+        return `${totalDays} Day`;
     }, [employee]);
 
     if (isLoading || !employee) {

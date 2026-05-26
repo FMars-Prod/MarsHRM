@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -101,7 +102,7 @@ export function useCollection<T = any>(
           errorEmitter.emit('permission-error', contextualError);
         } else {
           // Log non-permission errors normally so they can be debugged (e.g. missing indices)
-          console.error(`Firestore [${error.code}]: ${error.message}`, error);
+          console.error(`Firestore [${error.code}]: ${error.message}. Diagnostic Link: https://console.firebase.google.com/project/${memoizedTargetRefOrQuery.firestore.app.options.projectId}/firestore/indexes`, error);
           setError(error);
         }
 
