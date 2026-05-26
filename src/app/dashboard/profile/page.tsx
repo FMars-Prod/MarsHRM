@@ -32,10 +32,9 @@ import { updateDocumentNonBlocking, useCollection } from "@/firebase";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, startOfDay, differenceInDays, differenceInMonths, differenceInYears } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, startOfDay, differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import jsPDF from "jspdf";
 
 const profileFormSchema = z.object({
@@ -238,77 +237,44 @@ export default function ProfilePage() {
         const pdfDoc = new jsPDF({
             orientation: 'p',
             unit: 'mm',
-            format: [54, 86] // Standard ID card size CR80
+            format: [54, 86]
         });
-
-        // Background
         pdfDoc.setFillColor(255, 255, 255);
         pdfDoc.rect(0, 0, 54, 86, 'F');
-
-        // Header
-        pdfDoc.setFillColor(107, 33, 168); // Primary purple
+        pdfDoc.setFillColor(107, 33, 168);
         pdfDoc.rect(0, 0, 54, 20, 'F');
-
-        // Corporate Labeling
         pdfDoc.setTextColor(255, 255, 255);
         pdfDoc.setFontSize(8);
         pdfDoc.setFont('helvetica', 'bold');
         pdfDoc.text("MARSHRM", 27, 8, { align: 'center' });
         pdfDoc.setFontSize(5);
         pdfDoc.text("FortuMars AI Technologies", 27, 12, { align: 'center' });
-
-        // Identity Placeholder
         pdfDoc.setFillColor(240, 240, 240);
         pdfDoc.circle(27, 35, 10, 'F');
         pdfDoc.setTextColor(107, 33, 168);
         pdfDoc.setFontSize(10);
         pdfDoc.text(`${employee.firstName[0]}${employee.lastName[0]}`, 27, 37, { align: 'center' });
-
-        // Tactical Data
         pdfDoc.setTextColor(0, 0, 0);
         pdfDoc.setFontSize(8);
         pdfDoc.setFont('helvetica', 'bold');
         pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 52, { align: 'center' });
-        
         pdfDoc.setFontSize(6);
         pdfDoc.setFont('helvetica', 'normal');
         pdfDoc.setTextColor(100);
         pdfDoc.text(employee.jobTitle || 'Fleet Member', 27, 56, { align: 'center' });
-        
-        pdfDoc.setFontSize(5);
-        pdfDoc.text(employee.department || 'General Operations', 27, 59, { align: 'center' });
-
-        // Divider
         pdfDoc.setDrawColor(220);
         pdfDoc.line(10, 65, 44, 65);
-
-        // Professional Record
         pdfDoc.setTextColor(0);
         pdfDoc.setFontSize(4);
-        pdfDoc.setFont('helvetica', 'bold');
-        pdfDoc.text("EMAIL:", 10, 70);
-        pdfDoc.setFont('helvetica', 'normal');
-        pdfDoc.text(employee.email || 'N/A', 20, 70);
-
-        pdfDoc.setFont('helvetica', 'bold');
-        pdfDoc.text("PHONE:", 10, 73);
-        pdfDoc.setFont('helvetica', 'normal');
-        pdfDoc.text(employee.phoneNumber || 'N/A', 20, 73);
-
-        pdfDoc.setFont('helvetica', 'bold');
-        pdfDoc.text("BRANCH:", 10, 76);
-        pdfDoc.setFont('helvetica', 'normal');
-        pdfDoc.text(employee.branch || 'N/A', 20, 76);
-
-        // Certification Footer
+        pdfDoc.text(`EMAIL: ${employee.email || 'N/A'}`, 10, 70);
+        pdfDoc.text(`PHONE: ${employee.phoneNumber || 'N/A'}`, 10, 73);
+        pdfDoc.text(`BRANCH: ${employee.branch || 'N/A'}`, 10, 76);
         pdfDoc.setFillColor(107, 33, 168);
         pdfDoc.rect(0, 82, 54, 4, 'F');
         pdfDoc.setTextColor(255, 255, 255);
         pdfDoc.setFontSize(3);
         pdfDoc.text("Authorized Platform Identity - MarsHRM v1.0", 27, 84.5, { align: 'center' });
-
         pdfDoc.save(`ID_CARD_${employee.firstName}_${employee.lastName}.pdf`);
-        toast({ title: "ID Card Transmitted", description: "Identity asset saved to device." });
     };
 
     const isUrl = (str: string) => str && str.startsWith('http');
@@ -372,9 +338,6 @@ export default function ProfilePage() {
                                             <DropdownMenuItem onClick={handleDownloadIdCard} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer">
                                                 <Download className="size-3.5"/> Download ID Card
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer">
-                                                <FileText className="size-3.5"/> Generate Performance Report
-                                            </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
@@ -396,7 +359,6 @@ export default function ProfilePage() {
                             <ExperienceBadge label="Commenced" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} icon={CalendarDays} color="bg-emerald-600" />
                             <ExperienceBadge label="Fleet Tenure" value={experience} icon={Clock} color="bg-primary" />
                         </div>
-                        
                         <div className="flex gap-4">
                             <div className="text-center sm:text-right">
                                 <p className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Tactical Comms</p>
@@ -404,11 +366,6 @@ export default function ProfilePage() {
                                     <a href={`mailto:${employee.email}`} className="p-2.5 rounded-xl bg-muted/50 hover:bg-primary hover:text-white transition-all duration-300">
                                         <Mail className="size-4" />
                                     </a>
-                                    {employee.phoneNumber && (
-                                        <a href={`tel:${employee.phoneNumber}`} className="p-2.5 rounded-xl bg-muted/50 hover:bg-accent hover:text-white transition-all duration-300">
-                                            <Phone className="size-4" />
-                                        </a>
-                                    )}
                                 </div>
                             </div>
                         </div>
@@ -485,20 +442,7 @@ export default function ProfilePage() {
                                     <p className="font-bold text-sm text-foreground">{managerData ? `${managerData.firstName} ${managerData.lastName}` : "Autonomous Role"}</p>
                                     <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{managerData?.jobTitle || "Direct Executive Reporting"}</p>
                                 </div>
-                                <Button variant="outline" size="sm" className="rounded-lg font-bold text-[9px] uppercase h-8 px-3" asChild>
-                                    <Link href={managerData ? `/dashboard/users/${managerData.id}` : '#'}>Profile</Link>
-                                </Button>
                             </div>
-                        </Card>
-                    </div>
-
-                    <div className="space-y-6">
-                        <SectionHeader title="Operational Context" />
-                        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4">
-                            <InfoRow label="Department" value={employee.department || "General"} />
-                            <InfoRow label="Operational Branch" value={employee.branch || "Chennai HQ"} icon={Building2} />
-                            <InfoRow label="Tactical Shift" value={employee.shiftType || "General Shift"} icon={Clock} />
-                            <InfoRow label="Status" value={operationalStatus} isStatus />
                         </Card>
                     </div>
                 </div>
@@ -557,22 +501,6 @@ export default function ProfilePage() {
                                             <SelectContent><SelectItem value="Employee">Employee</SelectItem><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Contract">Contract</SelectItem></SelectContent>
                                         </Select>
                                     </FormItem>
-                                )} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={form.control} name="jobTitle" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Job Title</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                                )} />
-                                <FormField control={form.control} name="department" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Department</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                                )} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={form.control} name="branch" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Branch</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                                )} />
-                                <FormField control={form.control} name="shiftType" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Shift Type</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                                 )} />
                             </div>
                             <Separator />
@@ -642,6 +570,7 @@ function TimelineItem({ icon: Icon, color, title, time, desc }: any) {
                 <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
             </div>
         </div>
+    );
 }
 
 function DocRow({ title, date, link }: any) {

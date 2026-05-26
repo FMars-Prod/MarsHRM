@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval, differenceInSeconds } from 'date-fns';
-import { Building2, User, UserCheck, UserCheck as UserCheckIcon, UserX, UserRoundX, Download, Share2, Mail, MessageSquare, Users, FileText, AlertTriangle, Phone, Home, MapPin, ChevronRight, LayoutGrid, Activity, ShieldCheck, Clock } from 'lucide-react';
+import { Activity, Download, Share2, Mail, MessageSquare, Users, FileText, Phone, MapPin, ShieldCheck, Clock, UserCheck as UserCheckIcon, UserRoundX } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -17,7 +18,6 @@ import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 
 type UserData = {
   id: string;
@@ -170,211 +170,30 @@ export function DailyMonitorWidget() {
     return `${hours}h ${minutes}m`;
   };
 
-  const handleExport = () => {
-    const { present, late, absent, onLeave, outOfRange, atHome, isLoading } = summary;
-    if (isLoading || (!present.length && !late.length && !absent.length && !onLeave.length && !outOfRange.length && !atHome.length)) {
-      toast({ variant: "destructive", title: "No data to export" });
-      return;
-    }
-
-    const allUsersWithStatus = [
-      ...present.map(u => ({ ...u, status: 'Present' })),
-      ...late.map(u => ({ ...u, status: 'Late' })),
-      ...outOfRange.map(u => ({ ...u, status: 'Out of Range' })),
-      ...atHome.map(u => ({ ...u, status: 'At Home' })),
-      ...absent.map(u => ({ ...u, status: 'Absent' })),
-      ...onLeave.map(u => ({ ...u, status: 'On Leave' })),
-    ];
-
-    const headers = ['Status', 'First Name', 'Last Name', 'Job Title', 'Date', 'Time (In/Out)', 'Duration (Work/Break)', 'Location', 'Notes'];
-    const csvRows = [
-      headers.join(','),
-      ...allUsersWithStatus.map(user => {
-        const rec = attendanceRecords.get(user.id);
-        let workDuration = 0;
-        let timeInOut = "N/A";
-        let durationWorkBreak = "N/A";
-        let location = "N/A";
-        let notes = "";
-        const recordDate = `"${format(new Date(), "PP")}"`;
-
-        if (rec && rec.checkInTime) {
-            if (rec.checkOutTime) {
-                workDuration = differenceInSeconds(rec.checkOutTime.toDate(), rec.checkInTime.toDate()) - (rec.totalBreakDuration || 0);
-            }
-            timeInOut = `"${format(rec.checkInTime.toDate(), "p")} / ${rec.checkOutTime ? format(rec.checkOutTime.toDate(), "p") : '--:--'}"`;
-            durationWorkBreak = `"${formatDuration(workDuration)} / ${formatDuration(rec.totalBreakDuration || 0)}"`;
-            location = rec.locationCheckInLatitude && rec.locationCheckInLongitude ? `"${rec.locationCheckInLatitude}, ${rec.locationCheckInLongitude}"` : "N/A";
-            notes = `"${((rec.checkInNotes || '') + ' ' + (rec.checkOutNotes || '')).trim().replace(/"/g, '""')}"`;
-        } else if (user.status === 'On Leave') {
-            notes = '"On Approved Leave"';
-        } else if (user.status === 'Absent') {
-            notes = '"Absent"';
-        }
-
-        const row = [
-          `"${user.status}"`,
-          `"${user.firstName}"`,
-          `"${user.lastName}"`,
-          `"${user.jobTitle}"`,
-          recordDate,
-          timeInOut,
-          durationWorkBreak,
-          location,
-          notes,
-        ];
-        return row.join(',');
-      })
-    ];
-
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute('download', `daily_monitor_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-  
-  const handleShare = (platform: 'email' | 'whatsapp' | 'teams') => {
-    if (summary.isLoading) {
-      toast({ variant: 'destructive', title: 'Data not ready' });
-      return;
-    }
-
+  const handleExportPdf = () => {
+    const pdfDoc = new jsPDF();
     const reportDate = format(new Date(), 'PPP');
     const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
 
-    let reportText = `FortuMars - Daily Attendance Summary\n`;
-    reportText += `Date: ${reportDate}\n`;
-    reportText += `Generated by: ${generatorName}\n\n`;
-
-    const createSection = (title: string, users: UserData[], includeTime: boolean = false) => {
-        if (users.length === 0) return '';
-        let section = `${title} (${users.length})\n`;
-        users.forEach(u => {
-            const rec = attendanceRecords.get(u.id);
-            const timeIn = rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--';
-            const timeOut = rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
-            const breakTime = rec?.totalBreakDuration ? formatDuration(rec.totalBreakDuration) : '0m';
-            
-            const detailStr = includeTime ? ` (In: ${timeIn} / Out: ${timeOut} - Break: ${breakTime})` : '';
-            section += `- ${u.firstName} ${u.lastName}${detailStr}\n`;
-        });
-        return section + '\n';
-    };
-
-    reportText += createSection('Present', summary.present, true);
-    reportText += createSection('Late', summary.late, true);
-    reportText += createSection('Out of Range', summary.outOfRange, true);
-    reportText += createSection('Absent', summary.absent);
-    reportText += createSection('On Leave', summary.onLeave);
-
-    const encodedText = encodeURIComponent(reportText);
-
-    let url = '';
-    if (platform === 'email') {
-      url = `mailto:?subject=Daily Attendance Summary&body=${encodedText}`;
-    } else if (platform === 'whatsapp') {
-      url = `https://wa.me/?text=${encodedText}`;
-    } else if (platform === 'teams') {
-      url = `https://teams.microsoft.com/l/chat/0/0?users=&message=${encodedText}`;
-    }
-    
-    window.open(url, '_blank');
-  };
-
-  const handleNudgeWhatsApp = (member: UserData, nudgeType?: 'missing_login' | 'missing_logout') => {
-      if (!member.phoneNumber) {
-          toast({ variant: 'destructive', title: 'No phone number', description: 'Please add a phone number in User Management.' });
-          return;
-      }
-      
-      const message = nudgeType === 'missing_login' 
-        ? `Hello ${member.firstName}, you haven't clocked in today. Please log in to MarsHRM now.`
-        : `Hello ${member.firstName}, please don't forget to update your work report and clock out.`;
-      
-      const cleanNumber = member.phoneNumber.replace(/\D/g, '');
-      const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank');
-  };
-
-  const handleExportPdf = () => {
-    if (summary.isLoading) {
-      toast({ variant: 'destructive', title: 'Data not ready' });
-      return;
-    }
-    
-    const pdfDoc = new jsPDF();
-    const now = new Date();
-    const reportDate = format(now, 'PPP');
-    const generatorName = currentUserData ? `${(currentUserData as any).firstName} ${(currentUserData as any).lastName}` : 'System';
-
-    const addPageContent = (data: any) => {
-        pdfDoc.setFontSize(16);
-        pdfDoc.setFont('helvetica', 'bold');
-        pdfDoc.text("FortuMars AI Technologies & Business Solutions.", pdfDoc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
-        
-        const pageCount = pdfDoc.internal.getNumberOfPages();
-        pdfDoc.setFontSize(8);
-        pdfDoc.text(`Page ${pageCount}`, data.settings.margin.left, pdfDoc.internal.pageSize.height - 10);
-    };
-
-    pdfDoc.setFontSize(12);
-    pdfDoc.setTextColor(100);
-    pdfDoc.text(`Daily Attendance Summary - ${reportDate}`, pdfDoc.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
+    pdfDoc.setFontSize(16);
+    pdfDoc.text("FortuMars AI Technologies - Daily Summary", 14, 20);
     pdfDoc.setFontSize(10);
-    pdfDoc.text(`Generated by: ${generatorName}`, 14, 48);
+    pdfDoc.text(`Date: ${reportDate} | Generated by: ${generatorName}`, 14, 28);
 
-    let finalY = 55;
+    const body = [
+        ...summary.present.map(u => [`${u.firstName} ${u.lastName}`, 'Present', 'HQ Sector']),
+        ...summary.late.map(u => [`${u.firstName} ${u.lastName}`, 'Late', 'HQ Sector']),
+        ...summary.outOfRange.map(u => [`${u.firstName} ${u.lastName}`, 'Remote', 'Field']),
+        ...summary.absent.map(u => [`${u.firstName} ${u.lastName}`, 'Absent', 'Unknown']),
+    ];
 
-    const addSection = (title: string, users: UserData[], statusLabel: string, includeTime: boolean = false) => {
-      if (users.length > 0) {
-        const body = users.map(u => {
-            const rec = attendanceRecords.get(u.id);
-            const clockIn = (rec && rec.checkInTime && typeof rec.checkInTime.toDate === 'function') ? format(rec.checkInTime.toDate(), 'p') : '--:--';
-            const clockOut = (rec && rec.checkOutTime && typeof rec.checkOutTime.toDate === 'function') ? format(rec.checkOutTime.toDate(), 'p') : '--:--';
-            const breakTime = (rec && rec.totalBreakDuration) ? formatDuration(rec.totalBreakDuration) : '0m';
-            
-            const detailLine = includeTime 
-                ? `${u.firstName} ${u.lastName} - ${statusLabel} - In: ${clockIn} / Out: ${clockOut} - Break: ${breakTime}`
-                : `${u.firstName} ${u.lastName} - ${statusLabel}`;
-            
-            return [detailLine];
-        });
-
-        autoTable(pdfDoc, {
-          startY: finalY,
-          head: [[{ content: `${title} (${users.length})`, styles: { fontStyle: 'bold', fontSize: 12, halign: 'left', fillColor: [240,240,240], textColor: 0 } }]],
-          body: [],
-          theme: 'plain',
-          didDrawPage: addPageContent,
-          margin: { top: 50 },
-        });
-
-        autoTable(pdfDoc, {
-          startY: (pdfDoc as any).lastAutoTable.finalY,
-          head: [['Employee Status Details']],
-          body: body,
-          theme: 'striped',
-          headStyles: { fillColor: [39, 55, 70] },
-          didDrawPage: addPageContent,
-          margin: { top: 50 },
-        });
-        finalY = (pdfDoc as any).lastAutoTable.finalY + 10;
-      }
-    };
-    
-    addSection('Present', summary.present, 'Present', true);
-    addSection('Late', summary.late, 'Late', true);
-    addSection('Out of Range', summary.outOfRange, 'Out of Range', true);
-    addSection('Absent', summary.absent, 'Absent', false);
-    addSection('On Leave', summary.onLeave, 'On Leave', false);
-    
-    addPageContent({ settings: { margin: { left: 14 } } });
+    autoTable(pdfDoc, {
+        startY: 35,
+        head: [['Employee', 'Status', 'Location']],
+        body: body,
+        theme: 'striped',
+        headStyles: { fillColor: [107, 33, 168] }
+    });
 
     pdfDoc.save(`daily_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
@@ -396,8 +215,6 @@ export function DailyMonitorWidget() {
     </Card>
   );
 
-  const isUrl = (str?: string) => str && str.startsWith('http');
-
   return (
     <Sheet onOpenChange={(isOpen) => !isOpen && setSheetContent(null)}>
         <Card className="animate-fade-in-up bg-white border-none shadow-xl rounded-[2.5rem] overflow-hidden font-open-sans">
@@ -411,25 +228,10 @@ export function DailyMonitorWidget() {
                             Operational grid status: {format(new Date(), 'EEEE, dd MMMM')}
                         </CardDescription>
                     </div>
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" disabled={summary.isLoading} className="rounded-xl h-10 px-5 font-black uppercase text-[10px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50 flex-1 sm:flex-none">
-                                    <Share2 className="mr-2 h-3.5 w-3.5" />
-                                    Dispatch Report
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-xl p-2 w-64">
-                                <DropdownMenuItem onClick={handleExport} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><Download className="size-3.5" /> Sector Audit CSV</DropdownMenuItem>
-                                <DropdownMenuItem onClick={handleExportPdf} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><FileText className="size-3.5" /> Sector Audit PDF</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase opacity-40">Tactical Sharing</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleShare('email')} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><Mail className="size-3.5"/> Email Registry</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleShare('whatsapp')} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><MessageSquare className="size-3.5"/> WhatsApp Comms</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleShare('teams')} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer"><Users className="size-3.5"/> MS Teams Channel</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
+                    <Button variant="outline" size="sm" onClick={handleExportPdf} className="rounded-xl h-10 px-5 font-black uppercase text-[10px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50">
+                        <Download className="mr-2 h-3.5 w-3.5" />
+                        Audit PDF
+                    </Button>
                 </div>
             </CardHeader>
 
@@ -489,128 +291,31 @@ export function DailyMonitorWidget() {
                     </div>
                 )}
             </CardContent>
-
-            <div className="px-8 pb-8 pt-0 border-t border-dashed border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
-                <div className="flex items-center gap-3 pt-6">
-                    <div className="flex -space-x-2">
-                        {summary.present.slice(0, 3).map(u => (
-                            <Avatar key={u.id} className="size-6 border-2 border-white ring-1 ring-border/20 shadow-sm">
-                                <AvatarImage src={u.avatar} />
-                                <AvatarFallback className="text-[8px] font-black">{u.firstName?.[0]}</AvatarFallback>
-                            </Avatar>
-                        ))}
-                        {summary.present.length > 3 && (
-                            <div className="size-6 rounded-full bg-muted border-2 border-white ring-1 ring-border/20 flex items-center justify-center text-[7px] font-black">
-                                +{summary.present.length - 3}
-                            </div>
-                        )}
-                    </div>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                        {summary.present.length} units online in current sector
-                    </p>
-                </div>
-                <div className="flex items-center gap-2 pt-6">
-                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[8px] font-black uppercase rounded-full px-3 h-6">
-                        <ShieldCheck className="size-2.5 mr-1.5" /> Tactical Verification Active
-                    </Badge>
-                </div>
-            </div>
         </Card>
 
         {sheetContent && (
-            <SheetContent className="flex flex-col rounded-l-[3rem] border-none shadow-2xl w-full sm:max-w-lg p-0 overflow-hidden font-open-sans">
+            <SheetContent className="rounded-l-[3rem] border-none shadow-2xl w-full sm:max-w-lg p-0 overflow-hidden font-open-sans">
                 <SheetHeader className="p-8 border-b bg-white/80 backdrop-blur-md">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <SheetTitle className={cn("text-2xl font-black uppercase tracking-tighter", sheetContent.color)}>{sheetContent.title}</SheetTitle>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Fleet Roster Audit • {format(new Date(), 'PP')}</p>
-                        </div>
-                        <Badge variant="outline" className="rounded-full h-8 px-4 font-black uppercase text-[10px] bg-muted/20 border-none">
-                            {sheetContent.users.length} Records
-                        </Badge>
-                    </div>
+                    <SheetTitle className={cn("text-2xl font-black uppercase tracking-tighter", sheetContent.color)}>{sheetContent.title}</SheetTitle>
                 </SheetHeader>
                 <ScrollArea className="flex-1 bg-secondary/5">
                   <div className="p-8 space-y-4">
-                     {sheetContent.users.length > 0 ? (
-                        sheetContent.users.map(member => {
-                            const rec = attendanceRecords.get(member.id);
-                            return (
-                                <Card key={member.id} className="border-none ring-1 ring-border/50 rounded-2xl hover:shadow-lg transition-all duration-300 group overflow-hidden bg-white">
-                                    <div className="p-5 flex flex-col gap-4">
-                                        <div className="flex items-center justify-between">
-                                            <Link href={`/dashboard/users/${member.id}`} className="flex items-center gap-4 flex-1">
-                                                <Avatar className="h-12 w-12 rounded-xl ring-1 ring-border group-hover:ring-primary/20 transition-all shadow-sm">
-                                                    {member.avatar ? (
-                                                        isUrl(member.avatar) ? (
-                                                            <AvatarImage src={member.avatar} className="object-cover" />
-                                                        ) : (
-                                                            <div className="h-full w-full bg-primary/5 flex items-center justify-center text-2xl">{member.avatar}</div>
-                                                        )
-                                                    ) : <AvatarFallback className="font-bold">{(member.firstName?.[0] || 'U')}{(member.lastName?.[0] || '')}</AvatarFallback>}
-                                                </Avatar>
-                                                <div>
-                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">{(member.firstName || 'Unknown')} {(member.lastName || '')}</p>
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{member.jobTitle || 'Fleet Member'}</p>
-                                                </div>
-                                            </Link>
-                                            <div className="flex gap-2">
-                                                {rec?.locationCheckInLatitude && (
-                                                    <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-primary hover:bg-primary/10 shadow-sm border">
-                                                        <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
-                                                            <MapPin className="h-4 w-4" />
-                                                        </Link>
-                                                    </Button>
-                                                )}
-                                                {sheetContent.nudgeType && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-9 w-9 rounded-xl text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm border border-green-100"
-                                                        onClick={() => handleNudgeWhatsApp(member, sheetContent.nudgeType)}
-                                                    >
-                                                        <Phone className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-3 pt-2">
-                                            <div className="p-3 bg-muted/20 rounded-xl space-y-1">
-                                                <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest">Clock In</p>
-                                                <p className="font-mono text-xs font-bold text-foreground/80">{rec?.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</p>
-                                            </div>
-                                            <div className="p-3 bg-muted/20 rounded-xl space-y-1">
-                                                <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest">Clock Out</p>
-                                                <p className="font-mono text-xs font-bold text-foreground/80">{rec?.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</p>
-                                            </div>
-                                        </div>
-
-                                        {rec?.checkInNotes && (
-                                            <div className="mt-1 flex gap-3 p-4 rounded-xl bg-orange-50/30 border border-orange-100/50">
-                                                <FileText className="size-4 text-orange-600 shrink-0" />
-                                                <p className="text-[11px] italic font-medium leading-relaxed text-orange-900/70 line-clamp-2">
-                                                    "{rec.checkInNotes}"
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </Card>
-                            );
-                        })
-                    ) : (
-                        <div className="py-20 text-center opacity-30 grayscale flex flex-col items-center">
-                            <LayoutGrid className="size-12 mb-4" />
-                            <p className="font-black uppercase text-[11px] tracking-[0.3em]">Sector Empty</p>
-                        </div>
-                    )}
+                     {sheetContent.users.map(member => (
+                        <Card key={member.id} className="border-none ring-1 ring-border/50 rounded-2xl p-5 bg-white">
+                            <div className="flex items-center gap-4">
+                                <Avatar className="h-12 w-12 rounded-xl">
+                                    <AvatarImage src={member.avatar} />
+                                    <AvatarFallback className="font-bold">{member.firstName?.[0]}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-black text-sm">{member.firstName} {member.lastName}</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{member.jobTitle}</p>
+                                </div>
+                            </div>
+                        </Card>
+                     ))}
                   </div>
                 </ScrollArea>
-                <div className="p-8 border-t bg-white">
-                    <Button variant="outline" className="w-full rounded-full h-14 font-black uppercase text-[10px] tracking-widest shadow-lg" asChild>
-                        <Link href="/dashboard/analytics">Download Sector Audit</Link>
-                    </Button>
-                </div>
             </SheetContent>
         )}
     </Sheet>

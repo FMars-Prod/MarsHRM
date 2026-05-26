@@ -3,6 +3,15 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // This rule is required to allow the collectionGroup query in monitoring widgets
+    match /{path=**}/attendances/{attendanceId} {
+      allow get, list: if true;
+    }
+    
+    match /{path=**}/issue_reports/{issue_reportsId} {
+      allow get, list: if true;
+    }
+    
     // Direct matches for root collections to ensure standard queries are authorized
     match /issue_reports/{id} {
       allow read, write: if true;
@@ -12,15 +21,6 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Collection Group matches for organization-wide monitoring
-    match /{path=**}/attendances/{attendanceId} {
-      allow get, list: if true;
-    }
-    
-    match /{path=**}/issue_reports/{issue_reportsId} {
-      allow get, list: if true;
-    }
-    
     // Global catch-all for rapid prototyping
     match /{document=**} {
       allow read, write: if true;
