@@ -7,7 +7,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { format, differenceInDays, differenceInMonths, differenceInYears } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { ShieldCheck, Mail, Phone, CalendarDays, MapPin, Target, Zap, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +23,7 @@ export function ProfileBentoCard() {
         const start = new Date(employee.hireDate);
         const now = new Date();
         const totalDays = differenceInDays(now, start);
-        return `${totalDays} Day`;
+        return `${totalDays} day`;
     }, [employee]);
 
     if (isLoading || !employee) {

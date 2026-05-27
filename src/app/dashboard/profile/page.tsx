@@ -141,7 +141,7 @@ export default function ProfilePage() {
         const start = new Date(employee.hireDate);
         const now = new Date();
         const totalDays = differenceInDays(now, start);
-        return `${totalDays} Day`;
+        return `${totalDays} day`;
     }, [employee]);
 
     const form = useForm<ProfileFormValues>({
@@ -232,49 +232,93 @@ export default function ProfilePage() {
         }
     };
 
-    const handleDownloadIdCard = () => {
+    const handleDownloadIdCard = async () => {
         if (!employee) return;
         const pdfDoc = new jsPDF({
             orientation: 'p',
             unit: 'mm',
             format: [54, 86]
         });
-        pdfDoc.setFillColor(255, 255, 255);
-        pdfDoc.rect(0, 0, 54, 86, 'F');
-        pdfDoc.setFillColor(107, 33, 168);
-        pdfDoc.rect(0, 0, 54, 20, 'F');
-        pdfDoc.setTextColor(255, 255, 255);
-        pdfDoc.setFontSize(8);
-        pdfDoc.setFont('helvetica', 'bold');
-        pdfDoc.text("MARSHRM", 27, 8, { align: 'center' });
-        pdfDoc.setFontSize(5);
-        pdfDoc.text("FortuMars AI Technologies", 27, 12, { align: 'center' });
-        pdfDoc.setFillColor(240, 240, 240);
-        pdfDoc.circle(27, 35, 10, 'F');
-        pdfDoc.setTextColor(107, 33, 168);
-        pdfDoc.setFontSize(10);
-        pdfDoc.text(`${employee.firstName[0]}${employee.lastName[0]}`, 27, 37, { align: 'center' });
-        pdfDoc.setTextColor(0, 0, 0);
-        pdfDoc.setFontSize(8);
-        pdfDoc.setFont('helvetica', 'bold');
-        pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 52, { align: 'center' });
-        pdfDoc.setFontSize(6);
-        pdfDoc.setFont('helvetica', 'normal');
-        pdfDoc.setTextColor(100);
-        pdfDoc.text(employee.jobTitle || 'Fleet Member', 27, 56, { align: 'center' });
-        pdfDoc.setDrawColor(220);
-        pdfDoc.line(10, 65, 44, 65);
-        pdfDoc.setTextColor(0);
-        pdfDoc.setFontSize(4);
-        pdfDoc.text(`EMAIL: ${employee.email || 'N/A'}`, 10, 70);
-        pdfDoc.text(`PHONE: ${employee.phoneNumber || 'N/A'}`, 10, 73);
-        pdfDoc.text(`BRANCH: ${employee.branch || 'N/A'}`, 10, 76);
-        pdfDoc.setFillColor(107, 33, 168);
-        pdfDoc.rect(0, 82, 54, 4, 'F');
-        pdfDoc.setTextColor(255, 255, 255);
-        pdfDoc.setFontSize(3);
-        pdfDoc.text("Authorized Platform Identity - MarsHRM v1.0", 27, 84.5, { align: 'center' });
-        pdfDoc.save(`ID_CARD_${employee.firstName}_${employee.lastName}.pdf`);
+
+        const loadImage = (url: string): Promise<HTMLImageElement> => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = url;
+            });
+        };
+
+        try {
+            const logo = await loadImage("https://fortumars.com/fortumarslogo.png");
+            
+            // Card Base
+            pdfDoc.setFillColor(255, 255, 255);
+            pdfDoc.rect(0, 0, 54, 86, 'F');
+
+            // Header Section
+            pdfDoc.setFillColor(107, 33, 168);
+            pdfDoc.rect(0, 0, 54, 28, 'F');
+
+            // Logo
+            const logoW = 38;
+            const logoH = (logo.height * logoW) / logo.width;
+            pdfDoc.addImage(logo, 'PNG', (54 - logoW) / 2, 6, logoW, logoH);
+
+            // Picture Placeholder
+            pdfDoc.setFillColor(245, 245, 245);
+            pdfDoc.circle(27, 44, 12, 'F');
+            pdfDoc.setDrawColor(107, 33, 168);
+            pdfDoc.setLineWidth(0.5);
+            pdfDoc.circle(27, 44, 12.5, 'S');
+
+            // Initials
+            pdfDoc.setTextColor(107, 33, 168);
+            pdfDoc.setFontSize(14);
+            pdfDoc.setFont('helvetica', 'bold');
+            pdfDoc.text(`${employee.firstName[0]}${employee.lastName[0]}`, 27, 47, { align: 'center' });
+
+            // Name
+            pdfDoc.setTextColor(0, 0, 0);
+            pdfDoc.setFontSize(10);
+            pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 62, { align: 'center' });
+
+            // Designation
+            pdfDoc.setFontSize(6.5);
+            pdfDoc.setFont('helvetica', 'bold');
+            pdfDoc.setTextColor(107, 33, 168);
+            pdfDoc.text(employee.jobTitle?.toUpperCase() || 'FLEET MEMBER', 27, 66, { align: 'center' });
+
+            // Date of Join
+            pdfDoc.setFontSize(5);
+            pdfDoc.setFont('helvetica', 'normal');
+            pdfDoc.setTextColor(140);
+            const joinedDate = employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A';
+            pdfDoc.text(`JOINED: ${joinedDate}`, 27, 70, { align: 'center' });
+
+            // Divider
+            pdfDoc.setDrawColor(230, 230, 230);
+            pdfDoc.line(10, 73, 44, 73);
+
+            // Contact details
+            pdfDoc.setTextColor(80);
+            pdfDoc.setFontSize(4.5);
+            pdfDoc.text(`ID: ${employee.id.slice(0, 8).toUpperCase()}`, 10, 77);
+            pdfDoc.text(`EMAIL: ${employee.email || 'N/A'}`, 10, 80);
+
+            // Brand Footer
+            pdfDoc.setFillColor(107, 33, 168);
+            pdfDoc.rect(0, 82, 54, 4, 'F');
+            pdfDoc.setTextColor(255, 255, 255);
+            pdfDoc.setFontSize(3.2);
+            pdfDoc.text("FORTUMARS AI TECHNOLOGIES & BUSINESS SOLUTIONS", 27, 84.5, { align: 'center' });
+
+            pdfDoc.save(`ID_CARD_${employee.firstName}_${employee.lastName}.pdf`);
+        } catch (err) {
+            console.error("ID Card Generation Failed", err);
+            toast({ variant: 'destructive', title: 'Design failed to render logo.' });
+        }
     };
 
     const isUrl = (str: string) => str && str.startsWith('http');
@@ -597,25 +641,6 @@ function AssetRow({ image, title, category }: any) {
                 <p className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest">{category}</p>
             </div>
             <Badge variant="outline" className="rounded-full text-[8px] font-black uppercase tracking-widest text-green-600 bg-green-50 border-none px-2.5">In Use</Badge>
-        </div>
-    )
-}
-
-function InfoRow({ label, value, isStatus, icon: Icon }: any) {
-    return (
-        <div className="flex items-center justify-between text-xs py-1">
-            <div className="flex items-center gap-2">
-                {Icon && <Icon className="size-3 text-muted-foreground/60" />}
-                <span className="font-medium text-muted-foreground text-[10px] uppercase tracking-wider">{label}</span>
-            </div>
-            {isStatus ? (
-                <div className="flex items-center gap-2">
-                    <div className={cn("h-1.5 w-1.5 rounded-full", value === 'Away' ? 'bg-slate-400' : 'bg-green-500')} />
-                    <span className="font-bold text-foreground text-[10px]">{value}</span>
-                </div>
-            ) : (
-                <span className="font-bold text-foreground text-right">{value}</span>
-            )}
         </div>
     )
 }

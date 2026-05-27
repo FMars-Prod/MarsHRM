@@ -64,7 +64,7 @@ export default function DashboardPage() {
               <span className="text-[10px] font-black uppercase tracking-[0.3em]">{format(new Date(), 'EEEE, MMMM dd')}</span>
           </div>
           <h1 className="text-4xl font-black tracking-tighter">
-              {greeting}, {currentUserData?.firstName || 'Strategist'}
+              {greeting}, {currentUserData?.firstName || 'Strategist'} ,
           </h1>
           <p className="text-sm font-medium text-muted-foreground">Welcome to the tactical grid. Your fleet operations are synchronized.</p>
       </div>
