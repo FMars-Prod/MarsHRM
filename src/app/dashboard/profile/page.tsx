@@ -15,7 +15,8 @@ import {
     ExternalLink, FileText, Lock, Users, CalendarDays, 
     FileBox, Loader2, Image as ImageIcon, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
-    Laptop, Activity, UserCheck, Clock, MessageSquareWarning
+    Laptop, Activity, UserCheck, Clock, MessageSquareWarning,
+    PieChart, Zap
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differe
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
+import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -81,9 +83,6 @@ export default function ProfilePage() {
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
 
-    const managerDocRef = useMemoFirebase(() => employee?.reportsToId ? doc(firestore, "users", employee.reportsToId) : null, [employee, firestore]);
-    const { data: managerData } = useDoc<any>(managerDocRef);
-
     const docsQuery = useMemoFirebase(() => user ? collection(firestore, `users/${user.uid}/documents`) : null, [user, firestore]);
     const { data: documents } = useCollection(docsQuery);
 
@@ -95,6 +94,9 @@ export default function ProfilePage() {
         return query(collection(firestore, "issue_reports"), where("employeeId", "==", user.uid));
     }, [user, firestore]);
     const { data: userTickets } = useCollection(ticketsQuery);
+
+    const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
+    const { data: teams } = useCollection<any>(teamsQuery);
 
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
@@ -143,6 +145,15 @@ export default function ProfilePage() {
         const totalDays = differenceInDays(now, start);
         return `${totalDays} day`;
     }, [employee]);
+
+    const teamChartData = React.useMemo(() => {
+        if (!teams) return [];
+        return teams.map((t: any, i: number) => ({
+            name: t.name,
+            value: t.memberIds?.length || 0,
+            fill: `hsl(var(--chart-${(i % 5) + 1}))`
+        })).sort((a, b) => b.value - a.value).slice(0, 5);
+    }, [teams]);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -339,8 +350,22 @@ export default function ProfilePage() {
     if (isEmployeeLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Synchronizing Identity Hub...</div>;
     if (!employee) return <div className="p-10 text-center">No identity record found.</div>;
 
+    const greeting = (() => {
+        const hour = new Date().getHours();
+        if (hour < 12) return "Good Morning";
+        if (hour < 17) return "Good Afternoon";
+        return "Good Evening";
+    })();
+
     return (
         <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8">
+            <div className="flex flex-col gap-1 mb-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
+                <h1 className="text-4xl font-black tracking-tighter">
+                    {greeting}, {employee.firstName} ,
+                </h1>
+            </div>
+
             <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
                 <CardContent className="p-8 md:p-12">
                     <div className="flex flex-col lg:flex-row gap-12 items-center lg:items-start text-center lg:text-left">
@@ -431,7 +456,7 @@ export default function ProfilePage() {
             </Card>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                <MetricCard label="Leave Balance" value="N/A" sub="Days Remaining" icon={CalendarDays} iconColor="text-purple-600" bgColor="bg-purple-50" />
+                <MetricCard label="Strategic Score" value="8.4" sub="Performance Index" icon={Zap} iconColor="text-purple-600" bgColor="bg-purple-50" />
                 <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count} / 22 Days`} icon={UserCheck} iconColor="text-green-600" bgColor="bg-green-50" />
                 <MetricCard label="Documents" value={`${documents?.length || 0} Assets`} sub="Secure Repository" icon={FileBox} iconColor="text-blue-600" bgColor="bg-blue-50" />
                 <MetricCard label="Work Hours" value={`${monthlyStats.hours}h`} sub="MTD Net Volume" icon={Clock} iconColor="text-orange-600" bgColor="bg-orange-50" />
@@ -487,18 +512,41 @@ export default function ProfilePage() {
 
                 <div className="lg:col-span-4 space-y-8">
                     <div className="space-y-6">
-                        <SectionHeader title="Vertical Authority" />
-                        <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-12 w-12 rounded-xl">
-                                    {managerData?.avatar ? (
-                                        isUrl(managerData.avatar) ? <AvatarImage src={managerData.avatar} /> : <div className="h-full w-full bg-primary/5 flex items-center justify-center text-xl">{managerData.avatar}</div>
-                                    ) : <AvatarFallback>{managerData?.firstName?.[0] || 'S'}</AvatarFallback>}
-                                </Avatar>
-                                <div className="flex-1">
-                                    <p className="font-bold text-sm text-foreground">{managerData ? `${managerData.firstName} ${managerData.lastName}` : "Autonomous Role"}</p>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{managerData?.jobTitle || "Direct Executive Reporting"}</p>
-                                </div>
+                        <SectionHeader title="Fleet Composition" />
+                        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 flex flex-col items-center">
+                            <div className="h-[200px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <RadialBarChart 
+                                        cx="50%" 
+                                        cy="50%" 
+                                        innerRadius="30%" 
+                                        outerRadius="100%" 
+                                        barSize={12} 
+                                        data={teamChartData}
+                                        startAngle={180}
+                                        endAngle={0}
+                                    >
+                                        <RadialBar
+                                            label={{ position: 'insideStart', fill: '#fff', fontSize: '8px', fontWeight: 'bold' }}
+                                            background
+                                            dataKey="value"
+                                            cornerRadius={10}
+                                        />
+                                        <PolarAngleAxis type="number" domain={[0, 20]} angleAxisId={0} tick={false} />
+                                    </RadialBarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="w-full space-y-2 mt-4">
+                                {teamChartData.map((t: any) => (
+                                    <div key={t.name} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="size-2 rounded-full" style={{ backgroundColor: t.fill }} />
+                                            <span className="text-[10px] font-bold uppercase truncate max-w-[120px]">{t.name}</span>
+                                        </div>
+                                        <span className="text-[10px] font-black">{t.value} Units</span>
+                                    </div>
+                                ))}
+                                {teamChartData.length === 0 && <p className="text-center text-xs text-muted-foreground italic">No tactical units identified.</p>}
                             </div>
                         </Card>
                     </div>
