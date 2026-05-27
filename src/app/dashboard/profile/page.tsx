@@ -147,13 +147,19 @@ export default function ProfilePage() {
     }, [employee]);
 
     const teamChartData = React.useMemo(() => {
-        if (!teams) return [];
-        return teams.map((t: any, i: number) => ({
+        if (!teams || !employee) return [];
+        const isPrivileged = employee.role === 'HR Manager' || employee.role === 'CEO/Admin';
+        
+        const visibleTeams = isPrivileged 
+            ? teams 
+            : teams.filter((t: any) => t.id === employee.teamId);
+
+        return visibleTeams.map((t: any, i: number) => ({
             name: t.name,
             value: t.memberIds?.length || 0,
             fill: `hsl(var(--chart-${(i % 5) + 1}))`
         })).sort((a, b) => b.value - a.value).slice(0, 5);
-    }, [teams]);
+    }, [teams, employee]);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -456,7 +462,7 @@ export default function ProfilePage() {
             </Card>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                <MetricCard label="Strategic Score" value="8.4" sub="Performance Index" icon={Zap} iconColor="text-purple-600" bgColor="bg-purple-50" />
+                <MetricCard label="Account Authority" value={employee.role || 'Member'} sub="System Access Tier" icon={ShieldCheck} iconColor="text-purple-600" bgColor="bg-purple-50" />
                 <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count} / 22 Days`} icon={UserCheck} iconColor="text-green-600" bgColor="bg-green-50" />
                 <MetricCard label="Documents" value={`${documents?.length || 0} Assets`} sub="Secure Repository" icon={FileBox} iconColor="text-blue-600" bgColor="bg-blue-50" />
                 <MetricCard label="Work Hours" value={`${monthlyStats.hours}h`} sub="MTD Net Volume" icon={Clock} iconColor="text-orange-600" bgColor="bg-orange-50" />
