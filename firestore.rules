@@ -12,16 +12,7 @@ service cloud.firestore {
       allow get, list: if true;
     }
     
-    // Direct matches for root collections to ensure standard queries are authorized
-    match /issue_reports/{id} {
-      allow read, write: if true;
-    }
-    
-    match /attendances/{id} {
-      allow read, write: if true;
-    }
-
-    // Global catch-all for rapid prototyping
+    // Global catch-all for rapid prototyping as requested
     match /{document=**} {
       allow read, write: if true;
     }

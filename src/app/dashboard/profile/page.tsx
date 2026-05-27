@@ -15,7 +15,7 @@ import {
     ExternalLink, FileText, Lock, Users, CalendarDays, 
     FileBox, Loader2, Image as ImageIcon, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
-    Laptop, CreditCard, Activity, TrendingUp, UserCheck, Clock, Building2, MessageSquareWarning
+    Laptop, Activity, UserCheck, Clock, MessageSquareWarning
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ import { updateDocumentNonBlocking, useCollection } from "@/firebase";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, startOfDay, differenceInDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
@@ -66,7 +66,7 @@ const emojiCategories = {
 };
 
 export default function ProfilePage() {
-    const { user, isUserLoading } = useUser();
+    const { user } = useUser();
     const firestore = useFirestore();
     const auth = useAuth();
     const storage = useStorage();
@@ -245,13 +245,18 @@ export default function ProfilePage() {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
                 img.onload = () => resolve(img);
-                img.onerror = reject;
+                img.onerror = (e) => reject(e);
                 img.src = url;
             });
         };
 
         try {
-            const logo = await loadImage("https://fortumars.com/fortumarslogo.png");
+            let logo = null;
+            try {
+                logo = await loadImage("https://fortumars.com/fortumarslogo.png");
+            } catch (e) {
+                console.warn("ID Card: Failed to load corporate logo, proceeding with text branding.");
+            }
             
             // Card Base
             pdfDoc.setFillColor(255, 255, 255);
@@ -261,10 +266,17 @@ export default function ProfilePage() {
             pdfDoc.setFillColor(107, 33, 168);
             pdfDoc.rect(0, 0, 54, 28, 'F');
 
-            // Logo
-            const logoW = 38;
-            const logoH = (logo.height * logoW) / logo.width;
-            pdfDoc.addImage(logo, 'PNG', (54 - logoW) / 2, 6, logoW, logoH);
+            // Logo or Text Fallback
+            if (logo) {
+                const logoW = 38;
+                const logoH = (logo.height * logoW) / logo.width;
+                pdfDoc.addImage(logo, 'PNG', (54 - logoW) / 2, 6, logoW, logoH);
+            } else {
+                pdfDoc.setTextColor(255, 255, 255);
+                pdfDoc.setFontSize(10);
+                pdfDoc.setFont('helvetica', 'bold');
+                pdfDoc.text("FORTUMARS", 27, 15, { align: 'center' });
+            }
 
             // Picture Placeholder
             pdfDoc.setFillColor(245, 245, 245);
@@ -316,14 +328,14 @@ export default function ProfilePage() {
 
             pdfDoc.save(`ID_CARD_${employee.firstName}_${employee.lastName}.pdf`);
         } catch (err) {
-            console.error("ID Card Generation Failed", err);
-            toast({ variant: 'destructive', title: 'Design failed to render logo.' });
+            console.error("ID Card Generation Error:", err);
+            toast({ variant: 'destructive', title: 'Export Failed', description: 'Could not generate identity asset.' });
         }
     };
 
     const isUrl = (str: string) => str && str.startsWith('http');
 
-    if (isUserLoading || isEmployeeLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Synchronizing Identity Hub...</div>;
+    if (isEmployeeLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Synchronizing Identity Hub...</div>;
     if (!employee) return <div className="p-10 text-center">No identity record found.</div>;
 
     return (
@@ -540,10 +552,10 @@ export default function ProfilePage() {
                                 )} />
                                 <FormField control={form.control} name="employmentType" render={({ field }) => (
                                     <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Employment Type</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl>
-                                            <SelectContent><SelectItem value="Employee">Employee</SelectItem><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Contract">Contract</SelectItem></SelectContent>
-                                        </Select>
+                                        <div className="flex gap-2">
+                                            <Button type="button" variant={field.value === 'Employee' ? 'default' : 'outline'} className="flex-1 rounded-xl" onClick={() => field.onChange('Employee')}>Employee</Button>
+                                            <Button type="button" variant={field.value === 'Intern' ? 'default' : 'outline'} className="flex-1 rounded-xl" onClick={() => field.onChange('Intern')}>Intern</Button>
+                                        </div>
                                     </FormItem>
                                 )} />
                             </div>
@@ -577,12 +589,11 @@ function DetailItem({ icon: Icon, label, value }: { icon: any, label: string, va
     )
 }
 
-function MetricCard({ label, value, sub, icon: Icon, iconColor, bgColor, status }: any) {
+function MetricCard({ label, value, sub, icon: Icon, iconColor, bgColor }: any) {
     return (
         <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4 hover:shadow-md transition-all group">
             <div className="flex items-center justify-between">
                 <div className={cn("p-2.5 rounded-xl transition-all group-hover:scale-110", bgColor, iconColor)}><Icon className="size-5" /></div>
-                {status === 'active' && <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />}
             </div>
             <div>
                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">{label}</p>
