@@ -316,15 +316,16 @@ export default function ProfilePage() {
             // Contact details
             pdfDoc.setTextColor(80);
             pdfDoc.setFontSize(4.5);
-            pdfDoc.text(`ID: ${employee.id.slice(0, 8).toUpperCase()}`, 10, 77);
-            pdfDoc.text(`EMAIL: ${employee.email || 'N/A'}`, 10, 80);
+            pdfDoc.text(`EMPLOYMENT: ${employee.employmentType?.toUpperCase() || 'EMPLOYEE'}`, 10, 76.5);
+            pdfDoc.text(`PHONE: ${employee.phoneNumber || 'N/A'}`, 10, 79);
+            pdfDoc.text(`EMAIL: ${employee.email || 'N/A'}`, 10, 81.5);
 
             // Brand Footer
             pdfDoc.setFillColor(107, 33, 168);
-            pdfDoc.rect(0, 82, 54, 4, 'F');
+            pdfDoc.rect(0, 83, 54, 3, 'F');
             pdfDoc.setTextColor(255, 255, 255);
             pdfDoc.setFontSize(3.2);
-            pdfDoc.text("FORTUMARS AI TECHNOLOGIES & BUSINESS SOLUTIONS", 27, 84.5, { align: 'center' });
+            pdfDoc.text("FORTUMARS AI TECHNOLOGIES & BUSINESS SOLUTIONS", 27, 85, { align: 'center' });
 
             pdfDoc.save(`ID_CARD_${employee.firstName}_${employee.lastName}.pdf`);
         } catch (err) {
