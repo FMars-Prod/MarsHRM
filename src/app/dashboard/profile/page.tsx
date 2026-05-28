@@ -18,7 +18,7 @@ import {
     Laptop, Activity, UserCheck, Clock, MessageSquareWarning,
     PieChart, Zap
 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
@@ -36,7 +36,7 @@ import Link from "next/link";
 import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import jsPDF from "jspdf";
+import jspdf from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
@@ -80,7 +80,7 @@ export default function ProfilePage() {
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
 
     const docsQuery = useMemoFirebase(() => user ? collection(firestore, `users/${user.uid}/documents`) : null, [user, firestore]);
-    const { data: documents } = useCollection(documentsQuery);
+    const { data: documents } = useCollection(docsQuery);
 
     const assetsQuery = useMemoFirebase(() => user ? query(collection(firestore, "assets"), where("assignedToId", "==", user.uid)) : null, [user, firestore]);
     const { data: assignedAssets } = useCollection(assetsQuery);
@@ -237,7 +237,7 @@ export default function ProfilePage() {
 
     const handleDownloadIdCard = async () => {
         if (!employee) return;
-        const pdfDoc = new jsPDF({
+        const pdfDoc = new jspdf({
             orientation: 'p',
             unit: 'mm',
             format: [54, 86]
@@ -347,7 +347,7 @@ export default function ProfilePage() {
                 </h1>
             </div>
 
-            <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden">
                 <CardContent className="p-8 md:p-12">
                     <div className="flex flex-col lg:flex-row gap-12 items-center lg:items-start text-center lg:text-left">
                         <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>

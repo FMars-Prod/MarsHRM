@@ -8,7 +8,3 @@ export const firebaseConfig = {
   "measurementId": "",
   "messagingSenderId": "1071692184412"
 };
-
-// Google Maps API Key - Required for Geofencing & Interactive Maps
-// Enabled APIs: Maps JavaScript API, Geocoding API
-export const mapsApiKey = "AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI";
