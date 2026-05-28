@@ -148,6 +148,7 @@ export default function ProfilePage() {
         if (!teams || !employee) return [];
         const isPrivileged = employee.role === 'HR Manager' || employee.role === 'CEO/Admin';
         
+        // Vertical Oversight Filtering
         const visibleTeams = isPrivileged 
             ? teams 
             : teams.filter((t: any) => t.id === employee.teamId);
@@ -455,7 +456,7 @@ export default function ProfilePage() {
                         </div>
                     </div>
                 </CardContent>
-            </Card>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                 <MetricCard label="Account Authority" value={employee.role || 'Member'} sub="System Access Tier" icon={ShieldCheck} iconColor="text-purple-600" bgColor="bg-purple-50" />

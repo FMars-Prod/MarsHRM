@@ -10,4 +10,4 @@ export const firebaseConfig = {
 
 // PLACE YOUR GOOGLE MAPS API KEY HERE
 // Required APIs: Maps JavaScript API, Geocoding API
-export const mapsApiKey = "";
+export const mapsApiKey = "AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI";

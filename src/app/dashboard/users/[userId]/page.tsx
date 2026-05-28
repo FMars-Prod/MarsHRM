@@ -49,7 +49,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const { data: teamData } = useDoc<any>(teamDocRef);
 
   const docsQuery = useMemoFirebase(() => userId ? collection(firestore, `users/${userId}/documents`) : null, [userId, firestore]);
-  const { data: documents } = useCollection(docsQuery);
+  const { data: documents } = useCollection(documentsQuery);
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);

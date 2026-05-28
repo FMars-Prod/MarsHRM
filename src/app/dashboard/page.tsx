@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
