@@ -148,7 +148,6 @@ export default function ProfilePage() {
         if (!teams || !employee) return [];
         const isPrivileged = employee.role === 'HR Manager' || employee.role === 'CEO/Admin';
         
-        // Vertical Oversight Filtering
         const visibleTeams = isPrivileged 
             ? teams 
             : teams.filter((t: any) => t.id === employee.teamId);
@@ -272,15 +271,12 @@ export default function ProfilePage() {
                 console.warn("ID Card: Failed to load corporate logo, proceeding with text branding.");
             }
             
-            // Card Base
             pdfDoc.setFillColor(255, 255, 255);
             pdfDoc.rect(0, 0, 54, 86, 'F');
 
-            // Header Section
             pdfDoc.setFillColor(107, 33, 168);
             pdfDoc.rect(0, 0, 54, 28, 'F');
 
-            // Logo or Text Fallback
             if (logo) {
                 const logoW = 38;
                 const logoH = (logo.height * logoW) / logo.width;
@@ -292,49 +288,41 @@ export default function ProfilePage() {
                 pdfDoc.text("FORTUMARS", 27, 15, { align: 'center' });
             }
 
-            // Picture Placeholder
             pdfDoc.setFillColor(245, 245, 245);
             pdfDoc.circle(27, 44, 12, 'F');
             pdfDoc.setDrawColor(107, 33, 168);
             pdfDoc.setLineWidth(0.5);
             pdfDoc.circle(27, 44, 12.5, 'S');
 
-            // Initials
             pdfDoc.setTextColor(107, 33, 168);
             pdfDoc.setFontSize(14);
             pdfDoc.setFont('helvetica', 'bold');
             pdfDoc.text(`${employee.firstName[0]}${employee.lastName[0]}`, 27, 47, { align: 'center' });
 
-            // Name
             pdfDoc.setTextColor(0, 0, 0);
             pdfDoc.setFontSize(10);
             pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 62, { align: 'center' });
 
-            // Designation
             pdfDoc.setFontSize(6.5);
             pdfDoc.setFont('helvetica', 'bold');
             pdfDoc.setTextColor(107, 33, 168);
             pdfDoc.text(employee.jobTitle?.toUpperCase() || 'FLEET MEMBER', 27, 66, { align: 'center' });
 
-            // Date of Join
             pdfDoc.setFontSize(5);
             pdfDoc.setFont('helvetica', 'normal');
             pdfDoc.setTextColor(140);
             const joinedDate = employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A';
             pdfDoc.text(`JOINED: ${joinedDate}`, 27, 70, { align: 'center' });
 
-            // Divider
             pdfDoc.setDrawColor(230, 230, 230);
             pdfDoc.line(10, 73, 44, 73);
 
-            // Contact details
             pdfDoc.setTextColor(80);
             pdfDoc.setFontSize(4.5);
             pdfDoc.text(`EMPLOYMENT: ${employee.employmentType?.toUpperCase() || 'EMPLOYEE'}`, 10, 76.5);
             pdfDoc.text(`PHONE: ${employee.phoneNumber || 'N/A'}`, 10, 79);
             pdfDoc.text(`EMAIL: ${employee.email || 'N/A'}`, 10, 81.5);
 
-            // Brand Footer
             pdfDoc.setFillColor(107, 33, 168);
             pdfDoc.rect(0, 83, 54, 3, 'F');
             pdfDoc.setTextColor(255, 255, 255);
@@ -456,7 +444,7 @@ export default function ProfilePage() {
                         </div>
                     </div>
                 </CardContent>
-            </div>
+            </Card>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                 <MetricCard label="Account Authority" value={employee.role || 'Member'} sub="System Access Tier" icon={ShieldCheck} iconColor="text-purple-600" bgColor="bg-purple-50" />
