@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -36,6 +37,7 @@ import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differe
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
+import autoTable from 'jspdf-autotable';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
 const profileFormSchema = z.object({
