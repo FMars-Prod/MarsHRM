@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -34,7 +33,7 @@ export default function BranchesPage() {
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
     const [editingBranch, setEditingBranch] = React.useState<Branch | null>(null);
     const [branchName, setBranchName] = React.useState("");
-    const [location, setLocation] = React.useState({ lat: 13.0827, lng: 80.2707, address: "" }); // Chennai Default
+    const [location, setLocation] = React.useState({ lat: 13.0827, lng: 80.2707, address: "" }); // Default: Precise Coordinate 1
     const [radius, setRadius] = React.useState(0.5);
 
     const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches'), orderBy('name', 'asc')), [firestore]);

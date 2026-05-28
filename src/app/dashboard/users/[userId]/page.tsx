@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -56,7 +55,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
 
-  // Permission Gate: Only Admin/HR can view other profiles.
+  // Vertical Oversight Gate: Only Admin/HR can view other profiles.
   React.useEffect(() => {
     if (!isUserLoading && currentUser && currentUserData) {
         const isSelf = currentUser.uid === userId;

@@ -8,4 +8,6 @@ export const firebaseConfig = {
   "messagingSenderId": "1071692184412"
 };
 
+// PLACE YOUR GOOGLE MAPS API KEY HERE
+// Required APIs: Maps JavaScript API, Geocoding API
 export const mapsApiKey = "";

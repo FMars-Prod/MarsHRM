@@ -78,7 +78,8 @@ export function useDoc<T = any>(
           setError(contextualError)
           errorEmitter.emit('permission-error', contextualError);
         } else {
-          console.error(`Firestore [${error.code}]: ${error.message}`, error);
+          // Log non-permission errors normally
+          console.error(`Firestore [${error.code}]: ${error.message}. Diagnostic Link: https://console.firebase.google.com/project/${memoizedDocRef.firestore.app.options.projectId}/firestore/indexes`, error);
           setError(error);
         }
         setData(null)
