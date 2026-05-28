@@ -44,10 +44,6 @@ const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
     phoneNumber: z.string().min(1, "Phone is required"),
-    jobTitle: z.string().min(1, "Job title is required"),
-    department: z.string().min(1, "Department is required"),
-    branch: z.string().min(1, "Branch is required"),
-    shiftType: z.string().min(1, "Shift Type is required"),
     password: z.string().optional(),
     confirmPassword: z.string().optional(),
 }).refine(data => {
@@ -167,10 +163,6 @@ export default function ProfilePage() {
             firstName: "", 
             lastName: "", 
             phoneNumber: "",
-            jobTitle: "",
-            department: "",
-            branch: "Chennai HQ", 
-            shiftType: "General Shift", 
             password: "", 
             confirmPassword: "" 
         },
@@ -182,10 +174,6 @@ export default function ProfilePage() {
                 firstName: employee.firstName || '', 
                 lastName: employee.lastName || '', 
                 phoneNumber: employee.phoneNumber || '',
-                jobTitle: employee.jobTitle || '',
-                department: employee.department || '',
-                branch: employee.branch || 'Chennai HQ',
-                shiftType: employee.shiftType || 'General Shift',
                 password: '', 
                 confirmPassword: '' 
             });
@@ -359,7 +347,7 @@ export default function ProfilePage() {
                 </h1>
             </div>
 
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+            <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
                 <CardContent className="p-8 md:p-12">
                     <div className="flex flex-col lg:flex-row gap-12 items-center lg:items-start text-center lg:text-left">
                         <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>
