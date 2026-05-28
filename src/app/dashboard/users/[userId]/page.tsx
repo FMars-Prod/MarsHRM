@@ -57,7 +57,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
 
   // Permission Gate: Only Admin/HR can view other profiles.
-  // Exception: Users can view their own profile via this route (though /profile is preferred).
   React.useEffect(() => {
     if (!isUserLoading && currentUser && currentUserData) {
         const isSelf = currentUser.uid === userId;
