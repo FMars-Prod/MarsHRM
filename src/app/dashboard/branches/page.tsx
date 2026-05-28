@@ -40,8 +40,8 @@ export default function BranchesPage() {
     const { data: branches, isLoading } = useCollection<Branch>(branchesQuery);
 
     const handleSave = () => {
-        if (!branchName || !location.lat || !location.lng) {
-            toast({ variant: 'destructive', title: 'Missing parameters' });
+        if (!branchName || isNaN(location.lat) || isNaN(location.lng)) {
+            toast({ variant: 'destructive', title: 'Missing parameters', description: 'Please ensure valid coordinates are set.' });
             return;
         }
 
@@ -81,31 +81,61 @@ export default function BranchesPage() {
                             <Plus className="mr-2 size-4" /> Add Branch
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="rounded-3xl sm:max-w-2xl p-0 overflow-hidden">
-                        <DialogHeader className="p-8 pb-4">
-                            <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Branch Registration</DialogTitle>
-                            <DialogDescription>Define tactical boundaries for shift verification.</DialogDescription>
-                        </DialogHeader>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-                            <div className="p-8 space-y-6">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Branch Name</Label>
-                                    <Input value={branchName} onChange={e => setBranchName(e.target.value)} placeholder="e.g., Chennai HQ" className="rounded-xl h-11" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Verification Radius (KM)</Label>
-                                    <Input type="number" step="0.1" value={radius} onChange={e => setRadius(parseFloat(e.target.value))} className="rounded-xl h-11" />
-                                </div>
-                                <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                                    <Label className="text-[9px] font-black uppercase text-muted-foreground mb-2 block">Precise Coordinates</Label>
-                                    <div className="grid grid-cols-2 gap-2 font-mono text-[10px] font-bold">
-                                        <div className="p-2 bg-white rounded-lg">LAT: {location.lat.toFixed(4)}</div>
-                                        <div className="p-2 bg-white rounded-lg">LNG: {location.lng.toFixed(4)}</div>
+                    <DialogContent className="rounded-[2.5rem] sm:max-w-4xl p-0 overflow-hidden border-none shadow-2xl">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                            <div className="lg:col-span-5 p-10 space-y-8 bg-white h-full overflow-y-auto">
+                                <DialogHeader className="text-left">
+                                    <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Branch Registry</DialogTitle>
+                                    <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Define tactical boundaries</DialogDescription>
+                                </DialogHeader>
+
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Branch Designation</Label>
+                                        <Input value={branchName} onChange={e => setBranchName(e.target.value)} placeholder="e.g., Chennai HQ" className="rounded-xl h-11 border-none ring-1 ring-border/50 bg-muted/20" />
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                                            <MapPin className="size-3" /> Manual Coordinate Override
+                                        </Label>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <span className="text-[9px] font-black text-muted-foreground/60 uppercase ml-1">Latitude</span>
+                                                <Input 
+                                                    type="number" 
+                                                    step="any" 
+                                                    value={location.lat} 
+                                                    onChange={e => setLocation({...location, lat: parseFloat(e.target.value) || 0})} 
+                                                    className="h-11 rounded-xl font-mono text-xs font-bold bg-muted/20 border-none ring-1 ring-border/50" 
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <span className="text-[9px] font-black text-muted-foreground/60 uppercase ml-1">Longitude</span>
+                                                <Input 
+                                                    type="number" 
+                                                    step="any" 
+                                                    value={location.lng} 
+                                                    onChange={e => setLocation({...location, lng: parseFloat(e.target.value) || 0})} 
+                                                    className="h-11 rounded-xl font-mono text-xs font-bold bg-muted/20 border-none ring-1 ring-border/50" 
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Verification Radius (KM)</Label>
+                                        <Input type="number" step="0.1" value={radius} onChange={e => setRadius(parseFloat(e.target.value))} className="rounded-xl h-11 border-none ring-1 ring-border/50 bg-muted/20" />
+                                        <p className="text-[9px] text-muted-foreground italic">Target precision: {radius * 1000} meters</p>
                                     </div>
                                 </div>
-                                <Button onClick={handleSave} className="w-full h-12 rounded-full font-black uppercase tracking-widest mt-4">Confirm Registry</Button>
+
+                                <div className="pt-6">
+                                    <Button onClick={handleSave} className="w-full h-14 rounded-full font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Registry</Button>
+                                </div>
                             </div>
-                            <div className="h-[400px] lg:h-auto bg-muted">
+                            
+                            <div className="lg:col-span-7 h-[400px] lg:h-auto bg-muted">
                                 <InteractiveMap 
                                     initialCenter={{ lat: location.lat, lng: location.lng }} 
                                     onLocationSelect={setLocation} 
@@ -136,6 +166,10 @@ export default function BranchesPage() {
                             <div className="flex items-start gap-3">
                                 <MapPin className="size-3.5 text-muted-foreground mt-0.5 shrink-0" />
                                 <p className="text-[11px] font-medium leading-relaxed line-clamp-2">{branch.address || "No precise address registered."}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 font-mono text-[9px] font-bold text-muted-foreground bg-muted/20 p-2 rounded-xl border border-dashed border-border/50">
+                                <div>LAT: {branch.latitude.toFixed(4)}</div>
+                                <div>LNG: {branch.longitude.toFixed(4)}</div>
                             </div>
                             <div className="pt-4 border-t border-dashed border-border/50 flex items-center justify-between">
                                 <div className="flex gap-2">
