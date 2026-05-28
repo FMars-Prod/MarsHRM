@@ -47,7 +47,6 @@ const profileFormSchema = z.object({
     department: z.string().min(1, "Department is required"),
     branch: z.string().min(1, "Branch is required"),
     shiftType: z.string().min(1, "Shift Type is required"),
-    employmentType: z.string().min(1, "Employment type is required"),
     password: z.string().optional(),
     confirmPassword: z.string().optional(),
 }).refine(data => {
@@ -171,7 +170,6 @@ export default function ProfilePage() {
             department: "",
             branch: "Chennai HQ", 
             shiftType: "General Shift", 
-            employmentType: "Employee",
             password: "", 
             confirmPassword: "" 
         },
@@ -187,7 +185,6 @@ export default function ProfilePage() {
                 department: employee.department || '',
                 branch: employee.branch || 'Chennai HQ',
                 shiftType: employee.shiftType || 'General Shift',
-                employmentType: employee.employmentType || 'Employee',
                 password: '', 
                 confirmPassword: '' 
             });
@@ -605,14 +602,14 @@ export default function ProfilePage() {
                                 <FormField control={form.control} name="phoneNumber" render={({ field }) => (
                                     <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Phone Number</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                                 )} />
-                                <FormField control={form.control} name="employmentType" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Employment Type</FormLabel>
-                                        <div className="flex gap-2">
-                                            <Button type="button" variant={field.value === 'Employee' ? 'default' : 'outline'} className="flex-1 rounded-xl" onClick={() => field.onChange('Employee')}>Employee</Button>
-                                            <Button type="button" variant={field.value === 'Intern' ? 'default' : 'outline'} className="flex-1 rounded-xl" onClick={() => field.onChange('Intern')}>Intern</Button>
-                                        </div>
-                                    </FormItem>
-                                )} />
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase opacity-60">Employment Status</Label>
+                                    <div className="p-3 bg-muted/30 rounded-xl border border-dashed text-[10px] font-bold uppercase text-muted-foreground flex items-center justify-between">
+                                        {employee.employmentType || "Employee"}
+                                        <Lock className="size-3 opacity-40" />
+                                    </div>
+                                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest italic">Contact HR to re-classify status.</p>
+                                </div>
                             </div>
                             <Separator />
                             <div className="grid grid-cols-2 gap-4">

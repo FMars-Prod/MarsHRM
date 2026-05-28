@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Ticket, CheckCircle2, Clock, Activity, ShieldCheck, UserCheck } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Ticket, CheckCircle2, Clock, Activity, ShieldCheck, UserCheck, Lock } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
@@ -86,6 +86,7 @@ export default function TicketsPage() {
   }
 
   const handleUpdateStatus = (ticketId: string, newStatus: TicketStatus) => {
+    if (!isAdminOrHR) return;
     const ticketRef = doc(firestore, 'issue_reports', ticketId);
     const updateData: any = {
       status: newStatus,
@@ -101,9 +102,19 @@ export default function TicketsPage() {
   };
 
   const handleDeleteTicket = (ticketId: string) => {
-      deleteDocumentNonBlocking(doc(firestore, 'issue_reports', ticketId));
-      toast({ title: "Ticket Record Deleted" });
-      setSelectedTicket(null);
+      const ticket = tickets?.find(t => t.id === ticketId);
+      if (!ticket) return;
+
+      const isOwner = ticket.employeeId === user?.uid;
+      const isResolved = ticket.status === 'Resolved';
+
+      if ((isOwner && isResolved) || isAdminOrHR) {
+          deleteDocumentNonBlocking(doc(firestore, 'issue_reports', ticketId));
+          toast({ title: "Ticket Record Deleted" });
+          setSelectedTicket(null);
+      } else {
+          toast({ variant: 'destructive', title: 'Action Denied', description: 'Tickets can only be deleted once verified as Resolved.' });
+      }
   };
 
   return (
@@ -174,7 +185,7 @@ export default function TicketsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setSelectedTicket(t)}><Ticket className="mr-2 size-4"/> View Ticket</DropdownMenuItem>
                         
-                        {isAdminOrHR && (
+                        {isAdminOrHR ? (
                             <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuLabel className="text-[10px] font-black uppercase">Management Controls</DropdownMenuLabel>
@@ -187,9 +198,13 @@ export default function TicketsPage() {
                                     </DropdownMenuSubContent>
                                 </DropdownMenuSub>
                             </>
+                        ) : (
+                            <DropdownMenuItem className="opacity-40 grayscale pointer-events-none text-[9px] font-black uppercase tracking-widest">
+                                <Lock className="mr-2 size-3"/> HR Managed Sector
+                            </DropdownMenuItem>
                         )}
 
-                        {(isAdminOrHR || t.employeeId === user?.uid) && t.status === 'Resolved' && (
+                        {(isAdminOrHR || (t.employeeId === user?.uid && t.status === 'Resolved')) && (
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 size-4" /> Purge Record</DropdownMenuItem>
