@@ -84,7 +84,7 @@ export default function ProfilePage() {
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
 
     const docsQuery = useMemoFirebase(() => user ? collection(firestore, `users/${user.uid}/documents`) : null, [user, firestore]);
-    const { data: documents } = useCollection(docsQuery);
+    const { data: documents } = useCollection(documentsQuery);
 
     const assetsQuery = useMemoFirebase(() => user ? query(collection(firestore, "assets"), where("assignedToId", "==", user.uid)) : null, [user, firestore]);
     const { data: assignedAssets } = useCollection(assetsQuery);
@@ -333,8 +333,8 @@ export default function ProfilePage() {
 
             pdfDoc.save(`ID_CARD_${employee.firstName}_${employee.lastName}.pdf`);
         } catch (err) {
-            console.error("ID Card Generation Error:", err);
-            toast({ variant: 'destructive', title: 'Export Failed', description: 'Could not generate identity asset.' });
+            console.error("ID Card Generation Failed", err);
+            toast({ variant: 'destructive', title: 'Design failed to render.' });
         }
     };
 
@@ -616,7 +616,7 @@ export default function ProfilePage() {
                 </DialogContent>
             </Dialog>
         </div>
-    )
+    );
 }
 
 function DetailItem({ icon: Icon, label, value }: { icon: any, label: string, value: string }) {
@@ -628,7 +628,7 @@ function DetailItem({ icon: Icon, label, value }: { icon: any, label: string, va
                 <p className="text-xs font-bold text-foreground/80">{value}</p>
             </div>
         </div>
-    )
+    );
 }
 
 function MetricCard({ label, value, sub, icon: Icon, iconColor, bgColor }: any) {
@@ -643,7 +643,7 @@ function MetricCard({ label, value, sub, icon: Icon, iconColor, bgColor }: any) 
                 <p className="text-[10px] font-medium text-muted-foreground mt-0.5">{sub}</p>
             </div>
         </Card>
-    )
+    );
 }
 
 function SectionHeader({ title, href }: { title: string, href?: string }) {
@@ -652,7 +652,7 @@ function SectionHeader({ title, href }: { title: string, href?: string }) {
             <h3 className="text-xs font-black uppercase tracking-[0.15em] text-foreground/80">{title}</h3>
             {href && <Link href={href} className="text-[9px] font-black uppercase tracking-widest text-primary hover:underline underline-offset-4">Browse Vault</Link>}
         </div>
-    )
+    );
 }
 
 function TimelineItem({ icon: Icon, color, title, time, desc }: any) {
@@ -680,7 +680,7 @@ function DocRow({ title, date, link }: any) {
             </div>
             <ExternalLink className="size-3 text-muted-foreground/40 group-hover:text-primary transition-colors" />
         </Link>
-    )
+    );
 }
 
 function AssetRow({ image, title, category }: any) {
@@ -695,7 +695,7 @@ function AssetRow({ image, title, category }: any) {
             </div>
             <Badge variant="outline" className="rounded-full text-[8px] font-black uppercase tracking-widest text-green-600 bg-green-50 border-none px-2.5">In Use</Badge>
         </div>
-    )
+    );
 }
 
 function ExperienceBadge({ label, value, icon: Icon, color }: any) {
@@ -709,5 +709,5 @@ function ExperienceBadge({ label, value, icon: Icon, color }: any) {
                 <p className="text-xs font-black whitespace-nowrap">{value}</p>
             </div>
         </div>
-    )
+    );
 }
