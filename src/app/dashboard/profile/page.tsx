@@ -1,10 +1,9 @@
-
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAuth, useUser, useStorage } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
@@ -12,11 +11,11 @@ import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
     Edit, MapPin, Camera, CheckCircle2, ShieldCheck, 
-    ExternalLink, FileText, Lock, Users, CalendarDays, 
+    ExternalLink, FileText, Lock, CalendarDays, 
     FileBox, Loader2, Image as ImageIcon, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
     Laptop, Activity, UserCheck, Clock, MessageSquareWarning,
-    PieChart, Zap
+    Zap
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -121,9 +120,9 @@ export default function ProfilePage() {
     }, [todaysAttendance]);
 
     const branchName = React.useMemo(() => {
-        if (!branches || !employee?.branchId) return "Unassigned";
+        if (!branches || !employee?.branchId) return "Unassigned Sector";
         const b = branches.find((b: any) => b.id === employee.branchId);
-        return b ? b.name : "Unassigned";
+        return b ? b.name : "Unassigned Sector";
     }, [branches, employee?.branchId]);
 
     const monthlyStats = React.useMemo(() => {

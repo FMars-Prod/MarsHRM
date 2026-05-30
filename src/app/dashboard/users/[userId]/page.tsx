@@ -1,23 +1,21 @@
-
 'use client';
 
 import * as React from 'react';
 import { use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
-import { useFirestore, useMemoFirebase, useCollection, useDoc, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { useFirestore, useMemoFirebase, useCollection, useDoc, useUser } from '@/firebase';
 import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth, differenceInDays } from 'date-fns';
-import { Grid, ShieldCheck, Calendar as CalendarIcon, FileText, ShieldAlert, Briefcase, Download, Save, ExternalLink, Clock, Users, MapPin, CalendarDays, FileBox, Mail, Phone, Building2 } from 'lucide-react';
+import { Grid, ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Link from "next/link";
@@ -50,22 +48,18 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const { data: branches } = useCollection<any>(branchesQuery);
 
   const branchName = React.useMemo(() => {
-    if (!branches || !user?.branchId) return "Unassigned";
+    if (!branches || !user?.branchId) return "Unassigned Sector";
     const b = branches.find((b: any) => b.id === user.branchId);
-    return b ? b.name : "Unassigned";
+    return b ? b.name : "Unassigned Sector";
   }, [branches, user?.branchId]);
 
-  const teamDocRef = useMemoFirebase(() => user?.teamId ? doc(firestore, "teams", user.teamId) : null, [user, firestore]);
-  const { data: teamData } = useDoc<any>(teamDocRef);
-
   const docsQuery = useMemoFirebase(() => userId ? collection(firestore, `users/${userId}/documents`) : null, [userId, firestore]);
-  const { data: documents } = useCollection(documentsQuery);
+  const { data: documents } = useCollection(docsQuery);
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
 
-  // Vertical Oversight Gate: Only Admin/HR can view other profiles.
   React.useEffect(() => {
     if (!isUserLoading && currentUser && currentUserData) {
         const isSelf = currentUser.uid === userId;
@@ -155,7 +149,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             ['Leaves (Month)', stats.leaves], 
             ['Total Reports (Recent)', stats.reports],
             ['Documents Submitted', documents?.length || 0],
-            ['Employment Type', user.employmentType || 'Standard']
+            ['Employment Status', user.employmentType || 'Employee']
         ],
         theme: 'striped',
         headStyles: { fillColor: [107, 33, 168] }
@@ -347,7 +341,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
               <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
                   <CardHeader className="p-8 border-b bg-muted/10">
                       <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <Activity className="size-4" /> MTD Performance
+                        <Clock className="size-4" /> MTD Performance
                       </CardTitle>
                   </CardHeader>
                   <CardContent className="p-8 space-y-8">
@@ -355,7 +349,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                           <p className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest">Net Work Hours</p>
                           <div className="flex items-baseline gap-2">
                               <span className="text-4xl font-black tracking-tighter text-foreground">{stats.workHours}</span>
-                              <span className="text-sm font-bold text-muted-foreground uppercase">HRS</span>
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase">HRS</span>
                           </div>
                       </div>
                       <div className="grid grid-cols-2 gap-6">
