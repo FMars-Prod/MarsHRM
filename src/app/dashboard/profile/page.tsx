@@ -15,8 +15,7 @@ import {
     ExternalLink, FileText, Lock, CalendarDays, 
     FileBox, Loader2, Image as ImageIcon, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
-    Laptop, Activity, UserCheck, Clock, MessageSquareWarning,
-    Zap
+    Clock, Activity, UserCheck, Zap
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -428,7 +427,7 @@ export default function ProfilePage() {
                     <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-dashed pt-8 border-border/50">
                         <div className="flex -space-x-4">
                             <ExperienceBadge label="Authority" value={employee.role || 'Member'} icon={ShieldCheck} color="bg-indigo-600" />
-                            <ExperienceBadge label="Commenced" value={joinDate} icon={CalendarDays} color="bg-emerald-600" />
+                            <ExperienceBadge label="Commenced" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} icon={CalendarDays} color="bg-emerald-600" />
                             <ExperienceBadge label="Fleet Tenure" value={experience} icon={Clock} color="bg-primary" />
                         </div>
                         <div className="flex gap-4">
@@ -450,7 +449,7 @@ export default function ProfilePage() {
                 <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count} / 22 Days`} icon={UserCheck} iconColor="text-green-600" bgColor="bg-green-50" />
                 <MetricCard label="Documents" value={`${documents?.length || 0} Assets`} sub="Secure Repository" icon={FileBox} iconColor="text-blue-600" bgColor="bg-blue-50" />
                 <MetricCard label="Work Hours" value={`${monthlyStats.hours}h`} sub="MTD Net Volume" icon={Clock} iconColor="text-orange-600" bgColor="bg-orange-50" />
-                <MetricCard label="Support Desk" value={`${userTickets?.length || 0} Tickets`} sub="Maintenance Logs" icon={MessageSquareWarning} iconColor="text-pink-600" bgColor="bg-pink-50" />
+                <MetricCard label="Support Desk" value={`${userTickets?.length || 0} Tickets`} sub="Maintenance Logs" icon={Briefcase} iconColor="text-pink-600" bgColor="bg-pink-50" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
@@ -684,7 +683,7 @@ function AssetRow({ image, title, category }: any) {
     return (
         <div className="flex items-center gap-4 group">
             <div className="h-12 w-12 rounded-2xl overflow-hidden ring-1 ring-border/50 group-hover:ring-primary/20 transition-all shrink-0">
-                {image ? <img src={image} className="h-full w-full object-cover" alt="Asset" /> : <div className="h-full w-full bg-muted flex items-center justify-center"><Laptop className="size-4 opacity-20"/></div>}
+                {image ? <img src={image} className="h-full w-full object-cover" alt="Asset" /> : <div className="h-full w-full bg-muted flex items-center justify-center"><Clock className="size-4 opacity-20"/></div>}
             </div>
             <div className="flex-1 min-w-0">
                 <p className="font-bold text-xs truncate">{title}</p>
