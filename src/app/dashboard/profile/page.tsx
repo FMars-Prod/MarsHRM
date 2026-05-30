@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -120,9 +121,9 @@ export default function ProfilePage() {
     }, [todaysAttendance]);
 
     const branchName = React.useMemo(() => {
-        if (!branches || !employee?.branchId) return "Unassigned Sector";
+        if (!branches || !employee?.branchId) return "HQ Sector";
         const b = branches.find((b: any) => b.id === employee.branchId);
-        return b ? b.name : "Unassigned Sector";
+        return b ? b.name : "HQ Sector";
     }, [branches, employee?.branchId]);
 
     const monthlyStats = React.useMemo(() => {
@@ -427,7 +428,7 @@ export default function ProfilePage() {
                     <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-dashed pt-8 border-border/50">
                         <div className="flex -space-x-4">
                             <ExperienceBadge label="Authority" value={employee.role || 'Member'} icon={ShieldCheck} color="bg-indigo-600" />
-                            <ExperienceBadge label="Commenced" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} icon={CalendarDays} color="bg-emerald-600" />
+                            <ExperienceBadge label="Commenced" value={joinDate} icon={CalendarDays} color="bg-emerald-600" />
                             <ExperienceBadge label="Fleet Tenure" value={experience} icon={Clock} color="bg-primary" />
                         </div>
                         <div className="flex gap-4">

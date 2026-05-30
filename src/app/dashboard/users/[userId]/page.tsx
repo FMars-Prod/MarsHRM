@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -318,7 +319,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                                         <p className="text-[8px] uppercase font-black tracking-widest text-muted-foreground">Linked {format(d.uploadedAt.toDate(), 'PPP')}</p>
                                                     </div>
                                                 </div>
-                                                <Button variant="ghost" size="sm" asChild className="rounded-full text-[9px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="sm" asChild className="rounded-full font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Link href={d.link} target="_blank">Access Link <ExternalLink className="size-3 ml-1.5"/></Link>
                                                 </Button>
                                             </div>
