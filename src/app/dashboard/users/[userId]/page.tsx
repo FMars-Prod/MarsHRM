@@ -46,6 +46,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const userDocRef = useMemoFirebase(() => (userId ? doc(firestore, 'users', userId) : null), [firestore, userId]);
   const { data: user, isLoading: isUserLoading } = useDoc<any>(userDocRef);
 
+  const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
+  const { data: branches } = useCollection<any>(branchesQuery);
+
+  const branchName = React.useMemo(() => {
+    if (!branches || !user?.branchId) return "Unassigned";
+    const b = branches.find((b: any) => b.id === user.branchId);
+    return b ? b.name : "Unassigned";
+  }, [branches, user?.branchId]);
+
   const teamDocRef = useMemoFirebase(() => user?.teamId ? doc(firestore, "teams", user.teamId) : null, [user, firestore]);
   const { data: teamData } = useDoc<any>(teamDocRef);
 
@@ -191,7 +200,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
                         <DetailItem icon={Mail} label="Email" value={user.email} />
                         <DetailItem icon={Phone} label="Phone" value={user.phoneNumber || "Not Provisioned"} />
-                        <DetailItem icon={Building2} label="Branch" value={user.branchId || "Chennai HQ"} />
+                        <DetailItem icon={Building2} label="Branch" value={branchName} />
                         <DetailItem icon={CalendarDays} label="Joined" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
                         <DetailItem icon={Briefcase} label="Status" value={user.employmentType || "Employee"} />
                         <DetailItem icon={Clock} label="Tenure" value={tenure} />

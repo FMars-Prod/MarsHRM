@@ -3,8 +3,8 @@
 
 import * as React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, query } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { format, differenceInDays } from 'date-fns';
@@ -17,6 +17,15 @@ export function ProfileBentoCard() {
 
     const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
     const { data: employee, isLoading } = useDoc<any>(userDocRef);
+
+    const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
+    const { data: branches } = useCollection<any>(branchesQuery);
+
+    const branchName = React.useMemo(() => {
+        if (!branches || !employee?.branchId) return "HQ Sector";
+        const b = branches.find((b: any) => b.id === employee.branchId);
+        return b ? b.name : "HQ Sector";
+    }, [branches, employee?.branchId]);
 
     const experience = React.useMemo(() => {
         if (!employee?.hireDate) return "N/A";
@@ -67,7 +76,7 @@ export function ProfileBentoCard() {
                             <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-2">
                                 <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-xl border border-border/50">
                                     <MapPin className="size-3.5 text-primary" />
-                                    <span className="text-[11px] font-bold uppercase tracking-tight">{employee.branch || 'HQ Sector'}</span>
+                                    <span className="text-[11px] font-bold uppercase tracking-tight">{branchName}</span>
                                 </div>
                                 <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-xl border border-border/50">
                                     <Target className="size-3.5 text-accent" />

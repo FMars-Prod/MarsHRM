@@ -36,7 +36,7 @@ import Link from "next/link";
 import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import jspdf from "jspdf";
+import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
@@ -60,7 +60,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 const emojiCategories = {
-    "People": ["🧑", "👨", "👩", "👮", "👷", "🏠", "🕵️", "🧑‍💻", "👨‍💻", "👩‍💻", "🦸", "🦹", "🧙", "🧚"],
+    "People": ["🧑", "👨", "👩", "👮", "👮", "🏠", "🕵️", "🧑‍💻", "👨‍💻", "👩‍💻", "🦸", "🦹", "🧙", "🧚"],
 };
 
 export default function ProfilePage() {
@@ -78,6 +78,9 @@ export default function ProfilePage() {
 
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
+
+    const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
+    const { data: branches } = useCollection<any>(branchesQuery);
 
     const docsQuery = useMemoFirebase(() => user ? collection(firestore, `users/${user.uid}/documents`) : null, [user, firestore]);
     const { data: documents } = useCollection(docsQuery);
@@ -116,6 +119,12 @@ export default function ProfilePage() {
         if (todaysAttendance.isOutOfRange) return "Remote (Field)";
         return "In-Office";
     }, [todaysAttendance]);
+
+    const branchName = React.useMemo(() => {
+        if (!branches || !employee?.branchId) return "Unassigned";
+        const b = branches.find((b: any) => b.id === employee.branchId);
+        return b ? b.name : "Unassigned";
+    }, [branches, employee?.branchId]);
 
     const monthlyStats = React.useMemo(() => {
         if (!attendanceData) return { hours: "0.0", percentage: "0", count: 0 };
@@ -237,7 +246,7 @@ export default function ProfilePage() {
 
     const handleDownloadIdCard = async () => {
         if (!employee) return;
-        const pdfDoc = new jspdf({
+        const pdfDoc = new jsPDF({
             orientation: 'p',
             unit: 'mm',
             format: [54, 86]
@@ -409,7 +418,7 @@ export default function ProfilePage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-12 pt-4">
                                 <DetailItem icon={Mail} label="Email" value={employee.email} />
                                 <DetailItem icon={Phone} label="Phone" value={employee.phoneNumber || "Not Provisioned"} />
-                                <DetailItem icon={MapPin} label="Branch Location" value={employee.branch || "Chennai HQ"} />
+                                <DetailItem icon={MapPin} label="Branch Location" value={branchName} />
                                 <DetailItem icon={CalendarDays} label="Joined On" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
                                 <DetailItem icon={Briefcase} label="Employment Type" value={employee.employmentType || "Full Time"} />
                             </div>
