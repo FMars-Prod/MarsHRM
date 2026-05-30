@@ -5,7 +5,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Building2, Plus, MapPin, Trash2, Edit, ExternalLink, ShieldCheck } from 'lucide-react';
@@ -85,7 +85,7 @@ export default function BranchesPage() {
                     <DialogContent className="rounded-[2.5rem] sm:max-w-md p-8 border-none shadow-2xl">
                         <DialogHeader className="text-left">
                             <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Branch Registry</DialogTitle>
-                            <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Define tactical boundaries</DialogDescription>
+                            <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Define tactical boundaries manually</DialogDescription>
                         </DialogHeader>
 
                         <div className="space-y-6 pt-4">
