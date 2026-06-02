@@ -35,7 +35,7 @@ import Link from "next/link";
 import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import jsPDF from "jspdf";
+import jspdf from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
@@ -246,7 +246,7 @@ export default function ProfilePage() {
 
     const handleDownloadIdCard = async () => {
         if (!employee) return;
-        const pdfDoc = new jsPDF({
+        const pdfDoc = new jspdf({
             orientation: 'p',
             unit: 'mm',
             format: [54, 86]
@@ -622,7 +622,7 @@ function DetailItem({ icon: Icon, label, value }: { icon: any, label: string, va
             <div className="p-2 rounded-lg bg-primary/5 text-primary/60 mt-0.5"><Icon className="size-3.5" /></div>
             <div>
                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">{label}</p>
-                <p className="text-xs font-bold text-foreground/80">{value}</p>
+                <p className="text-xs font-bold text-foreground/80 truncate max-w-[120px]">{value}</p>
             </div>
         </div>
     );
