@@ -25,7 +25,7 @@ type AttendanceRecord = {
   id: string;
   checkInTime?: Timestamp;
   checkOutTime?: Timestamp;
-  status: 'present' | 'late' | 'absent' | 'on_leave';
+  status: 'present' | 'late' | 'absent' | 'on_leave' | 'out_of_range';
   totalBreakDuration?: number;
 };
 
@@ -129,7 +129,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   }, [user]);
 
   const modifiers = React.useMemo(() => {
-    const mods: Record<string, any> = { present: [], late: [], absent: [], on_leave: [], report: [], sunday: { dayOfWeek: [0] } };
+    const mods: Record<string, any> = { present: [], late: [], absent: [], on_leave: [], out_of_range: [], report: [], sunday: { dayOfWeek: [0] } };
     attendanceData?.forEach(event => { if (event.checkInTime instanceof Timestamp && mods[event.status]) mods[event.status].push(event.checkInTime.toDate()); });
     userReports.forEach(report => { if (report.date instanceof Timestamp) mods.report.push(report.date.toDate()); });
     return mods;
@@ -248,6 +248,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                         present: 'bg-green-500/20 text-green-700 font-black',
                                         late: 'bg-yellow-500/20 text-yellow-700 font-black',
                                         on_leave: 'bg-blue-500/20 text-blue-700 font-black',
+                                        out_of_range: 'bg-orange-500/20 text-orange-700 font-black',
                                         report: 'after:content-["•"] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:text-primary after:font-black',
                                         sunday: 'opacity-20 bg-muted/20',
                                     }} 
@@ -257,6 +258,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     <LegendItem color="bg-green-500" label="Present" />
                                     <LegendItem color="bg-yellow-500" label="Late Log" />
                                     <LegendItem color="bg-blue-500" label="On Leave" />
+                                    <LegendItem color="bg-orange-500" label="Out of Range" />
                                     <LegendItem color="bg-primary" label="Reported" />
                                 </div>
                             </CardContent>

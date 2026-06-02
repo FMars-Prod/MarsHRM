@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -20,6 +21,8 @@ type AttendanceApprovalRequest = {
     employeeId: string;
     employeeName: string;
     requestedCheckInTime: string;
+    dateId: string;
+    intendedStatus: string;
     requestedLatitude: number;
     requestedLongitude: number;
     reason: string;
@@ -62,6 +65,17 @@ export default function AttendanceRequestsPage() {
         }
 
         updateDocumentNonBlocking(requestRef, payload);
+
+        // If approved, update the actual attendance record for that day
+        if (status === 'Approved') {
+            const attDateId = request.dateId || request.requestedCheckInTime.split(' at ')[0];
+            const attendanceRef = doc(firestore, `users/${request.employeeId}/attendances`, attDateId);
+            updateDocumentNonBlocking(attendanceRef, {
+                status: request.intendedStatus || 'present',
+                isOutOfRange: false
+            });
+        }
+
         toast({ 
             title: `Request ${status}`, 
             description: `${request.employeeName}'s out-of-range request has been ${status.toLowerCase()}.` 

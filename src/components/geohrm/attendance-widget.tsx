@@ -254,7 +254,7 @@ export function AttendanceWidget() {
   
   const proceedWithClockIn = (userLocation: Location, dist: number, reason?: string) => {
       const nowClock = new Date();
-      let attendanceStatus: 'present' | 'late' = 'present';
+      let attendanceStatus: 'present' | 'late' | 'out_of_range' = 'present';
       if (globalLocationData?.shiftStartTime) {
           const shiftStart = parse(globalLocationData.shiftStartTime, 'HH:mm', new Date());
           if (isAfter(nowClock, shiftStart)) attendanceStatus = 'late';
@@ -263,12 +263,14 @@ export function AttendanceWidget() {
       const isAtHome = userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
                        getDistanceInKm(userLocation, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5);
       
+      const todayId = format(nowClock, 'yyyy-MM-dd');
+
       if (getTodaysAttendanceRef) {
           const attendancePayload: any = {
-              id: format(nowClock, 'yyyy-MM-dd'),
+              id: todayId,
               employeeId: user!.uid,
               checkInTime: serverTimestamp(),
-              status: attendanceStatus,
+              status: reason ? 'out_of_range' : attendanceStatus,
               totalBreakDuration: 0,
               locationCheckInLatitude: userLocation.latitude || 0,
               locationCheckInLongitude: userLocation.longitude || 0,
@@ -284,6 +286,8 @@ export function AttendanceWidget() {
               employeeId: user!.uid,
               employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
               requestedCheckInTime: format(nowClock, 'PP p'),
+              dateId: todayId,
+              intendedStatus: attendanceStatus,
               requestedLatitude: userLocation.latitude,
               requestedLongitude: userLocation.longitude,
               reason: reason,
@@ -293,7 +297,7 @@ export function AttendanceWidget() {
       }
 
       setStatus("in");
-      toast({ title: "Shift Started" });
+      toast({ title: reason ? "Request Sent - Marked Out of Range" : "Shift Started" });
   }
 
   const handleClockIn = () => {

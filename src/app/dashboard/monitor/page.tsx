@@ -67,16 +67,16 @@ export default function MonitorPage() {
             let icon = <UserRoundX className="size-3 mr-1" />;
 
             if (att) {
-                if (att.isAtHome) {
-                    status = 'home';
-                    label = 'HOME';
-                    color = 'bg-blue-100 text-blue-700 border-blue-200';
-                    icon = <Activity className="size-3 mr-1" />;
-                } else if (att.isOutOfRange) {
+                if (att.status === 'out_of_range' || att.isOutOfRange) {
                     status = 'out-of-range';
                     label = 'OUT OF RANGE';
                     color = 'bg-orange-100 text-orange-700 border-orange-200';
                     icon = <AlertTriangle className="size-3 mr-1" />;
+                } else if (att.isAtHome) {
+                    status = 'home';
+                    label = 'HOME';
+                    color = 'bg-blue-100 text-blue-700 border-blue-200';
+                    icon = <Activity className="size-3 mr-1" />;
                 } else if (att.status === 'late') {
                     status = 'late';
                     label = 'LATE';

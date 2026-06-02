@@ -114,15 +114,16 @@ export default function ProfilePage() {
     const operationalStatus = React.useMemo(() => {
         if (!todaysAttendance) return "Away";
         if (todaysAttendance.checkOutTime) return "Off-Duty";
+        if (todaysAttendance.status === 'out_of_range') return "Pending Verification";
         if (todaysAttendance.isAtHome) return "WFH (At Home)";
         if (todaysAttendance.isOutOfRange) return "Remote (Field)";
         return "In-Office";
     }, [todaysAttendance]);
 
     const branchName = React.useMemo(() => {
-        if (!branches || !employee?.branchId) return "HQ Sector";
+        if (!branches || !employee?.branchId) return "Unassigned Sector";
         const b = branches.find((b: any) => b.id === employee.branchId);
-        return b ? b.name : "HQ Sector";
+        return b ? b.name : "Unassigned Sector";
     }, [branches, employee?.branchId]);
 
     const monthlyStats = React.useMemo(() => {
