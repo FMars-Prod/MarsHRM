@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ThumbsUp, ThumbsDown, Clock, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useUser, setDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, doc, serverTimestamp, orderBy } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
 import { format } from 'date-fns';
@@ -27,6 +27,7 @@ type AttendanceApprovalRequest = {
     requestedLongitude: number;
     reason: string;
     status: 'Pending' | 'Approved' | 'Rejected';
+    type?: 'Check In' | 'Clock Out';
     requestTimestamp: any;
     approvalNotes?: string;
 };
@@ -66,14 +67,31 @@ export default function AttendanceRequestsPage() {
 
         updateDocumentNonBlocking(requestRef, payload);
 
-        // If approved, update the actual attendance record for that day
+        // If approved, update or create the actual attendance record for that day
         if (status === 'Approved') {
-            const attDateId = request.dateId || request.requestedCheckInTime.split(' at ')[0];
+            const attDateId = request.dateId || format(new Date(), 'yyyy-MM-dd');
             const attendanceRef = doc(firestore, `users/${request.employeeId}/attendances`, attDateId);
-            updateDocumentNonBlocking(attendanceRef, {
-                status: request.intendedStatus || 'present',
+            
+            const attendanceUpdate: any = {
                 isOutOfRange: false
-            });
+            };
+
+            if (request.type === 'Clock Out') {
+                attendanceUpdate.checkOutTime = serverTimestamp();
+                attendanceUpdate.locationCheckOutLatitude = request.requestedLatitude;
+                attendanceUpdate.locationCheckOutLongitude = request.requestedLongitude;
+            } else {
+                // Check In
+                attendanceUpdate.id = attDateId;
+                attendanceUpdate.employeeId = request.employeeId;
+                attendanceUpdate.checkInTime = serverTimestamp();
+                attendanceUpdate.status = request.intendedStatus || 'present';
+                attendanceUpdate.locationCheckInLatitude = request.requestedLatitude;
+                attendanceUpdate.locationCheckInLongitude = request.requestedLongitude;
+                attendanceUpdate.totalBreakDuration = 0;
+            }
+
+            setDocumentNonBlocking(attendanceRef, attendanceUpdate, { merge: true });
         }
 
         toast({ 
@@ -89,7 +107,7 @@ export default function AttendanceRequestsPage() {
 
     return (
         <div className="animate-fade-in-up space-y-6">
-            <PageHeader title="Range Approval Desk" description="Verify and approve remote clock-in requests with high-precision GPS monitoring.">
+            <PageHeader title="Range Approval Desk" description="Verify and approve remote clock-in/out requests with high-precision GPS monitoring.">
                 <div className="flex bg-muted/50 p-1 rounded-full border">
                     <Button 
                         variant={filter === 'Pending' ? 'default' : 'ghost'} 
@@ -117,15 +135,16 @@ export default function AttendanceRequestsPage() {
                             <TableHeader className="bg-muted/30">
                                 <TableRow className="hover:bg-transparent border-none">
                                     <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Employee</TableHead>
+                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Type</TableHead>
                                     <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Requested At</TableHead>
                                     <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Justification</TableHead>
-                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Precision Location</TableHead>
+                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Location</TableHead>
                                     <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4 text-right">Final Decision</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground animate-pulse font-medium">Fetching remote requests...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground animate-pulse font-medium">Fetching remote requests...</TableCell></TableRow>
                                 ) : requests && requests.length > 0 ? (
                                     requests.map(req => (
                                         <TableRow key={req.id} className="border-border/50">
@@ -134,6 +153,11 @@ export default function AttendanceRequestsPage() {
                                                     <span>{req.employeeName}</span>
                                                     <span className="text-[10px] text-muted-foreground font-medium uppercase">ID: {req.employeeId.slice(0, 8)}</span>
                                                 </div>
+                                            </TableCell>
+                                            <TableCell className="py-4">
+                                                <Badge variant="outline" className="rounded-full text-[9px] font-black uppercase tracking-widest">
+                                                    {req.type || 'Check In'}
+                                                </Badge>
                                             </TableCell>
                                             <TableCell className="py-4">
                                                 <div className="flex flex-col gap-0.5">
@@ -209,7 +233,7 @@ export default function AttendanceRequestsPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic font-medium">No {filter.toLowerCase()} requests in the queue.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic font-medium">No {filter.toLowerCase()} requests in the queue.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>

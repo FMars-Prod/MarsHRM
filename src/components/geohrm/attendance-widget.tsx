@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap } from "lucide-react";
+import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -31,10 +31,10 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc } from "@/firebase";
-import { doc, serverTimestamp, Timestamp, collection } from "firebase/firestore";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc, useCollection } from "@/firebase";
+import { doc, serverTimestamp, Timestamp, collection, query, where } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
-import { format, parse, isAfter } from "date-fns";
+import { format, parse, isAfter, startOfToday } from "date-fns";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
@@ -114,6 +114,19 @@ export function AttendanceWidget() {
   }, [user, firestore]);
   
   const {data: todaysAttendance} = useDoc(getTodaysAttendanceRef);
+
+  const requestsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    const today = startOfToday();
+    return query(
+        collection(firestore, "attendanceApprovalRequests"),
+        where("employeeId", "==", user.uid),
+        where("requestTimestamp", ">=", Timestamp.fromDate(today))
+    );
+  }, [user, firestore]);
+  
+  const { data: myRequests } = useCollection(requestsQuery);
+  const pendingRequest = myRequests?.find(r => r.status === 'Pending');
 
   const formatTime = (totalSeconds: number) => {
     const hrs = Math.floor(Math.max(0, totalSeconds) / 3600);
@@ -260,28 +273,10 @@ export function AttendanceWidget() {
           if (isAfter(nowClock, shiftStart)) attendanceStatus = 'late';
       }
 
-      const isAtHome = userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
-                       getDistanceInKm(userLocation, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5);
-      
       const todayId = format(nowClock, 'yyyy-MM-dd');
 
-      if (getTodaysAttendanceRef) {
-          const attendancePayload: any = {
-              id: todayId,
-              employeeId: user!.uid,
-              checkInTime: serverTimestamp(),
-              status: reason ? 'out_of_range' : attendanceStatus,
-              totalBreakDuration: 0,
-              locationCheckInLatitude: userLocation.latitude || 0,
-              locationCheckInLongitude: userLocation.longitude || 0,
-              checkInNotes: reason || "",
-              isOutOfRange: !!reason,
-              isAtHome: isAtHome || false,
-          };
-          setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
-      }
-
       if (reason) {
+          // Submit Request ONLY - Do not login yet
           addDocumentNonBlocking(collection(firestore, "attendanceApprovalRequests"), {
               employeeId: user!.uid,
               employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
@@ -292,12 +287,32 @@ export function AttendanceWidget() {
               requestedLongitude: userLocation.longitude,
               reason: reason,
               status: 'Pending',
+              type: 'Check In',
               requestTimestamp: serverTimestamp()
           });
+          toast({ title: "Range Permission Dispatched", description: "Pending administrative review." });
+          setIsOutOfRangeReasonDialogOpen(false);
+          setOutOfRangeReason("");
+      } else {
+          // Normal Login
+          if (getTodaysAttendanceRef) {
+              const attendancePayload: any = {
+                  id: todayId,
+                  employeeId: user!.uid,
+                  checkInTime: serverTimestamp(),
+                  status: attendanceStatus,
+                  totalBreakDuration: 0,
+                  locationCheckInLatitude: userLocation.latitude || 0,
+                  locationCheckInLongitude: userLocation.longitude || 0,
+                  isOutOfRange: false,
+                  isAtHome: userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
+                           getDistanceInKm(userLocation, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5),
+              };
+              setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
+          }
+          setStatus("in");
+          toast({ title: "Shift Synchronized" });
       }
-
-      setStatus("in");
-      toast({ title: reason ? "Request Sent - Marked Out of Range" : "Shift Started" });
   }
 
   const handleClockIn = () => {
@@ -325,21 +340,56 @@ export function AttendanceWidget() {
     );
   };
 
-  const handleClockOutRedirect = () => {
-      setIsVerifyingLocation(true);
-      navigator.geolocation.getCurrentPosition(p => {
+  const proceedWithClockOut = (userLocation: Location, dist: number, reason?: string) => {
+      if (reason) {
+          // Submit Request for Clock Out
+          addDocumentNonBlocking(collection(firestore, "attendanceApprovalRequests"), {
+              employeeId: user!.uid,
+              employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
+              requestedCheckInTime: format(new Date(), 'PP p'),
+              dateId: format(new Date(), 'yyyy-MM-dd'),
+              requestedLatitude: userLocation.latitude,
+              requestedLongitude: userLocation.longitude,
+              reason: reason,
+              status: 'Pending',
+              type: 'Clock Out',
+              requestTimestamp: serverTimestamp()
+          });
+          toast({ title: "Checkout Request Dispatched", description: "Pending administrative review." });
+          setIsOutOfRangeReasonDialogOpen(false);
+          setOutOfRangeReason("");
+      } else {
           if (getTodaysAttendanceRef) {
               updateDocumentNonBlocking(getTodaysAttendanceRef, {
                   checkOutTime: serverTimestamp(),
-                  locationCheckOutLatitude: p.coords.latitude,
-                  locationCheckOutLongitude: p.coords.longitude,
+                  locationCheckOutLatitude: userLocation.latitude,
+                  locationCheckOutLongitude: userLocation.longitude,
               });
           }
-          setIsVerifyingLocation(false);
           setStatus("out");
           setHasClockedOutToday(true);
           toast({ title: "Shift Concluded" });
           router.push('/dashboard/reports');
+      }
+  };
+
+  const handleClockOutRedirect = () => {
+      setIsVerifyingLocation(true);
+      navigator.geolocation.getCurrentPosition(p => {
+          const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
+          setIsVerifyingLocation(false);
+          if (isAdminOrCEO) { proceedWithClockOut(userLoc, 0); return; }
+
+          const officeDist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
+          const isAtHome = userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
+                           getDistanceInKm(userLoc, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5);
+
+          if (officeDist <= activeGeofence.radius || isAtHome) {
+              proceedWithClockOut(userLoc, officeDist);
+          } else {
+              setOutOfRangeAction(() => () => proceedWithClockOut(userLoc, officeDist, outOfRangeReason));
+              setIsOutOfRangeReasonDialogOpen(true);
+          }
       }, () => { 
           setIsVerifyingLocation(false); 
           toast({ variant: 'destructive', title: 'GPS Required' }); 
@@ -423,6 +473,16 @@ export function AttendanceWidget() {
                     </Badge>
                   </div>
                 )}
+
+                {pendingRequest && status === 'out' && (
+                    <div className="p-6 bg-amber-50 rounded-3xl border-2 border-dashed border-amber-200 animate-pulse">
+                        <div className="flex items-center justify-center gap-2 text-amber-700">
+                            <Timer className="size-5" />
+                            <span className="text-sm font-black uppercase tracking-widest">Range Permission Pending Approval</span>
+                        </div>
+                        <p className="text-[10px] text-amber-600 mt-2 font-medium">Deployment blocked until executive verification.</p>
+                    </div>
+                )}
             </div>
 
             <div className="w-full grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl">
@@ -435,9 +495,15 @@ export function AttendanceWidget() {
 
         <CardFooter className="p-10 pt-0 flex justify-center items-center relative">
           <div className="w-full max-w-3xl pt-8 border-t border-dashed border-border/50">
-            {status === 'out' && !hasClockedOutToday && (
+            {status === 'out' && !hasClockedOutToday && !pendingRequest && (
                 <Button onClick={handleClockIn} className="w-full h-16 rounded-[2rem] text-xl font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/25 bg-primary text-white hover:scale-[1.02] active:scale-[0.98] transition-all">
                     Clock In
+                </Button>
+            )}
+
+            {status === 'out' && pendingRequest && (
+                <Button disabled className="w-full h-16 rounded-[2rem] text-sm font-black uppercase tracking-[0.1em] bg-muted text-muted-foreground opacity-50">
+                    Awaiting Signal Authority
                 </Button>
             )}
             
@@ -508,8 +574,8 @@ export function AttendanceWidget() {
                   <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Provide context for remote operational base..." className="rounded-2xl min-h-[140px] bg-muted/20 border-none ring-1 ring-border/50 focus:ring-primary/40 transition-all p-4 text-sm" />
               </div>
               <div className="flex flex-col gap-3 mt-6">
-                  <Button onClick={() => { if(!outOfRangeReason) { toast({variant: 'destructive', title: 'Justification Required'}); return; } if(outOfRangeAction) outOfRangeAction(); setIsOutOfRangeReasonDialogOpen(false); }} className="h-14 rounded-2xl font-black uppercase tracking-widest bg-primary text-white shadow-xl shadow-primary/20">
-                      Certify & Authenticate
+                  <Button onClick={() => { if(!outOfRangeReason) { toast({variant: 'destructive', title: 'Justification Required'}); return; } if(outOfRangeAction) outOfRangeAction(); }} className="h-14 rounded-2xl font-black uppercase tracking-widest bg-primary text-white shadow-xl shadow-primary/20">
+                      Certify & Dispatch Request
                   </Button>
                   <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="ghost" className="h-12 rounded-2xl font-bold uppercase text-[10px] tracking-widest text-muted-foreground">
                       Abort Request
