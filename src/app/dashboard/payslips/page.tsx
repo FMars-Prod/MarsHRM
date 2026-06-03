@@ -44,7 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format, getYear } from "date-fns";
 import Link from "next/link";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import jsPDF from "jsPDF";
+import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 
 type Payslip = {
