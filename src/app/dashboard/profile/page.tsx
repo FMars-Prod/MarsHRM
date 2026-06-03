@@ -17,7 +17,7 @@ import {
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
     FileDown, Target, Image as ImageIcon,
-    Table as TableIcon
+    Table as TableIcon, Laptop
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";

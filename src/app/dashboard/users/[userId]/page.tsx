@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday } from 'date-fns';
-import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin } from 'lucide-react';
+import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -293,7 +293,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             
             <TabsContent value="assets" className="mt-0">
                 <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
                         {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
                             <div key={asset.id} className="p-8 rounded-[2rem] ring-1 ring-border/50 bg-muted/10 space-y-6 hover:shadow-xl transition-all duration-500">
                                 <div className="aspect-square bg-muted rounded-3xl flex items-center justify-center overflow-hidden">
