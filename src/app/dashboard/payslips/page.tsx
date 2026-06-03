@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -35,7 +34,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Download, Trash2, MoreHorizontal, FileText, Banknote, ShieldCheck } from "lucide-react";
+import { PlusCircle, Download, Trash2, MoreHorizontal, FileText, Banknote, ShieldCheck, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase";
@@ -45,7 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format, getYear } from "date-fns";
 import Link from "next/link";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import jsPDF from "jspdf";
+import jsPDF from "jsPDF";
 import autoTable from 'jspdf-autotable';
 
 type Payslip = {
@@ -237,7 +236,7 @@ export default function PayslipsPage() {
             ['Mobile Allowances', p.mobileAllowance === 0 ? 'NA' : p.mobileAllowance.toLocaleString(), '', ''],
             ['', '', '', ''],
             ['', '', '', ''],
-            ['Total Earnings', p.basicStipend + p.mobileAllowance, 'Total Deductions', p.deductions.toLocaleString()],
+            ['Total Earnings', (p.basicStipend + p.mobileAllowance).toLocaleString(), 'Total Deductions', p.deductions.toLocaleString()],
             ['', '', 'Net Pay', `${p.netSalary.toLocaleString()} INR`],
         ],
         theme: 'grid',
