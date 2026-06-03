@@ -57,36 +57,36 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 max-w-[1200px] mx-auto pb-10 font-jakarta">
-      {/* Command Greeting Header */}
+      {/* Greeting Header */}
       <div className="flex flex-col gap-0.5 mb-2 animate-fade-in-up">
           <div className="flex items-center gap-1.5 text-primary">
               <Sparkles className="size-3" />
               <span className="text-[9px] font-black uppercase tracking-[0.3em]">{format(new Date(), 'EEEE, MMMM dd')}</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tighter leading-none">
-              {greeting}, {currentUserData?.firstName || 'Strategist'} ,
+          <h1 className="text-xl font-black tracking-tighter leading-none">
+              {greeting}, {currentUserData?.firstName || 'User'} ,
           </h1>
-          <p className="text-xs font-semibold text-muted-foreground/80 mt-1">Operational grid synchronized.</p>
+          <p className="text-[10px] font-semibold text-muted-foreground/80 mt-1">App is ready.</p>
       </div>
 
-      {/* Dynamic Notifications */}
+      {/* Notifications */}
       {isCEO && hasCriticalAlert && latestCompliance?.[0] && (
-          <Alert className="mb-4 bg-red-50 border-red-200 animate-pulse rounded-2xl border-2 p-4 shadow-md">
+          <Alert className="mb-4 bg-red-50 border-red-200 animate-pulse rounded-2xl border-2 p-3 shadow-md">
               <ShieldAlert className="size-4 text-red-600" />
-              <AlertTitle className="text-red-700 font-black uppercase text-[10px] tracking-widest">Protocol Alert</AlertTitle>
-              <AlertDescription className="flex justify-between items-center mt-2">
-                  <p className="text-red-800 text-xs font-bold">Compliance report filed for <span className="font-black underline">{latestCompliance[0].employeeName}</span>.</p>
-                  <Link href="/dashboard/compliance" className="text-red-600 font-black uppercase text-[8px] underline underline-offset-4">Review</Link>
+              <AlertTitle className="text-red-700 font-black uppercase text-[10px] tracking-widest">Alert</AlertTitle>
+              <AlertDescription className="flex justify-between items-center mt-1">
+                  <p className="text-red-800 text-[11px] font-bold">New report for <span className="font-black underline">{latestCompliance[0].employeeName}</span>.</p>
+                  <Link href="/dashboard/compliance" className="text-red-600 font-black uppercase text-[8px] underline underline-offset-4">Check</Link>
               </AlertDescription>
           </Alert>
       )}
 
       {recentTicketUpdates.length > 0 && (
-          <Alert className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 shadow-md">
+          <Alert className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-2xl p-3 shadow-md">
               <MessageSquareWarning className="size-4 text-blue-600" />
-              <AlertTitle className="text-blue-700 font-black uppercase text-[10px] tracking-widest">Support Update</AlertTitle>
-              <AlertDescription className="flex justify-between items-center mt-2">
-                  <p className="text-blue-800 text-xs font-bold">Ticket "{recentTicketUpdates[0].title}" updated to {recentTicketUpdates[0].status}.</p>
+              <AlertTitle className="text-blue-700 font-black uppercase text-[10px] tracking-widest">Update</AlertTitle>
+              <AlertDescription className="flex justify-between items-center mt-1">
+                  <p className="text-blue-800 text-[11px] font-bold">Ticket "{recentTicketUpdates[0].title}" is {recentTicketUpdates[0].status}.</p>
                   <Link href="/dashboard/issues" className="text-blue-600 font-black uppercase text-[8px] underline underline-offset-4">View</Link>
               </AlertDescription>
           </Alert>
