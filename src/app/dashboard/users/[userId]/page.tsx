@@ -110,7 +110,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     };
   }, [attendanceData]);
 
-  const tenure = React.useMemo(() => {
+  const experience = React.useMemo(() => {
     if (!user?.hireDate) return "N/A";
     const totalDays = differenceInDays(new Date(), new Date(user.hireDate));
     return `${totalDays} day`;
@@ -122,7 +122,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     autoTable(pdfDoc, {
         startY: 30,
         head: [['Metric', 'Value']],
-        body: [['Work Hours (MTD)', `${stats.workHours}h`], ['Attendance %', `${stats.percentage}%`], ['Tenure', tenure]]
+        body: [['Work Hours (MTD)', `${stats.workHours}h`], ['Attendance %', `${stats.percentage}%`], ['Tenure', experience]]
     });
     pdfDoc.save(`Audit_${user.firstName}.pdf`);
   };
@@ -172,7 +172,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <DetailItem icon={Phone} label="Phone Line" value={user.phoneNumber || "N/A"} />
                             <DetailItem icon={Building2} label="Operational Sector" value={branchName} />
                             <DetailItem icon={CalendarDays} label="Commenced" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                            <DetailItem icon={Clock} label="Fleet Tenure" value={tenure} />
+                            <DetailItem icon={Clock} label="Fleet Tenure" value={experience} />
                             <DetailItem icon={ShieldCheck} label="System Tier" value={user.role} />
                         </div>
                     </div>

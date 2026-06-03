@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
     const todaysAttendance = React.useMemo(() => {
         if (!attendanceData) return null;
-        return attendanceData.find(a => isToday(a.checkInTime.toDate()));
+        return attendanceData.find(a => a.checkInTime && isToday(a.checkInTime.toDate()));
     }, [attendanceData]);
 
     const operationalStatus = React.useMemo(() => {
@@ -138,11 +138,18 @@ export default function ProfilePage() {
         };
     }, [attendanceData, monthStart, monthEnd]);
 
-    const tenure = React.useMemo(() => {
+    const experience = React.useMemo(() => {
         if (!employee?.hireDate) return "N/A";
         const totalDays = differenceInDays(new Date(), new Date(employee.hireDate));
         return `${totalDays} day`;
     }, [employee]);
+
+    const greeting = React.useMemo(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) return "Morning";
+        if (hour < 17) return "Afternoon";
+        return "Evening";
+    }, []);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -272,7 +279,7 @@ export default function ProfilePage() {
             <div className="flex flex-col gap-1 mb-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
                 <h1 className="text-4xl font-black tracking-tighter">
-                    Good {new Date().getHours() < 12 ? "Morning" : "Afternoon"}, {employee.firstName} ,
+                    Good {greeting}, {employee.firstName || 'Strategist'} ,
                 </h1>
             </div>
 
@@ -322,7 +329,7 @@ export default function ProfilePage() {
                                 <DetailItem icon={Phone} label="Phone Line" value={employee.phoneNumber || "N/A"} />
                                 <DetailItem icon={MapPin} label="Sector Location" value={branchName} />
                                 <DetailItem icon={CalendarDays} label="Joined Operational" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                                <DetailItem icon={Briefcase} label="Deployment Type" value={employee.employmentType || "Full Time"} />
+                                <DetailItem icon={Clock} label="Fleet Tenure" value={experience} />
                             </div>
                         </div>
                     </div>
@@ -404,7 +411,7 @@ export default function ProfilePage() {
 
                         <div className="lg:col-span-4 space-y-8">
                              <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Tactical Specifications</h3>
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/80">Tactical Specifications</h3>
                                 <div className="space-y-5 pt-2">
                                     <InfoRow label="Deployment Unit" value={employee.department} />
                                     <InfoRow label="Sector Location" value={branchName} />
