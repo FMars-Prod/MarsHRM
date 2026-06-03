@@ -56,7 +56,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   }, [branches, user?.branchId]);
 
   const docsQuery = useMemoFirebase(() => userId ? query(collection(firestore, 'vault_assets'), where('ownerId', '==', userId), orderBy('uploadedAt', 'desc')) : null, [userId, firestore]);
-  const { data: documents } = useCollection(docsQuery);
+  const { data: documents } = useCollection<any>(docsQuery);
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
@@ -79,7 +79,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const { data: complianceData } = useCollection<any>(complianceQuery);
 
   const assetsQuery = useMemoFirebase(() => userId ? query(collection(firestore, "assets"), where("assignedToId", "==", userId)) : null, [userId, firestore]);
-  const { data: assignedAssets } = useCollection(assetsQuery);
+  const { data: assignedAssets } = useCollection<any>(assetsQuery);
 
   React.useEffect(() => {
       const fetchReports = async () => {

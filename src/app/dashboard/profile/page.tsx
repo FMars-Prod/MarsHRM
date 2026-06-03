@@ -81,16 +81,10 @@ export default function ProfilePage() {
     const { data: branches } = useCollection<any>(branchesQuery);
 
     const docsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'vault_assets'), where('ownerId', '==', user.uid), orderBy('uploadedAt', 'desc')) : null, [user, firestore]);
-    const { data: documents } = useCollection(docsQuery);
+    const { data: documents } = useCollection<any>(docsQuery);
 
     const assetsQuery = useMemoFirebase(() => user ? query(collection(firestore, "assets"), where("assignedToId", "==", user.uid)) : null, [user, firestore]);
-    const { data: assignedAssets } = useCollection(assetsQuery);
-
-    const ticketsQuery = useMemoFirebase(() => {
-        if (!user) return null;
-        return query(collection(firestore, "issue_reports"), where("employeeId", "==", user.uid));
-    }, [user, firestore]);
-    const { data: userTickets } = useCollection(ticketsQuery);
+    const { data: assignedAssets } = useCollection<any>(assetsQuery);
 
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
@@ -121,6 +115,13 @@ export default function ProfilePage() {
         return b ? b.name : "HQ Sector";
     }, [branches, employee?.branchId]);
 
+    const experience = React.useMemo(() => {
+        if (!employee?.hireDate) return "N/A";
+        const start = new Date(employee.hireDate);
+        const totalDays = differenceInDays(new Date(), start);
+        return `${totalDays} day`;
+    }, [employee]);
+
     const monthlyStats = React.useMemo(() => {
         const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
         const workingDaysInMonth = days.filter(d => !isSunday(d)).length;
@@ -140,12 +141,6 @@ export default function ProfilePage() {
             totalWorkingDays: workingDaysInMonth
         };
     }, [attendanceData, monthStart, monthEnd]);
-
-    const experience = React.useMemo(() => {
-        if (!employee?.hireDate) return "N/A";
-        const totalDays = differenceInDays(new Date(), new Date(employee.hireDate));
-        return `${totalDays} day`;
-    }, [employee]);
 
     const greeting = React.useMemo(() => {
         const hour = new Date().getHours();
@@ -669,4 +664,5 @@ function InfoRow({ label, value }: { label: string, value: string }) {
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{label}</span>
             <span className="text-sm font-black text-foreground/80">{value}</span>
         </div>
+    );
 }
