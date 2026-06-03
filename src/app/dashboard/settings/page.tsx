@@ -10,7 +10,7 @@ import { doc, serverTimestamp } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin, Clock, ShieldCheck, Globe, Save, Info } from 'lucide-react';
+import { MapPin, Clock, ShieldCheck, Globe, Save, Info, Key, Map as MapIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 export default function SettingsPage() {
@@ -25,7 +25,8 @@ export default function SettingsPage() {
 
     const [form, setForm] = React.useState<any>({
         latitude: '', longitude: '', maxDistanceKm: '0.5', shiftStartTime: '09:00', shiftEndTime: '18:00',
-        morningReportSlot: '09:50', eveningReportSlot: '18:50', companyName: 'FortuMars AI'
+        morningReportSlot: '09:50', eveningReportSlot: '18:50', companyName: 'FortuMars AI',
+        googleMapsApiKey: ''
     });
 
     React.useEffect(() => {
@@ -35,7 +36,8 @@ export default function SettingsPage() {
                 latitude: locationData.latitude || '',
                 longitude: locationData.longitude || '',
                 maxDistanceKm: locationData.maxDistanceKm || '0.5',
-                shiftStartTime: locationData.shiftStartTime || '09:00'
+                shiftStartTime: locationData.shiftStartTime || '09:00',
+                googleMapsApiKey: locationData.googleMapsApiKey || ''
             }));
         }
         if (reportData?.timings) {
@@ -54,6 +56,7 @@ export default function SettingsPage() {
             longitude: parseFloat(form.longitude),
             maxDistanceKm: parseFloat(form.maxDistanceKm),
             shiftStartTime: form.shiftStartTime,
+            googleMapsApiKey: form.googleMapsApiKey,
             updatedAt: serverTimestamp()
         };
 
@@ -68,12 +71,12 @@ export default function SettingsPage() {
         setDocumentNonBlocking(configRef, locPayload, { merge: true });
         setDocumentNonBlocking(reportConfigRef, reportPayload, { merge: true });
         
-        toast({ title: "System Protocols Synchronized", description: "Global configuration updated across all modules." });
+        toast({ title: "System Protocols Synchronized", description: "Global configuration and API keys updated." });
     };
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up">
-            <PageHeader title="Global Command Center" description="Configure core platform parameters and geofencing protocols." />
+            <PageHeader title="Global Command Center" description="Configure core platform parameters, geofencing protocols, and external API integrations." />
 
             <div className="grid gap-8">
                 <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
@@ -87,6 +90,26 @@ export default function SettingsPage() {
                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Longitude</Label><Input type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: e.target.value})} placeholder="e.g., 77.2090" className="rounded-xl h-12" /></div>
                         </div>
                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Verification Radius (KM)</Label><Input type="number" step="0.1" value={form.maxDistanceKm} onChange={e => setForm({...form, maxDistanceKm: e.target.value})} className="rounded-xl h-12 w-full md:w-1/3" /></div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                    <CardHeader className="bg-primary/5 border-b border-primary/10">
+                        <CardTitle className="text-lg font-headline flex items-center gap-2 text-primary"><MapIcon className="size-5" /> Intelligence Integrations</CardTitle>
+                        <CardDescription>Connect external services for high-fidelity geofencing visualization.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-6">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Key className="size-3" /> Google Maps API Key</Label>
+                            <Input 
+                                type="password" 
+                                value={form.googleMapsApiKey} 
+                                onChange={e => setForm({...form, googleMapsApiKey: e.target.value})} 
+                                placeholder="Paste API Key here..." 
+                                className="rounded-xl h-12 font-mono" 
+                            />
+                            <p className="text-[9px] text-muted-foreground italic mt-2">Required for the Live Operational Monitor and precise address lookups. Enable "Maps JavaScript API" and "Geocoding API".</p>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -115,3 +138,4 @@ export default function SettingsPage() {
         </div>
     );
 }
+

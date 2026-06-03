@@ -51,7 +51,7 @@ const getDistanceInKm = (loc1: Location, loc2: Location) => {
   if (typeof loc2.latitude !== 'number' || typeof loc2.longitude !== 'number') return Infinity;
 
   const toRad = (v: number) => (v * Math.PI) / 180;
-  const R = 6371; 
+  const R = 6371; // Earth radius in km
   const dLat = toRad(loc2.latitude - loc1.latitude);
   const dLon = toRad(loc2.longitude - loc1.longitude);
   const a =
@@ -96,22 +96,42 @@ export function AttendanceWidget() {
   );
   const { data: globalLocationData } = useDoc<any>(globalLocationDocRef);
   
+  // STRICT SECTOR LOCKING LOGIC
   const activeGeofence = React.useMemo(() => {
-    if (userData?.branchId && branchData) {
+    // 1. If user is assigned a specific branch, that is the ONLY valid geofence
+    if (userData?.branchId) {
+        if (isBranchLoading) return null; // Indicator to block action until resolved
+        if (branchData) {
+            return {
+                name: branchData.name || "Assigned Branch",
+                lat: Number(branchData.latitude),
+                lng: Number(branchData.longitude),
+                radius: Number(branchData.radius || 0.5),
+                type: 'branch'
+            };
+        }
+    }
+
+    // 2. Fallback to WFH Residential Base if assigned branch doesn't exist but WFH is allowed
+    if (userData?.isWfhAllowed && typeof userData.homeLatitude === 'number' && typeof userData.homeLongitude === 'number') {
         return {
-            name: branchData.name || "Assigned Branch",
-            lat: Number(branchData.latitude),
-            lng: Number(branchData.longitude),
-            radius: Number(branchData.radius || 0.5)
+            name: "Residential Base (WFH)",
+            lat: Number(userData.homeLatitude),
+            lng: Number(userData.homeLongitude),
+            radius: Number(userData.homeRadius || 0.5),
+            type: 'wfh'
         };
     }
+
+    // 3. Absolute fallback to Global HQ if no specific branch or WFH profile is found
     return {
-        name: "HQ Sector",
+        name: "Global HQ Sector",
         lat: Number(globalLocationData?.latitude || 13.0827),
         lng: Number(globalLocationData?.longitude || 80.2707),
-        radius: Number(globalLocationData?.maxDistanceKm || 0.5)
+        radius: Number(globalLocationData?.maxDistanceKm || 0.5),
+        type: 'hq'
     };
-  }, [branchData, globalLocationData, userData?.branchId]);
+  }, [branchData, isBranchLoading, globalLocationData, userData]);
 
   const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
@@ -233,6 +253,7 @@ export function AttendanceWidget() {
   }, [currentBreakStartTime, totalBreakTime, status, getTodaysAttendanceRef, toast]);
 
   const handleLunch = () => {
+    if (!activeGeofence) return;
     setIsVerifyingLocation(true);
     navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -300,7 +321,7 @@ export function AttendanceWidget() {
               status: 'Pending',
               type: 'Check In',
               distance: dist.toFixed(2),
-              targetBranch: activeGeofence.name,
+              targetBranch: activeGeofence?.name,
               requestTimestamp: serverTimestamp()
           });
           toast({ title: "Range Permission Dispatched", description: "Pending administrative review." });
@@ -317,8 +338,7 @@ export function AttendanceWidget() {
                   locationCheckInLatitude: userLocation.latitude || 0,
                   locationCheckInLongitude: userLocation.longitude || 0,
                   isOutOfRange: false,
-                  isAtHome: userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
-                           getDistanceInKm(userLocation, { latitude: Number(userData.homeLatitude), longitude: Number(userData.homeLongitude) }) <= (Number(userData.homeRadius) || 0.5),
+                  isAtHome: activeGeofence?.type === 'wfh'
               };
               setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
           }
@@ -328,27 +348,26 @@ export function AttendanceWidget() {
   }
 
   const handleClockIn = () => {
+    if (!activeGeofence) {
+        toast({ variant: 'destructive', title: 'Target Sector Resolving', description: 'Please wait while we calibrate your assigned operational coordinates.' });
+        return;
+    }
     setIsVerifyingLocation(true);
     navigator.geolocation.getCurrentPosition(
         (position) => {
             const userLoc = { latitude: position.coords.latitude, longitude: position.coords.longitude };
             setIsVerifyingLocation(false);
 
-            const officeDist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-            const isAtHome = !!(userData?.isWfhAllowed && 
-                             typeof userData.homeLatitude === 'number' && 
-                             typeof userData.homeLongitude === 'number' && 
-                             getDistanceInKm(userLoc, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5));
-
-            const isWithinOfficeRange = officeDist <= activeGeofence.radius;
-
-            if (isWithinOfficeRange || isAtHome) { 
-                proceedWithClockIn(userLoc, officeDist); 
+            const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
+            
+            // STRICT Geofence Enforcement
+            if (dist <= activeGeofence.radius) { 
+                proceedWithClockIn(userLoc, dist); 
                 return; 
             }
 
-            setCurrentDist(officeDist);
-            setOutOfRangeAction(() => () => proceedWithClockIn(userLoc, officeDist, outOfRangeReason));
+            setCurrentDist(dist);
+            setOutOfRangeAction(() => () => proceedWithClockIn(userLoc, dist, outOfRangeReason));
             setIsOutOfRangeReasonDialogOpen(true);
         },
         () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "GPS Error" }); },
@@ -369,7 +388,7 @@ export function AttendanceWidget() {
               status: 'Pending',
               type: 'Clock Out',
               distance: dist.toFixed(2),
-              targetBranch: activeGeofence.name,
+              targetBranch: activeGeofence?.name,
               requestTimestamp: serverTimestamp()
           });
           toast({ title: "Checkout Request Dispatched", description: "Pending administrative review." });
@@ -391,24 +410,19 @@ export function AttendanceWidget() {
   };
 
   const handleClockOutRedirect = () => {
+      if (!activeGeofence) return;
       setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(p => {
           const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
           setIsVerifyingLocation(false);
 
-          const officeDist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-          const isAtHome = !!(userData?.isWfhAllowed && 
-                           typeof userData.homeLatitude === 'number' && 
-                           typeof userData.homeLongitude === 'number' && 
-                           getDistanceInKm(userLoc, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5));
+          const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
 
-          const isWithinOfficeRange = officeDist <= activeGeofence.radius;
-
-          if (isWithinOfficeRange || isAtHome) {
-              proceedWithClockOut(userLoc, officeDist);
+          if (dist <= activeGeofence.radius) {
+              proceedWithClockOut(userLoc, dist);
           } else {
-              setCurrentDist(officeDist);
-              setOutOfRangeAction(() => () => proceedWithClockOut(userLoc, officeDist, outOfRangeReason));
+              setCurrentDist(dist);
+              setOutOfRangeAction(() => () => proceedWithClockOut(userLoc, dist, outOfRangeReason));
               setIsOutOfRangeReasonDialogOpen(true);
           }
       }, () => { 
@@ -480,6 +494,12 @@ export function AttendanceWidget() {
                         {formatTime(workTimer)}
                     </div>
                 </div>
+
+                {activeGeofence && (
+                    <Badge variant="secondary" className="rounded-full px-4 py-1 font-bold text-[9px] uppercase tracking-widest bg-muted/40">
+                        Assigned Sector: {activeGeofence.name}
+                    </Badge>
+                )}
 
                 {(status === "lunch" || status === "short_break") && (
                   <div className="flex flex-col items-center gap-6 animate-fade-in-up">
@@ -592,7 +612,7 @@ export function AttendanceWidget() {
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">Verification Radius Breach Detected</p>
                       {currentDist !== null && (
                           <Badge variant="outline" className="text-[10px] font-bold text-orange-600 border-orange-200 mt-2">
-                              Distance: {currentDist.toFixed(2)} KM from {activeGeofence.name}
+                              Distance: {currentDist.toFixed(2)} KM from {activeGeofence?.name}
                           </Badge>
                       )}
                   </div>
@@ -630,3 +650,4 @@ export function AttendanceWidget() {
     </>
   );
 }
+
