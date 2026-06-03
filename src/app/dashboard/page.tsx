@@ -11,6 +11,7 @@ import { WorkHoursSummaryWidget } from "@/components/geohrm/work-hours-summary-w
 import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
 import { ProfileBentoCard } from "@/components/geohrm/profile-bento-card";
 import { MissionHeatmapWidget } from "@/components/geohrm/mission-heatmap-widget";
+import { TodoWidget } from "@/components/geohrm/todo-widget";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ShieldAlert, MessageSquareWarning, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -56,45 +57,45 @@ export default function DashboardPage() {
   }, [userTickets]);
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-12 font-open-sans">
+    <div className="space-y-8 max-w-[1600px] mx-auto pb-20 font-jakarta">
       {/* Command Greeting Header */}
-      <div className="flex flex-col gap-1 mb-8 animate-fade-in-up">
+      <div className="flex flex-col gap-1 mb-6 animate-fade-in-up">
           <div className="flex items-center gap-2 text-primary">
               <Sparkles className="size-4" />
               <span className="text-[10px] font-black uppercase tracking-[0.3em]">{format(new Date(), 'EEEE, MMMM dd')}</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter">
+          <h1 className="text-5xl font-black tracking-tighter leading-none">
               {greeting}, {currentUserData?.firstName || 'Strategist'} ,
           </h1>
-          <p className="text-sm font-medium text-muted-foreground">Welcome to the tactical grid. Your fleet operations are synchronized.</p>
+          <p className="text-base font-semibold text-muted-foreground/80 mt-2">Welcome to the tactical grid. Your fleet operations are synchronized.</p>
       </div>
 
       {/* Dynamic Notifications */}
       {isCEO && hasCriticalAlert && latestCompliance?.[0] && (
-          <Alert className="mb-6 bg-red-50 border-red-200 animate-pulse rounded-2xl border-2">
-              <ShieldAlert className="size-4 text-red-600" />
+          <Alert className="mb-6 bg-red-50 border-red-200 animate-pulse rounded-[2rem] border-2 p-6 shadow-xl shadow-red-500/10">
+              <ShieldAlert className="size-5 text-red-600" />
               <AlertTitle className="text-red-700 font-black uppercase text-xs tracking-widest">Protocol Alert: Executive Review Required</AlertTitle>
-              <AlertDescription className="flex justify-between items-center mt-2">
-                  <p className="text-red-800 text-sm font-medium">A high-priority compliance report has been filed for <span className="font-black">{latestCompliance[0].employeeName}</span>.</p>
-                  <Link href="/dashboard/compliance" className="text-red-600 font-black uppercase text-[10px] underline underline-offset-4">Review Detail</Link>
+              <AlertDescription className="flex justify-between items-center mt-3">
+                  <p className="text-red-800 text-sm font-bold">A high-priority compliance report has been filed for <span className="font-black underline">{latestCompliance[0].employeeName}</span>.</p>
+                  <Link href="/dashboard/compliance" className="text-red-600 font-black uppercase text-[10px] underline underline-offset-8 decoration-2">Review Detail</Link>
               </AlertDescription>
           </Alert>
       )}
 
       {recentTicketUpdates.length > 0 && (
-          <Alert className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-2xl">
-              <MessageSquareWarning className="size-4 text-blue-600" />
+          <Alert className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-[2rem] p-6 shadow-xl shadow-blue-500/10">
+              <MessageSquareWarning className="size-5 text-blue-600" />
               <AlertTitle className="text-blue-700 font-black uppercase text-xs tracking-widest">Support Desk Update</AlertTitle>
-              <AlertDescription className="flex justify-between items-center mt-2">
-                  <p className="text-blue-800 text-sm font-medium">Your support ticket "<span className="font-black">{recentTicketUpdates[0].title}</span>" has been updated to <span className="font-black">{recentTicketUpdates[0].status}</span>.</p>
-                  <Link href="/dashboard/issues" className="text-blue-600 font-black uppercase text-[10px] underline underline-offset-4">View Updates</Link>
+              <AlertDescription className="flex justify-between items-center mt-3">
+                  <p className="text-blue-800 text-sm font-bold">Your support ticket "<span className="font-black">{recentTicketUpdates[0].title}</span>" has been updated to <span className="font-black">{recentTicketUpdates[0].status}</span>.</p>
+                  <Link href="/dashboard/issues" className="text-blue-600 font-black uppercase text-[10px] underline underline-offset-8 decoration-2">View Updates</Link>
               </AlertDescription>
           </Alert>
       )}
 
       <DashboardReminder />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
           <div className="lg:col-span-8 animate-fade-in-up">
               <ProfileBentoCard />
           </div>
@@ -103,7 +104,7 @@ export default function DashboardPage() {
           </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <AttendanceWidget />
           </div>
@@ -115,9 +116,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <ActionItemsWidget />
+        </div>
+
+        <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '450ms' }}>
+          <TodoWidget />
         </div>
 
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
@@ -125,7 +130,7 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <div className="grid gap-6">
+      <div className="grid gap-8">
           <div className="animate-fade-in-up" style={{ animationDelay: '600ms' }}>
             <EventsWidget />
           </div>

@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 const { fontFamily } = require("tailwindcss/defaultTheme");
@@ -19,7 +20,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ["var(--font-body)", ...fontFamily.sans],
+        jakarta: ["var(--font-jakarta)", ...fontFamily.sans],
         headline: ["var(--font-headline)", ...fontFamily.sans],
         "open-sans": ["var(--font-open-sans)", ...fontFamily.sans],
       },

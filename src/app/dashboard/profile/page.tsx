@@ -265,10 +265,10 @@ export default function ProfilePage() {
         pdfDoc.save(`ID_CARD_${employee.firstName}.pdf`);
     };
 
-    if (isEmployeeLoading || !employee) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Identity Hub...</div>;
+    if (isEmployeeLoading || !employee) return <div className="p-20 text-center animate-pulse uppercase font-black text-[10px] tracking-[0.3em]">Syncing Identity Hub...</div>;
 
     return (
-        <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-open-sans">
+        <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-jakarta">
             <div className="flex flex-col gap-1 mb-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
                 <h1 className="text-4xl font-black tracking-tighter">
@@ -276,53 +276,53 @@ export default function ProfilePage() {
                 </h1>
             </div>
 
-            <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden ring-1 ring-border/50">
-                <CardContent className="p-8 md:p-10">
-                    <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-start">
+            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
+                <CardContent className="p-8 md:p-12">
+                    <div className="flex flex-col lg:flex-row gap-12 items-center lg:items-start">
                         <div className="relative group cursor-pointer" onClick={() => setIsAvatarDialogOpen(true)}>
-                            <Avatar className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-white shadow-xl ring-1 ring-border">
+                            <Avatar className="h-32 w-32 md:h-48 md:w-48 rounded-full border-4 border-white shadow-2xl ring-1 ring-border">
                                 {employee.avatar?.startsWith('http') ? (
                                     <AvatarImage src={employee.avatar} className="object-cover" />
                                 ) : (
-                                    <AvatarFallback className="text-6xl bg-primary/5 text-primary/40">{employee.avatar || employee.firstName?.[0]}</AvatarFallback>
+                                    <AvatarFallback className="text-7xl bg-primary/5 text-primary/40 font-black">{employee.avatar || employee.firstName?.[0]}</AvatarFallback>
                                 )}
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Camera className="size-8 text-white" />
+                                    <Camera className="size-10 text-white" />
                                 </div>
                             </Avatar>
-                            <div className={cn("absolute bottom-2 right-2 h-6 w-6 rounded-full border-4 border-white shadow-md", operationalStatus === 'Active' ? 'bg-green-500' : 'bg-slate-300')} />
+                            <div className={cn("absolute bottom-4 right-4 h-8 w-8 rounded-full border-4 border-white shadow-xl", operationalStatus === 'Active' ? 'bg-green-500 shadow-green-500/50' : 'bg-slate-300')} />
                         </div>
 
-                        <div className="flex-1 text-center lg:text-left space-y-6 w-full">
-                            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-3 justify-center lg:justify-start">
-                                        <h2 className="text-3xl font-black tracking-tighter">{employee.firstName} {employee.lastName}</h2>
-                                        <Badge className="bg-blue-100 text-blue-700 border-none rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-widest">{operationalStatus}</Badge>
+                        <div className="flex-1 text-center lg:text-left space-y-8 w-full">
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center gap-4 justify-center lg:justify-start">
+                                        <h2 className="text-4xl font-black tracking-tighter">{employee.firstName} {employee.lastName}</h2>
+                                        <Badge className="bg-primary/10 text-primary border-none rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest shadow-sm">{operationalStatus}</Badge>
                                     </div>
-                                    <p className="text-lg font-medium text-muted-foreground">{employee.jobTitle}</p>
-                                    <p className="text-xs font-black uppercase text-primary/60 tracking-widest">{employee.department} Division</p>
+                                    <p className="text-2xl font-semibold text-muted-foreground/80">{employee.jobTitle}</p>
+                                    <p className="text-[11px] font-black uppercase text-primary tracking-[0.25em]">{employee.department} Division</p>
                                 </div>
-                                <div className="flex gap-3">
-                                    <Button onClick={() => setIsProfileDialogOpen(true)} className="rounded-xl h-10 px-6 font-black uppercase text-[10px] tracking-widest shadow-lg">Edit Profile</Button>
+                                <div className="flex gap-4">
+                                    <Button onClick={() => setIsProfileDialogOpen(true)} className="rounded-2xl h-12 px-8 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-primary/20">Edit Profile</Button>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" className="rounded-xl h-10 px-5 font-black uppercase text-[10px] bg-white border-none ring-1 ring-border/50">More Actions <MoreHorizontal className="size-4 ml-2" /></Button>
+                                            <Button variant="outline" className="rounded-2xl h-12 px-6 font-black uppercase text-[10px] tracking-[0.1em] bg-white border-none ring-1 ring-border/50 shadow-sm transition-all hover:shadow-md">More Actions <MoreHorizontal className="size-4 ml-2" /></Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
-                                            <DropdownMenuItem onClick={handleDownloadIdCard} className="font-bold text-xs uppercase cursor-pointer gap-2"><Download className="size-3.5"/> Download ID Card</DropdownMenuItem>
+                                        <DropdownMenuContent align="end" className="rounded-2xl p-2 w-64 border-none shadow-2xl">
+                                            <DropdownMenuItem onClick={handleDownloadIdCard} className="font-black text-[10px] uppercase tracking-widest cursor-pointer gap-2.5 py-3"><Download className="size-4"/> Download ID Card</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 pt-4 border-t border-dashed border-border/50">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 pt-8 border-t border-dashed border-border/50">
                                 <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${employee.id.slice(0, 5).toUpperCase()}`} />
-                                <DetailItem icon={Mail} label="Email" value={employee.email} />
-                                <DetailItem icon={Phone} label="Phone" value={employee.phoneNumber || "N/A"} />
-                                <DetailItem icon={MapPin} label="Location" value={branchName} />
-                                <DetailItem icon={CalendarDays} label="Joined On" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                                <DetailItem icon={Briefcase} label="Employment Type" value={employee.employmentType || "Full Time"} />
+                                <DetailItem icon={Mail} label="Email Directive" value={employee.email} />
+                                <DetailItem icon={Phone} label="Phone Line" value={employee.phoneNumber || "N/A"} />
+                                <DetailItem icon={MapPin} label="Sector Location" value={branchName} />
+                                <DetailItem icon={CalendarDays} label="Joined Operational" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
+                                <DetailItem icon={Briefcase} label="Deployment Type" value={employee.employmentType || "Full Time"} />
                             </div>
                         </div>
                     </div>
@@ -330,17 +330,17 @@ export default function ProfilePage() {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/${monthlyStats.totalWorkingDays} Days`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
-                <MetricCard label="Documents" value={documents?.length || 0} sub="Files Updated" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
+                <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/${monthlyStats.totalWorkingDays} Days Active`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
+                <MetricCard label="Intelligence Vault" value={documents?.length || 0} sub="Records Stored" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
                 <MetricCard label="Account Authority" value={employee.role === 'CEO/Admin' ? 'Executive' : employee.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
-                <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Net Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
-                <MetricCard label="Support Desk" value={userTickets?.length || 0} sub="Logged Issues" icon={ShieldCheck} color="text-pink-600" bg="bg-pink-50" />
+                <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Shift Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
+                <MetricCard label="Support Registry" value={userTickets?.length || 0} sub="Logged Reports" icon={ShieldCheck} color="text-pink-600" bg="bg-pink-50" />
             </div>
 
             <Tabs defaultValue="overview" className="space-y-8">
-                <TabsList className="w-full justify-start bg-transparent border-none p-0 h-auto gap-8">
+                <TabsList className="w-full justify-start bg-transparent border-none p-0 h-auto gap-12">
                     {["Overview", "Attendance", "Documents", "Assets"].map(tab => (
-                        <TabsTrigger key={tab} value={tab.toLowerCase().replace(' ', '-')} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary p-0 pb-4 bg-transparent font-black uppercase text-[10px] tracking-widest">
+                        <TabsTrigger key={tab} value={tab.toLowerCase().replace(' ', '-')} className="rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary p-0 pb-5 bg-transparent font-black uppercase text-[11px] tracking-[0.25em] transition-all">
                             {tab}
                         </TabsTrigger>
                     ))}
@@ -348,54 +348,54 @@ export default function ProfilePage() {
 
                 <TabsContent value="overview" className="mt-0">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        <div className="lg:col-span-4 space-y-6">
-                            <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
+                        <div className="lg:col-span-4 space-y-8">
+                            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Activity Timeline</h3>
-                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase text-primary">View All</Button>
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Activity Timeline</h3>
+                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-full px-4">View All</Button>
                                 </div>
-                                <div className="space-y-8 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
+                                <div className="space-y-10 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
                                     {userReports.length > 0 ? userReports.map(r => (
-                                        <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Submission`} time={format(r.date.toDate(), 'PPP')} desc={`Implementation log for ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
+                                        <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Submission`} time={format(r.date.toDate(), 'PPP')} desc={`Implementation log for ${r.employeeDepartment} unit.`} color="bg-primary/10 text-primary" />
                                     )) : (
-                                        <div className="py-20 text-center opacity-30 italic text-xs uppercase font-black">No activity records found.</div>
+                                        <div className="py-24 text-center opacity-30 italic text-[10px] uppercase font-black tracking-[0.3em]">No activity detected</div>
                                     )}
                                 </div>
                             </Card>
                         </div>
 
                         <div className="lg:col-span-4 space-y-8">
-                            <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
+                            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Recent Documents</h3>
-                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase text-primary">View All</Button>
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Recent Assets</h3>
+                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-full px-4">Vault Access</Button>
                                 </div>
-                                <div className="space-y-4">
+                                <div className="space-y-5">
                                     {documents?.slice(0, 3).map(doc => (
-                                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 rounded-2xl transition-colors border border-transparent hover:border-border/50">
-                                            <div className="h-10 w-10 bg-red-50 text-red-600 flex items-center justify-center rounded-xl font-black text-[10px]">PDF</div>
+                                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center gap-5 p-5 hover:bg-muted/30 rounded-3xl transition-all border border-transparent hover:border-border/50 group shadow-sm hover:shadow-md">
+                                            <div className="h-12 w-12 bg-red-50 text-red-600 flex items-center justify-center rounded-2xl font-black text-[11px] shadow-sm">PDF</div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-xs truncate">{doc.title}</p>
-                                                <p className="text-[8px] font-black uppercase text-muted-foreground opacity-60">Uploaded on {format(doc.uploadedAt.toDate(), 'dd MMM yyyy')}</p>
+                                                <p className="font-black text-sm truncate group-hover:text-primary transition-colors">{doc.title}</p>
+                                                <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60 mt-1 tracking-tighter">Uploaded: {format(doc.uploadedAt.toDate(), 'dd MMM yyyy')}</p>
                                             </div>
                                         </Link>
                                     ))}
                                 </div>
                             </Card>
 
-                            <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
-                                <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Assigned Assets</h3>
-                                <div className="space-y-4">
+                            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Fleet Hardware</h3>
+                                <div className="space-y-5">
                                     {assignedAssets?.map(asset => (
-                                        <div key={asset.id} className="flex items-center gap-4">
-                                            <div className="h-12 w-12 bg-muted rounded-2xl flex items-center justify-center overflow-hidden">
-                                                {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Briefcase className="size-5 opacity-20" />}
+                                        <div key={asset.id} className="flex items-center gap-5 p-4 rounded-3xl bg-muted/20 border border-border/50">
+                                            <div className="h-14 w-14 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-inner ring-1 ring-border/30">
+                                                {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Briefcase className="size-6 opacity-20" />}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-xs truncate">{asset.name}</p>
-                                                <p className="text-[8px] font-black uppercase text-muted-foreground opacity-60">{asset.category}</p>
+                                                <p className="font-black text-sm truncate">{asset.name}</p>
+                                                <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60 mt-1 tracking-widest">{asset.category}</p>
                                             </div>
-                                            <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[8px] font-black">IN USE</Badge>
+                                            <Badge className="bg-emerald-100 text-emerald-700 border-none rounded-full text-[8px] font-black px-3 py-1 shadow-sm">IN USE</Badge>
                                         </div>
                                     ))}
                                 </div>
@@ -403,21 +403,21 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="lg:col-span-4 space-y-8">
-                             <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
-                                <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Quick Info</h3>
-                                <div className="space-y-4">
-                                    <InfoRow label="Department" value={employee.department} />
-                                    <InfoRow label="Work Location" value={branchName} />
-                                    <InfoRow label="Shift" value={employee.shiftType || 'General Shift'} />
-                                    <InfoRow label="Experience" value={tenure} />
+                             <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Tactical Specifications</h3>
+                                <div className="space-y-5 pt-2">
+                                    <InfoRow label="Deployment Unit" value={employee.department} />
+                                    <InfoRow label="Sector Location" value={branchName} />
+                                    <InfoRow label="Shift Profile" value={employee.shiftType || 'Standard'} />
+                                    <InfoRow label="Fleet Experience" value={experience} />
                                 </div>
                             </Card>
 
-                            <Card className="border-none shadow-sm rounded-3xl bg-primary/5 p-8 text-center space-y-6">
-                                <ShieldCheck className="size-10 text-primary mx-auto opacity-30" />
+                            <Card className="border-none shadow-xl rounded-[2.5rem] bg-primary/5 p-10 text-center space-y-6 ring-2 ring-primary/10">
+                                <ShieldCheck className="size-12 text-primary mx-auto opacity-30 animate-pulse" />
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-widest text-primary leading-tight">Operational Security Stamped</p>
-                                    <p className="text-[9px] font-bold text-primary/60 mt-1 uppercase">Fleet tenure verified</p>
+                                    <p className="text-sm font-black uppercase tracking-[0.2em] text-primary leading-tight">Identity Stamped</p>
+                                    <p className="text-[10px] font-bold text-primary/50 mt-2 uppercase tracking-widest">Vertical tenure verified</p>
                                 </div>
                             </Card>
                         </div>
@@ -425,24 +425,24 @@ export default function ProfilePage() {
                 </TabsContent>
                 
                 <TabsContent value="attendance">
-                    <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
-                        <div className="text-center py-20 opacity-30 uppercase font-black text-xs">Monthly detailed log synchronized.</div>
+                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-12">
+                        <div className="text-center py-32 opacity-20 uppercase font-black text-xs tracking-[0.4em]">Monthly detailed mission log synchronized.</div>
                     </Card>
                 </TabsContent>
                 
                 <TabsContent value="documents">
-                    <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {documents?.map(doc => (
-                                <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 hover:bg-white border border-transparent hover:border-border/50 transition-all group">
-                                    <div className="flex items-center gap-4">
-                                        <FileBox className="size-5 text-blue-600" />
+                                <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-6 rounded-[2rem] bg-muted/20 hover:bg-white border-2 border-transparent hover:border-primary/20 transition-all group shadow-sm hover:shadow-xl">
+                                    <div className="flex items-center gap-5">
+                                        <div className="p-3 rounded-2xl bg-blue-50 text-blue-600 shadow-sm"><FileBox className="size-6" /></div>
                                         <div>
-                                            <p className="font-bold text-xs">{doc.title}</p>
-                                            <p className="text-[8px] font-black uppercase text-muted-foreground">Linked on {format(doc.uploadedAt.toDate(), 'dd MMM yyyy')}</p>
+                                            <p className="font-black text-sm">{doc.title}</p>
+                                            <p className="text-[10px] font-black uppercase text-muted-foreground mt-1 opacity-60">Linked on {format(doc.uploadedAt.toDate(), 'dd MMM yyyy')}</p>
                                         </div>
                                     </div>
-                                    <ExternalLink className="size-3.5 opacity-0 group-hover:opacity-100" />
+                                    <ExternalLink className="size-4 opacity-0 group-hover:opacity-100 transition-all text-primary" />
                                 </Link>
                             ))}
                         </div>
@@ -451,51 +451,51 @@ export default function ProfilePage() {
             </Tabs>
 
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
-                <DialogContent className="rounded-3xl sm:max-w-xl">
-                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Profile Config</DialogTitle></DialogHeader>
+                <DialogContent className="rounded-[2.5rem] sm:max-w-xl p-10 border-none shadow-2xl">
+                    <DialogHeader><DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Identity Calibration</DialogTitle></DialogHeader>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-6">
+                            <div className="grid grid-cols-2 gap-6">
                                 <FormField control={form.control} name="firstName" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">First Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">First Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={form.control} name="lastName" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Last Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Last Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
                                 )} />
                             </div>
                             <FormField control={form.control} name="phoneNumber" render={({ field }) => (
-                                <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Phone Number</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Phone Line</FormLabel><FormControl><Input {...field} className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
                             )} />
-                            <Separator />
-                            <div className="grid grid-cols-2 gap-4">
+                            <Separator className="opacity-50" />
+                            <div className="grid grid-cols-2 gap-6">
                                 <FormField control={form.control} name="password" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">New Password</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-11" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Reset Cipher</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={form.control} name="confirmPassword" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Confirm Password</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-11" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Confirm Cipher</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
                                 )} />
                             </div>
-                            <Button type="submit" className="w-full h-12 rounded-full font-black uppercase tracking-widest shadow-lg" disabled={isSubmitting}>{isSubmitting ? "Syncing..." : "Finalize Config"}</Button>
+                            <Button type="submit" className="w-full h-14 rounded-full font-black uppercase tracking-widest shadow-2xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? "CALIBRATING..." : "Finalize Protocol"}</Button>
                         </form>
                     </Form>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
-                <DialogContent className="rounded-[2.5rem] sm:max-w-md">
-                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Identity Asset Sync</DialogTitle></DialogHeader>
-                    <div className="py-6 space-y-8">
+                <DialogContent className="rounded-[3rem] sm:max-w-md p-10 border-none shadow-2xl">
+                    <DialogHeader><DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Identity Portrait Sync</DialogTitle></DialogHeader>
+                    <div className="py-8 space-y-10">
                         <div className="relative group">
-                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleAvatarImageUpload(e.target.files[0])} disabled={isUploadingAvatar} />
-                            <Button className="w-full h-20 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary flex-col gap-1 font-black uppercase text-[10px]" disabled={isUploadingAvatar}>
-                                {isUploadingAvatar ? <Loader2 className="animate-spin size-5"/> : <ImageIcon className="size-6" />}
-                                {isUploadingAvatar ? "Transmitting..." : "Upload New Portrait"}
+                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-20" onChange={(e) => e.target.files?.[0] && handleAvatarImageUpload(e.target.files[0])} disabled={isUploadingAvatar} />
+                            <Button className="w-full h-28 rounded-[2rem] border-2 border-dashed border-primary/30 bg-primary/5 text-primary flex-col gap-2 font-black uppercase text-[11px] tracking-widest hover:bg-primary/10 transition-all" disabled={isUploadingAvatar}>
+                                {isUploadingAvatar ? <Loader2 className="animate-spin size-6"/> : <ImageIcon className="size-8" />}
+                                {isUploadingAvatar ? "TRANSMITTING..." : "Upload Professional Asset"}
                             </Button>
                         </div>
-                        <Separator />
-                        <div className="grid grid-cols-5 gap-3">
+                        <Separator className="opacity-50" />
+                        <div className="grid grid-cols-5 gap-4">
                             {emojiCategories.map(emoji => (
-                                <button key={emoji} onClick={() => handleAvatarEmojiUpdate(emoji)} className="text-3xl p-3 rounded-xl hover:bg-primary/10 transition-all border border-transparent hover:border-primary/20">{emoji}</button>
+                                <button key={emoji} onClick={() => handleAvatarEmojiUpdate(emoji)} className="text-4xl p-4 rounded-2xl hover:bg-primary/10 transition-all border-2 border-transparent hover:border-primary/20 bg-muted/10">{emoji}</button>
                             ))}
                         </div>
                     </div>
@@ -507,11 +507,11 @@ export default function ProfilePage() {
 
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
-        <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/5 text-primary/60"><Icon className="size-3.5" /></div>
+        <div className="flex items-start gap-4">
+            <div className="p-3 rounded-2xl bg-primary/5 text-primary/60 shadow-sm"><Icon className="size-4.5" /></div>
             <div>
-                <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">{label}</p>
-                <p className="text-xs font-bold truncate max-w-[150px]">{value}</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-1 leading-none">{label}</p>
+                <p className="text-sm font-black truncate max-w-[180px] text-foreground/80">{value}</p>
             </div>
         </div>
     );
@@ -519,12 +519,12 @@ function DetailItem({ icon: Icon, label, value }: any) {
 
 function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4 ring-1 ring-border/50 hover:shadow-md transition-all group">
-            <div className={cn("p-2.5 rounded-xl w-fit group-hover:scale-110 transition-transform", bg, color)}><Icon className="size-4" /></div>
+        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-8 space-y-6 ring-1 ring-border/50 hover:-translate-y-1 transition-all duration-500 group">
+            <div className={cn("p-3 rounded-2xl w-fit shadow-sm transition-transform group-hover:scale-110", bg, color)}><Icon className="size-5" /></div>
             <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">{label}</p>
-                <p className="text-2xl font-black tracking-tighter">{value}</p>
-                <p className="text-[10px] font-bold text-muted-foreground mt-0.5">{sub}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-1.5">{label}</p>
+                <p className="text-3xl font-black tracking-tighter text-foreground">{value}</p>
+                <p className="text-[11px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-tight">{sub}</p>
             </div>
         </Card>
     );
@@ -532,12 +532,12 @@ function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
 
 function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
-        <div className="flex gap-4 items-start relative">
-            <div className={cn("h-7 w-7 rounded-full flex items-center justify-center shrink-0 z-10", color)}><Icon className="size-3.5" /></div>
-            <div className="space-y-0.5 pt-0.5">
-                <p className="font-bold text-xs">{title}</p>
-                <p className="text-[9px] font-black uppercase text-muted-foreground/40">{time}</p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">{desc}</p>
+        <div className="flex gap-6 items-start relative">
+            <div className={cn("h-8 w-8 rounded-2xl flex items-center justify-center shrink-0 z-10 shadow-sm", color)}><Icon className="size-4" /></div>
+            <div className="space-y-1 pt-0.5">
+                <p className="font-black text-sm uppercase tracking-tight">{title}</p>
+                <p className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest">{time}</p>
+                <p className="text-xs font-medium text-muted-foreground/80 leading-relaxed mt-2">"{desc}"</p>
             </div>
         </div>
     );
@@ -545,9 +545,9 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
 
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <div className="flex items-center justify-between py-2 border-b border-dashed border-border last:border-none">
-            <span className="text-[10px] font-black uppercase text-muted-foreground/60">{label}</span>
-            <span className="text-xs font-bold">{value}</span>
+        <div className="flex items-center justify-between py-3.5 border-b border-dashed border-border/50 last:border-none">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{label}</span>
+            <span className="text-sm font-black text-foreground/80">{value}</span>
         </div>
     );
 }
