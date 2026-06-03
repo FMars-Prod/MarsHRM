@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, CalendarOff, ShieldCheck, MessageSquareWarning, ArrowRight, ShieldAlert } from 'lucide-react';
+import { List, CalendarOff, ShieldCheck, MessageSquareWarning, ArrowRight, ShieldAlert, MapPin } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, getDocs, collectionGroup } from 'firebase/firestore';
 import { subDays, endOfDay, format, startOfDay } from 'date-fns';
@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 type ActionItem = {
     id: string;
-    type: 'leave' | 'policy' | 'issue' | 'compliance';
+    type: 'leave' | 'policy' | 'issue' | 'compliance' | 'range_approval';
     title: string;
     description: string;
     href: string;
@@ -67,6 +67,12 @@ export function ActionItemsWidget() {
         return query(collection(firestore, 'leave_requests'), where('status', 'in', statuses));
     }, [firestore, currentUser, userRole]);
     const { data: pendingLeaves, isLoading: leavesLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
+
+    const rangeRequestsQuery = useMemoFirebase(() => {
+        if (!isAdmin) return null;
+        return query(collection(firestore, 'attendanceApprovalRequests'), where('status', '==', 'Pending'));
+    }, [firestore, isAdmin]);
+    const { data: pendingRangeRequests, isLoading: rangeLoading } = useCollection<any>(rangeRequestsQuery);
 
     const policiesQuery = useMemoFirebase(() => collection(firestore, 'policies'), [firestore]);
     const { data: allPolicies, isLoading: policiesLoading } = useCollection<Policy>(policiesQuery);
@@ -136,6 +142,15 @@ export function ActionItemsWidget() {
 
     const actionItems: ActionItem[] = React.useMemo(() => {
         const items: ActionItem[] = [...complianceIssues];
+        (pendingRangeRequests || []).forEach(req => {
+            items.push({
+                id: `range-${req.id}`,
+                type: 'range_approval',
+                title: `Range Request: ${req.employeeName}`,
+                description: `Awaiting authority: ${req.type}`,
+                href: '/dashboard/attendance-requests'
+            });
+        });
         (pendingLeaves || []).forEach(leave => {
             items.push({
                 id: `leave-${leave.id}`,
@@ -164,15 +179,16 @@ export function ActionItemsWidget() {
             });
         });
         return items;
-    }, [pendingLeaves, unacknowledgedPolicies, openIssues, complianceIssues]);
+    }, [pendingLeaves, unacknowledgedPolicies, openIssues, complianceIssues, pendingRangeRequests]);
 
-    const isLoading = leavesLoading || policiesLoading || acksLoading || issuesLoading;
+    const isLoading = leavesLoading || policiesLoading || acksLoading || issuesLoading || rangeLoading;
     
     const iconMap = {
         leave: <CalendarOff className="size-4" />,
         policy: <ShieldCheck className="size-4" />,
         issue: <MessageSquareWarning className="size-4" />,
-        compliance: <ShieldAlert className="size-4" />
+        compliance: <ShieldAlert className="size-4" />,
+        range_approval: <MapPin className="size-4" />
     };
 
     return (
@@ -209,6 +225,7 @@ export function ActionItemsWidget() {
                                         item.type === 'compliance' ? "bg-orange-50/50 border-orange-100/50 hover:border-orange-200" :
                                         item.type === 'leave' ? "bg-blue-50/50 border-blue-100/50 hover:border-blue-200" :
                                         item.type === 'policy' ? "bg-yellow-50/50 border-yellow-100/50 hover:border-yellow-200" :
+                                        item.type === 'range_approval' ? "bg-purple-50/50 border-purple-100/50 hover:border-purple-200" :
                                         "bg-red-50/50 border-red-100/50 hover:border-red-200"
                                     )}>
                                         <div className="flex items-center gap-4">
@@ -217,6 +234,7 @@ export function ActionItemsWidget() {
                                                 item.type === 'compliance' ? "bg-orange-500 text-white" :
                                                 item.type === 'leave' ? "bg-blue-500 text-white" :
                                                 item.type === 'policy' ? "bg-yellow-500 text-white" :
+                                                item.type === 'range_approval' ? "bg-purple-500 text-white" :
                                                 "bg-red-500 text-white"
                                             )}>
                                                 {iconMap[item.type]}

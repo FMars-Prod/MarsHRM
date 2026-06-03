@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles } from "lucide-react";
+import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles, ShieldCheck, RefreshCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -154,6 +154,7 @@ export function AttendanceWidget() {
   
   const { data: myRequests } = useCollection(requestsQuery);
   const pendingRequest = myRequests?.find(r => r.status === 'Pending');
+  const approvedRequest = myRequests?.find(r => r.status === 'Approved');
 
   const formatTime = (totalSeconds: number) => {
     const hrs = Math.floor(Math.max(0, totalSeconds) / 3600);
@@ -258,7 +259,7 @@ export function AttendanceWidget() {
           setIsVerifyingLocation(false);
           
           if (status === "lunch") {
-              if (dist > activeGeofence.radius) {
+              if (dist > activeGeofence.radius && !approvedRequest) {
                   setCurrentDist(dist);
                   setOutOfRangeAction(() => () => proceedWithBreakEnd(userLocation, dist, outOfRangeReason));
                   setIsOutOfRangeReasonDialogOpen(true);
@@ -333,7 +334,7 @@ export function AttendanceWidget() {
                   totalBreakDuration: 0,
                   locationCheckInLatitude: userLocation.latitude || 0,
                   locationCheckInLongitude: userLocation.longitude || 0,
-                  isOutOfRange: false,
+                  isOutOfRange: dist > (activeGeofence?.radius || 0.5),
                   isAtHome: activeGeofence?.type === 'wfh'
               };
               setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
@@ -356,7 +357,8 @@ export function AttendanceWidget() {
 
             const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
             
-            if (dist <= activeGeofence.radius) { 
+            // Allow clock-in if within range OR if a request for today was already approved
+            if (dist <= activeGeofence.radius || approvedRequest) { 
                 proceedWithClockIn(userLoc, dist); 
                 return; 
             }
@@ -413,7 +415,7 @@ export function AttendanceWidget() {
 
           const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
 
-          if (dist <= activeGeofence.radius) {
+          if (dist <= activeGeofence.radius || approvedRequest) {
               proceedWithClockOut(userLoc, dist);
           } else {
               setCurrentDist(dist);
@@ -424,6 +426,17 @@ export function AttendanceWidget() {
           setIsVerifyingLocation(false); 
           toast({ variant: 'destructive', title: 'GPS Required' }); 
       });
+  };
+
+  const handleRecalibrate = () => {
+      setIsVerifyingLocation(true);
+      navigator.geolocation.getCurrentPosition(() => {
+          setIsVerifyingLocation(false);
+          toast({ title: "Satellite Grid Recalibrated", description: "GPS coordinates synchronized with high-fidelity." });
+      }, () => {
+          setIsVerifyingLocation(false);
+          toast({ variant: 'destructive', title: "Calibration Failed" });
+      }, { enableHighAccuracy: true, timeout: 5000 });
   };
 
   const isLate = () => {
@@ -468,9 +481,14 @@ export function AttendanceWidget() {
                   </CardTitle>
                   <CardDescription className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Verified location-based intelligence registry</CardDescription>
               </div>
-              <Badge variant="outline" className="rounded-full bg-primary/5 text-primary border-primary/20 font-black text-[10px] uppercase px-5 h-10 shadow-sm">
-                <MapPin className="size-3.5 mr-2" /> Satellite Sync Active
-              </Badge>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={handleRecalibrate} className="rounded-full h-10 px-4 font-black text-[9px] uppercase tracking-widest text-muted-foreground hover:bg-muted/50 border border-dashed">
+                    <RefreshCcw className="size-3 mr-2" /> Recalibrate
+                </Button>
+                <Badge variant="outline" className="rounded-full bg-primary/5 text-primary border-primary/20 font-black text-[10px] uppercase px-5 h-10 shadow-sm">
+                    <MapPin className="size-3.5 mr-2" /> Satellite Sync Active
+                </Badge>
+              </div>
           </div>
         </CardHeader>
 
@@ -491,9 +509,16 @@ export function AttendanceWidget() {
                 </div>
 
                 {activeGeofence && (
-                    <Badge variant="secondary" className="rounded-full px-6 py-2 font-black text-[10px] uppercase tracking-widest bg-muted/40 text-primary border border-primary/10">
-                        Target Sector: {activeGeofence.name}
-                    </Badge>
+                    <div className="flex flex-col items-center gap-3">
+                        <Badge variant="secondary" className="rounded-full px-6 py-2 font-black text-[10px] uppercase tracking-widest bg-muted/40 text-primary border border-primary/10">
+                            Target Sector: {activeGeofence.name}
+                        </Badge>
+                        {approvedRequest && (
+                            <Badge className="bg-emerald-100 text-emerald-700 border-none rounded-full px-4 h-6 text-[8px] font-black uppercase tracking-widest shadow-sm">
+                                <ShieldCheck className="size-2.5 mr-1" /> Remote Authority Authenticated
+                            </Badge>
+                        )}
+                    </div>
                 )}
 
                 {(status === "lunch" || status === "short_break") && (
@@ -620,7 +645,7 @@ export function AttendanceWidget() {
                   <Button onClick={() => { if(!outOfRangeReason) { toast({variant: 'destructive', title: 'Justification Required'}); return; } if(outOfRangeAction) outOfRangeAction(); }} className="h-16 rounded-[2rem] font-black uppercase tracking-widest bg-primary text-white shadow-2xl shadow-primary/20 text-[11px] transition-all hover:scale-105">
                       Certify & Dispatch Request
                   </Button>
-                  <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="ghost" className="h-12 rounded-full font-black uppercase text-[10px] tracking-[0.3em] text-muted-foreground/60">
+                  <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="ghost" className="h-12 rounded-full font-black uppercase text-[10px] tracking-with-widest text-muted-foreground/60">
                       Abort Protocol
                   </Button>
               </div>

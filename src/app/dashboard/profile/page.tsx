@@ -17,7 +17,7 @@ import {
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
     FileDown, Target, Image as ImageIcon,
-    Table as TableIcon, Laptop
+    Table as TableIcon, Laptop, Sparkles, Globe
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -339,12 +339,32 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/${monthlyStats.totalWorkingDays} Days Active`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
-                <MetricCard label="Intelligence Vault" value={documents?.length || 0} sub="Records Stored" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
-                <MetricCard label="Account Authority" value={employee.role === 'CEO/Admin' ? 'Executive' : employee.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
-                <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Shift Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
-                <MetricCard label="Support Registry" value={userTickets?.length || 0} sub="Logged Reports" icon={ShieldCheck} color="text-pink-600" bg="bg-pink-50" />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/${monthlyStats.totalWorkingDays} Days Active`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
+                    <MetricCard label="Intelligence Vault" value={documents?.length || 0} sub="Records Stored" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
+                    <MetricCard label="Account Authority" value={employee.role === 'CEO/Admin' ? 'Executive' : employee.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
+                    <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Shift Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
+                </div>
+                <div className="lg:col-span-4">
+                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-indigo-600 to-purple-800 text-white overflow-hidden h-full group hover:shadow-2xl transition-all duration-500">
+                        <CardContent className="p-8 h-full flex flex-col justify-between relative">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
+                                <Globe className="size-32" />
+                            </div>
+                            <div className="space-y-4">
+                                <div className="p-3 bg-white/20 rounded-2xl w-fit"><Sparkles className="size-6 text-white" /></div>
+                                <div className="space-y-1">
+                                    <h3 className="text-2xl font-black uppercase tracking-tighter">Explore MarsOS</h3>
+                                    <p className="text-xs font-medium text-white/70 uppercase tracking-widest leading-relaxed">Access the next-generation operating system interface for high-fidelity operations.</p>
+                                </div>
+                            </div>
+                            <Button asChild className="w-full h-12 rounded-2xl bg-white text-indigo-700 hover:bg-white/90 font-black uppercase text-[10px] tracking-widest shadow-lg mt-8">
+                                <Link href="https://fortumars.com/os.html" target="_blank">Activate OS Environment <ChevronRight className="size-4 ml-2" /></Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
             <Tabs defaultValue="overview" className="space-y-8">
@@ -649,5 +669,4 @@ function InfoRow({ label, value }: { label: string, value: string }) {
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{label}</span>
             <span className="text-sm font-black text-foreground/80">{value}</span>
         </div>
-    );
 }
