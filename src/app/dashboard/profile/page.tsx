@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -273,55 +272,55 @@ export default function ProfilePage() {
     if (isEmployeeLoading || !employee) return <div className="p-20 text-center animate-pulse uppercase font-black text-[10px] tracking-[0.3em]">Syncing Identity Hub...</div>;
 
     return (
-        <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-jakarta">
-            <div className="flex flex-col gap-1 mb-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
-                <h1 className="text-4xl font-black tracking-tighter">
+        <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
+            <div className="flex flex-col gap-0.5 mb-2">
+                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
+                <h1 className="text-xl font-black tracking-tighter">
                     Good {greeting}, {employee.firstName || 'Strategist'} ,
                 </h1>
             </div>
 
-            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
-                <CardContent className="p-8 md:p-12">
-                    <div className="flex flex-col lg:flex-row gap-12 items-center lg:items-start">
+            <Card className="border-none shadow-md rounded-[1.5rem] bg-white overflow-hidden ring-1 ring-border/50">
+                <CardContent className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                         <div className="relative group cursor-pointer" onClick={() => setIsAvatarDialogOpen(true)}>
-                            <Avatar className="h-32 w-32 md:h-48 md:w-48 rounded-full border-4 border-white shadow-2xl ring-1 ring-border">
+                            <Avatar className="h-20 w-20 md:h-24 md:w-24 rounded-full border-2 border-white shadow-lg ring-1 ring-border">
                                 {employee.avatar?.startsWith('http') ? (
                                     <AvatarImage src={employee.avatar} className="object-cover" />
                                 ) : (
-                                    <AvatarFallback className="text-7xl bg-primary/5 text-primary/40 font-black">{employee.avatar || employee.firstName?.[0]}</AvatarFallback>
+                                    <AvatarFallback className="text-4xl bg-primary/5 text-primary/40 font-black">{employee.avatar || employee.firstName?.[0]}</AvatarFallback>
                                 )}
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Camera className="size-10 text-white" />
+                                    <Camera className="size-6 text-white" />
                                 </div>
                             </Avatar>
-                            <div className={cn("absolute bottom-4 right-4 h-8 w-8 rounded-full border-4 border-white shadow-xl", operationalStatus === 'Active' ? 'bg-green-500 shadow-green-500/50' : 'bg-slate-300')} />
+                            <div className={cn("absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white shadow-md", operationalStatus === 'Active' ? 'bg-green-500 shadow-green-500/50' : 'bg-slate-300')} />
                         </div>
 
-                        <div className="flex-1 text-center lg:text-left space-y-8 w-full">
-                            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center gap-4 justify-center lg:justify-start">
-                                        <h2 className="text-4xl font-black tracking-tighter">{employee.firstName} {employee.lastName}</h2>
-                                        <Badge className="bg-primary/10 text-primary border-none rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest shadow-sm">{operationalStatus}</Badge>
+                        <div className="flex-1 text-center md:text-left space-y-4 w-full">
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2 justify-center md:justify-start">
+                                        <h2 className="text-xl font-black tracking-tighter">{employee.firstName} {employee.lastName}</h2>
+                                        <Badge className="bg-primary/10 text-primary border-none rounded-full px-2 py-0 h-5 text-[8px] font-black uppercase tracking-widest shadow-sm">{operationalStatus}</Badge>
                                     </div>
-                                    <p className="text-2xl font-semibold text-muted-foreground/80">{employee.jobTitle}</p>
-                                    <p className="text-[11px] font-black uppercase text-primary tracking-[0.25em]">{employee.department} Division</p>
+                                    <p className="text-sm font-semibold text-muted-foreground/80">{employee.jobTitle}</p>
+                                    <p className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{employee.department} Division</p>
                                 </div>
-                                <div className="flex gap-4">
-                                    <Button onClick={() => setIsProfileDialogOpen(true)} className="rounded-2xl h-12 px-8 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-primary/20">Edit Profile</Button>
+                                <div className="flex gap-2">
+                                    <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-xl h-8 px-4 font-black uppercase text-[8px] tracking-[0.2em] shadow-sm border-none ring-1 ring-border/50">Edit Profile</Button>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" className="rounded-2xl h-12 px-6 font-black uppercase text-[10px] tracking-[0.1em] bg-white border-none ring-1 ring-border/50 shadow-sm transition-all hover:shadow-md">More Actions <MoreHorizontal className="size-4 ml-2" /></Button>
+                                            <Button variant="outline" size="sm" className="rounded-xl h-8 px-3 font-black uppercase text-[8px] tracking-[0.1em] bg-white border-none ring-1 ring-border/50 shadow-sm">More Actions <MoreHorizontal className="size-3 ml-1" /></Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="rounded-2xl p-2 w-64 border-none shadow-2xl">
-                                            <DropdownMenuItem onClick={handleDownloadIdCard} className="font-black text-[10px] uppercase tracking-widest cursor-pointer gap-2.5 py-3"><Download className="size-4"/> Download ID Card</DropdownMenuItem>
+                                        <DropdownMenuContent align="end" className="rounded-xl p-1 w-48 border-none shadow-xl">
+                                            <DropdownMenuItem onClick={handleDownloadIdCard} className="font-black text-[8px] uppercase tracking-widest cursor-pointer gap-2 py-2"><Download className="size-3"/> Download ID Card</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 pt-8 border-t border-dashed border-border/50">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t border-dashed border-border/50">
                                 <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${employee.id.slice(0, 5).toUpperCase()}`} />
                                 <DetailItem icon={Mail} label="Email Directive" value={employee.email} />
                                 <DetailItem icon={Phone} label="Phone Line" value={employee.phoneNumber || "N/A"} />
@@ -334,125 +333,89 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/${monthlyStats.totalWorkingDays} Days Active`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
-                    <MetricCard label="Intelligence Vault" value={documents?.length || 0} sub="Records Stored" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
-                    <MetricCard label="Account Authority" value={employee.role === 'CEO/Admin' ? 'Executive' : employee.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
-                    <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Shift Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-9 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <MetricCard label="Attendance" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/26 Days`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
+                    <MetricCard label="Vault" value={documents?.length || 0} sub="Records" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
+                    <MetricCard label="Tier" value={employee.role === 'CEO/Admin' ? 'Exec' : employee.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
+                    <MetricCard label="Hours" value={`${monthlyStats.hours}h`} sub="MTD Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
                 </div>
-                <div className="lg:col-span-4">
-                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-indigo-600 to-purple-800 text-white overflow-hidden h-full group hover:shadow-2xl transition-all duration-500">
-                        <CardContent className="p-8 h-full flex flex-col justify-between relative">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
-                                <Globe className="size-32" />
+                <div className="lg:col-span-3">
+                    <Card className="border-none shadow-md rounded-[1.5rem] bg-gradient-to-br from-indigo-600 to-purple-800 text-white overflow-hidden h-full group transition-all duration-300">
+                        <CardContent className="p-4 h-full flex flex-col justify-between relative">
+                            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:rotate-12 transition-transform">
+                                <Globe className="size-16" />
                             </div>
-                            <div className="space-y-4">
-                                <div className="p-3 bg-white/20 rounded-2xl w-fit"><Sparkles className="size-6 text-white" /></div>
-                                <div className="space-y-1">
-                                    <h3 className="text-2xl font-black uppercase tracking-tighter">Explore MarsOS</h3>
-                                    <p className="text-xs font-medium text-white/70 uppercase tracking-widest leading-relaxed">Access the next-generation operating system interface for high-fidelity operations.</p>
-                                </div>
+                            <div className="space-y-1">
+                                <h3 className="text-sm font-black uppercase tracking-tighter">MarsOS</h3>
+                                <p className="text-[8px] font-medium text-white/70 uppercase tracking-widest leading-tight">Activate the next-gen tactical interface.</p>
                             </div>
-                            <Button asChild className="w-full h-12 rounded-2xl bg-white text-indigo-700 hover:bg-white/90 font-black uppercase text-[10px] tracking-widest shadow-lg mt-8">
-                                <Link href="https://fortumars.com/os.html" target="_blank">Activate OS Environment <ChevronRight className="size-4 ml-2" /></Link>
+                            <Button asChild size="sm" className="w-full h-8 rounded-xl bg-white text-indigo-700 hover:bg-white/90 font-black uppercase text-[8px] tracking-widest shadow-md mt-4">
+                                <Link href="https://fortumars.com/os.html" target="_blank">Activate Environment</Link>
                             </Button>
                         </CardContent>
                     </Card>
                 </div>
             </div>
 
-            <Tabs defaultValue="overview" className="space-y-8">
-                <TabsList className="w-full justify-start bg-transparent border-none p-0 h-auto gap-12">
+            <Tabs defaultValue="overview" className="space-y-4">
+                <TabsList className="w-full justify-start bg-transparent border-none p-0 h-auto gap-8">
                     {["Overview", "Attendance", "Documents", "Assets"].map(tab => (
-                        <TabsTrigger key={tab} value={tab.toLowerCase().replace(' ', '-')} className="rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary p-0 pb-5 bg-transparent font-black uppercase text-[11px] tracking-[0.25em] transition-all">
+                        <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary p-0 pb-2 bg-transparent font-black uppercase text-[9px] tracking-[0.25em] transition-all">
                             {tab}
                         </TabsTrigger>
                     ))}
                 </TabsList>
 
                 <TabsContent value="overview" className="mt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        <div className="lg:col-span-4 space-y-8">
-                            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                        <div className="lg:col-span-4">
+                            <Card className="border-none shadow-md rounded-[1.5rem] bg-white p-6 space-y-6">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Activity Timeline</h3>
-                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-full px-4" asChild>
-                                        <Link href="/dashboard/reports">View All</Link>
+                                    <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/60">Timeline</h3>
+                                    <Button variant="ghost" size="sm" className="text-[8px] font-black uppercase tracking-widest text-primary h-6 rounded-full px-2" asChild>
+                                        <Link href="/dashboard/reports">All</Link>
                                     </Button>
                                 </div>
-                                <div className="space-y-10 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
+                                <div className="space-y-6 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
                                     {userReports.length > 0 ? userReports.map(r => (
-                                        <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Submission`} time={r.date?.toDate ? format(r.date.toDate(), 'PPP') : 'N/A'} desc={`Implementation log for ${r.employeeDepartment} unit.`} color="bg-primary/10 text-primary" />
+                                        <TimelineItem key={r.id} icon={FileText} title={`${r.reportType}`} time={r.date?.toDate ? format(r.date.toDate(), 'dd MMM') : 'N/A'} desc={`Sector: ${r.employeeDepartment}`} color="bg-primary/10 text-primary" />
                                     )) : (
-                                        <div className="py-24 text-center opacity-30 italic text-[10px] uppercase font-black tracking-[0.3em]">No activity detected</div>
+                                        <div className="py-10 text-center opacity-30 text-[8px] uppercase font-black tracking-[0.3em]">Sector Clear</div>
                                     )}
                                 </div>
                             </Card>
                         </div>
 
-                        <div className="lg:col-span-4 space-y-8">
-                            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Recent Assets</h3>
-                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-full px-4" asChild>
-                                        <Link href="/dashboard/documents">Vault Access</Link>
-                                    </Button>
-                                </div>
-                                <div className="space-y-5">
+                        <div className="lg:col-span-4 space-y-4">
+                            <Card className="border-none shadow-md rounded-[1.5rem] bg-white p-6 space-y-4">
+                                <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/60">Recent Assets</h3>
+                                <div className="space-y-2">
                                     {documents && documents.length > 0 ? documents.slice(0, 3).map(doc => (
-                                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center gap-5 p-5 hover:bg-muted/30 rounded-3xl transition-all border border-transparent hover:border-border/50 group shadow-sm hover:shadow-md">
-                                            <div className="h-12 w-12 bg-red-50 text-red-600 flex items-center justify-center rounded-2xl font-black text-[11px] shadow-sm">
+                                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center gap-3 p-3 hover:bg-muted/30 rounded-xl transition-all border border-transparent hover:border-border/50 group">
+                                            <div className="h-8 w-8 bg-red-50 text-red-600 flex items-center justify-center rounded-lg font-black text-[8px]">
                                                 {doc.sourceType === 'file' ? 'FILE' : 'LINK'}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-black text-sm truncate group-hover:text-primary transition-colors">{doc.title}</p>
-                                                <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60 mt-1 tracking-tighter">Uploaded: {doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM yyyy') : 'N/A'}</p>
+                                                <p className="font-black text-xs truncate group-hover:text-primary transition-colors">{doc.title}</p>
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground opacity-60 tracking-tighter">{doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM') : 'N/A'}</p>
                                             </div>
                                         </Link>
                                     )) : (
-                                        <div className="py-12 text-center opacity-20 text-[10px] font-black uppercase tracking-widest">No assets found</div>
-                                    )}
-                                </div>
-                            </Card>
-
-                            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Fleet Hardware</h3>
-                                <div className="space-y-5">
-                                    {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
-                                        <div key={asset.id} className="flex items-center gap-5 p-4 rounded-3xl bg-muted/20 border border-border/50">
-                                            <div className="h-14 w-14 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-inner ring-1 ring-border/30">
-                                                {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Briefcase className="size-6 opacity-20" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-black text-sm truncate">{asset.name}</p>
-                                                <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60 mt-1 tracking-widest">{asset.category}</p>
-                                            </div>
-                                            <Badge className="bg-emerald-100 text-emerald-700 border-none rounded-full text-[8px] font-black px-3 py-1 shadow-sm">IN USE</Badge>
-                                        </div>
-                                    )) : (
-                                        <div className="py-8 text-center opacity-20 text-[10px] font-black uppercase tracking-widest">No assigned hardware</div>
+                                        <div className="py-6 text-center opacity-20 text-[8px] font-black uppercase tracking-widest">No assets</div>
                                     )}
                                 </div>
                             </Card>
                         </div>
 
-                        <div className="lg:col-span-4 space-y-8">
-                             <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/80">Tactical Specifications</h3>
-                                <div className="space-y-5 pt-2">
-                                    <InfoRow label="Deployment Unit" value={employee.department} />
-                                    <InfoRow label="Sector Location" value={branchName} />
-                                    <InfoRow label="Shift Profile" value={employee.shiftType || 'Standard'} />
-                                    <InfoRow label="Fleet Experience" value={experience} />
-                                </div>
-                            </Card>
-
-                            <Card className="border-none shadow-xl rounded-[2.5rem] bg-primary/5 p-10 text-center space-y-6 ring-2 ring-primary/10">
-                                <ShieldCheck className="size-12 text-primary mx-auto opacity-30 animate-pulse" />
-                                <div>
-                                    <p className="text-sm font-black uppercase tracking-[0.2em] text-primary leading-tight">Identity Stamped</p>
-                                    <p className="text-[10px] font-bold text-primary/50 mt-2 uppercase tracking-widest">Vertical tenure verified</p>
+                        <div className="lg:col-span-4">
+                             <Card className="border-none shadow-md rounded-[1.5rem] bg-white p-6 space-y-4">
+                                <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/80">Specifications</h3>
+                                <div className="space-y-3 pt-1">
+                                    <InfoRow label="Unit" value={employee.department} />
+                                    <InfoRow label="Sector" value={branchName} />
+                                    <InfoRow label="Shift" value={employee.shiftType || 'Standard'} />
+                                    <InfoRow label="Tenure" value={experience} />
                                 </div>
                             </Card>
                         </div>
@@ -460,25 +423,23 @@ export default function ProfilePage() {
                 </TabsContent>
                 
                 <TabsContent value="attendance">
-                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden">
+                    <Card className="border-none shadow-md rounded-[1.5rem] bg-white overflow-hidden">
                         <Table>
-                            <TableHeader className="bg-muted/10 border-b">
+                            <TableHeader className="bg-muted/5 border-b">
                                 <TableRow>
-                                    <TableHead className="font-black uppercase text-[10px] py-6 px-10">Mission Date</TableHead>
-                                    <TableHead className="font-black uppercase text-[10px] py-6">Signal Status</TableHead>
-                                    <TableHead className="font-black uppercase text-[10px] py-6">Log In</TableHead>
-                                    <TableHead className="font-black uppercase text-[10px] py-6">Tactical Break</TableHead>
-                                    <TableHead className="font-black uppercase text-[10px] py-6">Log Out</TableHead>
-                                    <TableHead className="font-black uppercase text-[10px] py-6 text-right px-10">Verification</TableHead>
+                                    <TableHead className="font-black uppercase text-[8px] py-4 px-6">Mission Date</TableHead>
+                                    <TableHead className="font-black uppercase text-[8px] py-4">Status</TableHead>
+                                    <TableHead className="font-black uppercase text-[8px] py-4">Log In</TableHead>
+                                    <TableHead className="font-black uppercase text-[8px] py-4 text-right px-6">Verification</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {attendanceData && attendanceData.length > 0 ? attendanceData.map((rec, i) => (
                                     <TableRow key={i} className="border-border/50">
-                                        <TableCell className="py-6 px-10 font-black text-sm">{format(rec.checkInTime.toDate(), 'PPP')}</TableCell>
+                                        <TableCell className="py-4 px-6 font-black text-xs">{format(rec.checkInTime.toDate(), 'dd MMM yyyy')}</TableCell>
                                         <TableCell>
                                             <Badge className={cn(
-                                                "rounded-full uppercase text-[9px] font-black tracking-widest px-3 border-none",
+                                                "rounded-full uppercase text-[7px] font-black tracking-widest px-2 h-4 border-none",
                                                 rec.status === 'present' ? "bg-green-100 text-green-700" :
                                                 rec.status === 'late' ? "bg-amber-100 text-amber-700" :
                                                 "bg-rose-100 text-rose-700"
@@ -486,28 +447,19 @@ export default function ProfilePage() {
                                                 {rec.isOutOfRange ? "REMOTE" : rec.status.toUpperCase()}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="font-mono text-xs font-bold text-primary">{format(rec.checkInTime.toDate(), 'p')}</TableCell>
-                                        <TableCell className="font-mono text-[10px] font-bold opacity-60">
-                                            {rec.totalBreakDuration ? `${(rec.totalBreakDuration / 60).toFixed(0)}m` : '0m'}
-                                        </TableCell>
-                                        <TableCell className="font-mono text-xs font-bold text-primary">
-                                            {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
-                                        </TableCell>
-                                        <TableCell className="text-right px-10">
-                                            <div className="flex justify-end gap-2">
-                                                {rec.locationCheckInLatitude && (
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-primary/5 text-primary" asChild>
-                                                        <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
-                                                            <MapPin className="size-3.5" />
-                                                        </Link>
-                                                    </Button>
-                                                )}
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl opacity-20"><CheckCircle2 className="size-3.5" /></Button>
-                                            </div>
+                                        <TableCell className="font-mono text-[9px] font-bold text-primary">{format(rec.checkInTime.toDate(), 'p')}</TableCell>
+                                        <TableCell className="text-right px-6">
+                                            {rec.locationCheckInLatitude && (
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg bg-primary/5 text-primary" asChild>
+                                                    <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
+                                                        <MapPin className="size-3" />
+                                                    </Link>
+                                                </Button>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 )) : (
-                                    <TableRow><TableCell colSpan={6} className="h-64 text-center opacity-30 text-[10px] font-black uppercase tracking-[0.3em]">No mission records found for this period</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={4} className="h-32 text-center opacity-30 text-[8px] font-black uppercase tracking-[0.3em]">No mission records</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -515,25 +467,25 @@ export default function ProfilePage() {
                 </TabsContent>
                 
                 <TabsContent value="documents">
-                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-12">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card className="border-none shadow-md rounded-[1.5rem] bg-white p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {documents && documents.length > 0 ? documents.map(doc => (
-                                <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-6 rounded-[2rem] bg-muted/20 hover:bg-white border-2 border-transparent hover:border-primary/20 transition-all group shadow-sm hover:shadow-xl">
-                                    <div className="flex items-center gap-5">
-                                        <div className={cn("p-3 rounded-2xl shadow-sm", doc.sourceType === 'file' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600")}>
-                                            <FileBox className="size-6" />
+                                <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 hover:bg-white border-2 border-transparent hover:border-primary/20 transition-all group shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn("p-2 rounded-lg shadow-sm", doc.sourceType === 'file' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600")}>
+                                            <FileBox className="size-4" />
                                         </div>
                                         <div>
-                                            <p className="font-black text-sm group-hover:text-primary transition-colors">{doc.title}</p>
-                                            <p className="text-[10px] font-black uppercase text-muted-foreground mt-1 opacity-60">Linked on {doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM yyyy') : 'N/A'}</p>
+                                            <p className="font-black text-xs group-hover:text-primary transition-colors truncate max-w-[120px]">{doc.title}</p>
+                                            <p className="text-[7px] font-black uppercase text-muted-foreground opacity-60">Linked: {doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM yy') : 'N/A'}</p>
                                         </div>
                                     </div>
-                                    <ExternalLink className="size-4 opacity-0 group-hover:opacity-100 transition-all text-primary" />
+                                    <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-all text-primary" />
                                 </Link>
                             )) : (
-                                <div className="col-span-full py-32 text-center opacity-30 grayscale flex flex-col items-center justify-center gap-4">
-                                    <FileBox className="size-16" />
-                                    <p className="font-black uppercase text-[10px] tracking-[0.3em]">Identity Vault Empty</p>
+                                <div className="col-span-full py-10 text-center opacity-30 grayscale flex flex-col items-center justify-center gap-2">
+                                    <FileBox className="size-8" />
+                                    <p className="font-black uppercase text-[8px] tracking-[0.3em]">Vault Empty</p>
                                 </div>
                             )}
                         </div>
@@ -541,23 +493,23 @@ export default function ProfilePage() {
                 </TabsContent>
                 
                 <TabsContent value="assets">
-                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-12">
-                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                    <Card className="border-none shadow-md rounded-[1.5rem] bg-white p-6">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
-                                <Card key={asset.id} className="border-none ring-1 ring-border/50 shadow-sm rounded-[2rem] overflow-hidden group hover:shadow-xl transition-all duration-500">
+                                <Card key={asset.id} className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl overflow-hidden group">
                                     <div className="aspect-square bg-muted relative overflow-hidden">
-                                        {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Briefcase className="size-20" /></div>}
-                                        <Badge className="absolute top-4 right-4 bg-emerald-500 text-white border-none rounded-full text-[8px] font-black uppercase px-3 py-1">IN USE</Badge>
+                                        {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Briefcase className="size-8" /></div>}
+                                        <Badge className="absolute top-2 right-2 bg-emerald-500 text-white border-none rounded-full text-[6px] font-black uppercase px-2 py-0.5">IN USE</Badge>
                                     </div>
-                                    <CardContent className="p-6 space-y-2">
-                                        <p className="text-xs font-black uppercase tracking-tight truncate">{asset.name}</p>
-                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{asset.category}</p>
+                                    <CardContent className="p-3 space-y-1">
+                                        <p className="text-[9px] font-black uppercase tracking-tight truncate">{asset.name}</p>
+                                        <p className="text-[7px] font-bold text-muted-foreground uppercase tracking-widest">{asset.category}</p>
                                     </CardContent>
                                 </Card>
                             )) : (
-                                <div className="col-span-full py-32 text-center opacity-30 grayscale flex flex-col items-center justify-center gap-4">
-                                    <Laptop className="size-16" />
-                                    <p className="font-black uppercase text-[10px] tracking-[0.3em]">No Hardware Registered to Profile</p>
+                                <div className="col-span-full py-10 text-center opacity-30 grayscale flex flex-col items-center justify-center gap-2">
+                                    <Laptop className="size-8" />
+                                    <p className="font-black uppercase text-[8px] tracking-[0.3em]">No Hardware</p>
                                 </div>
                             )}
                         </div>
@@ -566,51 +518,51 @@ export default function ProfilePage() {
             </Tabs>
 
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
-                <DialogContent className="rounded-[2.5rem] sm:max-w-xl p-10 border-none shadow-2xl">
-                    <DialogHeader><DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Identity Calibration</DialogTitle></DialogHeader>
+                <DialogContent className="rounded-[1.5rem] sm:max-w-md p-6 border-none shadow-2xl">
+                    <DialogHeader><DialogTitle className="text-lg font-black uppercase tracking-tighter text-primary">Identity Calibration</DialogTitle></DialogHeader>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-6">
-                            <div className="grid grid-cols-2 gap-6">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <FormField control={form.control} name="firstName" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">First Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[8px] font-black uppercase tracking-widest opacity-60">First Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-10 shadow-sm" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={form.control} name="lastName" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Last Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[8px] font-black uppercase tracking-widest opacity-60">Last Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-10 shadow-sm" /></FormControl></FormItem>
                                 )} />
                             </div>
                             <FormField control={form.control} name="phoneNumber" render={({ field }) => (
-                                <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Phone Line</FormLabel><FormControl><Input {...field} className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
+                                <FormItem><FormLabel className="text-[8px] font-black uppercase tracking-widest opacity-60">Phone Line</FormLabel><FormControl><Input {...field} className="rounded-xl h-10 shadow-sm" /></FormControl></FormItem>
                             )} />
                             <Separator className="opacity-50" />
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-2 gap-4">
                                 <FormField control={form.control} name="password" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Reset Cipher</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[8px] font-black uppercase tracking-widest opacity-60">Reset Cipher</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-10 shadow-sm" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={form.control} name="confirmPassword" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase tracking-widest opacity-60">Confirm Cipher</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-12 shadow-sm" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[8px] font-black uppercase tracking-widest opacity-60">Confirm Cipher</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-10 shadow-sm" /></FormControl></FormItem>
                                 )} />
                             </div>
-                            <Button type="submit" className="w-full h-14 rounded-full font-black uppercase tracking-widest shadow-2xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? "CALIBRATING..." : "Finalize Protocol"}</Button>
+                            <Button type="submit" className="w-full h-12 rounded-full font-black uppercase tracking-widest shadow-lg shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? "CALIBRATING..." : "Finalize Protocol"}</Button>
                         </form>
                     </Form>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
-                <DialogContent className="rounded-[3rem] sm:max-w-md p-10 border-none shadow-2xl">
-                    <DialogHeader><DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Identity Portrait Sync</DialogTitle></DialogHeader>
-                    <div className="py-8 space-y-10">
+                <DialogContent className="rounded-[1.5rem] sm:max-w-xs p-6 border-none shadow-2xl">
+                    <DialogHeader><DialogTitle className="text-lg font-black uppercase tracking-tighter text-primary">Identity Sync</DialogTitle></DialogHeader>
+                    <div className="py-4 space-y-6">
                         <div className="relative group">
                             <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-20" onChange={(e) => e.target.files?.[0] && handleAvatarImageUpload(e.target.files[0])} disabled={isUploadingAvatar} />
-                            <Button className="w-full h-28 rounded-[2rem] border-2 border-dashed border-primary/30 bg-primary/5 text-primary flex-col gap-2 font-black uppercase text-[11px] tracking-widest hover:bg-primary/10 transition-all" disabled={isUploadingAvatar}>
-                                {isUploadingAvatar ? <Loader2 className="animate-spin size-6"/> : <ImageIcon className="size-8" />}
-                                {isUploadingAvatar ? "TRANSMITTING..." : "Upload Professional Asset"}
+                            <Button variant="outline" className="w-full h-20 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 text-primary flex-col gap-1 font-black uppercase text-[8px] tracking-widest hover:bg-primary/10 transition-all" disabled={isUploadingAvatar}>
+                                {isUploadingAvatar ? <Loader2 className="animate-spin size-4"/> : <ImageIcon className="size-6" />}
+                                {isUploadingAvatar ? "TRANSMITTING..." : "Upload Portrait"}
                             </Button>
                         </div>
                         <Separator className="opacity-50" />
-                        <div className="grid grid-cols-5 gap-4">
+                        <div className="grid grid-cols-4 gap-2">
                             {emojiCategories.map(emoji => (
-                                <button key={emoji} onClick={() => handleAvatarEmojiUpdate(emoji)} className="text-4xl p-4 rounded-2xl hover:bg-primary/10 transition-all border-2 border-transparent hover:border-primary/20 bg-muted/10">{emoji}</button>
+                                <button key={emoji} onClick={() => handleAvatarEmojiUpdate(emoji)} className="text-2xl p-2 rounded-lg hover:bg-primary/10 transition-all border-2 border-transparent hover:border-primary/20 bg-muted/10">{emoji}</button>
                             ))}
                         </div>
                     </div>
@@ -622,11 +574,11 @@ export default function ProfilePage() {
 
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
-        <div className="flex items-start gap-4">
-            <div className="p-3 rounded-2xl bg-primary/5 text-primary/60 shadow-sm"><Icon className="size-4.5" /></div>
-            <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-1 leading-none">{label}</p>
-                <p className="text-sm font-black truncate max-w-[180px] text-foreground/80">{value}</p>
+        <div className="flex items-start gap-2">
+            <div className="p-2 rounded-lg bg-primary/5 text-primary/60 shadow-sm shrink-0"><Icon className="size-3" /></div>
+            <div className="min-w-0">
+                <p className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-0.5 leading-none">{label}</p>
+                <p className="text-[10px] font-black truncate text-foreground/80">{value}</p>
             </div>
         </div>
     );
@@ -634,12 +586,12 @@ function DetailItem({ icon: Icon, label, value }: any) {
 
 function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     return (
-        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-8 space-y-6 ring-1 ring-border/50 hover:-translate-y-1 transition-all duration-500 group">
-            <div className={cn("p-3 rounded-2xl w-fit shadow-sm transition-transform group-hover:scale-110", bg, color)}><Icon className="size-5" /></div>
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-3 space-y-2 ring-1 ring-border/50 hover:-translate-y-0.5 transition-all duration-300 group">
+            <div className={cn("p-1.5 rounded-lg w-fit shadow-sm", bg, color)}><Icon className="size-3" /></div>
             <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-1.5">{label}</p>
-                <p className="text-3xl font-black tracking-tighter text-foreground">{value}</p>
-                <p className="text-[11px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-tight">{sub}</p>
+                <p className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 leading-none mb-1">{label}</p>
+                <p className="text-lg font-black tracking-tighter text-foreground leading-none">{value}</p>
+                <p className="text-[8px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-tight leading-none">{sub}</p>
             </div>
         </Card>
     );
@@ -647,12 +599,12 @@ function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
 
 function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
-        <div className="flex gap-6 items-start relative">
-            <div className={cn("h-8 w-8 rounded-2xl flex items-center justify-center shrink-0 z-10 shadow-sm", color)}><Icon className="size-4" /></div>
-            <div className="space-y-1 pt-0.5">
-                <p className="font-black text-sm uppercase tracking-tight">{title}</p>
-                <p className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest">{time}</p>
-                <p className="text-xs font-medium text-muted-foreground/80 leading-relaxed mt-2">"{desc}"</p>
+        <div className="flex gap-4 items-start relative">
+            <div className={cn("h-5 w-5 rounded-lg flex items-center justify-center shrink-0 z-10 shadow-sm", color)}><Icon className="size-2.5" /></div>
+            <div className="space-y-0.5 pt-0.5">
+                <p className="font-black text-[10px] uppercase tracking-tight">{title}</p>
+                <p className="text-[7px] font-black uppercase text-muted-foreground/40 tracking-widest">{time}</p>
+                <p className="text-[9px] font-medium text-muted-foreground/80 leading-tight mt-1">"{desc}"</p>
             </div>
         </div>
     );
@@ -660,9 +612,9 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
 
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <div className="flex items-center justify-between py-3.5 border-b border-dashed border-border/50 last:border-none">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{label}</span>
-            <span className="text-sm font-black text-foreground/80">{value}</span>
+        <div className="flex items-center justify-between py-2 border-b border-dashed border-border/50 last:border-none">
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{label}</span>
+            <span className="text-[10px] font-black text-foreground/80">{value}</span>
         </div>
     );
 }

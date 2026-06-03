@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
@@ -57,45 +56,45 @@ export default function DashboardPage() {
   }, [userTickets]);
 
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto pb-20 font-jakarta">
+    <div className="space-y-4 max-w-[1200px] mx-auto pb-10 font-jakarta">
       {/* Command Greeting Header */}
-      <div className="flex flex-col gap-1 mb-6 animate-fade-in-up">
-          <div className="flex items-center gap-2 text-primary">
-              <Sparkles className="size-4" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em]">{format(new Date(), 'EEEE, MMMM dd')}</span>
+      <div className="flex flex-col gap-0.5 mb-2 animate-fade-in-up">
+          <div className="flex items-center gap-1.5 text-primary">
+              <Sparkles className="size-3" />
+              <span className="text-[9px] font-black uppercase tracking-[0.3em]">{format(new Date(), 'EEEE, MMMM dd')}</span>
           </div>
-          <h1 className="text-5xl font-black tracking-tighter leading-none">
+          <h1 className="text-2xl font-black tracking-tighter leading-none">
               {greeting}, {currentUserData?.firstName || 'Strategist'} ,
           </h1>
-          <p className="text-base font-semibold text-muted-foreground/80 mt-2">Welcome to the tactical grid. Your fleet operations are synchronized.</p>
+          <p className="text-xs font-semibold text-muted-foreground/80 mt-1">Operational grid synchronized.</p>
       </div>
 
       {/* Dynamic Notifications */}
       {isCEO && hasCriticalAlert && latestCompliance?.[0] && (
-          <Alert className="mb-6 bg-red-50 border-red-200 animate-pulse rounded-[2rem] border-2 p-6 shadow-xl shadow-red-500/10">
-              <ShieldAlert className="size-5 text-red-600" />
-              <AlertTitle className="text-red-700 font-black uppercase text-xs tracking-widest">Protocol Alert: Executive Review Required</AlertTitle>
-              <AlertDescription className="flex justify-between items-center mt-3">
-                  <p className="text-red-800 text-sm font-bold">A high-priority compliance report has been filed for <span className="font-black underline">{latestCompliance[0].employeeName}</span>.</p>
-                  <Link href="/dashboard/compliance" className="text-red-600 font-black uppercase text-[10px] underline underline-offset-8 decoration-2">Review Detail</Link>
+          <Alert className="mb-4 bg-red-50 border-red-200 animate-pulse rounded-2xl border-2 p-4 shadow-md">
+              <ShieldAlert className="size-4 text-red-600" />
+              <AlertTitle className="text-red-700 font-black uppercase text-[10px] tracking-widest">Protocol Alert</AlertTitle>
+              <AlertDescription className="flex justify-between items-center mt-2">
+                  <p className="text-red-800 text-xs font-bold">Compliance report filed for <span className="font-black underline">{latestCompliance[0].employeeName}</span>.</p>
+                  <Link href="/dashboard/compliance" className="text-red-600 font-black uppercase text-[8px] underline underline-offset-4">Review</Link>
               </AlertDescription>
           </Alert>
       )}
 
       {recentTicketUpdates.length > 0 && (
-          <Alert className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-[2rem] p-6 shadow-xl shadow-blue-500/10">
-              <MessageSquareWarning className="size-5 text-blue-600" />
-              <AlertTitle className="text-blue-700 font-black uppercase text-xs tracking-widest">Support Desk Update</AlertTitle>
-              <AlertDescription className="flex justify-between items-center mt-3">
-                  <p className="text-blue-800 text-sm font-bold">Your support ticket "<span className="font-black">{recentTicketUpdates[0].title}</span>" has been updated to <span className="font-black">{recentTicketUpdates[0].status}</span>.</p>
-                  <Link href="/dashboard/issues" className="text-blue-600 font-black uppercase text-[10px] underline underline-offset-8 decoration-2">View Updates</Link>
+          <Alert className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 shadow-md">
+              <MessageSquareWarning className="size-4 text-blue-600" />
+              <AlertTitle className="text-blue-700 font-black uppercase text-[10px] tracking-widest">Support Update</AlertTitle>
+              <AlertDescription className="flex justify-between items-center mt-2">
+                  <p className="text-blue-800 text-xs font-bold">Ticket "{recentTicketUpdates[0].title}" updated to {recentTicketUpdates[0].status}.</p>
+                  <Link href="/dashboard/issues" className="text-blue-600 font-black uppercase text-[8px] underline underline-offset-4">View</Link>
               </AlertDescription>
           </Alert>
       )}
 
       <DashboardReminder />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           <div className="lg:col-span-8 animate-fade-in-up">
               <ProfileBentoCard />
           </div>
@@ -104,7 +103,7 @@ export default function DashboardPage() {
           </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div className="lg:col-span-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <AttendanceWidget />
           </div>
@@ -116,7 +115,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <ActionItemsWidget />
         </div>
@@ -130,7 +129,7 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <div className="grid gap-8">
+      <div className="grid gap-4">
           <div className="animate-fade-in-up" style={{ animationDelay: '600ms' }}>
             <EventsWidget />
           </div>

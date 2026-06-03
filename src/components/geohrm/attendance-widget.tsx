@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -447,17 +446,16 @@ export function AttendanceWidget() {
 
   const TrackingCard = ({ label, time, icon: Icon, subValue, active }: any) => (
     <div className={cn(
-        "flex-1 p-5 rounded-[2rem] border transition-all duration-500", 
-        active ? "bg-white shadow-md ring-1 ring-border border-border/50" : "bg-muted/10 border-transparent opacity-40 grayscale"
+        "flex-1 p-3 rounded-2xl border transition-all duration-500", 
+        active ? "bg-white shadow-sm ring-1 ring-border border-border/50" : "bg-muted/5 border-transparent opacity-40 grayscale"
     )}>
-        <div className="flex flex-col items-center text-center gap-3">
-            <div className={cn("p-2.5 rounded-2xl shadow-sm", active ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
-                <Icon className="size-4" />
+        <div className="flex flex-col items-center text-center gap-2">
+            <div className={cn("p-1.5 rounded-lg shadow-sm", active ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
+                <Icon className="size-3" />
             </div>
-            <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">{label}</p>
-                <p className={cn("text-sm font-black tracking-tight", active ? "text-foreground" : "text-muted-foreground")}>{time}</p>
-                {subValue && active && <p className="text-[8px] font-mono font-bold text-primary/60 mt-1.5 tracking-tighter bg-primary/5 px-2 py-0.5 rounded-full">{subValue}</p>}
+            <div className="min-w-0 w-full">
+                <p className="text-[7px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5 leading-none">{label}</p>
+                <p className={cn("text-[10px] font-black tracking-tight truncate", active ? "text-foreground" : "text-muted-foreground")}>{time}</p>
             </div>
         </div>
     </div>
@@ -465,154 +463,140 @@ export function AttendanceWidget() {
 
   const getMilestoneTime = (timestamp: any) => (timestamp instanceof Timestamp) ? format(timestamp.toDate(), 'p') : '--:--';
 
-  if (isUserDocLoading) return <div className="h-96 flex items-center justify-center animate-pulse uppercase font-black text-xs tracking-[0.4em]">Calibrating Fleet ID...</div>;
+  if (isUserDocLoading) return <div className="h-64 flex items-center justify-center animate-pulse uppercase font-black text-[10px] tracking-[0.4em]">Calibrating...</div>;
 
   return (
     <>
-      <Card className="flex flex-col animate-fade-in-up border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden relative font-jakarta">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full -mr-40 -mt-40 blur-[80px]" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full -ml-32 -mb-32 blur-[80px]" />
+      <Card className="flex flex-col animate-fade-in-up border-none shadow-lg rounded-[1.5rem] bg-white overflow-hidden relative font-jakarta">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full -mr-20 -mt-20 blur-[60px]" />
         
-        <CardHeader className="p-10 pb-4 relative">
+        <CardHeader className="p-6 pb-2 relative">
           <div className="flex items-center justify-between">
-              <div className="space-y-1.5">
-                  <CardTitle className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2.5 text-primary">
-                    <Clock className="size-6" /> Fleet Shift Tracker
+              <div className="space-y-1">
+                  <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2 text-primary">
+                    <Clock className="size-4" /> Shift Tracker
                   </CardTitle>
-                  <CardDescription className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Verified location-based intelligence registry</CardDescription>
+                  <CardDescription className="text-[8px] font-black uppercase tracking-[0.2em] opacity-60">Verified location registry</CardDescription>
               </div>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={handleRecalibrate} className="rounded-full h-10 px-4 font-black text-[9px] uppercase tracking-widest text-muted-foreground hover:bg-muted/50 border border-dashed">
-                    <RefreshCcw className="size-3 mr-2" /> Recalibrate
+              <div className="flex gap-1.5">
+                <Button variant="ghost" size="sm" onClick={handleRecalibrate} className="rounded-full h-8 px-3 font-black text-[8px] uppercase tracking-widest text-muted-foreground hover:bg-muted/50 border border-dashed">
+                    <RefreshCcw className="size-2.5 mr-1" /> Re-sync
                 </Button>
-                <Badge variant="outline" className="rounded-full bg-primary/5 text-primary border-primary/20 font-black text-[10px] uppercase px-5 h-10 shadow-sm">
-                    <MapPin className="size-3.5 mr-2" /> Satellite Sync Active
+                <Badge variant="outline" className="rounded-full bg-primary/5 text-primary border-primary/20 font-black text-[8px] uppercase px-3 h-8 shadow-sm">
+                    <MapPin className="size-2.5 mr-1.5" /> Satellite Active
                 </Badge>
               </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-10 pt-4 flex flex-col items-center justify-center gap-12 text-center relative">
-            <div className="space-y-4">
+        <CardContent className="p-6 pt-2 flex flex-col items-center justify-center gap-8 text-center relative">
+            <div className="space-y-2">
                 <div className={cn(
-                    "inline-flex items-center gap-2.5 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] shadow-sm", 
-                    status === "in" ? (isLate() ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700") : "bg-muted text-muted-foreground"
+                    "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] shadow-sm", 
+                    status === "in" ? (isLate() ? "bg-orange-50 text-orange-700" : "bg-green-50 text-green-700") : "bg-muted text-muted-foreground"
                 )}>
-                    <div className={cn("size-2 rounded-full", status === 'in' ? (isLate() ? 'bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.5)]' : 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]') : 'bg-slate-400')} />
-                    {status === 'in' ? (isLate() ? 'Late Clock-in Detected' : 'Operational Status: On Shift') : 'Ready for Deployment'}
+                    <div className={cn("size-1.5 rounded-full", status === 'in' ? (isLate() ? 'bg-orange-500 animate-pulse' : 'bg-green-500 animate-pulse') : 'bg-slate-400')} />
+                    {status === 'in' ? (isLate() ? 'Late Entry' : 'On Shift') : 'Ready'}
                 </div>
                 
-                <div className="py-4">
-                    <div className="text-8xl md:text-9xl font-black font-mono tabular-nums tracking-tighter text-primary drop-shadow-xl select-none">
+                <div className="py-2">
+                    <div className="text-6xl md:text-7xl font-black font-mono tabular-nums tracking-tighter text-primary drop-shadow-md select-none">
                         {formatTime(workTimer)}
                     </div>
                 </div>
 
                 {activeGeofence && (
-                    <div className="flex flex-col items-center gap-3">
-                        <Badge variant="secondary" className="rounded-full px-6 py-2 font-black text-[10px] uppercase tracking-widest bg-muted/40 text-primary border border-primary/10">
-                            Target Sector: {activeGeofence.name}
+                    <div className="flex flex-col items-center gap-2">
+                        <Badge variant="secondary" className="rounded-full px-4 py-1 font-black text-[8px] uppercase tracking-widest bg-muted/40 text-primary border border-primary/10">
+                            Sector: {activeGeofence.name}
                         </Badge>
-                        {approvedRequest && (
-                            <Badge className="bg-emerald-100 text-emerald-700 border-none rounded-full px-4 h-6 text-[8px] font-black uppercase tracking-widest shadow-sm">
-                                <ShieldCheck className="size-2.5 mr-1" /> Remote Authority Authenticated
-                            </Badge>
-                        )}
                     </div>
                 )}
 
                 {(status === "lunch" || status === "short_break") && (
-                  <div className="flex flex-col items-center gap-6 animate-fade-in-up">
-                    <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-center p-8 rounded-[2.5rem] bg-orange-50/50 border border-orange-100 ring-4 ring-orange-50 shadow-inner">
-                            <span className="text-[11px] font-black uppercase text-orange-600 tracking-[0.3em] flex items-center gap-2 mb-2">
-                                <Coffee className="size-4 animate-bounce"/> Active Break
+                  <div className="flex flex-col items-center gap-4 animate-fade-in-up">
+                        <div className="flex flex-col items-center p-4 rounded-2xl bg-orange-50/50 border border-orange-100 shadow-inner">
+                            <span className="text-[9px] font-black uppercase text-orange-600 tracking-[0.2em] flex items-center gap-1.5 mb-1">
+                                <Coffee className="size-3 animate-bounce"/> Break
                             </span>
-                            <div className="text-5xl font-black font-mono tabular-nums text-orange-600 drop-shadow-sm">{formatTime(breakTimer)}</div>
+                            <div className="text-3xl font-black font-mono tabular-nums text-orange-600">{formatTime(breakTimer)}</div>
                         </div>
-                    </div>
-                    <Badge variant="secondary" className="bg-white/50 text-orange-700 border-orange-100/50 rounded-2xl px-6 py-2 font-black text-[11px] uppercase tracking-widest shadow-sm">
-                        Total Accumulated: <span className="ml-2 font-mono">{formatTime(totalBreakTime + breakTimer)}</span>
+                    <Badge variant="secondary" className="bg-white/50 text-orange-700 border-orange-100/50 rounded-xl px-4 py-1 font-black text-[9px] uppercase tracking-widest shadow-sm">
+                        Total: {formatTime(totalBreakTime + breakTimer)}
                     </Badge>
                   </div>
                 )}
 
                 {pendingRequest && status === 'out' && (
-                    <div className="p-8 bg-amber-50 rounded-[2.5rem] border-2 border-dashed border-amber-200 animate-pulse shadow-xl shadow-amber-500/5">
-                        <div className="flex items-center justify-center gap-3 text-amber-700 mb-2">
-                            <Timer className="size-6" />
-                            <span className="text-base font-black uppercase tracking-widest">Signal Authority Pending</span>
+                    <div className="p-4 bg-amber-50 rounded-2xl border border-dashed border-amber-200 animate-pulse">
+                        <div className="flex items-center justify-center gap-2 text-amber-700 mb-1">
+                            <Timer className="size-4" />
+                            <span className="text-xs font-black uppercase tracking-widest">Awaiting Approval</span>
                         </div>
-                        <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest leading-relaxed">Remote access request submitted. Deployment blocked until executive verification.</p>
+                        <p className="text-[8px] text-amber-600 font-bold uppercase tracking-widest leading-tight">Remote access justification submitted. Deployment pending.</p>
                     </div>
                 )}
             </div>
 
-            <div className="w-full grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl">
-                <TrackingCard label="Clock In" time={getMilestoneTime(todaysAttendance?.checkInTime)} icon={LogIn} subValue={todaysAttendance?.locationCheckInLatitude ? `${todaysAttendance.locationCheckInLatitude.toFixed(3)}, ${todaysAttendance.locationCheckInLongitude.toFixed(3)}` : undefined} active={!!todaysAttendance?.checkInTime} />
-                <TrackingCard label="Lunch Start" time={getMilestoneTime(todaysAttendance?.lunchOutTime)} icon={Utensils} active={!!todaysAttendance?.lunchOutTime} />
-                <TrackingCard label="Lunch End" time={getMilestoneTime(todaysAttendance?.lunchInTime)} icon={LogIn} active={!!todaysAttendance?.lunchInTime} />
+            <div className="w-full grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-2xl">
+                <TrackingCard label="Clock In" time={getMilestoneTime(todaysAttendance?.checkInTime)} icon={LogIn} active={!!todaysAttendance?.checkInTime} />
+                <TrackingCard label="Break Start" time={getMilestoneTime(todaysAttendance?.lunchOutTime)} icon={Utensils} active={!!todaysAttendance?.lunchOutTime} />
+                <TrackingCard label="Break End" time={getMilestoneTime(todaysAttendance?.lunchInTime)} icon={LogIn} active={!!todaysAttendance?.lunchInTime} />
                 <TrackingCard label="Clock Out" time={getMilestoneTime(todaysAttendance?.checkOutTime)} icon={LogOut} active={!!todaysAttendance?.checkOutTime} />
             </div>
         </CardContent>
 
-        <CardFooter className="p-10 pt-0 flex justify-center items-center relative">
-          <div className="w-full max-w-3xl pt-8 border-t border-dashed border-border/50">
+        <CardFooter className="p-6 pt-0 flex justify-center items-center relative">
+          <div className="w-full max-w-xl pt-4 border-t border-dashed border-border/50">
             {status === 'out' && !hasClockedOutToday && !pendingRequest && (
-                <Button onClick={handleClockIn} className="w-full h-20 rounded-[2.5rem] text-2xl font-black uppercase tracking-[0.25em] shadow-2xl shadow-primary/25 bg-primary text-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+                <Button onClick={handleClockIn} className="w-full h-14 rounded-2xl text-lg font-black uppercase tracking-[0.2em] shadow-lg shadow-primary/20 bg-primary text-white transition-all">
                     Activate Shift
                 </Button>
             )}
 
             {status === 'out' && pendingRequest && (
-                <Button disabled className="w-full h-20 rounded-[2.5rem] text-sm font-black uppercase tracking-[0.1em] bg-muted text-muted-foreground opacity-50 border-2 border-dashed border-border/50">
-                    Awaiting Signal Authority...
+                <Button disabled className="w-full h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] bg-muted text-muted-foreground opacity-50 border border-dashed">
+                    Awaiting Authority...
                 </Button>
             )}
             
             {status !== 'out' && (
-                <div className="flex flex-col sm:flex-row gap-5 w-full justify-center">
+                <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
                     {status === "in" && (
                         <>
                             {!todaysAttendance?.lunchInTime && (
-                                <Button onClick={handleLunch} variant="outline" className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] bg-white border-2 hover:bg-orange-50 hover:border-orange-200 transition-all">
-                                    Lunch Out
+                                <Button onClick={handleLunch} variant="outline" className="rounded-xl h-12 flex-1 font-black uppercase text-[9px] tracking-[0.15em] bg-white border-2 hover:bg-orange-50 transition-all">
+                                    Break Out
                                 </Button>
                             )}
-                            <Button onClick={handleShortBreak} variant="outline" className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] bg-white border-2 hover:bg-blue-50 hover:border-blue-200 transition-all">
-                                Short Break
+                            <Button onClick={handleShortBreak} variant="outline" className="rounded-xl h-12 flex-1 font-black uppercase text-[9px] tracking-[0.15em] bg-white border-2 hover:bg-blue-50 transition-all">
+                                Short Stop
                             </Button>
                         </>
                     )}
                     
-                    {status === "lunch" && (
-                        <Button onClick={handleLunch} className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] bg-primary text-white shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-                            Resume Mission
-                        </Button>
-                    )}
-                    
-                    {status === "short_break" && (
-                        <Button onClick={handleShortBreak} className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] bg-primary text-white shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-                            Resume Mission
+                    {(status === "lunch" || status === "short_break") && (
+                        <Button onClick={handleLunch} className="rounded-xl h-12 flex-1 font-black uppercase text-[9px] tracking-[0.15em] bg-primary text-white shadow-md transition-all">
+                            Resume
                         </Button>
                     )}
 
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-red-500/20 transition-all hover:bg-red-700">
-                                Deactivate Shift
+                            <Button variant="destructive" className="rounded-xl h-12 flex-1 font-black uppercase text-[9px] tracking-[0.15em] shadow-md transition-all">
+                                Deactivate
                             </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-[3rem] p-10 border-none shadow-2xl">
+                        <AlertDialogContent className="rounded-[1.5rem] p-6 border-none shadow-2xl">
                             <AlertDialogHeader>
-                                <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter text-red-600">Deactivate Fleet ID?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-sm font-bold uppercase tracking-tight leading-relaxed opacity-60 pt-2">
-                                    Strategic protocols require a daily work report submission upon deactivation. Your shift duration will be stamped on the permanent mission log.
+                                <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-red-600">Deactivate Shift?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-[10px] font-bold uppercase tracking-tight leading-relaxed opacity-60">
+                                    Strategic protocols require a daily log submission. Your tenure will be stamped on the mission log.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter className="mt-10 gap-4">
-                                <AlertDialogCancel className="rounded-full font-black uppercase text-[10px] h-12 border-2 px-8">Return to Post</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-black uppercase text-[10px] h-12 bg-red-600 shadow-xl shadow-red-600/20 px-8">Finalize & Deactivate</AlertDialogAction>
+                            <AlertDialogFooter className="mt-6 gap-2">
+                                <AlertDialogCancel className="rounded-full font-black uppercase text-[8px] h-10 border-2 px-6">Return</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-black uppercase text-[8px] h-10 bg-red-600 shadow-md px-6">Deactivate</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -622,31 +606,26 @@ export function AttendanceWidget() {
         </CardFooter>
 
         <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
-          <DialogContent className="rounded-[3rem] p-12 border-none shadow-2xl sm:max-w-lg">
-              <div className="flex flex-col items-center text-center gap-8 py-4">
-                  <div className="p-8 rounded-[2.5rem] bg-orange-100 text-orange-600 shadow-inner ring-4 ring-orange-50">
-                      <MapPinned className="size-12" />
+          <DialogContent className="rounded-[1.5rem] p-8 border-none shadow-2xl sm:max-w-md">
+              <div className="flex flex-col items-center text-center gap-4 py-2">
+                  <div className="p-4 rounded-xl bg-orange-100 text-orange-600 shadow-inner">
+                      <MapPinned className="size-8" />
                   </div>
-                  <div className="space-y-3">
-                      <h3 className="text-3xl font-black uppercase tracking-tighter text-primary">Remote Access Alert</h3>
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-60">Verification Radius Breach Detected</p>
-                      {currentDist !== null && (
-                          <Badge variant="outline" className="text-[11px] font-black uppercase text-orange-600 border-orange-200 mt-4 h-8 px-5 rounded-full">
-                              Distance: {currentDist.toFixed(2)} KM from Sector
-                          </Badge>
-                      )}
+                  <div className="space-y-1">
+                      <h3 className="text-xl font-black uppercase tracking-tighter text-primary">Range Breach</h3>
+                      <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">Radius Violation Detected</p>
                   </div>
               </div>
-              <div className="grid gap-6 py-4">
-                  <Label htmlFor="reason" className="font-black text-[10px] uppercase text-primary tracking-[0.2em] ml-2">Strategic Justification</Label>
-                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Provide context for remote operational base..." className="rounded-[2rem] min-h-[160px] bg-muted/20 border-none ring-1 ring-border/50 focus:ring-primary/40 transition-all p-6 text-sm font-medium leading-relaxed" />
+              <div className="grid gap-4 py-4">
+                  <Label htmlFor="reason" className="font-black text-[8px] uppercase text-primary tracking-[0.2em]">Justification</Label>
+                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Provide contextual briefing..." className="rounded-xl min-h-[100px] bg-muted/10 border-none ring-1 ring-border/50 focus:ring-primary/40 p-4 text-xs font-medium" />
               </div>
-              <div className="flex flex-col gap-4 mt-8">
-                  <Button onClick={() => { if(!outOfRangeReason) { toast({variant: 'destructive', title: 'Justification Required'}); return; } if(outOfRangeAction) outOfRangeAction(); }} className="h-16 rounded-[2rem] font-black uppercase tracking-widest bg-primary text-white shadow-2xl shadow-primary/20 text-[11px] transition-all hover:scale-105">
-                      Certify & Dispatch Request
+              <div className="flex flex-col gap-2 mt-4">
+                  <Button onClick={() => { if(!outOfRangeReason) { toast({variant: 'destructive', title: 'Justification Required'}); return; } if(outOfRangeAction) outOfRangeAction(); }} className="h-12 rounded-xl font-black uppercase tracking-widest bg-primary text-white text-[9px] transition-all">
+                      Certify & Dispatch
                   </Button>
-                  <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="ghost" className="h-12 rounded-full font-black uppercase text-[10px] tracking-with-widest text-muted-foreground/60">
-                      Abort Protocol
+                  <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="ghost" className="h-10 rounded-full font-black uppercase text-[8px] text-muted-foreground/60">
+                      Abort
                   </Button>
               </div>
           </DialogContent>
@@ -654,18 +633,18 @@ export function AttendanceWidget() {
       </Card>
       
       {isVerifyingLocation && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-xl animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
             <div className="relative">
-                <div className="h-24 w-20 border-4 border-primary/20 border-t-primary animate-spin rounded-full" />
+                <div className="h-16 w-16 border-2 border-primary/20 border-t-primary animate-spin rounded-full" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <MapPin className="size-8 text-primary animate-pulse" />
+                    <MapPin className="size-4 text-primary animate-pulse" />
                 </div>
             </div>
-            <div className="mt-10 text-center space-y-3">
-                <div className="flex items-center gap-3 justify-center text-white font-black uppercase tracking-[0.5em] text-lg">
-                    <Sparkles className="size-5 text-primary" /> Synchronizing Satellite Grid
+            <div className="mt-6 text-center space-y-2">
+                <div className="flex items-center gap-2 justify-center text-white font-black uppercase tracking-[0.3em] text-sm">
+                    <Sparkles className="size-4 text-primary" /> Calibrating Grid
                 </div>
-                <p className="text-white/40 font-bold uppercase tracking-[0.2em] text-[10px]">Awaiting pinpoint GPS calibration...</p>
+                <p className="text-white/40 font-bold uppercase tracking-[0.15em] text-[8px]">Satellite handshake in progress...</p>
             </div>
         </div>
       )}
