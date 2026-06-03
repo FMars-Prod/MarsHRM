@@ -295,7 +295,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/22 Days`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
                 <MetricCard label="Documents" value={documents?.length || 0} sub="Files Updated" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
-                <MetricCard label="Performance" value="Excellent" sub="Last Review: Q4" icon={Zap} color="text-orange-600" bg="bg-orange-50" />
+                <MetricCard label="Account Authority" value={employee.role === 'CEO/Admin' ? 'Executive' : employee.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
                 <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Net Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
                 <MetricCard label="Support Desk" value={userTickets?.length || 0} sub="Logged Issues" icon={ShieldCheck} color="text-pink-600" bg="bg-pink-50" />
             </div>

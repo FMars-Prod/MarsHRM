@@ -124,6 +124,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   return (
     <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-open-sans">
+        {/* Command Greeting */}
+        <div className="flex flex-col gap-1 mb-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
+            <h1 className="text-4xl font-black tracking-tighter">
+                Personnel Audit, {user.firstName} ,
+            </h1>
+        </div>
+
         {/* Bento Header */}
         <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden ring-1 ring-border/50">
             <CardContent className="p-8 md:p-10">
@@ -171,8 +179,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <MetricCard label="Attendance (MTD)" value={`${stats.percentage}%`} sub={`${stats.count} Days Stamped`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
             <MetricCard label="Mission Hours" value={`${stats.workHours}h`} sub="Net Active Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
+            <MetricCard label="Account Authority" value={user.role === 'CEO/Admin' ? 'Executive' : user.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
             <MetricCard label="Intelligence Assets" value={documents?.length || 0} sub="Vault Records" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
-            <MetricCard label="Compliance Logs" value={complianceData?.length || 0} sub="Executive Alerts" icon={ShieldAlert} color="text-red-600" bg="bg-red-50" />
         </div>
 
         <Tabs defaultValue="activity" className="space-y-8">
@@ -244,6 +252,23 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     </div>
                 </Card>
             </TabsContent>
+
+            <TabsContent value="compliance" className="mt-0">
+                <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
+                    <div className="space-y-4">
+                        {complianceData?.map((report: any) => (
+                            <div key={report.id} className="p-4 rounded-2xl bg-red-50 border border-red-100 flex items-start gap-4">
+                                <ShieldAlert className="size-5 text-red-600 mt-1" />
+                                <div>
+                                    <p className="font-bold text-sm text-red-900">{report.severity} Alert: {report.reason}</p>
+                                    <p className="text-[10px] font-bold text-red-700 uppercase">Filed on {format(report.timestamp.toDate(), 'PP p')}</p>
+                                </div>
+                            </div>
+                        ))}
+                        {complianceData?.length === 0 && <div className="py-10 text-center opacity-30 text-xs font-black uppercase">Fleet Integrity Clear</div>}
+                    </div>
+                </Card>
+            </TabsContent>
         </Tabs>
     </div>
   );
@@ -293,5 +318,4 @@ function InfoRow({ label, value }: { label: string, value: string }) {
             <span className="text-[10px] font-black uppercase text-muted-foreground/60">{label}</span>
             <span className="text-xs font-bold">{value}</span>
         </div>
-    );
 }
