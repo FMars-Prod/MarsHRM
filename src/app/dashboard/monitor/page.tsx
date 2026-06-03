@@ -4,10 +4,10 @@
 import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay } from 'date-fns';
-import { UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, AlertTriangle, Utensils, LogIn, Phone, PieChart as PieChartIcon, MapPin, Activity, Clock, LogOut, Map as MapIcon, List, Search } from 'lucide-react';
+import { UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, AlertTriangle, Utensils, LogIn, Phone, PieChart as PieChartIcon, MapPin, Activity, Clock, LogOut, Map as MapIcon, List, Search, Key, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -139,51 +139,57 @@ export default function MonitorPage() {
   };
 
   const getFormattedTime = (ts: any) => {
-      if (!ts) return <span className="text-muted-foreground/30">—</span>;
+      if (!ts) return <span className="text-muted-foreground/30 font-black">—</span>;
       const d = ts.toDate ? ts.toDate() : new Date(ts);
-      return <span className="font-mono text-[10px] font-bold">{format(d, 'p')}</span>;
+      return <span className="font-mono text-[11px] font-black text-primary">{format(d, 'p')}</span>;
   };
 
   const isUrl = (str?: string) => str && str.startsWith('http');
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Real-Time Oversight" description="Tactical grid monitor with verified timestamps and nudge integration.">
-        <div className="flex gap-2">
-            <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+    <div className="space-y-8 animate-fade-in-up font-jakarta">
+      <PageHeader title="Real-Time Oversight" description="Tactical grid monitor with verified satellite timestamps and integrated fleet nudges.">
+        <div className="flex gap-3">
+            <div className="relative w-72">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground opacity-60" />
                 <Input 
-                    placeholder="Search personnel..." 
+                    placeholder="Search personnel directory..." 
                     value={searchQuery} 
                     onChange={e => setSearchQuery(e.target.value)} 
-                    className="h-11 pl-9 rounded-full bg-white/50 border-none ring-1 ring-border/50" 
+                    className="h-12 pl-11 rounded-full bg-white border-none ring-1 ring-border/50 shadow-sm focus-visible:ring-primary/40" 
                 />
             </div>
             <Popover>
-                <PopoverTrigger asChild><Button variant="outline" className="rounded-full h-11 bg-white/50"><CalendarIcon className="size-4 mr-2" /> {format(date, 'PP')}</Button></PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-2xl overflow-hidden border-none shadow-2xl"><Calendar mode="single" selected={date} onSelect={d => d && setDate(d)} initialFocus /></PopoverContent>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" className="rounded-full h-12 bg-white border-none ring-1 ring-border/50 shadow-sm px-6 font-black uppercase text-[10px] tracking-widest">
+                        <CalendarIcon className="size-4 mr-2.5 text-primary opacity-60" /> {format(date, 'PP')}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 rounded-[2rem] overflow-hidden border-none shadow-2xl"><Calendar mode="single" selected={date} onSelect={d => d && setDate(d)} initialFocus /></PopoverContent>
             </Popover>
         </div>
       </PageHeader>
 
       <Tabs defaultValue="list" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-12 bg-white/50 ring-1 ring-border/50 rounded-2xl p-1 mb-6">
-              <TabsTrigger value="list" className="rounded-xl font-black uppercase text-[10px] tracking-widest gap-2"><List className="size-3.5"/> Grid Overview</TabsTrigger>
-              <TabsTrigger value="map" className="rounded-xl font-black uppercase text-[10px] tracking-widest gap-2"><MapIcon className="size-3.5"/> Satellite Map</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-14 bg-white/50 ring-2 ring-white rounded-[2rem] p-1.5 mb-10 shadow-sm">
+              <TabsTrigger value="list" className="rounded-[1.5rem] font-black uppercase text-[11px] tracking-widest gap-2.5 transition-all data-[state=active]:bg-white data-[state=active]:shadow-lg"><List className="size-4"/> Operational Grid Overview</TabsTrigger>
+              <TabsTrigger value="map" className="rounded-[1.5rem] font-black uppercase text-[11px] tracking-widest gap-2.5 transition-all data-[state=active]:bg-white data-[state=active]:shadow-lg"><MapIcon className="size-4"/> Satellite Map Intelligence</TabsTrigger>
           </TabsList>
 
           <TabsContent value="list" className="mt-0">
-              <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
-                  <CardHeader className="bg-muted/10 border-b">
-                      <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg font-headline flex items-center gap-2">
-                              <Activity className="size-5 text-primary" />
-                              Live Strategic Log
-                          </CardTitle>
-                          <div className="flex gap-4">
-                              <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-green-500" /><span className="text-[10px] font-black uppercase tracking-tighter opacity-60">Present: {monitorData.filter(d => d.statusInfo.status === 'present' || d.statusInfo.status === 'home').length}</span></div>
-                              <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-yellow-500" /><span className="text-[10px] font-black uppercase tracking-tighter opacity-60">Late: {monitorData.filter(d => d.statusInfo.status === 'late').length}</span></div>
-                              <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-red-500" /><span className="text-[10px] font-black uppercase tracking-tighter opacity-60">Absent: {monitorData.filter(d => d.statusInfo.status === 'absent').length}</span></div>
+              <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white/80 backdrop-blur-md">
+                  <CardHeader className="p-10 pb-6 border-b bg-muted/5">
+                      <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                          <div className="space-y-1">
+                            <CardTitle className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3 text-primary">
+                                <Activity className="size-7" /> Live Tactical Registry
+                            </CardTitle>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Verified fleet signals for {format(date, 'PPP')}</p>
+                          </div>
+                          <div className="flex flex-wrap justify-center gap-6">
+                              <div className="flex items-center gap-2.5"><div className="size-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" /><span className="text-[11px] font-black uppercase tracking-tighter">Onsite: {monitorData.filter(d => d.statusInfo.status === 'present' || d.statusInfo.status === 'home').length}</span></div>
+                              <div className="flex items-center gap-2.5"><div className="size-2.5 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]" /><span className="text-[11px] font-black uppercase tracking-tighter">Late: {monitorData.filter(d => d.statusInfo.status === 'late').length}</span></div>
+                              <div className="flex items-center gap-2.5"><div className="size-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" /><span className="text-[11px] font-black uppercase tracking-tighter">Absent: {monitorData.filter(d => d.statusInfo.status === 'absent').length}</span></div>
                           </div>
                       </div>
                   </CardHeader>
@@ -192,57 +198,57 @@ export default function MonitorPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent border-none">
-                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Employee Official</TableHead>
-                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Status</TableHead>
-                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Check In</TableHead>
-                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4 text-center">L-Out / L-In</TableHead>
-                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Check Out</TableHead>
-                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4 text-right">Actions</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 px-10">Personnel Official</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Current Status</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Inbound Signal</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 text-center">Tactical Break</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Outbound Signal</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 text-right px-10">Direct Comms</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={6} className="h-32 text-center animate-pulse uppercase font-black text-xs text-muted-foreground">Scanning tactical logs...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.4em]">Scanning Deep-Grid Records...</TableCell></TableRow>
                                 ) : filteredData.length > 0 ? (
                                     filteredData.map((row, i) => (
-                                        <TableRow key={i} className="border-border/50 group hover:bg-primary/5 transition-colors">
-                                            <TableCell className="py-4">
-                                                <Link href={`/dashboard/users/${row.user.id}`} className="flex items-center gap-3">
-                                                    <Avatar className="size-8 ring-1 ring-border group-hover:ring-primary/20 transition-all">
+                                        <TableRow key={i} className="border-border/50 group hover:bg-primary/5 transition-all duration-300">
+                                            <TableCell className="py-6 px-10">
+                                                <Link href={`/dashboard/users/${row.user.id}`} className="flex items-center gap-4 group/link">
+                                                    <Avatar className="size-11 ring-2 ring-white shadow-md group-hover/link:ring-primary/20 transition-all">
                                                         {row.user.avatar ? (
                                                             isUrl(row.user.avatar) ? (
                                                                 <AvatarImage src={row.user.avatar} className="object-cover" />
                                                             ) : (
-                                                                <span className="text-xl">{row.user.avatar}</span>
+                                                                <span className="text-2xl">{row.user.avatar}</span>
                                                             )
-                                                        ) : <AvatarFallback>{row.user.firstName?.[0]}</AvatarFallback>}
+                                                        ) : <AvatarFallback className="font-bold">{row.user.firstName?.[0]}</AvatarFallback>}
                                                     </Avatar>
                                                     <div className="flex flex-col">
-                                                        <span className="font-bold text-sm group-hover:text-primary transition-colors">{row.user.firstName} {row.user.lastName}</span>
-                                                        <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">{row.user.jobTitle}</span>
+                                                        <span className="font-black text-sm group-hover/link:text-primary transition-colors">{row.user.firstName} {row.user.lastName}</span>
+                                                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">{row.user.jobTitle}</span>
                                                     </div>
                                                 </Link>
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className={cn("rounded-full uppercase text-[9px] font-black tracking-widest gap-1 border-none", row.statusInfo.color)}>
+                                                <Badge variant="outline" className={cn("rounded-full uppercase text-[9px] font-black tracking-[0.15em] gap-1.5 border-none px-4 py-1.5 shadow-sm", row.statusInfo.color)}>
                                                     {row.statusInfo.icon}
                                                     {row.statusInfo.label}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>{getFormattedTime(row.att?.checkInTime)}</TableCell>
                                             <TableCell className="text-center">
-                                                <div className="flex items-center justify-center gap-2">
+                                                <div className="flex items-center justify-center gap-3 bg-muted/20 rounded-full py-1.5 px-4 w-fit mx-auto border border-dashed border-border/50">
                                                     {getFormattedTime(row.att?.lunchOutTime)}
-                                                    <span className="text-muted-foreground/30 font-black">|</span>
+                                                    <span className="text-muted-foreground/30 font-black opacity-30">|</span>
                                                     {getFormattedTime(row.att?.lunchInTime)}
                                                 </div>
                                             </TableCell>
                                             <TableCell>{getFormattedTime(row.att?.checkOutTime)}</TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
+                                            <TableCell className="text-right px-10">
+                                                <div className="flex justify-end gap-3">
                                                     {row.user.phoneNumber && (
-                                                        <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleNudge(row.user)}>
-                                                            <Phone className="size-3.5" />
+                                                        <Button variant="ghost" size="icon" className="rounded-full h-11 w-11 text-emerald-600 hover:text-white hover:bg-emerald-600 shadow-sm border border-emerald-100 transition-all" onClick={() => handleNudge(row.user)}>
+                                                            <Phone className="size-4" />
                                                         </Button>
                                                     )}
                                                 </div>
@@ -250,7 +256,7 @@ export default function MonitorPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">No tactical data for this sector.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">Operational Sector Clear: No matching personnel found.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -260,16 +266,31 @@ export default function MonitorPage() {
           </TabsContent>
 
           <TabsContent value="map" className="mt-0">
-                <Card className="border-none ring-1 ring-border/50 shadow-2xl rounded-[3rem] overflow-hidden bg-white h-[600px] relative">
+                <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white h-[700px] relative font-jakarta ring-1 ring-border/50">
                     {locationConfig?.googleMapsApiKey ? (
-                        <MonitorMap employees={monitorData.filter(d => d.att?.locationCheckInLatitude)} apiKey={locationConfig.googleMapsApiKey} />
+                        <>
+                            <MonitorMap employees={monitorData.filter(d => d.att?.locationCheckInLatitude)} apiKey={locationConfig.googleMapsApiKey} />
+                            <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end pointer-events-none">
+                                <div className="p-6 rounded-[2rem] bg-white/90 backdrop-blur-md shadow-2xl border-2 border-white pointer-events-auto space-y-4 max-w-sm">
+                                    <div className="flex items-center gap-2.5 text-primary font-black uppercase text-[11px] tracking-[0.2em]">
+                                        <Sparkles className="size-4 animate-pulse" /> Live Satellite Data
+                                    </div>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase leading-relaxed">Markers represent exact GPS coordinates captured during shift activation. Click a signal for personnel details.</p>
+                                </div>
+                                <Badge className="bg-primary text-white font-black uppercase text-[10px] tracking-[0.3em] h-10 px-8 rounded-full shadow-2xl pointer-events-auto flex gap-2">
+                                    <Activity className="size-3.5" /> Synchronized
+                                </Badge>
+                            </div>
+                        </>
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 bg-muted/20">
-                            <MapPin className="size-16 text-primary/20 mb-4" />
-                            <h3 className="text-xl font-black uppercase tracking-tighter">Satellite Intelligence Disabled</h3>
-                            <p className="text-sm text-muted-foreground max-w-sm mt-2">Please configure your Google Maps API Key in <b>System Settings</b> to enable real-time fleet visualization.</p>
-                            <Button asChild className="mt-8 rounded-full h-11 px-8 font-black uppercase text-[10px]" variant="outline">
-                                <Link href="/dashboard/settings">Open Command Center</Link>
+                            <div className="p-8 rounded-[3rem] bg-white shadow-xl ring-4 ring-primary/5 mb-8">
+                                <MapPin className="size-20 text-primary/30" />
+                            </div>
+                            <h3 className="text-3xl font-black uppercase tracking-tighter">Satellite Intelligence Disabled</h3>
+                            <p className="text-sm text-muted-foreground max-w-md mt-4 font-medium leading-relaxed uppercase tracking-tight opacity-70">Google Maps credentials missing. Configure your operational API Key in the <b>Global Command Center</b> to enable real-time fleet visualization.</p>
+                            <Button asChild className="mt-10 rounded-full h-14 px-12 font-black uppercase text-[11px] tracking-widest shadow-2xl shadow-primary/20 transition-all hover:scale-105" variant="default">
+                                <Link href="/dashboard/settings">Access Command Center</Link>
                             </Button>
                         </div>
                     )}
@@ -305,7 +326,7 @@ function MonitorMap({ employees, apiKey }: { employees: any[], apiKey: string })
         if (isLoaded && mapRef.current && window.google) {
             const map = new window.google.maps.Map(mapRef.current, {
                 center: { lat: 13.0827, lng: 80.2707 },
-                zoom: 12,
+                zoom: 13,
                 styles: [
                     { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#ffffff" }] },
                     { "featureType": "all", "elementType": "labels.text.stroke", "stylers": [{ "color": "#000000" }, { "lightness": 13 }] },
@@ -336,20 +357,23 @@ function MonitorMap({ employees, apiKey }: { employees: any[], apiKey: string })
                         title: `${emp.user.firstName} ${emp.user.lastName}`,
                         icon: {
                             path: window.google.maps.SymbolPath.CIRCLE,
-                            fillColor: '#8b5cf6',
+                            fillColor: '#a855f7', // primary color
                             fillOpacity: 1,
                             strokeColor: '#ffffff',
-                            strokeWeight: 2,
-                            scale: 8,
+                            strokeWeight: 3,
+                            scale: 10,
                         }
                     });
 
                     const infoWindow = new window.google.maps.InfoWindow({
                         content: `
-                            <div style="padding: 10px; font-family: 'Open Sans', sans-serif;">
-                                <p style="margin: 0; font-weight: 800; font-size: 14px; text-transform: uppercase;">${emp.user.firstName} ${emp.user.lastName}</p>
-                                <p style="margin: 2px 0; font-size: 10px; opacity: 0.6; font-weight: 700; text-transform: uppercase;">${emp.user.jobTitle}</p>
-                                <p style="margin: 5px 0 0; font-size: 11px; font-weight: 600; color: #8b5cf6;">Synced: ${format(emp.att.checkInTime.toDate(), 'p')}</p>
+                            <div style="padding: 12px; font-family: 'Plus Jakarta Sans', sans-serif;">
+                                <p style="margin: 0; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: -0.02em; color: #1a1a1a;">${emp.user.firstName} ${emp.user.lastName}</p>
+                                <p style="margin: 2px 0; font-size: 9px; opacity: 0.5; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;">${emp.user.jobTitle}</p>
+                                <div style="margin-top: 10px; height: 1px; background: rgba(0,0,0,0.05);"></div>
+                                <p style="margin: 8px 0 0; font-size: 11px; font-weight: 800; color: #a855f7; display: flex; align-items: center; gap: 4px;">
+                                    SYNCED: ${format(emp.att.checkInTime.toDate(), 'p')}
+                                </p>
                             </div>
                         `
                     });

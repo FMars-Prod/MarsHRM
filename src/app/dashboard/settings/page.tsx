@@ -26,7 +26,7 @@ export default function SettingsPage() {
     const [form, setForm] = React.useState<any>({
         latitude: '', longitude: '', maxDistanceKm: '0.5', shiftStartTime: '09:00', shiftEndTime: '18:00',
         morningReportSlot: '09:50', eveningReportSlot: '18:50', companyName: 'FortuMars AI',
-        googleMapsApiKey: ''
+        googleMapsApiKey: 'AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI'
     });
 
     React.useEffect(() => {
@@ -37,7 +37,7 @@ export default function SettingsPage() {
                 longitude: locationData.longitude || '',
                 maxDistanceKm: locationData.maxDistanceKm || '0.5',
                 shiftStartTime: locationData.shiftStartTime || '09:00',
-                googleMapsApiKey: locationData.googleMapsApiKey || ''
+                googleMapsApiKey: locationData.googleMapsApiKey || 'AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI'
             }));
         }
         if (reportData?.timings) {
@@ -81,26 +81,26 @@ export default function SettingsPage() {
             <div className="grid gap-8">
                 <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/10 border-b">
-                        <CardTitle className="text-lg font-headline flex items-center gap-2"><MapPin className="size-5 text-primary" /> HQ Geofencing Matrix</CardTitle>
-                        <CardDescription>Precision coordinates for the primary operational base.</CardDescription>
+                        <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter"><MapPin className="size-5 text-primary" /> HQ Geofencing Matrix</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Precision coordinates for the primary operational base.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Latitude</Label><Input type="number" step="any" value={form.latitude} onChange={e => setForm({...form, latitude: e.target.value})} placeholder="e.g., 28.6139" className="rounded-xl h-12" /></div>
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Longitude</Label><Input type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: e.target.value})} placeholder="e.g., 77.2090" className="rounded-xl h-12" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Latitude</Label><Input type="number" step="any" value={form.latitude} onChange={e => setForm({...form, latitude: e.target.value})} placeholder="e.g., 28.6139" className="rounded-xl h-12 font-mono" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Longitude</Label><Input type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: e.target.value})} placeholder="e.g., 77.2090" className="rounded-xl h-12 font-mono" /></div>
                         </div>
-                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Verification Radius (KM)</Label><Input type="number" step="0.1" value={form.maxDistanceKm} onChange={e => setForm({...form, maxDistanceKm: e.target.value})} className="rounded-xl h-12 w-full md:w-1/3" /></div>
+                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Verification Radius (KM)</Label><Input type="number" step="0.1" value={form.maxDistanceKm} onChange={e => setForm({...form, maxDistanceKm: e.target.value})} className="rounded-xl h-12 w-full md:w-1/3" /></div>
                     </CardContent>
                 </Card>
 
                 <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                     <CardHeader className="bg-primary/5 border-b border-primary/10">
-                        <CardTitle className="text-lg font-headline flex items-center gap-2 text-primary"><MapIcon className="size-5" /> Intelligence Integrations</CardTitle>
-                        <CardDescription>Connect external services for high-fidelity geofencing visualization.</CardDescription>
+                        <CardTitle className="text-lg font-headline flex items-center gap-2 text-primary font-black uppercase tracking-tighter"><MapIcon className="size-5" /> Intelligence Integrations</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Connect external services for high-fidelity geofencing visualization.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8 space-y-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Key className="size-3" /> Google Maps API Key</Label>
+                            <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2 tracking-widest"><Key className="size-3" /> Google Maps API Key</Label>
                             <Input 
                                 type="password" 
                                 value={form.googleMapsApiKey} 
@@ -108,34 +108,33 @@ export default function SettingsPage() {
                                 placeholder="Paste API Key here..." 
                                 className="rounded-xl h-12 font-mono" 
                             />
-                            <p className="text-[9px] text-muted-foreground italic mt-2">Required for the Live Operational Monitor and precise address lookups. Enable "Maps JavaScript API" and "Geocoding API".</p>
+                            <p className="text-[9px] text-muted-foreground font-medium italic mt-2">Required for the Live Operational Monitor and precise address lookups. Enable "Maps JavaScript API" and "Geocoding API".</p>
                         </div>
                     </CardContent>
                 </Card>
 
                 <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/10 border-b">
-                        <CardTitle className="text-lg font-headline flex items-center gap-2"><Clock className="size-5 text-primary" /> Tactical Timings</CardTitle>
-                        <CardDescription>Configure shift windows and automated intelligence triggers.</CardDescription>
+                        <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter"><Clock className="size-5 text-primary" /> Tactical Timings</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Configure shift windows and automated intelligence triggers.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Shift Log-In Start</Label><Input type="time" value={form.shiftStartTime} onChange={e => setForm({...form, shiftStartTime: e.target.value})} className="rounded-xl h-12" /></div>
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Shift Log-Out Target</Label><Input type="time" value={form.shiftEnd} onChange={e => setForm({...form, shiftEnd: e.target.value})} className="rounded-xl h-12" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-In Start</Label><Input type="time" value={form.shiftStartTime} onChange={e => setForm({...form, shiftStartTime: e.target.value})} className="rounded-xl h-12" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-Out Target</Label><Input type="time" value={form.shiftEnd} onChange={e => setForm({...form, shiftEnd: e.target.value})} className="rounded-xl h-12" /></div>
                         </div>
-                        <Separator />
+                        <Separator className="opacity-50" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Morning Report Trigger</Label><Input type="time" value={form.morningReportSlot} onChange={e => setForm({...form, morningReportSlot: e.target.value})} className="rounded-xl h-12" /><p className="text-[9px] text-muted-foreground italic">Standard: 09:50 AM IST</p></div>
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Evening Report Trigger</Label><Input type="time" value={form.eveningReportSlot} onChange={e => setForm({...form, eveningReportSlot: e.target.value})} className="rounded-xl h-12" /><p className="text-[9px] text-muted-foreground italic">Standard: 06:50 PM IST</p></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Morning Report Trigger</Label><Input type="time" value={form.morningReportSlot} onChange={e => setForm({...form, morningReportSlot: e.target.value})} className="rounded-xl h-12" /><p className="text-[9px] text-muted-foreground italic font-bold">Standard: 09:50 AM IST</p></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Evening Report Trigger</Label><Input type="time" value={form.eveningReportSlot} onChange={e => setForm({...form, eveningReportSlot: e.target.value})} className="rounded-xl h-12" /><p className="text-[9px] text-muted-foreground italic font-bold">Standard: 06:50 PM IST</p></div>
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
             <div className="pt-6 flex justify-end">
-                <Button onClick={handleSave} className="rounded-full h-14 px-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20"><Save className="mr-2 size-5" /> Save Platform Config</Button>
+                <Button onClick={handleSave} className="rounded-full h-14 px-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95"><Save className="mr-2 size-5" /> Save Platform Config</Button>
             </div>
         </div>
     );
 }
-

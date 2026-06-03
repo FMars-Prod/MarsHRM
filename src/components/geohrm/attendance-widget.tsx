@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer } from "lucide-react";
+import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -96,11 +96,9 @@ export function AttendanceWidget() {
   );
   const { data: globalLocationData } = useDoc<any>(globalLocationDocRef);
   
-  // STRICT SECTOR LOCKING LOGIC
   const activeGeofence = React.useMemo(() => {
-    // 1. If user is assigned a specific branch, that is the ONLY valid geofence
     if (userData?.branchId) {
-        if (isBranchLoading) return null; // Indicator to block action until resolved
+        if (isBranchLoading) return null;
         if (branchData) {
             return {
                 name: branchData.name || "Assigned Branch",
@@ -112,7 +110,6 @@ export function AttendanceWidget() {
         }
     }
 
-    // 2. Fallback to WFH Residential Base if assigned branch doesn't exist but WFH is allowed
     if (userData?.isWfhAllowed && typeof userData.homeLatitude === 'number' && typeof userData.homeLongitude === 'number') {
         return {
             name: "Residential Base (WFH)",
@@ -123,7 +120,6 @@ export function AttendanceWidget() {
         };
     }
 
-    // 3. Absolute fallback to Global HQ if no specific branch or WFH profile is found
     return {
         name: "Global HQ Sector",
         lat: Number(globalLocationData?.latitude || 13.0827),
@@ -360,7 +356,6 @@ export function AttendanceWidget() {
 
             const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
             
-            // STRICT Geofence Enforcement
             if (dist <= activeGeofence.radius) { 
                 proceedWithClockIn(userLoc, dist); 
                 return; 
@@ -457,11 +452,11 @@ export function AttendanceWidget() {
 
   const getMilestoneTime = (timestamp: any) => (timestamp instanceof Timestamp) ? format(timestamp.toDate(), 'p') : '--:--';
 
-  if (isUserDocLoading) return <div className="h-96 flex items-center justify-center animate-pulse uppercase font-black text-xs">Calibrating Fleet ID...</div>;
+  if (isUserDocLoading) return <div className="h-96 flex items-center justify-center animate-pulse uppercase font-black text-xs tracking-[0.4em]">Calibrating Fleet ID...</div>;
 
   return (
     <>
-      <Card className="flex flex-col animate-fade-in-up border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden relative font-open-sans">
+      <Card className="flex flex-col animate-fade-in-up border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden relative font-jakarta">
         <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full -mr-40 -mt-40 blur-[80px]" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full -ml-32 -mb-32 blur-[80px]" />
         
@@ -474,7 +469,7 @@ export function AttendanceWidget() {
                   <CardDescription className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Verified location-based intelligence registry</CardDescription>
               </div>
               <Badge variant="outline" className="rounded-full bg-primary/5 text-primary border-primary/20 font-black text-[10px] uppercase px-5 h-10 shadow-sm">
-                <MapPin className="size-3.5 mr-2" /> GPS Active
+                <MapPin className="size-3.5 mr-2" /> Satellite Sync Active
               </Badge>
           </div>
         </CardHeader>
@@ -496,34 +491,34 @@ export function AttendanceWidget() {
                 </div>
 
                 {activeGeofence && (
-                    <Badge variant="secondary" className="rounded-full px-4 py-1 font-bold text-[9px] uppercase tracking-widest bg-muted/40">
-                        Assigned Sector: {activeGeofence.name}
+                    <Badge variant="secondary" className="rounded-full px-6 py-2 font-black text-[10px] uppercase tracking-widest bg-muted/40 text-primary border border-primary/10">
+                        Target Sector: {activeGeofence.name}
                     </Badge>
                 )}
 
                 {(status === "lunch" || status === "short_break") && (
                   <div className="flex flex-col items-center gap-6 animate-fade-in-up">
                     <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-center p-6 rounded-3xl bg-orange-50/50 border border-orange-100 ring-4 ring-orange-50">
+                        <div className="flex flex-col items-center p-8 rounded-[2.5rem] bg-orange-50/50 border border-orange-100 ring-4 ring-orange-50 shadow-inner">
                             <span className="text-[11px] font-black uppercase text-orange-600 tracking-[0.3em] flex items-center gap-2 mb-2">
                                 <Coffee className="size-4 animate-bounce"/> Active Break
                             </span>
-                            <div className="text-4xl font-black font-mono tabular-nums text-orange-600 drop-shadow-sm">{formatTime(breakTimer)}</div>
+                            <div className="text-5xl font-black font-mono tabular-nums text-orange-600 drop-shadow-sm">{formatTime(breakTimer)}</div>
                         </div>
                     </div>
                     <Badge variant="secondary" className="bg-white/50 text-orange-700 border-orange-100/50 rounded-2xl px-6 py-2 font-black text-[11px] uppercase tracking-widest shadow-sm">
-                        Accumulated Break: <span className="ml-2 font-mono">{formatTime(totalBreakTime + breakTimer)}</span>
+                        Total Accumulated: <span className="ml-2 font-mono">{formatTime(totalBreakTime + breakTimer)}</span>
                     </Badge>
                   </div>
                 )}
 
                 {pendingRequest && status === 'out' && (
-                    <div className="p-6 bg-amber-50 rounded-3xl border-2 border-dashed border-amber-200 animate-pulse">
-                        <div className="flex items-center justify-center gap-2 text-amber-700">
-                            <Timer className="size-5" />
-                            <span className="text-sm font-black uppercase tracking-widest">Range Permission Pending Approval</span>
+                    <div className="p-8 bg-amber-50 rounded-[2.5rem] border-2 border-dashed border-amber-200 animate-pulse shadow-xl shadow-amber-500/5">
+                        <div className="flex items-center justify-center gap-3 text-amber-700 mb-2">
+                            <Timer className="size-6" />
+                            <span className="text-base font-black uppercase tracking-widest">Signal Authority Pending</span>
                         </div>
-                        <p className="text-[10px] text-amber-600 mt-2 font-medium">Deployment blocked until executive verification.</p>
+                        <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest leading-relaxed">Remote access request submitted. Deployment blocked until executive verification.</p>
                     </div>
                 )}
             </div>
@@ -539,14 +534,14 @@ export function AttendanceWidget() {
         <CardFooter className="p-10 pt-0 flex justify-center items-center relative">
           <div className="w-full max-w-3xl pt-8 border-t border-dashed border-border/50">
             {status === 'out' && !hasClockedOutToday && !pendingRequest && (
-                <Button onClick={handleClockIn} className="w-full h-16 rounded-[2rem] text-xl font-black uppercase tracking-[0.2em] shadow-2xl shadow-primary/25 bg-primary text-white hover:scale-[1.02] active:scale-[0.98] transition-all">
-                    Clock In
+                <Button onClick={handleClockIn} className="w-full h-20 rounded-[2.5rem] text-2xl font-black uppercase tracking-[0.25em] shadow-2xl shadow-primary/25 bg-primary text-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-300">
+                    Activate Shift
                 </Button>
             )}
 
             {status === 'out' && pendingRequest && (
-                <Button disabled className="w-full h-16 rounded-[2rem] text-sm font-black uppercase tracking-[0.1em] bg-muted text-muted-foreground opacity-50">
-                    Awaiting Signal Authority
+                <Button disabled className="w-full h-20 rounded-[2.5rem] text-sm font-black uppercase tracking-[0.1em] bg-muted text-muted-foreground opacity-50 border-2 border-dashed border-border/50">
+                    Awaiting Signal Authority...
                 </Button>
             )}
             
@@ -555,44 +550,44 @@ export function AttendanceWidget() {
                     {status === "in" && (
                         <>
                             {!todaysAttendance?.lunchInTime && (
-                                <Button onClick={handleLunch} variant="outline" className="rounded-2xl h-14 flex-1 font-black uppercase text-[11px] tracking-widest bg-white border-2 hover:bg-orange-50 hover:border-orange-200 transition-colors">
+                                <Button onClick={handleLunch} variant="outline" className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] bg-white border-2 hover:bg-orange-50 hover:border-orange-200 transition-all">
                                     Lunch Out
                                 </Button>
                             )}
-                            <Button onClick={handleShortBreak} variant="outline" className="rounded-2xl h-14 flex-1 font-black uppercase text-[11px] tracking-widest bg-white border-2 hover:bg-blue-50 hover:border-blue-200 transition-colors">
+                            <Button onClick={handleShortBreak} variant="outline" className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] bg-white border-2 hover:bg-blue-50 hover:border-blue-200 transition-all">
                                 Short Break
                             </Button>
                         </>
                     )}
                     
                     {status === "lunch" && (
-                        <Button onClick={handleLunch} className="rounded-2xl h-14 flex-1 font-black uppercase text-[11px] tracking-widest bg-primary text-white shadow-lg shadow-primary/20">
-                            Resume Mission (Lunch End)
+                        <Button onClick={handleLunch} className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] bg-primary text-white shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+                            Resume Mission
                         </Button>
                     )}
                     
                     {status === "short_break" && (
-                        <Button onClick={handleShortBreak} className="rounded-2xl h-14 flex-1 font-black uppercase text-[11px] tracking-widest bg-primary text-white shadow-lg shadow-primary/20">
+                        <Button onClick={handleShortBreak} className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] bg-primary text-white shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
                             Resume Mission
                         </Button>
                     )}
 
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="rounded-2xl h-14 flex-1 font-black uppercase text-[11px] tracking-widest shadow-xl shadow-red-500/20">
-                                Clock Out
+                            <Button variant="destructive" className="rounded-3xl h-16 flex-1 font-black uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-red-500/20 transition-all hover:bg-red-700">
+                                Deactivate Shift
                             </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-[2rem] p-8 border-none shadow-2xl">
+                        <AlertDialogContent className="rounded-[3rem] p-10 border-none shadow-2xl">
                             <AlertDialogHeader>
-                                <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter">Deactivate Fleet ID?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                                    Strategic protocols require a daily work report submission upon deactivation. Your shift duration will be stamped on the mission log.
+                                <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter text-red-600">Deactivate Fleet ID?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-sm font-bold uppercase tracking-tight leading-relaxed opacity-60 pt-2">
+                                    Strategic protocols require a daily work report submission upon deactivation. Your shift duration will be stamped on the permanent mission log.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter className="mt-8 gap-3">
-                                <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px] h-11 border-2">Return to Post</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-bold uppercase text-[10px] h-11 bg-red-600 shadow-lg shadow-red-600/20">Finalize & Clock Out</AlertDialogAction>
+                            <AlertDialogFooter className="mt-10 gap-4">
+                                <AlertDialogCancel className="rounded-full font-black uppercase text-[10px] h-12 border-2 px-8">Return to Post</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleClockOutRedirect} className="rounded-full font-black uppercase text-[10px] h-12 bg-red-600 shadow-xl shadow-red-600/20 px-8">Finalize & Deactivate</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -602,31 +597,31 @@ export function AttendanceWidget() {
         </CardFooter>
 
         <Dialog open={isOutOfRangeReasonDialogOpen} onOpenChange={setIsOutOfRangeReasonDialogOpen}>
-          <DialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl sm:max-w-md">
-              <div className="flex flex-col items-center text-center gap-6 py-4">
-                  <div className="p-6 rounded-[2rem] bg-orange-100 text-orange-600 shadow-inner">
-                      <MapPinned className="size-10" />
+          <DialogContent className="rounded-[3rem] p-12 border-none shadow-2xl sm:max-w-lg">
+              <div className="flex flex-col items-center text-center gap-8 py-4">
+                  <div className="p-8 rounded-[2.5rem] bg-orange-100 text-orange-600 shadow-inner ring-4 ring-orange-50">
+                      <MapPinned className="size-12" />
                   </div>
-                  <div className="space-y-2">
-                      <h3 className="text-2xl font-black uppercase tracking-tighter">Remote Access Alert</h3>
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">Verification Radius Breach Detected</p>
+                  <div className="space-y-3">
+                      <h3 className="text-3xl font-black uppercase tracking-tighter text-primary">Remote Access Alert</h3>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-60">Verification Radius Breach Detected</p>
                       {currentDist !== null && (
-                          <Badge variant="outline" className="text-[10px] font-bold text-orange-600 border-orange-200 mt-2">
-                              Distance: {currentDist.toFixed(2)} KM from {activeGeofence?.name}
+                          <Badge variant="outline" className="text-[11px] font-black uppercase text-orange-600 border-orange-200 mt-4 h-8 px-5 rounded-full">
+                              Distance: {currentDist.toFixed(2)} KM from Sector
                           </Badge>
                       )}
                   </div>
               </div>
-              <div className="grid gap-4 py-2">
-                  <Label htmlFor="reason" className="font-black text-[10px] uppercase text-primary tracking-widest">Strategic Justification</Label>
-                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Provide context for remote operational base..." className="rounded-2xl min-h-[140px] bg-muted/20 border-none ring-1 ring-border/50 focus:ring-primary/40 transition-all p-4 text-sm" />
+              <div className="grid gap-6 py-4">
+                  <Label htmlFor="reason" className="font-black text-[10px] uppercase text-primary tracking-[0.2em] ml-2">Strategic Justification</Label>
+                  <Textarea id="reason" value={outOfRangeReason} onChange={(e) => setOutOfRangeReason(e.target.value)} placeholder="Provide context for remote operational base..." className="rounded-[2rem] min-h-[160px] bg-muted/20 border-none ring-1 ring-border/50 focus:ring-primary/40 transition-all p-6 text-sm font-medium leading-relaxed" />
               </div>
-              <div className="flex flex-col gap-3 mt-6">
-                  <Button onClick={() => { if(!outOfRangeReason) { toast({variant: 'destructive', title: 'Justification Required'}); return; } if(outOfRangeAction) outOfRangeAction(); }} className="h-14 rounded-2xl font-black uppercase tracking-widest bg-primary text-white shadow-xl shadow-primary/20">
+              <div className="flex flex-col gap-4 mt-8">
+                  <Button onClick={() => { if(!outOfRangeReason) { toast({variant: 'destructive', title: 'Justification Required'}); return; } if(outOfRangeAction) outOfRangeAction(); }} className="h-16 rounded-[2rem] font-black uppercase tracking-widest bg-primary text-white shadow-2xl shadow-primary/20 text-[11px] transition-all hover:scale-105">
                       Certify & Dispatch Request
                   </Button>
-                  <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="ghost" className="h-12 rounded-2xl font-bold uppercase text-[10px] tracking-widest text-muted-foreground">
-                      Abort Request
+                  <Button onClick={() => setIsOutOfRangeReasonDialogOpen(false)} variant="ghost" className="h-12 rounded-full font-black uppercase text-[10px] tracking-[0.3em] text-muted-foreground/60">
+                      Abort Protocol
                   </Button>
               </div>
           </DialogContent>
@@ -634,20 +629,21 @@ export function AttendanceWidget() {
       </Card>
       
       {isVerifyingLocation && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/70 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-xl animate-in fade-in duration-500">
             <div className="relative">
-                <div className="h-20 w-20 border-4 border-primary/20 border-t-primary animate-spin rounded-full" />
+                <div className="h-24 w-20 border-4 border-primary/20 border-t-primary animate-spin rounded-full" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <MapPin className="size-6 text-primary animate-pulse" />
+                    <MapPin className="size-8 text-primary animate-pulse" />
                 </div>
             </div>
-            <div className="mt-8 text-center space-y-2">
-                <p className="text-white font-black uppercase tracking-[0.4em] text-sm">Synchronizing Satellite Grid</p>
-                <p className="text-white/40 font-bold uppercase tracking-widest text-[9px]">Awaiting precise GPS calibration...</p>
+            <div className="mt-10 text-center space-y-3">
+                <div className="flex items-center gap-3 justify-center text-white font-black uppercase tracking-[0.5em] text-lg">
+                    <Sparkles className="size-5 text-primary" /> Synchronizing Satellite Grid
+                </div>
+                <p className="text-white/40 font-bold uppercase tracking-[0.2em] text-[10px]">Awaiting pinpoint GPS calibration...</p>
             </div>
         </div>
       )}
     </>
   );
 }
-
