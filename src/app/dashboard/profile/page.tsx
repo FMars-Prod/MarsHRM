@@ -5,7 +5,7 @@ import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth, useUser, useStorage, useFirestore, useMemoFirebase, useCollection, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
@@ -16,7 +16,8 @@ import {
     FileBox, Loader2, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
-    FileDown, Target, Image as ImageIcon
+    FileDown, Target, Image as ImageIcon,
+    Table as TableIcon
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -78,7 +80,7 @@ export default function ProfilePage() {
     const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
     const { data: branches } = useCollection<any>(branchesQuery);
 
-    const docsQuery = useMemoFirebase(() => user ? collection(firestore, `users/${user.uid}/documents`) : null, [user, firestore]);
+    const docsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'vault_assets'), where('ownerId', '==', user.uid), orderBy('uploadedAt', 'desc')) : null, [user, firestore]);
     const { data: documents } = useCollection(docsQuery);
 
     const assetsQuery = useMemoFirebase(() => user ? query(collection(firestore, "assets"), where("assignedToId", "==", user.uid)) : null, [user, firestore]);
@@ -96,7 +98,8 @@ export default function ProfilePage() {
     const attendanceQuery = useMemoFirebase(() => user ? query(
         collection(firestore, `users/${user.uid}/attendances`),
         where('checkInTime', '>=', Timestamp.fromDate(monthStart)),
-        where('checkInTime', '<=', Timestamp.fromDate(monthEnd))
+        where('checkInTime', '<=', Timestamp.fromDate(monthEnd)),
+        orderBy('checkInTime', 'desc')
     ) : null, [user, firestore]);
     const { data: attendanceData } = useCollection<any>(attendanceQuery);
 
@@ -359,11 +362,13 @@ export default function ProfilePage() {
                             <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Activity Timeline</h3>
-                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-full px-4">View All</Button>
+                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-full px-4" asChild>
+                                        <Link href="/dashboard/reports">View All</Link>
+                                    </Button>
                                 </div>
                                 <div className="space-y-10 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
                                     {userReports.length > 0 ? userReports.map(r => (
-                                        <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Submission`} time={format(r.date.toDate(), 'PPP')} desc={`Implementation log for ${r.employeeDepartment} unit.`} color="bg-primary/10 text-primary" />
+                                        <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Submission`} time={r.date?.toDate ? format(r.date.toDate(), 'PPP') : 'N/A'} desc={`Implementation log for ${r.employeeDepartment} unit.`} color="bg-primary/10 text-primary" />
                                     )) : (
                                         <div className="py-24 text-center opacity-30 italic text-[10px] uppercase font-black tracking-[0.3em]">No activity detected</div>
                                     )}
@@ -375,25 +380,31 @@ export default function ProfilePage() {
                             <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Recent Assets</h3>
-                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-full px-4">Vault Access</Button>
+                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-full px-4" asChild>
+                                        <Link href="/dashboard/documents">Vault Access</Link>
+                                    </Button>
                                 </div>
                                 <div className="space-y-5">
-                                    {documents?.slice(0, 3).map(doc => (
+                                    {documents && documents.length > 0 ? documents.slice(0, 3).map(doc => (
                                         <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center gap-5 p-5 hover:bg-muted/30 rounded-3xl transition-all border border-transparent hover:border-border/50 group shadow-sm hover:shadow-md">
-                                            <div className="h-12 w-12 bg-red-50 text-red-600 flex items-center justify-center rounded-2xl font-black text-[11px] shadow-sm">PDF</div>
+                                            <div className="h-12 w-12 bg-red-50 text-red-600 flex items-center justify-center rounded-2xl font-black text-[11px] shadow-sm">
+                                                {doc.sourceType === 'file' ? 'FILE' : 'LINK'}
+                                            </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-black text-sm truncate group-hover:text-primary transition-colors">{doc.title}</p>
-                                                <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60 mt-1 tracking-tighter">Uploaded: {format(doc.uploadedAt.toDate(), 'dd MMM yyyy')}</p>
+                                                <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60 mt-1 tracking-tighter">Uploaded: {doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM yyyy') : 'N/A'}</p>
                                             </div>
                                         </Link>
-                                    ))}
+                                    )) : (
+                                        <div className="py-12 text-center opacity-20 text-[10px] font-black uppercase tracking-widest">No assets found</div>
+                                    )}
                                 </div>
                             </Card>
 
                             <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">Fleet Hardware</h3>
                                 <div className="space-y-5">
-                                    {assignedAssets?.map(asset => (
+                                    {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
                                         <div key={asset.id} className="flex items-center gap-5 p-4 rounded-3xl bg-muted/20 border border-border/50">
                                             <div className="h-14 w-14 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-inner ring-1 ring-border/30">
                                                 {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Briefcase className="size-6 opacity-20" />}
@@ -404,7 +415,9 @@ export default function ProfilePage() {
                                             </div>
                                             <Badge className="bg-emerald-100 text-emerald-700 border-none rounded-full text-[8px] font-black px-3 py-1 shadow-sm">IN USE</Badge>
                                         </div>
-                                    ))}
+                                    )) : (
+                                        <div className="py-8 text-center opacity-20 text-[10px] font-black uppercase tracking-widest">No assigned hardware</div>
+                                    )}
                                 </div>
                             </Card>
                         </div>
@@ -432,26 +445,106 @@ export default function ProfilePage() {
                 </TabsContent>
                 
                 <TabsContent value="attendance">
-                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-12">
-                        <div className="text-center py-32 opacity-20 uppercase font-black text-xs tracking-[0.4em]">Monthly detailed mission log synchronized.</div>
+                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden">
+                        <Table>
+                            <TableHeader className="bg-muted/10 border-b">
+                                <TableRow>
+                                    <TableHead className="font-black uppercase text-[10px] py-6 px-10">Mission Date</TableHead>
+                                    <TableHead className="font-black uppercase text-[10px] py-6">Signal Status</TableHead>
+                                    <TableHead className="font-black uppercase text-[10px] py-6">Log In</TableHead>
+                                    <TableHead className="font-black uppercase text-[10px] py-6">Tactical Break</TableHead>
+                                    <TableHead className="font-black uppercase text-[10px] py-6">Log Out</TableHead>
+                                    <TableHead className="font-black uppercase text-[10px] py-6 text-right px-10">Verification</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {attendanceData && attendanceData.length > 0 ? attendanceData.map((rec, i) => (
+                                    <TableRow key={i} className="border-border/50">
+                                        <TableCell className="py-6 px-10 font-black text-sm">{format(rec.checkInTime.toDate(), 'PPP')}</TableCell>
+                                        <TableCell>
+                                            <Badge className={cn(
+                                                "rounded-full uppercase text-[9px] font-black tracking-widest px-3 border-none",
+                                                rec.status === 'present' ? "bg-green-100 text-green-700" :
+                                                rec.status === 'late' ? "bg-amber-100 text-amber-700" :
+                                                "bg-rose-100 text-rose-700"
+                                            )}>
+                                                {rec.isOutOfRange ? "REMOTE" : rec.status.toUpperCase()}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="font-mono text-xs font-bold text-primary">{format(rec.checkInTime.toDate(), 'p')}</TableCell>
+                                        <TableCell className="font-mono text-[10px] font-bold opacity-60">
+                                            {rec.totalBreakDuration ? `${(rec.totalBreakDuration / 60).toFixed(0)}m` : '0m'}
+                                        </TableCell>
+                                        <TableCell className="font-mono text-xs font-bold text-primary">
+                                            {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
+                                        </TableCell>
+                                        <TableCell className="text-right px-10">
+                                            <div className="flex justify-end gap-2">
+                                                {rec.locationCheckInLatitude && (
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-primary/5 text-primary" asChild>
+                                                        <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
+                                                            <MapPin className="size-3.5" />
+                                                        </Link>
+                                                    </Button>
+                                                )}
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl opacity-20"><CheckCircle2 className="size-3.5" /></Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                )) : (
+                                    <TableRow><TableCell colSpan={6} className="h-64 text-center opacity-30 text-[10px] font-black uppercase tracking-[0.3em]">No mission records found for this period</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
                     </Card>
                 </TabsContent>
                 
                 <TabsContent value="documents">
                     <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-12">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {documents?.map(doc => (
+                            {documents && documents.length > 0 ? documents.map(doc => (
                                 <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-6 rounded-[2rem] bg-muted/20 hover:bg-white border-2 border-transparent hover:border-primary/20 transition-all group shadow-sm hover:shadow-xl">
                                     <div className="flex items-center gap-5">
-                                        <div className="p-3 rounded-2xl bg-blue-50 text-blue-600 shadow-sm"><FileBox className="size-6" /></div>
+                                        <div className={cn("p-3 rounded-2xl shadow-sm", doc.sourceType === 'file' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600")}>
+                                            <FileBox className="size-6" />
+                                        </div>
                                         <div>
-                                            <p className="font-black text-sm">{doc.title}</p>
-                                            <p className="text-[10px] font-black uppercase text-muted-foreground mt-1 opacity-60">Linked on {format(doc.uploadedAt.toDate(), 'dd MMM yyyy')}</p>
+                                            <p className="font-black text-sm group-hover:text-primary transition-colors">{doc.title}</p>
+                                            <p className="text-[10px] font-black uppercase text-muted-foreground mt-1 opacity-60">Linked on {doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM yyyy') : 'N/A'}</p>
                                         </div>
                                     </div>
                                     <ExternalLink className="size-4 opacity-0 group-hover:opacity-100 transition-all text-primary" />
                                 </Link>
-                            ))}
+                            )) : (
+                                <div className="col-span-full py-32 text-center opacity-30 grayscale flex flex-col items-center justify-center gap-4">
+                                    <FileBox className="size-16" />
+                                    <p className="font-black uppercase text-[10px] tracking-[0.3em]">Identity Vault Empty</p>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+                </TabsContent>
+                
+                <TabsContent value="assets">
+                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-12">
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                            {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
+                                <Card key={asset.id} className="border-none ring-1 ring-border/50 shadow-sm rounded-[2rem] overflow-hidden group hover:shadow-xl transition-all duration-500">
+                                    <div className="aspect-square bg-muted relative overflow-hidden">
+                                        {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700" /> : <div className="w-full h-full flex items-center justify-center opacity-10"><Briefcase className="size-20" /></div>}
+                                        <Badge className="absolute top-4 right-4 bg-emerald-500 text-white border-none rounded-full text-[8px] font-black uppercase px-3 py-1">IN USE</Badge>
+                                    </div>
+                                    <CardContent className="p-6 space-y-2">
+                                        <p className="text-xs font-black uppercase tracking-tight truncate">{asset.name}</p>
+                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{asset.category}</p>
+                                    </CardContent>
+                                </Card>
+                            )) : (
+                                <div className="col-span-full py-32 text-center opacity-30 grayscale flex flex-col items-center justify-center gap-4">
+                                    <Laptop className="size-16" />
+                                    <p className="font-black uppercase text-[10px] tracking-[0.3em]">No Hardware Registered to Profile</p>
+                                </div>
+                            )}
                         </div>
                     </Card>
                 </TabsContent>

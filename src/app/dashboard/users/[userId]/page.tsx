@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday } from 'date-fns';
-import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target } from 'lucide-react';
+import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Link from "next/link";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type AttendanceRecord = {
   id: string;
@@ -27,6 +28,9 @@ type AttendanceRecord = {
   checkOutTime?: Timestamp;
   status: 'present' | 'late' | 'absent' | 'on_leave' | 'out_of_range';
   totalBreakDuration?: number;
+  locationCheckInLatitude?: number;
+  locationCheckInLongitude?: number;
+  isOutOfRange?: boolean;
 };
 
 export default function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
@@ -51,7 +55,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     return b ? b.name : "Unassigned Sector";
   }, [branches, user?.branchId]);
 
-  const docsQuery = useMemoFirebase(() => userId ? collection(firestore, `users/${userId}/documents`) : null, [userId, firestore]);
+  const docsQuery = useMemoFirebase(() => userId ? query(collection(firestore, 'vault_assets'), where('ownerId', '==', userId), orderBy('uploadedAt', 'desc')) : null, [userId, firestore]);
   const { data: documents } = useCollection(docsQuery);
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
@@ -130,7 +134,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   if (isUserLoading || !user) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Personnel Data...</div>;
 
   return (
-    <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-open-sans">
+    <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-jakarta">
         <div className="flex flex-col gap-1 mb-2">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
             <h1 className="text-4xl font-black tracking-tighter">
@@ -138,7 +142,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </h1>
         </div>
 
-        <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden ring-1 ring-border/50">
+        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
             <CardContent className="p-8 md:p-10">
                 <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-start">
                     <Avatar className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-white shadow-xl ring-1 ring-border flex items-center justify-center bg-muted">
@@ -160,8 +164,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 <p className="text-xs font-black uppercase text-primary/60 tracking-widest">{user.department} Unit</p>
                             </div>
                             <div className="flex gap-3">
-                                {isAdmin && <Button onClick={handleExportPdf} className="rounded-xl h-10 px-6 font-black uppercase text-[10px] tracking-widest">Generate Audit PDF</Button>}
-                                <Button variant="outline" asChild className="rounded-xl h-10 px-6 font-black uppercase text-[10px] border-none ring-1 ring-border/50 bg-white">
+                                {isAdmin && <Button onClick={handleExportPdf} className="rounded-2xl h-10 px-6 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/10">Generate Audit PDF</Button>}
+                                <Button variant="outline" asChild className="rounded-2xl h-10 px-6 font-black uppercase text-[10px] border-none ring-1 ring-border/50 bg-white">
                                     <Link href="/dashboard/users"><Users className="size-3.5 mr-2" /> Back to Roster</Link>
                                 </Button>
                             </div>
@@ -189,8 +193,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
         <Tabs defaultValue="activity" className="space-y-8">
             <TabsList className="bg-transparent border-none gap-8 p-0 h-auto">
-                {["Activity", "Documents", "Assets", "Compliance"].map(tab => (
-                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary pb-4 font-black uppercase text-[10px] tracking-widest bg-transparent">
+                {["Activity", "Attendance", "Documents", "Assets", "Compliance"].map(tab => (
+                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary pb-5 font-black uppercase text-[11px] tracking-[0.25em] bg-transparent">
                         {tab}
                     </TabsTrigger>
                 ))}
@@ -198,19 +202,19 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
             <TabsContent value="activity" className="mt-0">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    <Card className="lg:col-span-7 border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Shift Implementation History</h3>
-                        <div className="space-y-8 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
+                    <Card className="lg:col-span-7 border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/80">Shift Implementation History</h3>
+                        <div className="space-y-10 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
                             {userReports.map(r => (
                                 <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={r.date?.toDate ? format(r.date.toDate(), 'PPP') : 'N/A'} desc={`Submitted for ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
                             ))}
-                            {userReports.length === 0 && <div className="py-20 text-center opacity-30 text-xs font-black uppercase">No Recent Activity</div>}
+                            {userReports.length === 0 && <div className="py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest">No Recent Activity</div>}
                         </div>
                     </Card>
                     <div className="lg:col-span-5 space-y-8">
-                        <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Sector Info</h3>
-                            <div className="space-y-4">
+                        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/80">Sector Info</h3>
+                            <div className="space-y-5">
                                 <InfoRow label="Assigned Sector" value={branchName} />
                                 <InfoRow label="Shift Type" value={user.shiftType || 'General'} />
                                 <InfoRow label="Hire Date" value={user.hireDate ? format(new Date(user.hireDate), 'PPP') : 'N/A'} />
@@ -220,56 +224,108 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 </div>
             </TabsContent>
 
+            <TabsContent value="attendance">
+                <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden">
+                    <Table>
+                        <TableHeader className="bg-muted/10 border-b">
+                            <TableRow>
+                                <TableHead className="font-black uppercase text-[10px] py-6 px-10">Mission Date</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] py-6">Signal Status</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] py-6">Log In</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] py-6">Log Out</TableHead>
+                                <TableHead className="text-right px-10 text-[10px] font-black uppercase">Verification</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {attendanceData && attendanceData.length > 0 ? attendanceData.map((rec, i) => (
+                                <TableRow key={i} className="border-border/50">
+                                    <TableCell className="py-6 px-10 font-black text-sm">{format(rec.checkInTime?.toDate() || new Date(), 'PPP')}</TableCell>
+                                    <TableCell>
+                                        <Badge className={cn(
+                                            "rounded-full uppercase text-[9px] font-black tracking-widest px-3 border-none",
+                                            rec.status === 'present' ? "bg-green-100 text-green-700" :
+                                            rec.status === 'late' ? "bg-amber-100 text-amber-700" :
+                                            "bg-rose-100 text-rose-700"
+                                        )}>
+                                            {rec.isOutOfRange ? "REMOTE" : rec.status.toUpperCase()}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs font-bold text-primary">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</TableCell>
+                                    <TableCell className="font-mono text-xs font-bold text-primary">{rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</TableCell>
+                                    <TableCell className="text-right px-10">
+                                        {rec.locationCheckInLatitude && (
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-primary/5 text-primary" asChild>
+                                                <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
+                                                    <MapPin className="size-3.5" />
+                                                </Link>
+                                            </Button>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow><TableCell colSpan={5} className="h-64 text-center opacity-30 text-[10px] font-black uppercase tracking-[0.3em]">No records found</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </Card>
+            </TabsContent>
+
             <TabsContent value="documents" className="mt-0">
-                <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {documents?.map(doc => (
-                            <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 border border-transparent hover:border-primary/20 hover:bg-white transition-all group">
-                                <div className="flex items-center gap-4">
-                                    <FileBox className="size-5 text-blue-600" />
+                <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {documents && documents.length > 0 ? documents.map(doc => (
+                            <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-6 rounded-[2rem] bg-muted/20 border border-transparent hover:border-primary/20 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
+                                <div className="flex items-center gap-5">
+                                    <FileBox className="size-6 text-blue-600" />
                                     <div>
-                                        <p className="font-bold text-xs">{doc.title}</p>
-                                        <p className="text-[8px] font-black uppercase text-muted-foreground">Linked on {doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM yyyy') : 'N/A'}</p>
+                                        <p className="font-black text-sm">{doc.title}</p>
+                                        <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60">Linked on {doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM yyyy') : 'N/A'}</p>
                                     </div>
                                 </div>
-                                <ExternalLink className="size-3.5 opacity-0 group-hover:opacity-100" />
+                                <ExternalLink className="size-4 opacity-0 group-hover:opacity-100 transition-all text-primary" />
                             </Link>
-                        ))}
+                        )) : (
+                            <div className="col-span-full py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest">No Intelligence Assets provisioned</div>
+                        )}
                     </div>
                 </Card>
             </TabsContent>
             
             <TabsContent value="assets" className="mt-0">
-                <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {assignedAssets?.map(asset => (
-                            <div key={asset.id} className="p-6 rounded-3xl ring-1 ring-border/50 bg-muted/10 space-y-4">
-                                <div className="aspect-square bg-muted rounded-2xl flex items-center justify-center overflow-hidden">
-                                    {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Briefcase className="size-8 opacity-10" />}
+                <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
+                            <div key={asset.id} className="p-8 rounded-[2rem] ring-1 ring-border/50 bg-muted/10 space-y-6 hover:shadow-xl transition-all duration-500">
+                                <div className="aspect-square bg-muted rounded-3xl flex items-center justify-center overflow-hidden">
+                                    {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Briefcase className="size-10 opacity-10" />}
                                 </div>
                                 <div>
-                                    <p className="font-black text-xs uppercase">{asset.name}</p>
-                                    <p className="text-[8px] font-bold text-muted-foreground uppercase">{asset.category}</p>
+                                    <p className="font-black text-sm uppercase tracking-tight truncate">{asset.name}</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{asset.category}</p>
                                 </div>
                             </div>
                         ))}
+                        {assignedAssets?.length === 0 && (
+                            <div className="col-span-full py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest">No Hardware Units assigned</div>
+                        )}
                     </div>
                 </Card>
             </TabsContent>
 
             <TabsContent value="compliance" className="mt-0">
-                <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
-                    <div className="space-y-4">
-                        {complianceData?.map((report: any) => (
-                            <div key={report.id} className="p-4 rounded-2xl bg-red-50 border border-red-100 flex items-start gap-4">
-                                <ShieldAlert className="size-5 text-red-600 mt-1" />
+                <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10">
+                    <div className="space-y-6">
+                        {complianceData && complianceData.length > 0 ? complianceData.map((report: any) => (
+                            <div key={report.id} className="p-6 rounded-[2rem] bg-red-50 border border-red-100 flex items-start gap-5">
+                                <ShieldAlert className="size-6 text-red-600 mt-1" />
                                 <div>
-                                    <p className="font-bold text-sm text-red-900">{report.severity} Alert: {report.reason}</p>
-                                    <p className="text-[10px] font-bold text-red-700 uppercase">Filed on {report.timestamp?.toDate ? format(report.timestamp.toDate(), 'PP p') : 'N/A'}</p>
+                                    <p className="font-black text-sm text-red-900">{report.severity} Alert: {report.reason}</p>
+                                    <p className="text-[10px] font-bold text-red-700 uppercase tracking-widest mt-1">Filed on {report.timestamp?.toDate ? format(report.timestamp.toDate(), 'PP p') : 'N/A'}</p>
                                 </div>
                             </div>
-                        ))}
-                        {complianceData?.length === 0 && <div className="py-10 text-center opacity-30 text-xs font-black uppercase">Fleet Integrity Clear</div>}
+                        )) : (
+                            <div className="py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest">Fleet Integrity Verified - No Alerts</div>
+                        )}
                     </div>
                 </Card>
             </TabsContent>
@@ -281,10 +337,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
         <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/5 text-primary/60"><Icon className="size-3.5" /></div>
+            <div className="p-2.5 rounded-xl bg-primary/5 text-primary/60"><Icon className="size-4" /></div>
             <div>
                 <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">{label}</p>
-                <p className="text-xs font-bold truncate max-w-[150px]">{value}</p>
+                <p className="text-xs font-black truncate max-w-[150px]">{value}</p>
             </div>
         </div>
     );
@@ -292,12 +348,12 @@ function DetailItem({ icon: Icon, label, value }: any) {
 
 function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4 ring-1 ring-border/50 hover:shadow-md transition-all group">
-            <div className={cn("p-2.5 rounded-xl w-fit group-hover:scale-110 transition-transform", bg, color)}><Icon className="size-4" /></div>
+        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-8 space-y-5 ring-1 ring-border/50 hover:shadow-2xl transition-all group">
+            <div className={cn("p-3 rounded-2xl w-fit group-hover:scale-110 transition-transform shadow-sm", bg, color)}><Icon className="size-5" /></div>
             <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">{label}</p>
-                <p className="text-2xl font-black tracking-tighter">{value}</p>
-                <p className="text-[10px] font-bold text-muted-foreground mt-0.5">{sub}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1.5">{label}</p>
+                <p className="text-3xl font-black tracking-tighter">{value}</p>
+                <p className="text-[10px] font-bold text-muted-foreground/40 mt-1.5 uppercase tracking-widest">{sub}</p>
             </div>
         </Card>
     );
@@ -305,12 +361,12 @@ function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
 
 function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
-        <div className="flex gap-4 items-start relative">
-            <div className={cn("h-7 w-7 rounded-full flex items-center justify-center shrink-0 z-10", color)}><Icon className="size-3.5" /></div>
-            <div className="space-y-0.5 pt-0.5">
-                <p className="font-bold text-xs">{title}</p>
-                <p className="text-[9px] font-black uppercase text-muted-foreground/40">{time}</p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">{desc}</p>
+        <div className="flex gap-6 items-start relative">
+            <div className={cn("h-8 w-8 rounded-2xl flex items-center justify-center shrink-0 z-10 shadow-sm", color)}><Icon className="size-4" /></div>
+            <div className="space-y-1 pt-0.5">
+                <p className="font-black text-sm uppercase tracking-tight">{title}</p>
+                <p className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest">{time}</p>
+                <p className="text-xs font-medium text-muted-foreground leading-relaxed mt-2 italic">"{desc}"</p>
             </div>
         </div>
     );
@@ -318,9 +374,9 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
 
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <div className="flex items-center justify-between py-2 border-b border-dashed border-border last:border-none">
-            <span className="text-[10px] font-black uppercase text-muted-foreground/60">{label}</span>
-            <span className="text-xs font-bold">{value}</span>
+        <div className="flex items-center justify-between py-4 border-b border-dashed border-border/50 last:border-none">
+            <span className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest">{label}</span>
+            <span className="text-sm font-black text-foreground/80">{value}</span>
         </div>
     );
 }
