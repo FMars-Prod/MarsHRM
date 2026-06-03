@@ -1,13 +1,13 @@
 
 'use client';
 
+import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useAuth, useUser, useStorage } from "@/firebase";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useAuth, useUser, useStorage, useFirestore, useMemoFirebase, useCollection, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
@@ -15,7 +15,8 @@ import {
     ExternalLink, FileText, Lock, CalendarDays, 
     FileBox, Loader2, Image as ImageIcon, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
-    Clock, Activity, UserCheck, Zap
+    Clock, Activity, UserCheck, Zap, ChevronRight,
+    Settings, FileDown, Target
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -26,18 +27,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { updateProfile, updatePassword } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
-import * as React from "react";
 import { cn } from "@/lib/utils";
-import { updateDocumentNonBlocking, useCollection } from "@/firebase";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
 import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differenceInDays } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import jspdf from "jspdf";
+import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
-import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -58,9 +57,7 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-const emojiCategories = {
-    "People": ["🧑", "👨", "👩", "👮", "👮", "🏠", "🕵️", "🧑‍💻", "👨‍💻", "👩‍💻", "🦸", "🦹", "🧙", "🧚"],
-};
+const emojiCategories = ["🧑", "👨", "👩", "🕵️", "🧑‍💻", "👨‍💻", "👩‍💻", "🦸", "🦹"];
 
 export default function ProfilePage() {
     const { user } = useUser();
@@ -93,9 +90,6 @@ export default function ProfilePage() {
     }, [user, firestore]);
     const { data: userTickets } = useCollection(ticketsQuery);
 
-    const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
-    const { data: teams } = useCollection<any>(teamsQuery);
-
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
     
@@ -115,9 +109,7 @@ export default function ProfilePage() {
         if (!todaysAttendance) return "Away";
         if (todaysAttendance.checkOutTime) return "Off-Duty";
         if (todaysAttendance.status === 'out_of_range') return "Pending Verification";
-        if (todaysAttendance.isAtHome) return "WFH (At Home)";
-        if (todaysAttendance.isOutOfRange) return "Remote (Field)";
-        return "In-Office";
+        return "Active";
     }, [todaysAttendance]);
 
     const branchName = React.useMemo(() => {
@@ -130,7 +122,6 @@ export default function ProfilePage() {
         if (!attendanceData) return { hours: "0.0", percentage: "0", count: 0 };
         let totalSec = 0;
         const presentDays = attendanceData.length;
-        const totalWorkDays = 22; 
         attendanceData.forEach(r => {
             if (r.checkInTime && r.checkOutTime) {
                 totalSec += differenceInSeconds(r.checkOutTime.toDate(), r.checkInTime.toDate()) - (r.totalBreakDuration || 0);
@@ -138,43 +129,20 @@ export default function ProfilePage() {
         });
         return { 
             hours: (totalSec / 3600).toFixed(1),
-            percentage: Math.min(100, Math.round((presentDays / totalWorkDays) * 100)),
+            percentage: Math.min(100, Math.round((presentDays / 22) * 100)),
             count: presentDays
         };
     }, [attendanceData]);
 
-    const experience = React.useMemo(() => {
+    const tenure = React.useMemo(() => {
         if (!employee?.hireDate) return "N/A";
-        const start = new Date(employee.hireDate);
-        const now = new Date();
-        const totalDays = differenceInDays(now, start);
+        const totalDays = differenceInDays(new Date(), new Date(employee.hireDate));
         return `${totalDays} day`;
     }, [employee]);
 
-    const teamChartData = React.useMemo(() => {
-        if (!teams || !employee) return [];
-        const isPrivileged = employee.role === 'HR Manager' || employee.role === 'CEO/Admin';
-        
-        const visibleTeams = isPrivileged 
-            ? teams 
-            : teams.filter((t: any) => t.id === employee.teamId);
-
-        return visibleTeams.map((t: any, i: number) => ({
-            name: t.name,
-            value: t.memberIds?.length || 0,
-            fill: `hsl(var(--chart-${(i % 5) + 1}))`
-        })).sort((a, b) => b.value - a.value).slice(0, 5);
-    }, [teams, employee]);
-
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: { 
-            firstName: "", 
-            lastName: "", 
-            phoneNumber: "",
-            password: "", 
-            confirmPassword: "" 
-        },
+        defaultValues: { firstName: "", lastName: "", phoneNumber: "", password: "", confirmPassword: "" },
     });
 
     React.useEffect(() => {
@@ -192,38 +160,32 @@ export default function ProfilePage() {
     React.useEffect(() => {
         const fetchReports = async () => {
             if (!user) return;
-            try {
-                const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(10));
-                const snap = await getDocs(q);
-                setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            } catch (err) {
-                console.error("Profile report fetch error:", err);
-            }
+            const q = query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(5));
+            const snap = await getDocs(q);
+            setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         };
-        if (user) fetchReports();
+        fetchReports();
     }, [user, firestore]);
     
     async function onSubmit(data: ProfileFormValues) {
         setIsSubmitting(true);
         if (!user || !auth.currentUser) return;
         try {
-            if (userDocRef) {
-                const { password, confirmPassword, ...updateData } = data;
-                updateDocumentNonBlocking(userDocRef, updateData);
-            }
+            const { password, confirmPassword, ...updateData } = data;
+            if (userDocRef) updateDocumentNonBlocking(userDocRef, updateData);
             await updateProfile(auth.currentUser, { displayName: `${data.firstName} ${data.lastName}` });
             if (data.password) await updatePassword(auth.currentUser, data.password);
-            toast({ title: "Profile Updated" });
+            toast({ title: "Profile Synchronized" });
             setIsProfileDialogOpen(false);
         } catch (error: any) {
-            toast({ variant: "destructive", title: "Failed", description: error.message });
+            toast({ variant: "destructive", title: "Update Failed", description: error.message });
         } finally { setIsSubmitting(false); }
     }
     
     const handleAvatarEmojiUpdate = (emoji: string) => {
         if (!userDocRef) return;
         updateDocumentNonBlocking(userDocRef, { avatar: emoji });
-        toast({ title: "Emoji Avatar synchronized!" });
+        toast({ title: "Identity Icon Updated" });
         setIsAvatarDialogOpen(false);
     }
 
@@ -235,10 +197,10 @@ export default function ProfilePage() {
             const snap = await uploadBytes(avatarRef, file);
             const url = await getDownloadURL(snap.ref);
             updateDocumentNonBlocking(userDocRef, { avatar: url });
-            toast({ title: "Identity Asset Saved" });
+            toast({ title: "Profile Portrait Saved" });
             setIsAvatarDialogOpen(false);
         } catch (e: any) {
-            toast({ variant: 'destructive', title: "Upload Error", description: e.message });
+            toast({ variant: 'destructive', title: "Upload Error" });
         } finally {
             setIsUploadingAvatar(false);
         }
@@ -246,332 +208,192 @@ export default function ProfilePage() {
 
     const handleDownloadIdCard = async () => {
         if (!employee) return;
-        const pdfDoc = new jspdf({
-            orientation: 'p',
-            unit: 'mm',
-            format: [54, 86]
-        });
-
-        const loadImage = (url: string): Promise<HTMLImageElement> => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.onload = () => resolve(img);
-                img.onerror = (e) => reject(e);
-                img.src = url;
-            });
-        };
-
-        try {
-            let logo = null;
-            try {
-                logo = await loadImage("https://fortumars.com/fortumarslogo.png");
-            } catch (e) {
-                console.warn("ID Card: Failed to load corporate logo, proceeding with text branding.");
-            }
-            
-            pdfDoc.setFillColor(255, 255, 255);
-            pdfDoc.rect(0, 0, 54, 86, 'F');
-
-            pdfDoc.setFillColor(107, 33, 168);
-            pdfDoc.rect(0, 0, 54, 28, 'F');
-
-            if (logo) {
-                const logoW = 38;
-                const logoH = (logo.height * logoW) / logo.width;
-                pdfDoc.addImage(logo, 'PNG', (54 - logoW) / 2, 6, logoW, logoH);
-            } else {
-                pdfDoc.setTextColor(255, 255, 255);
-                pdfDoc.setFontSize(10);
-                pdfDoc.setFont('helvetica', 'bold');
-                pdfDoc.text("FORTUMARS", 27, 15, { align: 'center' });
-            }
-
-            pdfDoc.setFillColor(245, 245, 245);
-            pdfDoc.circle(27, 44, 12, 'F');
-            pdfDoc.setDrawColor(107, 33, 168);
-            pdfDoc.setLineWidth(0.5);
-            pdfDoc.circle(27, 44, 12.5, 'S');
-
-            pdfDoc.setTextColor(107, 33, 168);
-            pdfDoc.setFontSize(14);
-            pdfDoc.setFont('helvetica', 'bold');
-            pdfDoc.text(`${employee.firstName[0]}${employee.lastName[0]}`, 27, 47, { align: 'center' });
-
-            pdfDoc.setTextColor(0, 0, 0);
-            pdfDoc.setFontSize(10);
-            pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 62, { align: 'center' });
-
-            pdfDoc.setFontSize(6.5);
-            pdfDoc.setFont('helvetica', 'bold');
-            pdfDoc.setTextColor(107, 33, 168);
-            pdfDoc.text(employee.jobTitle?.toUpperCase() || 'FLEET MEMBER', 27, 66, { align: 'center' });
-
-            pdfDoc.setFontSize(5);
-            pdfDoc.setFont('helvetica', 'normal');
-            pdfDoc.setTextColor(140);
-            const joinedDate = employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A';
-            pdfDoc.text(`JOINED: ${joinedDate}`, 27, 70, { align: 'center' });
-
-            pdfDoc.setDrawColor(230, 230, 230);
-            pdfDoc.line(10, 73, 44, 73);
-
-            pdfDoc.setTextColor(80);
-            pdfDoc.setFontSize(4.5);
-            pdfDoc.text(`EMPLOYMENT: ${employee.employmentType?.toUpperCase() || 'EMPLOYEE'}`, 10, 76.5);
-            pdfDoc.text(`PHONE: ${employee.phoneNumber || 'N/A'}`, 10, 79);
-            pdfDoc.text(`EMAIL: ${employee.email || 'N/A'}`, 10, 81.5);
-
-            pdfDoc.setFillColor(107, 33, 168);
-            pdfDoc.rect(0, 83, 54, 3, 'F');
-            pdfDoc.setTextColor(255, 255, 255);
-            pdfDoc.setFontSize(3.2);
-            pdfDoc.text("FORTUMARS AI TECHNOLOGIES & BUSINESS SOLUTIONS", 27, 85, { align: 'center' });
-
-            pdfDoc.save(`ID_CARD_${employee.firstName}_${employee.lastName}.pdf`);
-        } catch (err) {
-            console.error("ID Card Generation Failed", err);
-            toast({ variant: 'destructive', title: 'Design failed to render.' });
-        }
+        const pdfDoc = new jsPDF({ orientation: 'p', unit: 'mm', format: [54, 86] });
+        pdfDoc.setFillColor(255, 255, 255);
+        pdfDoc.rect(0, 0, 54, 86, 'F');
+        pdfDoc.setFillColor(107, 33, 168);
+        pdfDoc.rect(0, 0, 54, 28, 'F');
+        pdfDoc.setTextColor(255, 255, 255);
+        pdfDoc.setFontSize(10);
+        pdfDoc.text("FORTUMARS", 27, 15, { align: 'center' });
+        pdfDoc.setTextColor(0, 0, 0);
+        pdfDoc.setFontSize(12);
+        pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 62, { align: 'center' });
+        pdfDoc.setFontSize(7);
+        pdfDoc.setTextColor(107, 33, 168);
+        pdfDoc.text(employee.jobTitle?.toUpperCase() || 'FLEET MEMBER', 27, 66, { align: 'center' });
+        pdfDoc.save(`ID_CARD_${employee.firstName}.pdf`);
     };
 
-    const isUrl = (str: string) => str && str.startsWith('http');
-
-    if (isEmployeeLoading) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Synchronizing Identity Hub...</div>;
-    if (!employee) return <div className="p-10 text-center">No identity record found.</div>;
-
-    const greeting = (() => {
-        const hour = new Date().getHours();
-        if (hour < 12) return "Good Morning";
-        if (hour < 17) return "Good Afternoon";
-        return "Good Evening";
-    })();
+    if (isEmployeeLoading) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Identity Hub...</div>;
 
     return (
-        <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8">
+        <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-open-sans">
+            {/* Command Greeting */}
             <div className="flex flex-col gap-1 mb-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
                 <h1 className="text-4xl font-black tracking-tighter">
-                    {greeting}, {employee.firstName} ,
+                    Good {new Date().getHours() < 12 ? "Morning" : "Afternoon"}, {employee.firstName} ,
                 </h1>
             </div>
 
-            <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden">
-                <CardContent className="p-8 md:p-12">
-                    <div className="flex flex-col lg:flex-row gap-12 items-center lg:items-start text-center lg:text-left">
-                        <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>
-                            <div className="relative h-40 w-40 md:h-48 md:w-48">
-                                <Avatar className="h-full w-full rounded-full ring-8 ring-primary/5 ring-offset-0 overflow-hidden bg-muted flex items-center justify-center transition-all duration-500 group-hover:ring-primary/10">
-                                    {employee.avatar ? (
-                                        isUrl(employee.avatar) ? (
-                                            <AvatarImage src={employee.avatar} className="object-cover" />
-                                        ) : (
-                                            <div className="flex items-center justify-center w-full h-full bg-primary/5">
-                                                <span className="text-7xl">{employee.avatar}</span>
-                                            </div>
-                                        )
-                                    ) : (
-                                        <AvatarFallback className="text-4xl font-light text-primary/40 bg-primary/5">
-                                            {employee.firstName?.[0]}{employee.lastName?.[0]}
-                                        </AvatarFallback>
-                                    )}
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Camera className="size-8 text-white" />
-                                    </div>
-                                </Avatar>
-                                <div className={cn("absolute bottom-4 right-4 h-5 w-5 rounded-full border-4 border-white shadow-sm", operationalStatus === 'Away' ? 'bg-slate-300' : 'bg-green-500')} />
-                            </div>
+            {/* Profile Bento Header */}
+            <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden ring-1 ring-border/50">
+                <CardContent className="p-8 md:p-10">
+                    <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-start">
+                        <div className="relative group cursor-pointer" onClick={() => setIsAvatarDialogOpen(true)}>
+                            <Avatar className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-white shadow-xl ring-1 ring-border">
+                                {employee.avatar?.startsWith('http') ? (
+                                    <AvatarImage src={employee.avatar} className="object-cover" />
+                                ) : (
+                                    <AvatarFallback className="text-6xl bg-primary/5 text-primary/40">{employee.avatar || employee.firstName[0]}</AvatarFallback>
+                                )}
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Camera className="size-8 text-white" />
+                                </div>
+                            </Avatar>
+                            <div className={cn("absolute bottom-2 right-2 h-6 w-6 rounded-full border-4 border-white shadow-md", operationalStatus === 'Active' ? 'bg-green-500' : 'bg-slate-300')} />
                         </div>
 
-                        <div className="flex-1 space-y-8 w-full">
+                        <div className="flex-1 text-center lg:text-left space-y-6 w-full">
                             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                                 <div className="space-y-1">
-                                    <div className="flex items-center justify-center lg:justify-start gap-3">
-                                        <h1 className="text-3xl font-bold tracking-tight text-foreground">{employee.firstName} {employee.lastName}</h1>
-                                        <Badge className={cn("border-none rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5", operationalStatus === 'Away' ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-700')}>
-                                            <div className={cn("h-1.5 w-1.5 rounded-full", operationalStatus === 'Away' ? 'bg-slate-400' : 'bg-blue-600 animate-pulse')} />
-                                            {operationalStatus}
-                                        </Badge>
+                                    <div className="flex items-center gap-3 justify-center lg:justify-start">
+                                        <h2 className="text-3xl font-black tracking-tighter">{employee.firstName} {employee.lastName}</h2>
+                                        <Badge className="bg-blue-100 text-blue-700 border-none rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-widest">{operationalStatus}</Badge>
                                     </div>
                                     <p className="text-lg font-medium text-muted-foreground">{employee.jobTitle}</p>
-                                    <p className="text-xs font-semibold text-primary/60 uppercase tracking-widest">{employee.department} Division</p>
+                                    <p className="text-xs font-black uppercase text-primary/60 tracking-widest">{employee.department} Division</p>
                                 </div>
-                                <div className="flex gap-3 w-full md:w-auto">
-                                    <Button onClick={() => setIsProfileDialogOpen(true)} className="rounded-xl h-10 px-6 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20 flex-1 md:flex-none">
-                                        Edit Profile
-                                    </Button>
+                                <div className="flex gap-3">
+                                    <Button onClick={() => setIsProfileDialogOpen(true)} className="rounded-xl h-10 px-6 font-black uppercase text-[10px] tracking-widest shadow-lg">Edit Profile</Button>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" className="rounded-xl h-10 px-5 font-black uppercase text-[10px] tracking-widest bg-white/50 border-none ring-1 ring-border/50">
-                                                More <MoreHorizontal className="size-4 ml-2 opacity-50" />
-                                            </Button>
+                                            <Button variant="outline" className="rounded-xl h-10 px-5 font-black uppercase text-[10px] bg-white border-none ring-1 ring-border/50">More Actions <MoreHorizontal className="size-4 ml-2" /></Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
-                                            <DropdownMenuItem onClick={handleDownloadIdCard} className="rounded-lg gap-2 font-bold text-xs uppercase cursor-pointer">
-                                                <Download className="size-3.5"/> Download ID Card
-                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={handleDownloadIdCard} className="font-bold text-xs uppercase cursor-pointer gap-2"><Download className="size-3.5"/> Download ID Card</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={handleAvatarImageUpload as any} className="font-bold text-xs uppercase cursor-pointer gap-2"><FileDown className="size-3.5"/> Generate Report</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-12 pt-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 pt-4 border-t border-dashed border-border/50">
+                                <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${employee.id.slice(0, 5).toUpperCase()}`} />
                                 <DetailItem icon={Mail} label="Email" value={employee.email} />
-                                <DetailItem icon={Phone} label="Phone" value={employee.phoneNumber || "Not Provisioned"} />
-                                <DetailItem icon={MapPin} label="Branch Location" value={branchName} />
+                                <DetailItem icon={Phone} label="Phone" value={employee.phoneNumber || "N/A"} />
+                                <DetailItem icon={MapPin} label="Location" value={branchName} />
                                 <DetailItem icon={CalendarDays} label="Joined On" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
                                 <DetailItem icon={Briefcase} label="Employment Type" value={employee.employmentType || "Full Time"} />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-dashed pt-8 border-border/50">
-                        <div className="flex -space-x-4">
-                            <ExperienceBadge label="Authority" value={employee.role || 'Member'} icon={ShieldCheck} color="bg-indigo-600" />
-                            <ExperienceBadge label="Commenced" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} icon={CalendarDays} color="bg-emerald-600" />
-                            <ExperienceBadge label="Fleet Tenure" value={experience} icon={Clock} color="bg-primary" />
-                        </div>
-                        <div className="flex gap-4">
-                            <div className="text-center sm:text-right">
-                                <p className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Tactical Comms</p>
-                                <div className="flex gap-2 mt-1">
-                                    <a href={`mailto:${employee.email}`} className="p-2.5 rounded-xl bg-muted/50 hover:bg-primary hover:text-white transition-all duration-300">
-                                        <Mail className="size-4" />
-                                    </a>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                <MetricCard label="Account Authority" value={employee.role || 'Member'} sub="System Access Tier" icon={ShieldCheck} iconColor="text-purple-600" bgColor="bg-purple-50" />
-                <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count} / 22 Days`} icon={UserCheck} iconColor="text-green-600" bgColor="bg-green-50" />
-                <MetricCard label="Documents" value={`${documents?.length || 0} Assets`} sub="Secure Repository" icon={FileBox} iconColor="text-blue-600" bgColor="bg-blue-50" />
-                <MetricCard label="Work Hours" value={`${monthlyStats.hours}h`} sub="MTD Net Volume" icon={Clock} iconColor="text-orange-600" bgColor="bg-orange-50" />
-                <MetricCard label="Support Desk" value={`${userTickets?.length || 0} Tickets`} sub="Maintenance Logs" icon={Briefcase} iconColor="text-pink-600" bgColor="bg-pink-50" />
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/22 Days`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
+                <MetricCard label="Documents" value={documents?.length || 0} sub="Files Updated" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
+                <MetricCard label="Performance" value="Excellent" sub="Last Review: Q4" icon={Zap} color="text-orange-600" bg="bg-orange-50" />
+                <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Net Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
+                <MetricCard label="Support Desk" value={userTickets?.length || 0} sub="Logged Issues" icon={ShieldCheck} color="text-pink-600" bg="bg-pink-50" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
-                <div className="lg:col-span-4 space-y-6">
-                    <SectionHeader title="Shift Activity Log" />
-                    <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
-                        <ScrollArea className="h-[400px] pr-4">
-                            <div className="space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
-                                {userReports.length > 0 ? userReports.map(report => (
-                                    <TimelineItem 
-                                        key={report.id}
-                                        icon={FileText} 
-                                        color="bg-primary/10 text-primary" 
-                                        title={`${report.reportType} Submission`} 
-                                        time={report.date ? format(report.date.toDate(), 'PPP p') : 'Pending'} 
-                                        desc={`Shift implementation log for ${report.employeeDepartment} sector.`} 
-                                    />
-                                )) : (
-                                    <div className="py-10 text-center text-muted-foreground italic text-xs uppercase font-black">No activity records found.</div>
-                                )}
-                            </div>
-                        </ScrollArea>
-                    </Card>
-                </div>
+            {/* Detailed Tabs Interface */}
+            <Tabs defaultValue="overview" className="space-y-8">
+                <TabsList className="w-full justify-start bg-transparent border-none p-0 h-auto gap-8">
+                    {["Overview", "Attendance", "Documents", "Assets", "Activity Logs"].map(tab => (
+                        <TabsTrigger key={tab} value={tab.toLowerCase().replace(' ', '-')} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary p-0 pb-4 bg-transparent font-black uppercase text-[10px] tracking-widest">
+                            {tab}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
 
-                <div className="lg:col-span-4 space-y-8">
-                    <div className="space-y-6">
-                        <SectionHeader title="Intelligence Repository" href="/dashboard/documents" />
-                        <Card className="border-none shadow-sm rounded-3xl bg-white p-2">
-                            {documents && documents.length > 0 ? documents.slice(0, 4).map(doc => (
-                                <DocRow key={doc.id} title={doc.title} date={format(doc.uploadedAt.toDate(), 'dd MMM yyyy')} link={doc.link} />
-                            )) : (
-                                <div className="p-10 text-center text-muted-foreground text-[10px] font-black uppercase italic">No digital assets linked.</div>
-                            )}
-                        </Card>
-                    </div>
+                <TabsContent value="overview" className="mt-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        {/* Timeline */}
+                        <div className="lg:col-span-4 space-y-6">
+                            <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Activity Timeline</h3>
+                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase text-primary">View All</Button>
+                                </div>
+                                <div className="space-y-8 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
+                                    {userReports.length > 0 ? userReports.map(r => (
+                                        <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Submission`} time={format(r.date.toDate(), 'PPP')} desc={`Implementation log for ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
+                                    )) : (
+                                        <div className="py-20 text-center opacity-30 italic text-xs uppercase font-black">No activity records found.</div>
+                                    )}
+                                </div>
+                            </Card>
+                        </div>
 
-                    <div className="space-y-6">
-                        <SectionHeader title="Technical Assets" href="/dashboard/assets" />
-                        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-6">
-                            {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
-                                <AssetRow key={asset.id} image={asset.imageUrl} title={asset.name} category={asset.category} />
-                            )) : (
-                                <div className="text-center text-muted-foreground text-[10px] font-black uppercase italic">No assigned hardware.</div>
-                            )}
-                        </Card>
-                    </div>
-                </div>
+                        {/* Recent Documents & Assets */}
+                        <div className="lg:col-span-4 space-y-8">
+                            <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Recent Documents</h3>
+                                    <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase text-primary">View All</Button>
+                                </div>
+                                <div className="space-y-4">
+                                    {documents?.slice(0, 3).map(doc => (
+                                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 rounded-2xl transition-colors border border-transparent hover:border-border/50">
+                                            <div className="h-10 w-10 bg-red-50 text-red-600 flex items-center justify-center rounded-xl font-black text-[10px]">PDF</div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-xs truncate">{doc.title}</p>
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground opacity-60">Uploaded on {format(doc.uploadedAt.toDate(), 'dd MMM yyyy')}</p>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </Card>
 
-                <div className="lg:col-span-4 space-y-8">
-                    <div className="space-y-6">
-                        <SectionHeader title="Fleet Composition" />
-                        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 flex flex-col items-center">
-                            <div className="h-[200px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <RadialBarChart 
-                                        cx="50%" 
-                                        cy="50%" 
-                                        innerRadius="30%" 
-                                        outerRadius="100%" 
-                                        barSize={12} 
-                                        data={teamChartData}
-                                        startAngle={180}
-                                        endAngle={0}
-                                    >
-                                        <RadialBar
-                                            label={{ position: 'insideStart', fill: '#fff', fontSize: '8px', fontWeight: 'bold' }}
-                                            background
-                                            dataKey="value"
-                                            cornerRadius={10}
-                                        />
-                                        <PolarAngleAxis type="number" domain={[0, 20]} angleAxisId={0} tick={false} />
-                                    </RadialBarChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="w-full space-y-2 mt-4">
-                                {teamChartData.map((t: any) => (
-                                    <div key={t.name} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className="size-2 rounded-full" style={{ backgroundColor: t.fill }} />
-                                            <span className="text-[10px] font-bold uppercase truncate max-w-[120px]">{t.name}</span>
+                            <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Assigned Assets</h3>
+                                <div className="space-y-4">
+                                    {assignedAssets?.map(asset => (
+                                        <div key={asset.id} className="flex items-center gap-4">
+                                            <div className="h-12 w-12 bg-muted rounded-2xl flex items-center justify-center overflow-hidden">
+                                                {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Briefcase className="size-5 opacity-20" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-xs truncate">{asset.name}</p>
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground opacity-60">Assigned on {joinDate}</p>
+                                            </div>
+                                            <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[8px] font-black">IN USE</Badge>
                                         </div>
-                                        <span className="text-[10px] font-black">{t.value} Units</span>
-                                    </div>
-                                ))}
-                                {teamChartData.length === 0 && <p className="text-center text-xs text-muted-foreground italic">No tactical units identified.</p>}
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-            </div>
-
-            <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
-                <DialogContent className="rounded-3xl sm:max-w-md p-0 overflow-hidden">
-                    <DialogHeader className="p-8 pb-4">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Identity Asset Sync</DialogTitle>
-                        <DialogDescription>Update your professional portrait or tactical emoji.</DialogDescription>
-                    </DialogHeader>
-                    <div className="p-8 space-y-6">
-                         <div className="flex flex-col items-center gap-6 py-4 text-center">
-                            <div className="p-6 rounded-3xl bg-primary/5 border-2 border-dashed border-primary/20 w-full">
-                                <ImageIcon className="size-10 text-primary opacity-30 mx-auto mb-4" />
-                                <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Professional Portrait Selection</p>
-                            </div>
-                            <div className="relative w-full">
-                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleAvatarImageUpload(e.target.files[0])} disabled={isUploadingAvatar} />
-                                <Button className="w-full rounded-2xl h-14 text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20" disabled={isUploadingAvatar}>
-                                    {isUploadingAvatar ? <Loader2 className="size-4 animate-spin"/> : "Upload Image Registry"}
-                                </Button>
-                            </div>
+                                    ))}
+                                </div>
+                            </Card>
                         </div>
-                        <Separator />
-                        <div className="grid grid-cols-6 gap-3">
-                            {emojiCategories.People.slice(0, 6).map(emoji => (
-                                <button key={emoji} onClick={() => handleAvatarEmojiUpdate(emoji)} className="text-3xl p-2 rounded-xl hover:bg-primary/5 transition-all">{emoji}</button>
-                            ))}
+
+                        {/* Quick Info & Command Chain */}
+                        <div className="lg:col-span-4 space-y-8">
+                             <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Quick Info</h3>
+                                <div className="space-y-4">
+                                    <InfoRow label="Department" value={employee.department} />
+                                    <InfoRow label="Work Location" value={branchName} />
+                                    <InfoRow label="Shift" value={employee.shiftType || 'General Shift'} />
+                                    <InfoRow label="Experience" value={tenure} />
+                                </div>
+                            </Card>
+
+                            <Card className="border-none shadow-sm rounded-3xl bg-primary/5 p-8 text-center space-y-6">
+                                <ShieldCheck className="size-10 text-primary mx-auto opacity-30" />
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-widest text-primary leading-tight">Operational Security Stamped</p>
+                                    <p className="text-[9px] font-bold text-primary/60 mt-1 uppercase">Fleet tenure verified</p>
+                                </div>
+                            </Card>
                         </div>
                     </div>
-                </DialogContent>
-            </Dialog>
+                </TabsContent>
+            </Tabs>
 
+            {/* Edit Dialogs */}
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                 <DialogContent className="rounded-3xl sm:max-w-xl">
                     <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Profile Config</DialogTitle></DialogHeader>
@@ -585,126 +407,91 @@ export default function ProfilePage() {
                                     <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Last Name</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                                 )} />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={form.control} name="phoneNumber" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Phone Number</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
-                                )} />
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase opacity-60">Employment Status</Label>
-                                    <div className="p-3 bg-muted/30 rounded-xl border border-dashed text-[10px] font-bold uppercase text-muted-foreground flex items-center justify-between">
-                                        {employee.employmentType || "Employee"}
-                                        <Lock className="size-3 opacity-40" />
-                                    </div>
-                                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest italic">Contact HR to re-classify status.</p>
-                                </div>
-                            </div>
+                            <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                                <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Phone Number</FormLabel><FormControl><Input {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                            )} />
                             <Separator />
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField control={form.control} name="password" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">New Password (Optional)</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-11" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">New Password</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-11" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={form.control} name="confirmPassword" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Confirm New Password</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-11" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[10px] font-black uppercase opacity-60">Confirm Password</FormLabel><FormControl><Input {...field} type="password" placeholder="••••••••" className="rounded-xl h-11" /></FormControl></FormItem>
                                 )} />
                             </div>
-                            <DialogFooter><Button type="submit" className="w-full rounded-2xl h-14 font-black uppercase tracking-widest" disabled={isSubmitting}>{isSubmitting ? "Transmitting..." : "Update Fleet Identity"}</Button></DialogFooter>
+                            <Button type="submit" className="w-full h-12 rounded-full font-black uppercase tracking-widest shadow-lg" disabled={isSubmitting}>{isSubmitting ? "Syncing..." : "Finalize Config"}</Button>
                         </form>
                     </Form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
+                <DialogContent className="rounded-[2.5rem] sm:max-w-md">
+                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Identity Asset Sync</DialogTitle></DialogHeader>
+                    <div className="py-6 space-y-8">
+                        <div className="relative group">
+                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleAvatarImageUpload(e.target.files[0])} disabled={isUploadingAvatar} />
+                            <Button className="w-full h-20 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary flex-col gap-1 font-black uppercase text-[10px]" disabled={isUploadingAvatar}>
+                                {isUploadingAvatar ? <Loader2 className="animate-spin size-5"/> : <ImageIcon className="size-6" />}
+                                {isUploadingAvatar ? "Transmitting..." : "Upload New Portrait"}
+                            </Button>
+                        </div>
+                        <Separator />
+                        <div className="grid grid-cols-5 gap-3">
+                            {emojiCategories.map(emoji => (
+                                <button key={emoji} onClick={() => handleAvatarEmojiUpdate(emoji)} className="text-3xl p-3 rounded-xl hover:bg-primary/10 transition-all border border-transparent hover:border-primary/20">{emoji}</button>
+                            ))}
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
     );
 }
 
-function DetailItem({ icon: Icon, label, value }: { icon: any, label: string, value: string }) {
+function DetailItem({ icon: Icon, label, value }: any) {
     return (
-        <div className="flex items-start gap-4">
-            <div className="p-2 rounded-lg bg-primary/5 text-primary/60 mt-0.5"><Icon className="size-3.5" /></div>
+        <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-primary/5 text-primary/60"><Icon className="size-3.5" /></div>
             <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">{label}</p>
-                <p className="text-xs font-bold text-foreground/80 truncate max-w-[120px]">{value}</p>
+                <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">{label}</p>
+                <p className="text-xs font-bold truncate max-w-[150px]">{value}</p>
             </div>
         </div>
     );
 }
 
-function MetricCard({ label, value, sub, icon: Icon, iconColor, bgColor }: any) {
+function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4 hover:shadow-md transition-all group">
-            <div className="flex items-center justify-between">
-                <div className={cn("p-2.5 rounded-xl transition-all group-hover:scale-110", bgColor, iconColor)}><Icon className="size-5" /></div>
-            </div>
+        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4 ring-1 ring-border/50 hover:shadow-md transition-all group">
+            <div className={cn("p-2.5 rounded-xl w-fit group-hover:scale-110 transition-transform", bg, color)}><Icon className="size-4" /></div>
             <div>
                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">{label}</p>
-                <p className="text-2xl font-black tracking-tight">{value}</p>
-                <p className="text-[10px] font-medium text-muted-foreground mt-0.5">{sub}</p>
+                <p className="text-2xl font-black tracking-tighter">{value}</p>
+                <p className="text-[10px] font-bold text-muted-foreground mt-0.5">{sub}</p>
             </div>
         </Card>
     );
 }
 
-function SectionHeader({ title, href }: { title: string, href?: string }) {
+function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
-        <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-[0.15em] text-foreground/80">{title}</h3>
-            {href && <Link href={href} className="text-[9px] font-black uppercase tracking-widest text-primary hover:underline underline-offset-4">Browse Vault</Link>}
-        </div>
-    );
-}
-
-function TimelineItem({ icon: Icon, color, title, time, desc }: any) {
-    return (
-        <div className="flex gap-6 items-start">
-            <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0 z-10", color)}><Icon className="size-3.5" /></div>
-            <div className="space-y-0.5">
-                <div className="flex items-center gap-3">
-                    <p className="font-bold text-xs text-foreground">{title}</p>
-                    <span className="text-[9px] font-medium text-muted-foreground">{time}</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
+        <div className="flex gap-4 items-start relative">
+            <div className={cn("h-7 w-7 rounded-full flex items-center justify-center shrink-0 z-10", color)}><Icon className="size-3.5" /></div>
+            <div className="space-y-0.5 pt-0.5">
+                <p className="font-bold text-xs">{title}</p>
+                <p className="text-[9px] font-black uppercase text-muted-foreground/40">{time}</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">{desc}</p>
             </div>
         </div>
     );
 }
 
-function DocRow({ title, date, link }: any) {
+function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <Link href={link} target="_blank" className="flex items-center gap-4 p-4 hover:bg-muted/30 rounded-2xl transition-colors group">
-            <div className="h-10 w-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center shrink-0 font-black text-[10px]">DOC</div>
-            <div className="flex-1 min-w-0">
-                <p className="font-bold text-xs truncate group-hover:text-primary transition-colors">{title}</p>
-                <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-widest">Provisioned on {date}</p>
-            </div>
-            <ExternalLink className="size-3 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-        </Link>
-    );
-}
-
-function AssetRow({ image, title, category }: any) {
-    return (
-        <div className="flex items-center gap-4 group">
-            <div className="h-12 w-12 rounded-2xl overflow-hidden ring-1 ring-border/50 group-hover:ring-primary/20 transition-all shrink-0">
-                {image ? <img src={image} className="h-full w-full object-cover" alt="Asset" /> : <div className="h-full w-full bg-muted flex items-center justify-center"><Clock className="size-4 opacity-20"/></div>}
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="font-bold text-xs truncate">{title}</p>
-                <p className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest">{category}</p>
-            </div>
-            <Badge variant="outline" className="rounded-full text-[8px] font-black uppercase tracking-widest text-green-600 bg-green-50 border-none px-2.5">In Use</Badge>
-        </div>
-    );
-}
-
-function ExperienceBadge({ label, value, icon: Icon, color }: any) {
-    return (
-        <div className="group/badge relative flex items-center gap-3 bg-white ring-1 ring-border/50 shadow-sm rounded-2xl p-2 px-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-            <div className={cn("p-2 rounded-xl text-white shadow-sm", color)}>
-                <Icon className="size-4" />
-            </div>
-            <div>
-                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest leading-none mb-0.5">{label}</p>
-                <p className="text-xs font-black whitespace-nowrap">{value}</p>
-            </div>
+        <div className="flex items-center justify-between py-2 border-b border-dashed border-border last:border-none">
+            <span className="text-[10px] font-black uppercase text-muted-foreground/60">{label}</span>
+            <span className="text-xs font-bold">{value}</span>
         </div>
     );
 }
