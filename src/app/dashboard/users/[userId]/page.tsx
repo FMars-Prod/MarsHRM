@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -121,8 +120,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     pdfDoc.save(`Audit_${user.firstName}.pdf`);
   };
 
-  if (isUserLoading) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Personnel Data...</div>;
-  if (!user) return notFound();
+  if (isUserLoading || !user) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Personnel Data...</div>;
 
   return (
     <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-open-sans">
@@ -134,7 +132,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         {user.avatar?.startsWith('http') ? (
                             <AvatarImage src={user.avatar} className="object-cover" />
                         ) : (
-                            <AvatarFallback className="text-6xl">{user.avatar || user.firstName[0]}</AvatarFallback>
+                            <AvatarFallback className="text-6xl">{user.avatar || user.firstName?.[0]}</AvatarFallback>
                         )}
                     </Avatar>
 

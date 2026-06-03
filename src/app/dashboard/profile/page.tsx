@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -225,7 +224,7 @@ export default function ProfilePage() {
         pdfDoc.save(`ID_CARD_${employee.firstName}.pdf`);
     };
 
-    if (isEmployeeLoading) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Identity Hub...</div>;
+    if (isEmployeeLoading || !employee) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Identity Hub...</div>;
 
     return (
         <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-open-sans">
@@ -246,7 +245,7 @@ export default function ProfilePage() {
                                 {employee.avatar?.startsWith('http') ? (
                                     <AvatarImage src={employee.avatar} className="object-cover" />
                                 ) : (
-                                    <AvatarFallback className="text-6xl bg-primary/5 text-primary/40">{employee.avatar || employee.firstName[0]}</AvatarFallback>
+                                    <AvatarFallback className="text-6xl bg-primary/5 text-primary/40">{employee.avatar || employee.firstName?.[0]}</AvatarFallback>
                                 )}
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Camera className="size-8 text-white" />
@@ -273,7 +272,7 @@ export default function ProfilePage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
                                             <DropdownMenuItem onClick={handleDownloadIdCard} className="font-bold text-xs uppercase cursor-pointer gap-2"><Download className="size-3.5"/> Download ID Card</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={handleAvatarImageUpload as any} className="font-bold text-xs uppercase cursor-pointer gap-2"><FileDown className="size-3.5"/> Generate Report</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => {}} className="font-bold text-xs uppercase cursor-pointer gap-2"><FileDown className="size-3.5"/> Generate Report</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
@@ -304,7 +303,7 @@ export default function ProfilePage() {
             {/* Detailed Tabs Interface */}
             <Tabs defaultValue="overview" className="space-y-8">
                 <TabsList className="w-full justify-start bg-transparent border-none p-0 h-auto gap-8">
-                    {["Overview", "Attendance", "Documents", "Assets", "Activity Logs"].map(tab => (
+                    {["Overview", "Attendance", "Documents", "Assets"].map(tab => (
                         <TabsTrigger key={tab} value={tab.toLowerCase().replace(' ', '-')} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary p-0 pb-4 bg-transparent font-black uppercase text-[10px] tracking-widest">
                             {tab}
                         </TabsTrigger>
@@ -360,7 +359,7 @@ export default function ProfilePage() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-bold text-xs truncate">{asset.name}</p>
-                                                <p className="text-[8px] font-black uppercase text-muted-foreground opacity-60">Assigned on {joinDate}</p>
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground opacity-60">{asset.category}</p>
                                             </div>
                                             <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[8px] font-black">IN USE</Badge>
                                         </div>
@@ -390,6 +389,31 @@ export default function ProfilePage() {
                             </Card>
                         </div>
                     </div>
+                </TabsContent>
+                
+                <TabsContent value="attendance">
+                    <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
+                        <div className="text-center py-20 opacity-30 uppercase font-black text-xs">Monthly detailed log synchronized.</div>
+                    </Card>
+                </TabsContent>
+                
+                <TabsContent value="documents">
+                    <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {documents?.map(doc => (
+                                <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 hover:bg-white border border-transparent hover:border-border/50 transition-all group">
+                                    <div className="flex items-center gap-4">
+                                        <FileBox className="size-5 text-blue-600" />
+                                        <div>
+                                            <p className="font-bold text-xs">{doc.title}</p>
+                                            <p className="text-[8px] font-black uppercase text-muted-foreground">Linked on {format(doc.uploadedAt.toDate(), 'dd MMM yyyy')}</p>
+                                        </div>
+                                    </div>
+                                    <ExternalLink className="size-3.5 opacity-0 group-hover:opacity-100" />
+                                </Link>
+                            ))}
+                        </div>
+                    </Card>
                 </TabsContent>
             </Tabs>
 
