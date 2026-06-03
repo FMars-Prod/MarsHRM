@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 const userSchema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -509,7 +510,7 @@ export default function UsersPage() {
                                     <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Purge Personnel Record?</AlertDialogTitle>
                                     <AlertDialogDescription className="text-sm font-medium">This will remove {u.firstName}'s entry from the tactical registry. Access credentials will be blocked.</AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter className="gap-2">
+                                <AlertDialogFooter>
                                     <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
                                     <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="rounded-full font-bold uppercase text-[10px] bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Confirm Purge</AlertDialogAction>
                                 </AlertDialogFooter>
