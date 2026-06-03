@@ -297,15 +297,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
                             <div key={asset.id} className="p-8 rounded-[2rem] ring-1 ring-border/50 bg-muted/10 space-y-6 hover:shadow-xl transition-all duration-500">
                                 <div className="aspect-square bg-muted rounded-3xl flex items-center justify-center overflow-hidden">
-                                    {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Briefcase className="size-10 opacity-10" />}
+                                    {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full" /> : <Briefcase className="size-10 opacity-10" />}
                                 </div>
                                 <div>
                                     <p className="font-black text-sm uppercase tracking-tight truncate">{asset.name}</p>
                                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{asset.category}</p>
                                 </div>
                             </div>
-                        ))}
-                        {assignedAssets?.length === 0 && (
+                        )) : (
                             <div className="col-span-full py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest">No Hardware Units assigned</div>
                         )}
                     </div>
