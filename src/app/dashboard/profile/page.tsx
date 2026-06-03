@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differenceInDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differenceInDays, eachDayOfInterval, isSunday } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
@@ -112,13 +112,16 @@ export default function ProfilePage() {
     }, [todaysAttendance]);
 
     const branchName = React.useMemo(() => {
-        if (!branches || !employee?.branchId) return "Unassigned Sector";
+        if (!branches || !employee?.branchId) return "HQ Sector";
         const b = branches.find((b: any) => b.id === employee.branchId);
-        return b ? b.name : "Unassigned Sector";
+        return b ? b.name : "HQ Sector";
     }, [branches, employee?.branchId]);
 
     const monthlyStats = React.useMemo(() => {
-        if (!attendanceData) return { hours: "0.0", percentage: "0", count: 0 };
+        const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        const workingDaysInMonth = days.filter(d => !isSunday(d)).length;
+
+        if (!attendanceData) return { hours: "0.0", percentage: "0", count: 0, totalWorkingDays: workingDaysInMonth };
         let totalSec = 0;
         const presentDays = attendanceData.length;
         attendanceData.forEach(r => {
@@ -128,10 +131,11 @@ export default function ProfilePage() {
         });
         return { 
             hours: (totalSec / 3600).toFixed(1),
-            percentage: Math.min(100, Math.round((presentDays / 22) * 100)),
-            count: presentDays
+            percentage: Math.min(100, Math.round((presentDays / workingDaysInMonth) * 100)),
+            count: presentDays,
+            totalWorkingDays: workingDaysInMonth
         };
-    }, [attendanceData]);
+    }, [attendanceData, monthStart, monthEnd]);
 
     const tenure = React.useMemo(() => {
         if (!employee?.hireDate) return "N/A";
@@ -208,19 +212,61 @@ export default function ProfilePage() {
     const handleDownloadIdCard = async () => {
         if (!employee) return;
         const pdfDoc = new jsPDF({ orientation: 'p', unit: 'mm', format: [54, 86] });
+        
+        // Card Front
         pdfDoc.setFillColor(255, 255, 255);
         pdfDoc.rect(0, 0, 54, 86, 'F');
+        
+        // Top Header
         pdfDoc.setFillColor(107, 33, 168);
-        pdfDoc.rect(0, 0, 54, 28, 'F');
+        pdfDoc.rect(0, 0, 54, 30, 'F');
+        
         pdfDoc.setTextColor(255, 255, 255);
-        pdfDoc.setFontSize(10);
-        pdfDoc.text("FORTUMARS", 27, 15, { align: 'center' });
+        pdfDoc.setFontSize(8);
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.text("FORTUMARS", 27, 10, { align: 'center' });
+        pdfDoc.setFontSize(6);
+        pdfDoc.text("AI TECHNOLOGIES & BUSINESS SOLUTIONS", 27, 14, { align: 'center' });
+
+        // Avatar fallback box
+        pdfDoc.setFillColor(240, 240, 240);
+        pdfDoc.roundedRect(15, 20, 24, 24, 3, 3, 'F');
+        
+        // Identity Text
         pdfDoc.setTextColor(0, 0, 0);
-        pdfDoc.setFontSize(12);
-        pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 62, { align: 'center' });
+        pdfDoc.setFontSize(11);
+        pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 52, { align: 'center' });
+        
         pdfDoc.setFontSize(7);
         pdfDoc.setTextColor(107, 33, 168);
-        pdfDoc.text(employee.jobTitle?.toUpperCase() || 'FLEET MEMBER', 27, 66, { align: 'center' });
+        pdfDoc.setFont('helvetica', 'bold');
+        pdfDoc.text(employee.jobTitle?.toUpperCase() || 'FLEET MEMBER', 27, 57, { align: 'center' });
+
+        // Detail Grid
+        pdfDoc.setTextColor(100, 100, 100);
+        pdfDoc.setFontSize(5);
+        pdfDoc.setFont('helvetica', 'normal');
+        
+        const startY = 65;
+        pdfDoc.text("EMPLOYEE ID", 10, startY);
+        pdfDoc.text("DEPT", 10, startY + 5);
+        pdfDoc.text("TYPE", 10, startY + 10);
+        pdfDoc.text("JOINED", 10, startY + 15);
+
+        pdfDoc.setTextColor(0, 0, 0);
+        pdfDoc.setFontSize(5);
+        pdfDoc.text(`MR-${employee.id.slice(0, 8).toUpperCase()}`, 25, startY);
+        pdfDoc.text(employee.department?.toUpperCase() || 'HQ', 25, startY + 5);
+        pdfDoc.text(employee.employmentType?.toUpperCase() || 'EMPLOYEE', 25, startY + 10);
+        pdfDoc.text(employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy').toUpperCase() : 'N/A', 25, startY + 15);
+
+        // Footer
+        pdfDoc.setFillColor(245, 245, 245);
+        pdfDoc.rect(0, 82, 54, 4, 'F');
+        pdfDoc.setTextColor(150);
+        pdfDoc.setFontSize(4);
+        pdfDoc.text("VERIFIED TACTICAL HUB • FORTUMARS AI SOLUTIONS", 27, 84.5, { align: 'center' });
+
         pdfDoc.save(`ID_CARD_${employee.firstName}.pdf`);
     };
 
@@ -293,7 +339,7 @@ export default function ProfilePage() {
 
             {/* Quick Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/22 Days`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
+                <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/${monthlyStats.totalWorkingDays} Days`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
                 <MetricCard label="Documents" value={documents?.length || 0} sub="Files Updated" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
                 <MetricCard label="Account Authority" value={employee.role === 'CEO/Admin' ? 'Executive' : employee.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
                 <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Net Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />

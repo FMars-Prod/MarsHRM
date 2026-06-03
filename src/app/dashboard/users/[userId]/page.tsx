@@ -8,7 +8,7 @@ import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } fro
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, differenceInSeconds, startOfMonth, differenceInDays } from 'date-fns';
+import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday } from 'date-fns';
 import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -87,9 +87,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   }, [userId, firestore]);
 
   const stats = React.useMemo(() => {
-    if (!attendanceData) return { workHours: "0.0", count: 0, percentage: 0 };
-    let totalSec = 0;
     const startOfCurrentMonth = startOfMonth(new Date());
+    const endOfCurrentMonth = endOfMonth(new Date());
+    const days = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
+    const workingDaysInMonth = days.filter(d => !isSunday(d)).length;
+
+    if (!attendanceData) return { workHours: "0.0", count: 0, percentage: 0, totalWorkingDays: workingDaysInMonth };
+    let totalSec = 0;
     const monthlyAtt = attendanceData.filter(a => a.checkInTime?.toDate() >= startOfCurrentMonth);
 
     monthlyAtt.forEach(r => {
@@ -100,7 +104,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     return { 
         workHours: (totalSec / 3600).toFixed(1), 
         count: monthlyAtt.length,
-        percentage: Math.min(100, Math.round((monthlyAtt.length / 22) * 100))
+        percentage: Math.min(100, Math.round((monthlyAtt.length / workingDaysInMonth) * 100)),
+        totalWorkingDays: workingDaysInMonth
     };
   }, [attendanceData]);
 
@@ -177,7 +182,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
         {/* Audit Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <MetricCard label="Attendance (MTD)" value={`${stats.percentage}%`} sub={`${stats.count} Days Stamped`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
+            <MetricCard label="Attendance (MTD)" value={`${stats.percentage}%`} sub={`${stats.count}/${stats.totalWorkingDays} Days Stamped`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
             <MetricCard label="Mission Hours" value={`${stats.workHours}h`} sub="Net Active Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
             <MetricCard label="Account Authority" value={user.role === 'CEO/Admin' ? 'Executive' : user.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
             <MetricCard label="Intelligence Assets" value={documents?.length || 0} sub="Vault Records" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
@@ -318,4 +323,5 @@ function InfoRow({ label, value }: { label: string, value: string }) {
             <span className="text-[10px] font-black uppercase text-muted-foreground/60">{label}</span>
             <span className="text-xs font-bold">{value}</span>
         </div>
+    );
 }
