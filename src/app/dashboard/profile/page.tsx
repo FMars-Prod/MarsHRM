@@ -1,10 +1,11 @@
+
 'use client';
 
 import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAuth, useUser, useStorage, useFirestore, useMemoFirebase, useCollection, updateDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
@@ -12,10 +13,10 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
     Edit, MapPin, Camera, CheckCircle2, ShieldCheck, 
     ExternalLink, FileText, Lock, CalendarDays, 
-    FileBox, Loader2, Image as ImageIcon, Phone, 
+    FileBox, Loader2, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
-    Settings, FileDown, Target
+    FileDown, Target, Image as ImageIcon
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -213,11 +214,9 @@ export default function ProfilePage() {
         if (!employee) return;
         const pdfDoc = new jsPDF({ orientation: 'p', unit: 'mm', format: [54, 86] });
         
-        // Card Front
         pdfDoc.setFillColor(255, 255, 255);
         pdfDoc.rect(0, 0, 54, 86, 'F');
         
-        // Top Header
         pdfDoc.setFillColor(107, 33, 168);
         pdfDoc.rect(0, 0, 54, 30, 'F');
         
@@ -228,11 +227,9 @@ export default function ProfilePage() {
         pdfDoc.setFontSize(6);
         pdfDoc.text("AI TECHNOLOGIES & BUSINESS SOLUTIONS", 27, 14, { align: 'center' });
 
-        // Avatar fallback box
         pdfDoc.setFillColor(240, 240, 240);
         pdfDoc.roundedRect(15, 20, 24, 24, 3, 3, 'F');
         
-        // Identity Text
         pdfDoc.setTextColor(0, 0, 0);
         pdfDoc.setFontSize(11);
         pdfDoc.text(`${employee.firstName} ${employee.lastName}`, 27, 52, { align: 'center' });
@@ -242,7 +239,6 @@ export default function ProfilePage() {
         pdfDoc.setFont('helvetica', 'bold');
         pdfDoc.text(employee.jobTitle?.toUpperCase() || 'FLEET MEMBER', 27, 57, { align: 'center' });
 
-        // Detail Grid
         pdfDoc.setTextColor(100, 100, 100);
         pdfDoc.setFontSize(5);
         pdfDoc.setFont('helvetica', 'normal');
@@ -260,7 +256,6 @@ export default function ProfilePage() {
         pdfDoc.text(employee.employmentType?.toUpperCase() || 'EMPLOYEE', 25, startY + 10);
         pdfDoc.text(employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy').toUpperCase() : 'N/A', 25, startY + 15);
 
-        // Footer
         pdfDoc.setFillColor(245, 245, 245);
         pdfDoc.rect(0, 82, 54, 4, 'F');
         pdfDoc.setTextColor(150);
@@ -274,7 +269,6 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-open-sans">
-            {/* Command Greeting */}
             <div className="flex flex-col gap-1 mb-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
                 <h1 className="text-4xl font-black tracking-tighter">
@@ -282,7 +276,6 @@ export default function ProfilePage() {
                 </h1>
             </div>
 
-            {/* Profile Bento Header */}
             <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden ring-1 ring-border/50">
                 <CardContent className="p-8 md:p-10">
                     <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-start">
@@ -318,7 +311,6 @@ export default function ProfilePage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
                                             <DropdownMenuItem onClick={handleDownloadIdCard} className="font-bold text-xs uppercase cursor-pointer gap-2"><Download className="size-3.5"/> Download ID Card</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => {}} className="font-bold text-xs uppercase cursor-pointer gap-2"><FileDown className="size-3.5"/> Generate Report</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
@@ -337,7 +329,6 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            {/* Quick Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/${monthlyStats.totalWorkingDays} Days`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
                 <MetricCard label="Documents" value={documents?.length || 0} sub="Files Updated" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
@@ -346,7 +337,6 @@ export default function ProfilePage() {
                 <MetricCard label="Support Desk" value={userTickets?.length || 0} sub="Logged Issues" icon={ShieldCheck} color="text-pink-600" bg="bg-pink-50" />
             </div>
 
-            {/* Detailed Tabs Interface */}
             <Tabs defaultValue="overview" className="space-y-8">
                 <TabsList className="w-full justify-start bg-transparent border-none p-0 h-auto gap-8">
                     {["Overview", "Attendance", "Documents", "Assets"].map(tab => (
@@ -358,7 +348,6 @@ export default function ProfilePage() {
 
                 <TabsContent value="overview" className="mt-0">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        {/* Timeline */}
                         <div className="lg:col-span-4 space-y-6">
                             <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
                                 <div className="flex items-center justify-between">
@@ -375,7 +364,6 @@ export default function ProfilePage() {
                             </Card>
                         </div>
 
-                        {/* Recent Documents & Assets */}
                         <div className="lg:col-span-4 space-y-8">
                             <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
                                 <div className="flex items-center justify-between">
@@ -414,7 +402,6 @@ export default function ProfilePage() {
                             </Card>
                         </div>
 
-                        {/* Quick Info & Command Chain */}
                         <div className="lg:col-span-4 space-y-8">
                              <Card className="border-none shadow-sm rounded-3xl bg-white p-8 space-y-6">
                                 <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Quick Info</h3>
@@ -463,7 +450,6 @@ export default function ProfilePage() {
                 </TabsContent>
             </Tabs>
 
-            {/* Edit Dialogs */}
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                 <DialogContent className="rounded-3xl sm:max-w-xl">
                     <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Strategic Profile Config</DialogTitle></DialogHeader>

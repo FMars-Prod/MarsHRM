@@ -43,18 +43,21 @@ type AttendanceStatus = "out" | "in" | "lunch" | "short_break";
 interface Location {
   latitude: number;
   longitude: number;
-  maxDistanceKm?: number;
 }
 
 const getDistanceInKm = (loc1: Location, loc2: Location) => {
-  if (!loc1 || !loc2 || isNaN(loc1.latitude) || isNaN(loc1.longitude) || isNaN(loc2.latitude) || isNaN(loc2.longitude)) return Infinity;
+  if (!loc1 || !loc2) return Infinity;
+  if (typeof loc1.latitude !== 'number' || typeof loc1.longitude !== 'number') return Infinity;
+  if (typeof loc2.latitude !== 'number' || typeof loc2.longitude !== 'number') return Infinity;
+
+  const toRad = (v: number) => (v * Math.PI) / 180;
   const R = 6371; 
-  const dLat = (loc2.latitude - loc1.latitude) * (Math.PI / 180);
-  const dLon = (loc2.longitude - loc1.longitude) * (Math.PI / 180);
+  const dLat = toRad(loc2.latitude - loc1.latitude);
+  const dLon = toRad(loc2.longitude - loc1.longitude);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(loc1.latitude * (Math.PI / 180)) *
-      Math.cos(loc2.latitude * (Math.PI / 180)) *
+    Math.cos(toRad(loc1.latitude)) *
+      Math.cos(toRad(loc2.latitude)) *
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
@@ -79,15 +82,13 @@ export function AttendanceWidget() {
     () => (user ? doc(firestore, "users", user.uid) : null),
     [user, firestore]
   );
-  const { data: userData } = useDoc(userDocRef);
-  const userRole = (userData as any)?.role || 'Member';
-  const isAdminOrCEO = userRole === 'CEO/Admin' || userRole === 'HR Manager';
+  const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
   const branchDocRef = useMemoFirebase(
     () => userData?.branchId ? doc(firestore, 'branches', userData.branchId) : null,
     [userData, firestore]
   );
-  const { data: branchData } = useDoc<any>(branchDocRef);
+  const { data: branchData, isLoading: isBranchLoading } = useDoc<any>(branchDocRef);
 
   const globalLocationDocRef = useMemoFirebase(
     () => doc(firestore, "settings", "location"),
@@ -96,16 +97,26 @@ export function AttendanceWidget() {
   const { data: globalLocationData } = useDoc<any>(globalLocationDocRef);
   
   const activeGeofence = React.useMemo(() => {
+    if (userData?.branchId && branchData) {
+        return {
+            name: branchData.name || "Assigned Branch",
+            lat: Number(branchData.latitude),
+            lng: Number(branchData.longitude),
+            radius: Number(branchData.radius || 0.5)
+        };
+    }
     return {
-        lat: branchData?.latitude || globalLocationData?.latitude || 13.0827,
-        lng: branchData?.longitude || globalLocationData?.longitude || 80.2707,
-        radius: branchData?.radius || globalLocationData?.maxDistanceKm || 0.5
+        name: "HQ Sector",
+        lat: Number(globalLocationData?.latitude || 13.0827),
+        lng: Number(globalLocationData?.longitude || 80.2707),
+        radius: Number(globalLocationData?.maxDistanceKm || 0.5)
     };
-  }, [branchData, globalLocationData]);
+  }, [branchData, globalLocationData, userData?.branchId]);
 
   const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
   const [outOfRangeAction, setOutOfRangeAction] = useState<(() => void) | null>(null);
+  const [currentDist, setCurrentDist] = useState<number | null>(null);
 
   const getTodaysAttendanceRef = useMemoFirebase(() => {
       if (!user) return null;
@@ -230,7 +241,8 @@ export function AttendanceWidget() {
           setIsVerifyingLocation(false);
           
           if (status === "lunch") {
-              if (dist > activeGeofence.radius && !isAdminOrCEO) {
+              if (dist > activeGeofence.radius) {
+                  setCurrentDist(dist);
                   setOutOfRangeAction(() => () => proceedWithBreakEnd(userLocation, dist, outOfRangeReason));
                   setIsOutOfRangeReasonDialogOpen(true);
               } else {
@@ -276,10 +288,9 @@ export function AttendanceWidget() {
       const todayId = format(nowClock, 'yyyy-MM-dd');
 
       if (reason) {
-          // Submit Request ONLY - Do not login yet
           addDocumentNonBlocking(collection(firestore, "attendanceApprovalRequests"), {
               employeeId: user!.uid,
-              employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
+              employeeName: `${userData?.firstName} ${userData?.lastName}`,
               requestedCheckInTime: format(nowClock, 'PP p'),
               dateId: todayId,
               intendedStatus: attendanceStatus,
@@ -288,13 +299,14 @@ export function AttendanceWidget() {
               reason: reason,
               status: 'Pending',
               type: 'Check In',
+              distance: dist.toFixed(2),
+              targetBranch: activeGeofence.name,
               requestTimestamp: serverTimestamp()
           });
           toast({ title: "Range Permission Dispatched", description: "Pending administrative review." });
           setIsOutOfRangeReasonDialogOpen(false);
           setOutOfRangeReason("");
       } else {
-          // Normal Login
           if (getTodaysAttendanceRef) {
               const attendancePayload: any = {
                   id: todayId,
@@ -306,7 +318,7 @@ export function AttendanceWidget() {
                   locationCheckInLongitude: userLocation.longitude || 0,
                   isOutOfRange: false,
                   isAtHome: userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
-                           getDistanceInKm(userLocation, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5),
+                           getDistanceInKm(userLocation, { latitude: Number(userData.homeLatitude), longitude: Number(userData.homeLongitude) }) <= (Number(userData.homeRadius) || 0.5),
               };
               setDocumentNonBlocking(getTodaysAttendanceRef, attendancePayload, { merge: true });
           }
@@ -321,17 +333,21 @@ export function AttendanceWidget() {
         (position) => {
             const userLoc = { latitude: position.coords.latitude, longitude: position.coords.longitude };
             setIsVerifyingLocation(false);
-            if (isAdminOrCEO) { proceedWithClockIn(userLoc, 0); return; }
 
             const officeDist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-            const isAtHome = userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
-                             getDistanceInKm(userLoc, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5);
+            const isAtHome = !!(userData?.isWfhAllowed && 
+                             typeof userData.homeLatitude === 'number' && 
+                             typeof userData.homeLongitude === 'number' && 
+                             getDistanceInKm(userLoc, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5));
 
-            if (officeDist <= activeGeofence.radius || isAtHome) { 
+            const isWithinOfficeRange = officeDist <= activeGeofence.radius;
+
+            if (isWithinOfficeRange || isAtHome) { 
                 proceedWithClockIn(userLoc, officeDist); 
                 return; 
             }
 
+            setCurrentDist(officeDist);
             setOutOfRangeAction(() => () => proceedWithClockIn(userLoc, officeDist, outOfRangeReason));
             setIsOutOfRangeReasonDialogOpen(true);
         },
@@ -342,10 +358,9 @@ export function AttendanceWidget() {
 
   const proceedWithClockOut = (userLocation: Location, dist: number, reason?: string) => {
       if (reason) {
-          // Submit Request for Clock Out
           addDocumentNonBlocking(collection(firestore, "attendanceApprovalRequests"), {
               employeeId: user!.uid,
-              employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
+              employeeName: `${userData?.firstName} ${userData?.lastName}`,
               requestedCheckInTime: format(new Date(), 'PP p'),
               dateId: format(new Date(), 'yyyy-MM-dd'),
               requestedLatitude: userLocation.latitude,
@@ -353,6 +368,8 @@ export function AttendanceWidget() {
               reason: reason,
               status: 'Pending',
               type: 'Clock Out',
+              distance: dist.toFixed(2),
+              targetBranch: activeGeofence.name,
               requestTimestamp: serverTimestamp()
           });
           toast({ title: "Checkout Request Dispatched", description: "Pending administrative review." });
@@ -378,15 +395,19 @@ export function AttendanceWidget() {
       navigator.geolocation.getCurrentPosition(p => {
           const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
           setIsVerifyingLocation(false);
-          if (isAdminOrCEO) { proceedWithClockOut(userLoc, 0); return; }
 
           const officeDist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-          const isAtHome = userData?.isWfhAllowed && userData.homeLatitude && userData.homeLongitude && 
-                           getDistanceInKm(userLoc, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5);
+          const isAtHome = !!(userData?.isWfhAllowed && 
+                           typeof userData.homeLatitude === 'number' && 
+                           typeof userData.homeLongitude === 'number' && 
+                           getDistanceInKm(userLoc, { latitude: userData.homeLatitude, longitude: userData.homeLongitude }) <= (userData.homeRadius || 0.5));
 
-          if (officeDist <= activeGeofence.radius || isAtHome) {
+          const isWithinOfficeRange = officeDist <= activeGeofence.radius;
+
+          if (isWithinOfficeRange || isAtHome) {
               proceedWithClockOut(userLoc, officeDist);
           } else {
+              setCurrentDist(officeDist);
               setOutOfRangeAction(() => () => proceedWithClockOut(userLoc, officeDist, outOfRangeReason));
               setIsOutOfRangeReasonDialogOpen(true);
           }
@@ -421,6 +442,8 @@ export function AttendanceWidget() {
   );
 
   const getMilestoneTime = (timestamp: any) => (timestamp instanceof Timestamp) ? format(timestamp.toDate(), 'p') : '--:--';
+
+  if (isUserDocLoading) return <div className="h-96 flex items-center justify-center animate-pulse uppercase font-black text-xs">Calibrating Fleet ID...</div>;
 
   return (
     <>
@@ -567,6 +590,11 @@ export function AttendanceWidget() {
                   <div className="space-y-2">
                       <h3 className="text-2xl font-black uppercase tracking-tighter">Remote Access Alert</h3>
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">Verification Radius Breach Detected</p>
+                      {currentDist !== null && (
+                          <Badge variant="outline" className="text-[10px] font-bold text-orange-600 border-orange-200 mt-2">
+                              Distance: {currentDist.toFixed(2)} KM from {activeGeofence.name}
+                          </Badge>
+                      )}
                   </div>
               </div>
               <div className="grid gap-4 py-2">

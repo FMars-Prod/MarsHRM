@@ -1,12 +1,13 @@
+
 'use client';
 
 import * as React from 'react';
 import { use } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useFirestore, useMemoFirebase, useCollection, useDoc, useUser } from '@/firebase';
 import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday } from 'date-fns';
 import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target } from 'lucide-react';
@@ -94,7 +95,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
     if (!attendanceData) return { workHours: "0.0", count: 0, percentage: 0, totalWorkingDays: workingDaysInMonth };
     let totalSec = 0;
-    const monthlyAtt = attendanceData.filter(a => a.checkInTime?.toDate() >= startOfCurrentMonth);
+    const monthlyAtt = attendanceData.filter(a => a.checkInTime && a.checkInTime.toDate() >= startOfCurrentMonth);
 
     monthlyAtt.forEach(r => {
         if (r.checkInTime && r.checkOutTime) {
@@ -111,7 +112,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const tenure = React.useMemo(() => {
     if (!user?.hireDate) return "N/A";
-    return `${differenceInDays(new Date(), new Date(user.hireDate))} day`;
+    const totalDays = differenceInDays(new Date(), new Date(user.hireDate));
+    return `${totalDays} day`;
   }, [user]);
 
   const handleExportPdf = () => {
@@ -129,7 +131,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   return (
     <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-open-sans">
-        {/* Command Greeting */}
         <div className="flex flex-col gap-1 mb-2">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
             <h1 className="text-4xl font-black tracking-tighter">
@@ -137,7 +138,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </h1>
         </div>
 
-        {/* Bento Header */}
         <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden ring-1 ring-border/50">
             <CardContent className="p-8 md:p-10">
                 <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-start">
@@ -180,7 +180,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </CardContent>
         </Card>
 
-        {/* Audit Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <MetricCard label="Attendance (MTD)" value={`${stats.percentage}%`} sub={`${stats.count}/${stats.totalWorkingDays} Days Stamped`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
             <MetricCard label="Mission Hours" value={`${stats.workHours}h`} sub="Net Active Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
@@ -203,7 +202,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         <h3 className="text-xs font-black uppercase tracking-widest text-foreground/80">Shift Implementation History</h3>
                         <div className="space-y-8 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
                             {userReports.map(r => (
-                                <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'PPP')} desc={`Submitted for ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
+                                <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={r.date?.toDate ? format(r.date.toDate(), 'PPP') : 'N/A'} desc={`Submitted for ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
                             ))}
                             {userReports.length === 0 && <div className="py-20 text-center opacity-30 text-xs font-black uppercase">No Recent Activity</div>}
                         </div>
@@ -230,7 +229,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     <FileBox className="size-5 text-blue-600" />
                                     <div>
                                         <p className="font-bold text-xs">{doc.title}</p>
-                                        <p className="text-[8px] font-black uppercase text-muted-foreground">Linked on {format(doc.uploadedAt.toDate(), 'dd MMM yyyy')}</p>
+                                        <p className="text-[8px] font-black uppercase text-muted-foreground">Linked on {doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM yyyy') : 'N/A'}</p>
                                     </div>
                                 </div>
                                 <ExternalLink className="size-3.5 opacity-0 group-hover:opacity-100" />
@@ -266,7 +265,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 <ShieldAlert className="size-5 text-red-600 mt-1" />
                                 <div>
                                     <p className="font-bold text-sm text-red-900">{report.severity} Alert: {report.reason}</p>
-                                    <p className="text-[10px] font-bold text-red-700 uppercase">Filed on {format(report.timestamp.toDate(), 'PP p')}</p>
+                                    <p className="text-[10px] font-bold text-red-700 uppercase">Filed on {report.timestamp?.toDate ? format(report.timestamp.toDate(), 'PP p') : 'N/A'}</p>
                                 </div>
                             </div>
                         ))}
