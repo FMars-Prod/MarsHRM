@@ -14,7 +14,8 @@ import {
     FileText, CalendarDays, Loader2, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
-    Globe, User as UserIcon, CalendarClock, FileCheck
+    Globe, User as UserIcon, CalendarClock, FileCheck,
+    Users, FileBox, Laptop
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
