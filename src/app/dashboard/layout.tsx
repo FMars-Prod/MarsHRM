@@ -208,7 +208,7 @@ export default function DashboardLayout({
           </div>
           <AutomatedReportSender />
         </header>
-        <main className="flex-1 p-4 overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
           {children}
         </main>
         <footer className="border-t py-4 px-6 bg-white/50 backdrop-blur-sm">

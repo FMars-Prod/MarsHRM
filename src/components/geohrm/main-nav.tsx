@@ -9,6 +9,7 @@ import {
   SidebarMenuBadge,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -118,6 +119,9 @@ export function MainNav({
 
         return (
           <SidebarGroup key={group.label} className="py-1">
+            <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-widest text-white/30 px-2 py-2">
+              {group.label}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleLinks.map((link) => {
