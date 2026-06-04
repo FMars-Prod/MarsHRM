@@ -10,7 +10,7 @@ import { doc, serverTimestamp } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin, Clock, ShieldCheck, Globe, Save, Info, Key, Map as MapIcon } from 'lucide-react';
+import { MapPin, Clock, ShieldCheck, Globe, Save, Info, Key, Map as MapIcon, CalendarClock } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 export default function SettingsPage() {
@@ -23,10 +23,14 @@ export default function SettingsPage() {
     const reportConfigRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
     const { data: reportData } = useDoc<any>(reportConfigRef);
 
+    const personnelConfigRef = useMemoFirebase(() => doc(firestore, 'settings', 'personnel'), [firestore]);
+    const { data: personnelData } = useDoc<any>(personnelConfigRef);
+
     const [form, setForm] = React.useState<any>({
         latitude: '', longitude: '', maxDistanceKm: '0.5', shiftStartTime: '09:00', shiftEndTime: '18:00',
         morningReportSlot: '09:50', eveningReportSlot: '18:50', companyName: 'FortuMars AI',
-        googleMapsApiKey: 'AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI'
+        googleMapsApiKey: 'AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI',
+        defaultLeaveEntitlement: '24'
     });
 
     React.useEffect(() => {
@@ -45,10 +49,16 @@ export default function SettingsPage() {
                 ...prev,
                 morningReportSlot: reportData.timings.morningReportSlot || '09:50',
                 eveningReportSlot: reportData.timings.eveningReportSlot || '18:50',
-                shiftEnd: reportData.timings.shiftEnd || '18:00'
+                shiftEndTime: reportData.timings.shiftEnd || '18:00'
             }));
         }
-    }, [locationData, reportData]);
+        if (personnelData) {
+            setForm((prev: any) => ({
+                ...prev,
+                defaultLeaveEntitlement: personnelData.defaultLeaveEntitlement || '24'
+            }));
+        }
+    }, [locationData, reportData, personnelData]);
 
     const handleSave = () => {
         const locPayload = {
@@ -64,18 +74,24 @@ export default function SettingsPage() {
             timings: {
                 morningReportSlot: form.morningReportSlot,
                 eveningReportSlot: form.eveningReportSlot,
-                shiftEnd: form.shiftEnd
+                shiftEnd: form.shiftEndTime
             }
+        };
+
+        const personnelPayload = {
+            defaultLeaveEntitlement: parseInt(form.defaultLeaveEntitlement) || 24,
+            updatedAt: serverTimestamp()
         };
 
         setDocumentNonBlocking(configRef, locPayload, { merge: true });
         setDocumentNonBlocking(reportConfigRef, reportPayload, { merge: true });
+        setDocumentNonBlocking(personnelConfigRef, personnelPayload, { merge: true });
         
         toast({ title: "System Protocols Synchronized", description: "Global configuration and API keys updated." });
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up">
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up pb-20">
             <PageHeader title="Global Command Center" description="Configure core platform parameters, geofencing protocols, and external API integrations." />
 
             <div className="grid gap-8">
@@ -115,13 +131,32 @@ export default function SettingsPage() {
 
                 <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/10 border-b">
+                        <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter"><CalendarClock className="size-5 text-primary" /> Personnel Protocols</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Establish global personnel standards and mission entitlements.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-6">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Default Annual Leave Entitlement (Days)</Label>
+                            <Input 
+                                type="number" 
+                                value={form.defaultLeaveEntitlement} 
+                                onChange={e => setForm({...form, defaultLeaveEntitlement: e.target.value})} 
+                                className="rounded-xl h-12 w-full md:w-1/3 font-black" 
+                            />
+                            <p className="text-[9px] text-muted-foreground italic mt-2">This serves as the default mission capacity for all fleet members until manually overridden.</p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
+                    <CardHeader className="bg-muted/10 border-b">
                         <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter"><Clock className="size-5 text-primary" /> Tactical Timings</CardTitle>
                         <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Configure shift windows and automated intelligence triggers.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-In Start</Label><Input type="time" value={form.shiftStartTime} onChange={e => setForm({...form, shiftStartTime: e.target.value})} className="rounded-xl h-12" /></div>
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-Out Target</Label><Input type="time" value={form.shiftEnd} onChange={e => setForm({...form, shiftEnd: e.target.value})} className="rounded-xl h-12" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-Out Target</Label><Input type="time" value={form.shiftEndTime} onChange={e => setForm({...form, shiftEndTime: e.target.value})} className="rounded-xl h-12" /></div>
                         </div>
                         <Separator className="opacity-50" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -142,9 +143,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   if (isUserLoading || !user) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Personnel Data...</div>;
 
-  const leaveBal = user.leaveBalance ?? 24;
-  const leaveEnt = user.totalLeaveEntitlement ?? 24;
-  const leavePercentage = Math.round((leaveBal / leaveEnt) * 100);
+  const leaveBalValue = user.leaveBalance;
+  const leaveEntValue = user.totalLeaveEntitlement || 24;
+  const isLeaveConfigured = leaveBalValue !== undefined;
+  const leavePercentage = isLeaveConfigured ? Math.round((leaveBalValue / leaveEntValue) * 100) : 0;
   
   const todaysAttendance = attendanceData?.find(a => a.checkInTime && isToday(a.checkInTime.toDate()));
   const operationalStatus = todaysAttendance ? (todaysAttendance.checkOutTime ? "Off-Duty" : "Active") : "Away";
@@ -201,17 +203,16 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
              <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
                 <div className="flex justify-between items-start">
                     <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm"><UserCheck className="size-4" /></div>
                     <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Audit Sync</Badge>
                 </div>
                 <div>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Attendance</p>
-                    <div className="flex items-baseline gap-1 mb-2">
-                        <span className="text-2xl font-black text-green-600">{attendanceStats.present + attendanceStats.late}</span>
-                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">/ {attendanceStats.totalWorkingDays} Days</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground">Attendance</p>
+                        <span className="text-sm font-black text-green-600">{attendanceStats.present + attendanceStats.late} / {attendanceStats.totalWorkingDays}</span>
                     </div>
                     <Progress value={attendanceStats.percentage} className="h-1.5 mb-4" />
                     <div className="grid grid-cols-4 gap-1">
@@ -235,14 +236,16 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 <div>
                     <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] font-black uppercase text-muted-foreground">Leave Balance</p>
-                        <span className="text-sm font-black text-blue-600">{leaveBal}/{leaveEnt}</span>
+                        <span className="text-sm font-black text-blue-600">{isLeaveConfigured ? `${leaveBalValue}/${leaveEntValue}` : "NIL"}</span>
                     </div>
                     <Progress value={leavePercentage} className="h-1.5 mb-4" />
-                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none">Days available for member</p>
+                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none">
+                        {isLeaveConfigured ? "Days available for member" : "Mission parameters pending"}
+                    </p>
                 </div>
-                <div className="pt-2 border-t border-dashed flex justify-between items-center">
-                    <span className="text-[8px] font-black uppercase opacity-40">Stored Assets:</span>
-                    <span className="text-[10px] font-black text-blue-600">{documents?.length || 0} Files</span>
+                <div className="pt-2 border-t border-dashed">
+                    <p className="text-[8px] font-black uppercase opacity-40">Entitlement Protocol:</p>
+                    <p className="text-[9px] font-bold uppercase">{isLeaveConfigured ? `Standard ${leaveEntValue}D Plan` : "Awaiting HR Sync"}</p>
                 </div>
             </Card>
 
@@ -288,6 +291,24 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     <p className="text-[9px] font-black text-purple-700 uppercase">
                         {user.employmentType === 'Intern' ? "Based on Performance" : "Scheduled cycle"}
                     </p>
+                </div>
+            </Card>
+
+            <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
+                <div className="flex justify-between items-start">
+                    <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shadow-sm transition-transform group-hover:scale-110"><FileBox className="size-4" /></div>
+                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Vault</Badge>
+                </div>
+                <div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Stored Intelligence</p>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-black text-emerald-600 tracking-tighter">{documents?.length || 0}</span>
+                        <span className="text-[10px] font-black uppercase text-muted-foreground/60">Professional Assets</span>
+                    </div>
+                </div>
+                <div className="pt-2 border-t border-dashed">
+                    <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Status:</p>
+                    <p className="text-[9px] font-black text-emerald-700 uppercase">Secure Repository Hub</p>
                 </div>
             </Card>
         </div>

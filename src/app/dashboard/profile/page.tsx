@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -15,7 +16,7 @@ import {
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
     Globe, User as UserIcon, CalendarClock, FileCheck,
-    Users, FileBox, Laptop
+    Users, FileBox, Laptop, ListTodo
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -229,9 +230,10 @@ export default function ProfilePage() {
 
     if (isEmployeeLoading || !employee) return <div className="p-20 text-center animate-pulse uppercase font-black text-[10px] tracking-[0.3em]">Loading Hub...</div>;
 
-    const leaveBal = employee.leaveBalance ?? 24;
-    const leaveEnt = employee.totalLeaveEntitlement ?? 24;
-    const leavePercentage = Math.round((leaveBal / leaveEnt) * 100);
+    const leaveBalValue = employee.leaveBalance;
+    const leaveEntValue = employee.totalLeaveEntitlement || 24;
+    const isLeaveConfigured = leaveBalValue !== undefined;
+    const leavePercentage = isLeaveConfigured ? Math.round((leaveBalValue / leaveEntValue) * 100) : 0;
 
     return (
         <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
@@ -298,17 +300,16 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm transition-transform group-hover:scale-110"><UserCheck className="size-4" /></div>
                         <Badge variant="outline" className="text-[7px] font-black uppercase text-muted-foreground tracking-widest bg-muted/20 border-none">Audit Sync</Badge>
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Attendance</p>
-                        <div className="flex items-baseline gap-1 mb-2">
-                            <span className="text-2xl font-black text-green-600">{attendanceStats.present + attendanceStats.late}</span>
-                            <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">/ {attendanceStats.totalWorkingDays} Days</span>
+                        <div className="flex items-center justify-between mb-2">
+                             <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Attendance</p>
+                             <span className="text-sm font-black text-green-600">{attendanceStats.present + attendanceStats.late} / {attendanceStats.totalWorkingDays}</span>
                         </div>
                         <Progress value={attendanceStats.percentage} className="h-1.5 mb-4" />
                         <div className="grid grid-cols-4 gap-1">
@@ -319,7 +320,7 @@ export default function ProfilePage() {
                         </div>
                     </div>
                     <div className="pt-2 border-t border-dashed flex justify-between items-center">
-                        <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Today's Hub Signal:</span>
+                        <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Status:</span>
                         <Badge className={cn("text-[7px] font-black h-4 px-2 uppercase rounded-full border-none", operationalStatus === 'Active' ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground")}>{operationalStatus}</Badge>
                     </div>
                 </Card>
@@ -332,14 +333,16 @@ export default function ProfilePage() {
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Leave Balance</p>
-                            <span className="text-sm font-black text-blue-600">{leaveBal}/{leaveEnt}</span>
+                            <span className="text-sm font-black text-blue-600">{isLeaveConfigured ? `${leaveBalValue}/${leaveEntValue}` : "NIL"}</span>
                         </div>
                         <Progress value={leavePercentage} className="h-1.5 mb-4" />
-                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none">Days remaining for member</p>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none">
+                            {isLeaveConfigured ? "Days remaining for member" : "Mission parameters pending"}
+                        </p>
                     </div>
-                    <div className="pt-2 border-t border-dashed flex justify-between items-center">
-                        <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Stored Assets:</span>
-                        <span className="text-[10px] font-black text-blue-600">{documents?.length || 0} Files</span>
+                    <div className="pt-2 border-t border-dashed">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Entitlement Protocol:</p>
+                        <p className="text-[9px] font-bold uppercase">{isLeaveConfigured ? `Standard ${leaveEntValue}D Plan` : "Awaiting HR Sync"}</p>
                     </div>
                 </Card>
 
@@ -383,10 +386,28 @@ export default function ProfilePage() {
                         </p>
                     </div>
                     <div className="pt-2 border-t border-dashed">
-                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Next Objective Cycle:</p>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Next Cycle:</p>
                         <p className="text-[9px] font-black text-purple-700 uppercase">
                             {employee.employmentType === 'Intern' ? "Based on Performance" : "Scheduled cycle"}
                         </p>
+                    </div>
+                </Card>
+
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
+                    <div className="flex justify-between items-start">
+                        <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shadow-sm transition-transform group-hover:scale-110"><FileBox className="size-4" /></div>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Vault</Badge>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Stored Intelligence</p>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-black text-emerald-600 tracking-tighter">{documents?.length || 0}</span>
+                            <span className="text-[10px] font-black uppercase text-muted-foreground/60">Professional Assets</span>
+                        </div>
+                    </div>
+                    <div className="pt-2 border-t border-dashed">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Status:</p>
+                        <p className="text-[9px] font-black text-emerald-700 uppercase">Secure Repository Hub</p>
                     </div>
                 </Card>
             </div>
