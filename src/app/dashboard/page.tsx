@@ -59,14 +59,9 @@ export default function DashboardPage() {
     <div className="space-y-4 max-w-[1200px] mx-auto pb-10 font-jakarta">
       {/* Greeting Header */}
       <div className="flex flex-col gap-0.5 mb-2 animate-fade-in-up">
-          <div className="flex items-center gap-1.5 text-primary">
-              <Sparkles className="size-3" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em]">{format(new Date(), 'EEEE, MMMM dd')}</span>
-          </div>
           <h1 className="text-xl font-black tracking-tighter leading-none">
-              {greeting}, {currentUserData?.firstName || 'User'} ,
+              {greeting}, {currentUserData?.firstName || 'Strategist'}
           </h1>
-          <p className="text-[10px] font-semibold text-muted-foreground/80 mt-1">App is ready.</p>
       </div>
 
       {/* Notifications */}

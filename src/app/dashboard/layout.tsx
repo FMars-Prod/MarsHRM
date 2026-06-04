@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sidebar';
 import { MainNav } from '@/components/geohrm/main-nav';
 import { UserNav } from '@/components/geohrm/user-nav';
-import { Building2 } from 'lucide-react';
+import { Building2, Sparkles } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
@@ -160,7 +160,7 @@ export default function DashboardLayout({
             />
           </div>
           <div className="space-y-2 text-center">
-            <h2 className="text-white/90 text-lg font-black uppercase tracking-[0.2em] animate-fade-in-up">Initializing MarsHRM</h2>
+            <h2 className="text-white/90 text-lg font-black uppercase tracking-[0.2em] animate-fade-in-up">MarsHRM</h2>
             <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden mx-auto">
                 <div className="h-full bg-white animate-progress-loading" />
             </div>
@@ -173,12 +173,12 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2 p-2">
-            <div className="bg-primary text-primary-foreground p-3 rounded-lg">
-              <Building2 className="h-6 w-6" />
+        <SidebarHeader className="border-b border-sidebar-border/50">
+          <div className="flex items-center gap-3 p-3">
+            <div className="bg-primary text-white p-2 rounded-xl shadow-lg">
+              <Building2 className="h-5 w-5" />
             </div>
-            <span className="font-headline text-lg font-semibold text-white">MarsHRM</span>
+            <span className="font-black text-lg tracking-tighter text-white uppercase">MarsHRM</span>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -193,24 +193,28 @@ export default function DashboardLayout({
             totalNotificationsCount={totalNotifications}
           />
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter className="border-t border-sidebar-border/50">
           <UserNav user={user} />
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col min-h-screen">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+        <header className="sticky top-0 z-30 flex h-12 items-center gap-4 border-b bg-background/80 backdrop-blur-md px-4">
           <SidebarTrigger />
           <div className="flex-1">
-            <AutomatedReportSender />
+             <div className="flex items-center gap-2 text-primary">
+                <Sparkles className="size-3" />
+                <span className="text-[10px] font-black uppercase tracking-widest">{format(new Date(), 'EEEE, MMMM dd')}</span>
+             </div>
           </div>
+          <AutomatedReportSender />
         </header>
-        <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
+        <main className="flex-1 p-4 overflow-x-hidden">
           {children}
         </main>
-        <footer className="mt-auto border-t py-6 px-4 md:px-6 bg-white/50 backdrop-blur-sm">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-                <p>© {new Date().getFullYear()} MarsHRM. All rights reserved.</p>
-                <p className="font-medium">Developed by FortuMars</p>
+        <footer className="border-t py-4 px-6 bg-white/50 backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                <p>© {new Date().getFullYear()} MarsHRM</p>
+                <p>By FortuMars</p>
             </div>
         </footer>
       </SidebarInset>
