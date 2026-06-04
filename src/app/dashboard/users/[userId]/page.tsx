@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday } from 'date-fns';
-import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon } from 'lucide-react';
+import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon, ChevronRight, CalendarClock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -145,7 +145,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
             <CardContent className="p-8 lg:p-12">
                 <div className="flex flex-col gap-10">
-                    {/* Top Identity Block */}
+                    {/* Linear Header Partition: Image + Basic Info */}
                     <div className="flex items-start gap-10">
                         <Avatar className="h-32 w-32 md:h-44 md:w-44 rounded-3xl border-4 border-white shadow-2xl ring-1 ring-border shrink-0 bg-muted">
                             {user.avatar?.startsWith('http') ? (
@@ -155,11 +155,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             )}
                         </Avatar>
 
-                        <div className="flex-1 space-y-3 pt-2">
+                        <div className="flex-1 space-y-4 pt-4">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <h2 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground leading-none">
-                                    {user.firstName} {user.lastName}
-                                </h2>
+                                <div className="space-y-1">
+                                    <h2 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground leading-none">
+                                        {user.firstName} {user.lastName}
+                                    </h2>
+                                    <p className="text-lg md:text-2xl font-bold text-muted-foreground">{user.jobTitle}</p>
+                                </div>
                                 <div className="flex gap-2">
                                     {isAdmin && <Button onClick={handleExportPdf} variant="outline" className="rounded-2xl h-10 px-5 font-black uppercase text-[10px] tracking-widest border-none ring-1 ring-border/50 shadow-sm bg-white hover:bg-primary/5 hover:text-primary transition-all">Export PDF</Button>}
                                     <Button asChild className="rounded-2xl h-10 px-5 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20">
@@ -167,12 +170,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     </Button>
                                 </div>
                             </div>
-                            <p className="text-lg md:text-2xl font-bold text-muted-foreground">{user.jobTitle}</p>
                             <Badge className="bg-primary/10 text-primary border-none rounded-full px-3 h-5 text-[8px] font-black uppercase tracking-widest">TACTICAL AUDIT ACTIVE</Badge>
                         </div>
                     </div>
 
-                    {/* Data Row 1 */}
+                    {/* Primary Data Row: ID, Joining, Email, Phone */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 py-8 border-t border-dashed border-border/50">
                         <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
                         <DetailItem icon={CalendarDays} label="Date of Joining" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
@@ -182,7 +184,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
                     <Separator className="opacity-50" />
 
-                    {/* Data Row 2 */}
+                    {/* Secondary Data Row: Team, Location, Employment Type */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                         <DetailItem icon={Users} label="Team" value={user.teamId ? "Assigned Fleet" : "General Sector"} />
                         <DetailItem icon={MapPin} label="Work Location" value={branchName} />

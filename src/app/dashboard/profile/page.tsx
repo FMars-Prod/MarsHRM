@@ -231,7 +231,7 @@ export default function ProfilePage() {
             <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
                 <CardContent className="p-8 lg:p-12">
                     <div className="flex flex-col gap-10">
-                        {/* Top Identity Block */}
+                        {/* Top Partition: Square Identity + Basic Details */}
                         <div className="flex items-start gap-10">
                             <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>
                                 <Avatar className="h-32 w-32 md:h-44 md:w-44 rounded-3xl border-4 border-white shadow-2xl ring-1 ring-border">
@@ -249,11 +249,14 @@ export default function ProfilePage() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 space-y-3 pt-2">
+                            <div className="flex-1 space-y-4 pt-4">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                    <h2 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground leading-none">
-                                        {employee.firstName} {employee.lastName}
-                                    </h2>
+                                    <div className="space-y-1">
+                                        <h2 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground leading-none">
+                                            {employee.firstName} {employee.lastName}
+                                        </h2>
+                                        <p className="text-lg md:text-2xl font-bold text-muted-foreground">{employee.jobTitle}</p>
+                                    </div>
                                     <div className="flex gap-2">
                                         <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" className="rounded-2xl h-10 px-5 font-black uppercase text-[10px] tracking-widest shadow-sm border-none ring-1 ring-border/50 bg-white">Edit Profile</Button>
                                         <DropdownMenu>
@@ -266,12 +269,11 @@ export default function ProfilePage() {
                                         </DropdownMenu>
                                     </div>
                                 </div>
-                                <p className="text-lg md:text-2xl font-bold text-muted-foreground">{employee.jobTitle}</p>
                                 <Badge className="bg-primary/10 text-primary border-none rounded-full px-3 h-5 text-[8px] font-black uppercase tracking-widest">{employee.department} Division</Badge>
                             </div>
                         </div>
 
-                        {/* Data Row 1 */}
+                        {/* Partition 1: Identity Data Row */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 py-8 border-t border-dashed border-border/50">
                             <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${employee.id.slice(0, 8).toUpperCase()}`} />
                             <DetailItem icon={CalendarDays} label="Date of Joining" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
@@ -281,7 +283,7 @@ export default function ProfilePage() {
 
                         <Separator className="opacity-50" />
 
-                        {/* Data Row 2 */}
+                        {/* Partition 2: Employment Details Row */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                             <DetailItem icon={Users} label="Team" value={employee.teamId ? "Assigned" : "Unassigned"} />
                             <DetailItem icon={MapPin} label="Work Location" value={branchName} />
