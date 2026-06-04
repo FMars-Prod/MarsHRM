@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check, LocateFixed } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, useStorage, deleteDocumentNonBlocking } from "@/firebase";
 import { doc, collection, query, writeBatch, serverTimestamp, deleteDoc, where, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -91,6 +91,23 @@ export default function UsersPage() {
 
   const isWfhAllowedValue = form.watch("isWfhAllowed");
 
+  const handleGetCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          form.setValue("homeLatitude", position.coords.latitude);
+          form.setValue("homeLongitude", position.coords.longitude);
+          toast({ title: "Signal Captured", description: "Current coordinates updated." });
+        },
+        (error) => {
+          toast({ variant: "destructive", title: "GPS Error", description: error.message });
+        }
+      );
+    } else {
+      toast({ variant: "destructive", title: "Not Supported", description: "Geolocation is not supported by your browser." });
+    }
+  };
+
   const onSubmit = async (values: UserFormValues) => {
     try {
         if (editingUser) {
@@ -98,12 +115,10 @@ export default function UsersPage() {
             const { password, ...updateData } = values;
             const batch = writeBatch(firestore);
             
-            // Handle last review date if performance changed
             if (values.performanceRating !== editingUser.performanceRating) {
                 (updateData as any).lastReviewDate = serverTimestamp();
             }
 
-            // Handle payroll date if payroll amount changed
             if (values.payrollAmount !== editingUser.payrollAmount) {
                 (updateData as any).payrollDate = serverTimestamp();
             }
@@ -372,9 +387,20 @@ export default function UsersPage() {
 
                                     {isWfhAllowedValue && (
                                         <div className="p-5 bg-primary/5 rounded-3xl border-2 border-primary/10 space-y-5 animate-fade-in-up">
-                                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                                <MapPin className="size-3" /> Home Base Coordinates
-                                            </Label>
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                                                    <MapPin className="size-3" /> Home Base Coordinates
+                                                </Label>
+                                                <Button 
+                                                    type="button" 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-7 rounded-full text-[8px] font-black uppercase tracking-widest px-3 border border-primary/20 hover:bg-primary/5"
+                                                    onClick={handleGetCurrentLocation}
+                                                >
+                                                    <LocateFixed className="size-2.5 mr-1.5" /> Capture Signal
+                                                </Button>
+                                            </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <FormField control={form.control} name="homeLatitude" render={({ field }) => (
                                                     <FormItem>

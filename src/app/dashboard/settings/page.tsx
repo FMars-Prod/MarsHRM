@@ -10,7 +10,7 @@ import { doc, serverTimestamp } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin, Clock, ShieldCheck, Globe, Save, Info, Key, Map as MapIcon, CalendarClock } from 'lucide-react';
+import { MapPin, Clock, ShieldCheck, Globe, Save, Info, Key, Map as MapIcon, CalendarClock, LocateFixed } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 export default function SettingsPage() {
@@ -60,6 +60,26 @@ export default function SettingsPage() {
         }
     }, [locationData, reportData, personnelData]);
 
+    const handleGetCurrentLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setForm({
+                        ...form,
+                        latitude: position.coords.latitude.toString(),
+                        longitude: position.coords.longitude.toString()
+                    });
+                    toast({ title: "HQ Signal Captured", description: "Global coordinates updated." });
+                },
+                (error) => {
+                    toast({ variant: "destructive", title: "GPS Error", description: error.message });
+                }
+            );
+        } else {
+            toast({ variant: "destructive", title: "Not Supported", description: "Geolocation is not supported by your browser." });
+        }
+    };
+
     const handleSave = () => {
         const locPayload = {
             latitude: parseFloat(form.latitude),
@@ -97,8 +117,21 @@ export default function SettingsPage() {
             <div className="grid gap-8">
                 <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/10 border-b">
-                        <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter"><MapPin className="size-5 text-primary" /> HQ Geofencing Matrix</CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Precision coordinates for the primary operational base.</CardDescription>
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter"><MapPin className="size-5 text-primary" /> HQ Geofencing Matrix</CardTitle>
+                                <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Precision coordinates for the primary operational base.</CardDescription>
+                            </div>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                className="rounded-full font-black uppercase text-[9px] tracking-widest h-9 bg-white border-primary/20 text-primary hover:bg-primary/5"
+                                onClick={handleGetCurrentLocation}
+                            >
+                                <LocateFixed className="size-3 mr-2" /> Capture HQ Signal
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -168,7 +201,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="pt-6 flex justify-end">
-                <Button onClick={handleSave} className="rounded-full h-14 px-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95"><Save className="mr-2 size-5" /> Save Platform Config</Button>
+                <Button onClick={handleSave} className="rounded-full h-14 px-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"><Save className="mr-2 size-5" /> Save Platform Config</Button>
             </div>
         </div>
     );
