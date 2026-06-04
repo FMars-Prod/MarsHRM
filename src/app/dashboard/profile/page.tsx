@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -15,7 +16,7 @@ import {
     FileBox, Loader2, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
-    FileDown, Globe, Laptop, User as UserIcon
+    FileDown, Globe, Laptop, User as UserIcon, CalendarClock, AlertCircle, FileCheck
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -119,23 +121,22 @@ export default function ProfilePage() {
         return `${totalDays} d`;
     }, [employee]);
 
-    const monthlyStats = React.useMemo(() => {
+    const attendanceStats = React.useMemo(() => {
         const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
         const workingDaysInMonth = days.filter(d => !isSunday(d)).length;
 
-        if (!attendanceData) return { hours: "0.0", percentage: "0", count: 0, totalWorkingDays: workingDaysInMonth };
-        let totalSec = 0;
-        const presentDays = attendanceData.length;
-        attendanceData.forEach(r => {
-            if (r.checkInTime && r.checkOutTime) {
-                totalSec += differenceInSeconds(r.checkOutTime.toDate(), r.checkInTime.toDate()) - (r.totalBreakDuration || 0);
-            }
-        });
+        if (!attendanceData) return { present: 0, late: 0, absent: workingDaysInMonth, percentage: 0 };
+        
+        const present = attendanceData.filter(a => a.status === 'present').length;
+        const late = attendanceData.filter(a => a.status === 'late').length;
+        const attended = present + late;
+        const absent = Math.max(0, workingDaysInMonth - attended);
+
         return { 
-            hours: (totalSec / 3600).toFixed(1),
-            percentage: Math.min(100, Math.round((presentDays / workingDaysInMonth) * 100)),
-            count: presentDays,
-            totalWorkingDays: workingDaysInMonth
+            present, 
+            late, 
+            absent, 
+            percentage: Math.min(100, Math.round((attended / workingDaysInMonth) * 100))
         };
     }, [attendanceData, monthStart, monthEnd]);
 
@@ -221,14 +222,19 @@ export default function ProfilePage() {
 
     if (isEmployeeLoading || !employee) return <div className="p-20 text-center animate-pulse uppercase font-black text-[10px] tracking-[0.3em]">Loading Hub...</div>;
 
+    const leaveBal = employee.leaveBalance ?? 24;
+    const leaveEnt = employee.totalLeaveEntitlement ?? 24;
+    const leavePercentage = Math.round((leaveBal / leaveEnt) * 100);
+
     return (
         <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
+            {/* Main Profile Header Card */}
             <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
                 <CardContent className="p-6 lg:p-8">
                     <div className="flex flex-col gap-4">
                         <div className="flex items-start gap-8">
                             <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>
-                                <Avatar className="h-24 w-24 md:h-32 md:w-32 rounded-3xl border-4 border-white shadow-2xl ring-1 ring-border">
+                                <Avatar className="h-24 w-24 rounded-3xl border-4 border-white shadow-2xl ring-1 ring-border">
                                     {employee.avatar?.startsWith('http') ? (
                                         <AvatarImage src={employee.avatar} className="object-cover" />
                                     ) : (
@@ -269,8 +275,8 @@ export default function ProfilePage() {
 
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-4 border-t border-dashed border-border/50">
                             <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${employee.id.slice(0, 8).toUpperCase()}`} />
-                            <DetailItem icon={CalendarDays} label="Date of Joining" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                            <DetailItem icon={Mail} label="Email Address" value={employee.email} />
+                            <DetailItem icon={CalendarDays} label="Joining Date" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
+                            <DetailItem icon={Mail} label="Email Directive" value={employee.email} />
                             <DetailItem icon={Phone} label="Phone Line" value={employee.phoneNumber || "N/A"} />
                         </div>
 
@@ -286,11 +292,100 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/26 Days Active`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
-                <MetricCard label="Intelligence Vault" value={documents?.length || 0} sub="Records Stored" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
-                <MetricCard label="Account Authority" value={employee.role === 'CEO/Admin' ? 'Executive' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
-                <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Shift Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
+            {/* High-Fidelity Metric Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Attendance Metric */}
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
+                    <div className="flex justify-between items-start">
+                        <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm transition-transform group-hover:scale-110"><UserCheck className="size-4" /></div>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">MTD Sync</Badge>
+                    </div>
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Attendance</p>
+                            <span className="text-sm font-black text-green-600">{attendanceStats.percentage}%</span>
+                        </div>
+                        <Progress value={attendanceStats.percentage} className="h-1.5 mb-4" />
+                        <div className="grid grid-cols-3 gap-1">
+                            <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Pres</p><p className="text-xs font-black">{attendanceStats.present}</p></div>
+                            <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Late</p><p className="text-xs font-black text-amber-500">{attendanceStats.late}</p></div>
+                            <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Abs</p><p className="text-xs font-black text-red-500">{attendanceStats.absent}</p></div>
+                        </div>
+                    </div>
+                    <div className="pt-2 border-t border-dashed flex justify-between items-center">
+                        <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Today's Status:</span>
+                        <Badge className={cn("text-[7px] font-black h-4 px-2 uppercase rounded-full border-none", operationalStatus === 'Active' ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground")}>{operationalStatus}</Badge>
+                    </div>
+                </Card>
+
+                {/* Leave Balance Metric */}
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
+                    <div className="flex justify-between items-start">
+                        <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shadow-sm transition-transform group-hover:scale-110"><CalendarClock className="size-4" /></div>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">Leaves</Badge>
+                    </div>
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Leave Balance</p>
+                            <span className="text-sm font-black text-blue-600">{leaveBal}/{leaveEnt}</span>
+                        </div>
+                        <Progress value={leavePercentage} className="h-1.5 mb-4" />
+                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none">Days remaining for fiscal year</p>
+                    </div>
+                    <div className="pt-2 border-t border-dashed flex justify-between items-center">
+                        <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Intelligence Vault:</span>
+                        <span className="text-[10px] font-black text-blue-600">{documents?.length || 0} Assets</span>
+                    </div>
+                </Card>
+
+                {/* Performance Metric */}
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
+                    <div className="flex justify-between items-start">
+                        <div className="p-2 rounded-xl bg-orange-50 text-orange-600 shadow-sm transition-transform group-hover:scale-110"><Zap className="size-4" /></div>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">Integrity</Badge>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Performance Audit</p>
+                        <div className="flex items-center gap-3">
+                            <h4 className={cn(
+                                "text-2xl font-black tracking-tighter uppercase",
+                                employee.performanceRating === 'Excellent' ? "text-green-600" :
+                                employee.performanceRating === 'Good' ? "text-blue-600" :
+                                employee.performanceRating === 'Average' ? "text-amber-500" : "text-red-500"
+                            )}>
+                                {employee.performanceRating || "Good"}
+                            </h4>
+                        </div>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-1">Strategic competence tier</p>
+                    </div>
+                    <div className="pt-2 border-t border-dashed">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Last Review Date:</p>
+                        <p className="text-[9px] font-bold text-foreground/70">{employee.lastReviewDate ? format(new Date(employee.lastReviewDate.toDate ? employee.lastReviewDate.toDate() : employee.lastReviewDate), 'dd MMM yyyy') : 'N/A'}</p>
+                    </div>
+                </Card>
+
+                {/* Payroll Metric */}
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
+                    <div className="flex justify-between items-start">
+                        <div className="p-2 rounded-xl bg-purple-50 text-purple-600 shadow-sm transition-transform group-hover:scale-110"><FileCheck className="size-4" /></div>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">Ledger</Badge>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Payroll Status</p>
+                        <h4 className="text-2xl font-black tracking-tighter text-purple-600 uppercase">
+                            {employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : "Audited"}
+                        </h4>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-1">
+                            {employee.payrollDate ? `Issued: ${format(new Date(employee.payrollDate.toDate ? employee.payrollDate.toDate() : employee.payrollDate), 'dd MMM')}` : "Ledger Synced"}
+                        </p>
+                    </div>
+                    <div className="pt-2 border-t border-dashed">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Next Mission Dispatch:</p>
+                        <p className="text-[9px] font-black text-purple-700 uppercase">
+                            {employee.employmentType === 'Intern' ? "Based on Performance" : "Scheduled cycle"}
+                        </p>
+                    </div>
+                </Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
@@ -441,19 +536,6 @@ function DetailItem({ icon: Icon, label, value }: any) {
                 <p className="text-[11px] font-black truncate text-foreground/80 uppercase tracking-tight">{value}</p>
             </div>
         </div>
-    );
-}
-
-function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
-    return (
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-4 space-y-2 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
-            <div className={cn("p-2 rounded-xl w-fit transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-md", bg, color)}><Icon className="size-4" /></div>
-            <div>
-                <p className="text-[8px] font-black uppercase text-muted-foreground/40 leading-none mb-1 tracking-[0.2em]">{label}</p>
-                <p className="text-xl font-black tracking-tighter leading-none">{value}</p>
-                <p className="text-[8px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-widest leading-none">{sub}</p>
-            </div>
-        </Card>
     );
 }
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -47,6 +48,9 @@ const userSchema = z.object({
   homeLatitude: z.coerce.number().optional(),
   homeLongitude: z.coerce.number().optional(),
   homeRadius: z.coerce.number().optional().default(0.5),
+  performanceRating: z.string().optional(),
+  leaveBalance: z.coerce.number().default(24),
+  payrollAmount: z.coerce.number().optional(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -80,7 +84,8 @@ export default function UsersPage() {
       firstName: "", lastName: "", email: "", phoneNumber: "", jobTitle: "", department: "",
       branchId: undefined, shiftType: "General Shift",
       employmentType: "Intern", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
-      homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5
+      homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5,
+      performanceRating: "Average", leaveBalance: 24, payrollAmount: 0
     },
   });
 
@@ -92,6 +97,12 @@ export default function UsersPage() {
             const userRef = doc(firestore, 'users', editingUser.id);
             const { password, ...updateData } = values;
             const batch = writeBatch(firestore);
+            
+            // Handle last review date if performance changed
+            if (values.performanceRating !== editingUser.performanceRating) {
+                (updateData as any).lastReviewDate = serverTimestamp();
+            }
+
             batch.update(userRef, updateData);
             
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
@@ -107,7 +118,15 @@ export default function UsersPage() {
             const { password, ...userData } = values;
             
             const batch = writeBatch(firestore);
-            batch.set(userRef, { id: newUserId, employeeId: newUserId, hireDate: new Date().toISOString(), ...userData, canUpdateSignature: true });
+            batch.set(userRef, { 
+                id: newUserId, 
+                employeeId: newUserId, 
+                hireDate: new Date().toISOString(), 
+                ...userData, 
+                canUpdateSignature: true,
+                totalLeaveEntitlement: 24,
+                lastReviewDate: serverTimestamp()
+            });
             
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', newUserId), { employeeId: newUserId });
             else if (values.role === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', newUserId), { employeeId: newUserId });
@@ -283,7 +302,7 @@ export default function UsersPage() {
             )}
             <Dialog open={isDialogOpen} onOpenChange={(open) => { if(!open) { setEditingUser(null); setManualSignatureUrl(""); } setIsDialogOpen(open); }}>
                 <DialogTrigger asChild><Button className="rounded-full h-11 shadow-lg shadow-primary/20"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button></DialogTrigger>
-                <DialogContent className="sm:max-w-md rounded-[2.5rem] p-8 border-none shadow-2xl">
+                <DialogContent className="sm:max-w-2xl rounded-[2.5rem] p-8 border-none shadow-2xl">
                     <DialogHeader className="text-left">
                         <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Profile' : 'Register New Member'}</DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Provision tactical identity access</DialogDescription>
@@ -317,6 +336,21 @@ export default function UsersPage() {
                                     <FormField control={form.control} name="role" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary">Account Tier</Label>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
+                                    )} />
+                                </div>
+
+                                <Separator className="my-4 opacity-50" />
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <FormField control={form.control} name="performanceRating" render={({ field }) => (
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Performance Rating</Label>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="leaveBalance" render={({ field }) => (
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="payrollAmount" render={({ field }) => (
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Last Payroll Amount</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
                                     )} />
                                 </div>
 

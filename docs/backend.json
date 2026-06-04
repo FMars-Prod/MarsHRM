@@ -21,7 +21,13 @@
         "isWfhAllowed": { "type": "boolean" },
         "homeLatitude": { "type": "number" },
         "homeLongitude": { "type": "number" },
-        "homeRadius": { "type": "number" }
+        "homeRadius": { "type": "number" },
+        "performanceRating": { "type": "string", "enum": ["Excellent", "Good", "Average", "Poor"] },
+        "lastReviewDate": { "type": "string", "format": "date-time" },
+        "leaveBalance": { "type": "number" },
+        "totalLeaveEntitlement": { "type": "number" },
+        "payrollAmount": { "type": "number" },
+        "payrollDate": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "firstName", "lastName", "email", "role"]
     },

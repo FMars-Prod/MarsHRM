@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -8,8 +9,8 @@ import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } fro
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday } from 'date-fns';
-import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon, ChevronRight, CalendarClock } from 'lucide-react';
+import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday } from 'date-fns';
+import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon, ChevronRight, CalendarClock, FileCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +22,7 @@ import Link from "next/link";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 
 type AttendanceRecord = {
   id: string;
@@ -91,26 +93,25 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
       fetchReports();
   }, [userId, firestore]);
 
-  const stats = React.useMemo(() => {
+  const attendanceStats = React.useMemo(() => {
     const startOfCurrentMonth = startOfMonth(new Date());
     const endOfCurrentMonth = endOfMonth(new Date());
     const days = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
     const workingDaysInMonth = days.filter(d => !isSunday(d)).length;
 
-    if (!attendanceData) return { workHours: "0.0", count: 0, percentage: 0, totalWorkingDays: workingDaysInMonth };
-    let totalSec = 0;
+    if (!attendanceData) return { present: 0, late: 0, absent: workingDaysInMonth, percentage: 0 };
+    
     const monthlyAtt = attendanceData.filter(a => a.checkInTime && a.checkInTime.toDate() >= startOfCurrentMonth);
+    const present = monthlyAtt.filter(a => a.status === 'present').length;
+    const late = monthlyAtt.filter(a => a.status === 'late').length;
+    const attended = present + late;
+    const absent = Math.max(0, workingDaysInMonth - attended);
 
-    monthlyAtt.forEach(r => {
-        if (r.checkInTime && r.checkOutTime) {
-            totalSec += differenceInSeconds(r.checkOutTime.toDate(), r.checkInTime.toDate()) - (r.totalBreakDuration || 0);
-        }
-    });
     return { 
-        workHours: (totalSec / 3600).toFixed(1), 
-        count: monthlyAtt.length,
-        percentage: Math.min(100, Math.round((monthlyAtt.length / workingDaysInMonth) * 100)),
-        totalWorkingDays: workingDaysInMonth
+        present, 
+        late, 
+        absent, 
+        percentage: Math.min(100, Math.round((attended / workingDaysInMonth) * 100))
     };
   }, [attendanceData]);
 
@@ -126,12 +127,19 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     autoTable(pdfDoc, {
         startY: 30,
         head: [['Metric', 'Value']],
-        body: [['Work Hours (MTD)', `${stats.workHours}h`], ['Attendance %', `${stats.percentage}%`], ['Tenure', experience]]
+        body: [['Attendance %', `${attendanceStats.percentage}%`], ['Tenure', experience]]
     });
     pdfDoc.save(`Audit_${user.firstName}.pdf`);
   };
 
   if (isUserLoading || !user) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Personnel Data...</div>;
+
+  const leaveBal = user.leaveBalance ?? 24;
+  const leaveEnt = user.totalLeaveEntitlement ?? 24;
+  const leavePercentage = Math.round((leaveBal / leaveEnt) * 100);
+  
+  const todaysAttendance = attendanceData?.find(a => a.checkInTime && isToday(a.checkInTime.toDate()));
+  const operationalStatus = todaysAttendance ? (todaysAttendance.checkOutTime ? "Off-Duty" : "Active") : "Away";
 
   return (
     <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
@@ -139,7 +147,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <CardContent className="p-6 lg:p-8">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-start gap-8">
-                        <Avatar className="h-24 w-24 md:h-32 md:w-32 rounded-3xl border-4 border-white shadow-2xl ring-1 ring-border shrink-0 bg-muted">
+                        <Avatar className="h-24 w-24 rounded-3xl border-4 border-white shadow-2xl ring-1 ring-border shrink-0 bg-muted">
                             {user.avatar?.startsWith('http') ? (
                                 <AvatarImage src={user.avatar} className="object-cover" />
                             ) : (
@@ -168,8 +176,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-4 border-t border-dashed border-border/50">
                         <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
-                        <DetailItem icon={CalendarDays} label="Date of Joining" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                        <DetailItem icon={Mail} label="Email Address" value={user.email} />
+                        <DetailItem icon={CalendarDays} label="Joining Date" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
+                        <DetailItem icon={Mail} label="Email Directive" value={user.email} />
                         <DetailItem icon={Phone} label="Phone Line" value={user.phoneNumber || "N/A"} />
                     </div>
 
@@ -185,11 +193,94 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard label="Attendance (MTD)" value={`${stats.percentage}%`} sub={`${stats.count}/${stats.totalWorkingDays} Days Active`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
-            <MetricCard label="Mission Hours" value={`${stats.workHours}h`} sub="Total Active Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
-            <MetricCard label="Integrity" value="Verified" sub="Compliance Status" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
-            <MetricCard label="Intelligence" value={documents?.length || 0} sub="Vault Assets Stored" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
+        {/* High-Fidelity Audit Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+             <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
+                <div className="flex justify-between items-start">
+                    <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm"><UserCheckIcon className="size-4" /></div>
+                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Audit Sync</Badge>
+                </div>
+                <div>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground">Attendance</p>
+                        <span className="text-sm font-black text-green-600">{attendanceStats.percentage}%</span>
+                    </div>
+                    <Progress value={attendanceStats.percentage} className="h-1.5 mb-4" />
+                    <div className="grid grid-cols-3 gap-1">
+                        <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Pres</p><p className="text-xs font-black">{attendanceStats.present}</p></div>
+                        <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Late</p><p className="text-xs font-black text-amber-500">{attendanceStats.late}</p></div>
+                        <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Abs</p><p className="text-xs font-black text-red-500">{attendanceStats.absent}</p></div>
+                    </div>
+                </div>
+                <div className="pt-2 border-t border-dashed flex justify-between items-center">
+                    <span className="text-[8px] font-black uppercase opacity-40">Today's Hub Signal:</span>
+                    <Badge className={cn("text-[7px] font-black h-4 px-2 uppercase rounded-full border-none", operationalStatus === 'Active' ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground")}>{operationalStatus}</Badge>
+                </div>
+            </Card>
+
+            <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
+                <div className="flex justify-between items-start">
+                    <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shadow-sm"><CalendarClock className="size-4" /></div>
+                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Balance</Badge>
+                </div>
+                <div>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground">Leave Balance</p>
+                        <span className="text-sm font-black text-blue-600">{leaveBal}/{leaveEnt}</span>
+                    </div>
+                    <Progress value={leavePercentage} className="h-1.5 mb-4" />
+                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none">Days available for member</p>
+                </div>
+                <div className="pt-2 border-t border-dashed flex justify-between items-center">
+                    <span className="text-[8px] font-black uppercase opacity-40">Stored Assets:</span>
+                    <span className="text-[10px] font-black text-blue-600">{documents?.length || 0} Files</span>
+                </div>
+            </Card>
+
+            <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
+                <div className="flex justify-between items-start">
+                    <div className="p-2 rounded-xl bg-orange-50 text-orange-600 shadow-sm"><Zap className="size-4" /></div>
+                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Integrity</Badge>
+                </div>
+                <div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Performance Audit</p>
+                    <h4 className={cn(
+                        "text-2xl font-black tracking-tighter uppercase",
+                        user.performanceRating === 'Excellent' ? "text-green-600" :
+                        user.performanceRating === 'Good' ? "text-blue-600" :
+                        user.performanceRating === 'Average' ? "text-amber-500" : "text-red-500"
+                    )}>
+                        {user.performanceRating || "Good"}
+                    </h4>
+                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-1">Strategic competence tier</p>
+                </div>
+                <div className="pt-2 border-t border-dashed">
+                    <p className="text-[8px] font-black uppercase opacity-40">Last Review Date:</p>
+                    <p className="text-[9px] font-bold">{user.lastReviewDate ? format(new Date(user.lastReviewDate.toDate ? user.lastReviewDate.toDate() : user.lastReviewDate), 'dd MMM yyyy') : 'N/A'}</p>
+                </div>
+            </Card>
+
+            <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
+                <div className="flex justify-between items-start">
+                    <div className="p-2 rounded-xl bg-purple-50 text-purple-600 shadow-sm"><FileCheck className="size-4" /></div>
+                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Ledger</Badge>
+                </div>
+                <div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Payroll Status</p>
+                    <h4 className="text-2xl font-black tracking-tighter text-purple-600 uppercase">
+                        {user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : "Audited"}
+                    </h4>
+                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-1">
+                        {user.payrollDate ? `Issued: ${format(new Date(user.payrollDate.toDate ? user.payrollDate.toDate() : user.payrollDate), 'dd MMM')}` : "Ledger Synced"}
+                    </p>
+                </div>
+                <div className="pt-2 border-t border-dashed">
+                    <p className="text-[8px] font-black uppercase opacity-40">Next Objective Cycle:</p>
+                    <p className="text-[9px] font-black text-purple-700 uppercase">
+                        {user.employmentType === 'Intern' ? "Based on Performance" : "Scheduled cycle"}
+                    </p>
+                </div>
+            </Card>
         </div>
 
         <Tabs defaultValue="activity" className="space-y-4">
@@ -380,3 +471,5 @@ function InfoRow({ label, value }: { label: string, value: string }) {
         </div>
     );
 }
+
+const UserCheckIcon = UserCheck;
