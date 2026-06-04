@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
-import { isToday } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import Image from 'next/image';
 import { AutomatedReportSender } from '@/components/geohrm/automated-report-sender';
 

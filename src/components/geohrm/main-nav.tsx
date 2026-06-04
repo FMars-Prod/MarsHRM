@@ -8,7 +8,6 @@ import {
   SidebarMenuButton,
   SidebarMenuBadge,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupContent,
 } from "@/components/ui/sidebar";
 import {
@@ -61,29 +60,19 @@ const groups = [
     ]
   },
   {
-    label: "Company",
+    label: "Tools",
     links: [
       { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/monitor", label: "Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/assets", label: "Assets", icon: Laptop, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/payslips", label: "Payslips", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    ]
-  },
-  {
-    label: "Social",
-    links: [
       { href: "/dashboard/announcements", label: "News", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
       { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
       { href: "/dashboard/holidays", label: "Holidays", icon: CalendarDays, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/issues", label: "Support", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
-    ]
-  },
-  {
-    label: "Tools",
-    links: [
       { href: "/dashboard/report-templates", label: "Templates", icon: LayoutTemplate, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/settings", label: "Settings", icon: Settings, roles: ['HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/profile", label: "My Profile", icon: User, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/profile", label: "Profile", icon: User, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
   }
 ];
@@ -128,12 +117,7 @@ export function MainNav({
         if (visibleLinks.length === 0) return null;
 
         return (
-          <SidebarGroup key={group.label}>
-            <div className="px-4 py-1">
-                <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/40 p-0 h-auto">
-                    {group.label}
-                </SidebarGroupLabel>
-            </div>
+          <SidebarGroup key={group.label} className="py-1">
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleLinks.map((link) => {
