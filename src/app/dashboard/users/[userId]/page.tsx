@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -9,7 +8,7 @@ import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } fro
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
+import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday, startOfDay, isBefore } from 'date-fns';
 import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck as UserCheckIcon, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon, ChevronRight, CalendarClock, FileCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -202,7 +201,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </CardContent>
         </Card>
 
-        {/* High-Fidelity Audit Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
              <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
                 <div className="flex justify-between items-start">
@@ -467,7 +465,4 @@ function InfoRow({ label, value }: { label: string, value: string }) {
             <span className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">{label}</span>
             <span className="text-[11px] font-black text-foreground/80 uppercase text-right pl-3">{value}</span>
         </div>
-    );
 }
-
-const UserCheckIcon = UserCheckIcon;

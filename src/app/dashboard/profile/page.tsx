@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -236,7 +235,6 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
-            {/* Main Profile Header Card */}
             <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
                 <CardContent className="p-6">
                     <div className="flex flex-col gap-4">
@@ -300,9 +298,7 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            {/* High-Fidelity Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Attendance Metric */}
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm transition-transform group-hover:scale-110"><UserCheck className="size-4" /></div>
@@ -328,7 +324,6 @@ export default function ProfilePage() {
                     </div>
                 </Card>
 
-                {/* Leave Balance Metric */}
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shadow-sm transition-transform group-hover:scale-110"><CalendarClock className="size-4" /></div>
@@ -348,7 +343,6 @@ export default function ProfilePage() {
                     </div>
                 </Card>
 
-                {/* Performance Metric */}
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-orange-50 text-orange-600 shadow-sm transition-transform group-hover:scale-110"><Zap className="size-4" /></div>
@@ -374,7 +368,6 @@ export default function ProfilePage() {
                     </div>
                 </Card>
 
-                {/* Payroll Metric */}
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-purple-50 text-purple-600 shadow-sm transition-transform group-hover:scale-110"><FileCheck className="size-4" /></div>
@@ -572,4 +565,3 @@ function InfoRow({ label, value }: { label: string, value: string }) {
         </div>
     );
 }
-
