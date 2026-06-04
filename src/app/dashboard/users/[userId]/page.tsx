@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -117,7 +116,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const experience = React.useMemo(() => {
     if (!user?.hireDate) return "N/A";
     const totalDays = differenceInDays(new Date(), new Date(user.hireDate));
-    return `${totalDays} day`;
+    return `${totalDays} d`;
   }, [user]);
 
   const handleExportPdf = () => {
@@ -134,90 +133,89 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   if (isUserLoading || !user) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Personnel Data...</div>;
 
   return (
-    <div className="max-w-[1400px] mx-auto animate-fade-in-up pb-20 space-y-8 font-jakarta">
+    <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-20 space-y-6 font-jakarta">
         <div className="flex flex-col gap-1 mb-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{format(new Date(), 'EEEE, MMMM dd')}</p>
-            <h1 className="text-4xl font-black tracking-tighter">
-                Personnel Audit, {user.firstName} ,
+            <h1 className="text-2xl font-black tracking-tighter">
+                Personnel Audit: {user.firstName} {user.lastName}
             </h1>
         </div>
 
-        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
-            <CardContent className="p-8 md:p-10">
-                <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-start">
-                    <Avatar className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-white shadow-xl ring-1 ring-border flex items-center justify-center bg-muted">
+        <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden ring-1 ring-border/50">
+            <CardContent className="p-6 md:p-8">
+                <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start">
+                    <Avatar className="h-24 w-24 md:h-32 md:w-32 rounded-full border-4 border-white shadow-xl ring-1 ring-border flex items-center justify-center bg-muted">
                         {user.avatar?.startsWith('http') ? (
                             <AvatarImage src={user.avatar} className="object-cover" />
                         ) : (
-                            <AvatarFallback className="text-6xl">{user.avatar || user.firstName?.[0]}</AvatarFallback>
+                            <AvatarFallback className="text-4xl font-black">{user.avatar || user.firstName?.[0]}</AvatarFallback>
                         )}
                     </Avatar>
 
-                    <div className="flex-1 text-center lg:text-left space-y-6 w-full">
-                        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                            <div className="space-y-1">
+                    <div className="flex-1 text-center lg:text-left space-y-4 w-full">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div className="space-y-0.5">
                                 <div className="flex items-center gap-3 justify-center lg:justify-start">
-                                    <h2 className="text-3xl font-black tracking-tighter">{user.firstName} {user.lastName}</h2>
-                                    <Badge className="bg-primary/10 text-primary border-none rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-widest">TACTICAL AUDIT</Badge>
+                                    <h2 className="text-xl md:text-2xl font-black tracking-tighter">{user.firstName} {user.lastName}</h2>
+                                    <Badge className="bg-primary/10 text-primary border-none rounded-full px-2 py-0 h-5 text-[8px] font-black uppercase tracking-widest">TACTICAL AUDIT</Badge>
                                 </div>
-                                <p className="text-lg font-medium text-muted-foreground">{user.jobTitle}</p>
-                                <p className="text-xs font-black uppercase text-primary/60 tracking-widest">{user.department} Unit</p>
+                                <p className="text-sm font-semibold text-muted-foreground">{user.jobTitle}</p>
+                                <p className="text-[9px] font-black uppercase text-primary/60 tracking-widest">{user.department} Unit</p>
                             </div>
-                            <div className="flex gap-3">
-                                {isAdmin && <Button onClick={handleExportPdf} className="rounded-2xl h-10 px-6 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/10">Generate Audit PDF</Button>}
-                                <Button variant="outline" asChild className="rounded-2xl h-10 px-6 font-black uppercase text-[10px] border-none ring-1 ring-border/50 bg-white">
-                                    <Link href="/dashboard/users"><Users className="size-3.5 mr-2" /> Back to Roster</Link>
+                            <div className="flex gap-2">
+                                {isAdmin && <Button onClick={handleExportPdf} className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest shadow-md">Export PDF</Button>}
+                                <Button variant="outline" asChild className="rounded-xl h-9 px-4 font-black uppercase text-[9px] border-none ring-1 ring-border/50 bg-white">
+                                    <Link href="/dashboard/users"><Users className="size-3.5 mr-2" /> All Staff</Link>
                                 </Button>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 pt-4 border-t border-dashed border-border/50">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t border-dashed border-border/50">
                             <DetailItem icon={Mail} label="Email Address" value={user.email} />
                             <DetailItem icon={Phone} label="Phone Line" value={user.phoneNumber || "N/A"} />
-                            <DetailItem icon={Building2} label="Operational Sector" value={branchName} />
-                            <DetailItem icon={CalendarDays} label="Commenced" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                            <DetailItem icon={Clock} label="Fleet Tenure" value={experience} />
-                            <DetailItem icon={ShieldCheck} label="System Tier" value={user.role} />
+                            <DetailItem icon={Building2} label="Work Location" value={branchName} />
+                            <DetailItem icon={CalendarDays} label="Joined Operational" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
+                            <DetailItem icon={Clock} label="Experience" value={experience} />
+                            <DetailItem icon={ShieldCheck} label="System Level" value={user.role} />
                         </div>
                     </div>
                 </div>
             </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <MetricCard label="Attendance (MTD)" value={`${stats.percentage}%`} sub={`${stats.count}/${stats.totalWorkingDays} Days Stamped`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
-            <MetricCard label="Mission Hours" value={`${stats.workHours}h`} sub="Net Active Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
-            <MetricCard label="Account Authority" value={user.role === 'CEO/Admin' ? 'Executive' : user.role === 'HR Manager' ? 'Admin' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
-            <MetricCard label="Intelligence Assets" value={documents?.length || 0} sub="Vault Records" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <MetricCard label="Attendance (MTD)" value={`${stats.percentage}%`} sub={`${stats.count}/${stats.totalWorkingDays} Days Active`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
+            <MetricCard label="Mission Hours" value={`${stats.workHours}h`} sub="Total Active Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
+            <MetricCard label="Account Tier" value={user.role === 'CEO/Admin' ? 'Executive' : 'Staff'} sub="Permission Level" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
+            <MetricCard label="Records" value={documents?.length || 0} sub="Vault Assets" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
         </div>
 
-        <Tabs defaultValue="activity" className="space-y-8">
+        <Tabs defaultValue="activity" className="space-y-6">
             <TabsList className="bg-transparent border-none gap-8 p-0 h-auto">
                 {["Activity", "Attendance", "Documents", "Assets", "Compliance"].map(tab => (
-                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary pb-5 font-black uppercase text-[11px] tracking-[0.25em] bg-transparent">
+                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary pb-3 font-black uppercase text-[10px] tracking-[0.2em] bg-transparent">
                         {tab}
                     </TabsTrigger>
                 ))}
             </TabsList>
 
             <TabsContent value="activity" className="mt-0">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    <Card className="lg:col-span-7 border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/80">Shift Implementation History</h3>
-                        <div className="space-y-10 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-px before:bg-border/50">
-                            {userReports.map(r => (
-                                <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={r.date?.toDate ? format(r.date.toDate(), 'PPP') : 'N/A'} desc={`Submitted for ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
-                            ))}
-                            {userReports.length === 0 && <div className="py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest">No Recent Activity</div>}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <Card className="lg:col-span-8 border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
+                        <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Submission History</h3>
+                        <div className="space-y-6">
+                            {userReports.length > 0 ? userReports.map(r => (
+                                <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={r.date?.toDate ? format(r.date.toDate(), 'PPP') : 'N/A'} desc={`Assigned to ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
+                            )) : <div className="py-10 text-center opacity-30 text-[10px] font-black uppercase tracking-widest">No Recent Submissions</div>}
                         </div>
                     </Card>
-                    <div className="lg:col-span-5 space-y-8">
-                        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10 space-y-8">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/80">Sector Info</h3>
-                            <div className="space-y-5">
-                                <InfoRow label="Assigned Sector" value={branchName} />
-                                <InfoRow label="Shift Type" value={user.shiftType || 'General'} />
-                                <InfoRow label="Hire Date" value={user.hireDate ? format(new Date(user.hireDate), 'PPP') : 'N/A'} />
+                    <div className="lg:col-span-4 space-y-4">
+                        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
+                            <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Employment Details</h3>
+                            <div className="space-y-4">
+                                <InfoRow label="Designation" value={user.department} />
+                                <InfoRow label="Work Location" value={branchName} />
+                                <InfoRow label="Work Schedule" value={user.shiftType || 'General Shift'} />
+                                <InfoRow label="Experience" value={experience} />
                             </div>
                         </Card>
                     </div>
@@ -225,24 +223,24 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </TabsContent>
 
             <TabsContent value="attendance">
-                <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden">
+                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden ring-1 ring-border/50">
                     <Table>
-                        <TableHeader className="bg-muted/10 border-b">
+                        <TableHeader className="bg-muted/5 border-b">
                             <TableRow>
-                                <TableHead className="font-black uppercase text-[10px] py-6 px-10">Mission Date</TableHead>
-                                <TableHead className="font-black uppercase text-[10px] py-6">Signal Status</TableHead>
-                                <TableHead className="font-black uppercase text-[10px] py-6">Log In</TableHead>
-                                <TableHead className="font-black uppercase text-[10px] py-6">Log Out</TableHead>
-                                <TableHead className="text-right px-10 text-[10px] font-black uppercase">Verification</TableHead>
+                                <TableHead className="font-black uppercase text-[9px] py-4 px-6 tracking-widest">Mission Date</TableHead>
+                                <TableHead className="font-black uppercase text-[9px] py-4 tracking-widest">Status</TableHead>
+                                <TableHead className="font-black uppercase text-[9px] py-4 tracking-widest">Log In</TableHead>
+                                <TableHead className="font-black uppercase text-[9px] py-4 tracking-widest">Log Out</TableHead>
+                                <TableHead className="text-right px-6 text-[9px] font-black uppercase tracking-widest">Map</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {attendanceData && attendanceData.length > 0 ? attendanceData.map((rec, i) => (
                                 <TableRow key={i} className="border-border/50">
-                                    <TableCell className="py-6 px-10 font-black text-sm">{format(rec.checkInTime?.toDate() || new Date(), 'PPP')}</TableCell>
+                                    <TableCell className="py-4 px-6 font-black text-xs uppercase">{format(rec.checkInTime?.toDate() || new Date(), 'dd MMM yyyy')}</TableCell>
                                     <TableCell>
                                         <Badge className={cn(
-                                            "rounded-full uppercase text-[9px] font-black tracking-widest px-3 border-none",
+                                            "rounded-full uppercase text-[8px] font-black tracking-widest px-2 border-none",
                                             rec.status === 'present' ? "bg-green-100 text-green-700" :
                                             rec.status === 'late' ? "bg-amber-100 text-amber-700" :
                                             "bg-rose-100 text-rose-700"
@@ -252,18 +250,16 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     </TableCell>
                                     <TableCell className="font-mono text-xs font-bold text-primary">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</TableCell>
                                     <TableCell className="font-mono text-xs font-bold text-primary">{rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</TableCell>
-                                    <TableCell className="text-right px-10">
+                                    <TableCell className="text-right px-6">
                                         {rec.locationCheckInLatitude && (
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-primary/5 text-primary" asChild>
-                                                <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
-                                                    <MapPin className="size-3.5" />
-                                                </Link>
-                                            </Button>
+                                            <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="p-1.5 rounded-lg bg-primary/5 text-primary hover:bg-primary/10 transition-all inline-block">
+                                                <MapPin className="size-3.5" />
+                                            </Link>
                                         )}
                                     </TableCell>
                                 </TableRow>
                             )) : (
-                                <TableRow><TableCell colSpan={5} className="h-64 text-center opacity-30 text-[10px] font-black uppercase tracking-[0.3em]">No records found</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="h-40 text-center opacity-30 text-[10px] font-black uppercase tracking-[0.3em]">Registry Clear</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>
@@ -271,59 +267,56 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </TabsContent>
 
             <TabsContent value="documents" className="mt-0">
-                <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {documents && documents.length > 0 ? documents.map(doc => (
-                            <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-6 rounded-[2rem] bg-muted/20 border border-transparent hover:border-primary/20 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
-                                <div className="flex items-center gap-5">
-                                    <FileBox className="size-6 text-blue-600" />
-                                    <div>
-                                        <p className="font-black text-sm">{doc.title}</p>
-                                        <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60">Linked on {doc.uploadedAt?.toDate ? format(doc.uploadedAt.toDate(), 'dd MMM yyyy') : 'N/A'}</p>
-                                    </div>
+                            <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border border-transparent hover:border-primary/20 hover:bg-white transition-all group shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <FileBox className="size-5 text-blue-600" />
+                                    <span className="font-black text-xs uppercase tracking-tight truncate max-w-[150px]">{doc.title}</span>
                                 </div>
-                                <ExternalLink className="size-4 opacity-0 group-hover:opacity-100 transition-all text-primary" />
+                                <ExternalLink className="size-3.5 opacity-0 group-hover:opacity-100 transition-all text-primary" />
                             </Link>
                         )) : (
-                            <div className="col-span-full py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest">No Intelligence Assets provisioned</div>
+                            <div className="col-span-full py-10 text-center opacity-30 text-[10px] font-black uppercase tracking-widest">No Intelligence Assets found</div>
                         )}
                     </div>
                 </Card>
             </TabsContent>
             
             <TabsContent value="assets" className="mt-0">
-                <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10">
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
-                            <div key={asset.id} className="p-8 rounded-[2rem] ring-1 ring-border/50 bg-muted/10 space-y-6 hover:shadow-xl transition-all duration-500">
-                                <div className="aspect-square bg-muted rounded-3xl flex items-center justify-center overflow-hidden">
-                                    {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full" /> : <Briefcase className="size-10 opacity-10" />}
+                            <div key={asset.id} className="p-4 rounded-2xl ring-1 ring-border/50 bg-muted/5 space-y-3 hover:shadow-md transition-all">
+                                <div className="aspect-square bg-muted rounded-xl flex items-center justify-center overflow-hidden border border-border/50">
+                                    {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full" /> : <Briefcase className="size-6 opacity-10" />}
                                 </div>
                                 <div>
-                                    <p className="font-black text-sm uppercase tracking-tight truncate">{asset.name}</p>
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{asset.category}</p>
+                                    <p className="font-black text-[10px] uppercase tracking-tighter truncate">{asset.name}</p>
+                                    <p className="text-[8px] font-bold text-muted-foreground uppercase">{asset.category}</p>
                                 </div>
                             </div>
                         )) : (
-                            <div className="col-span-full py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest">No Hardware Units assigned</div>
+                            <div className="col-span-full py-10 text-center opacity-30 text-[10px] font-black uppercase tracking-widest flex flex-col items-center gap-3"><Laptop className="size-8" /> No Hardware Units assigned</div>
                         )}
                     </div>
                 </Card>
             </TabsContent>
 
             <TabsContent value="compliance" className="mt-0">
-                <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-10">
-                    <div className="space-y-6">
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-6">
+                    <div className="space-y-4">
                         {complianceData && complianceData.length > 0 ? complianceData.map((report: any) => (
-                            <div key={report.id} className="p-6 rounded-[2rem] bg-red-50 border border-red-100 flex items-start gap-5">
-                                <ShieldAlert className="size-6 text-red-600 mt-1" />
+                            <div key={report.id} className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-4">
+                                <ShieldAlert className="size-5 text-red-600 mt-0.5" />
                                 <div>
-                                    <p className="font-black text-sm text-red-900">{report.severity} Alert: {report.reason}</p>
-                                    <p className="text-[10px] font-bold text-red-700 uppercase tracking-widest mt-1">Filed on {report.timestamp?.toDate ? format(report.timestamp.toDate(), 'PP p') : 'N/A'}</p>
+                                    <p className="font-black text-xs text-red-900 uppercase tracking-tight">{report.severity} Alert: {report.reason}</p>
+                                    <p className="text-[9px] font-bold text-red-700 uppercase tracking-widest mt-1">Audit Stamped: {report.timestamp?.toDate ? format(report.timestamp.toDate(), 'PP p') : 'N/A'}</p>
                                 </div>
                             </div>
                         )) : (
-                            <div className="py-20 text-center opacity-30 text-xs font-black uppercase tracking-widest">Fleet Integrity Verified - No Alerts</div>
+                            <div className="py-10 text-center opacity-30 text-[10px] font-black uppercase tracking-widest">Integrity Verified: 0 Active Alerts</div>
                         )}
                     </div>
                 </Card>
@@ -336,10 +329,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
         <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/5 text-primary/60"><Icon className="size-4" /></div>
+            <div className="p-1.5 rounded-lg bg-primary/5 text-primary/60"><Icon className="size-3.5" /></div>
             <div>
                 <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">{label}</p>
-                <p className="text-xs font-black truncate max-w-[150px]">{value}</p>
+                <p className="text-xs font-black truncate max-w-[140px] uppercase">{value}</p>
             </div>
         </div>
     );
@@ -347,12 +340,12 @@ function DetailItem({ icon: Icon, label, value }: any) {
 
 function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     return (
-        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white p-8 space-y-5 ring-1 ring-border/50 hover:shadow-2xl transition-all group">
-            <div className={cn("p-3 rounded-2xl w-fit group-hover:scale-110 transition-transform shadow-sm", bg, color)}><Icon className="size-5" /></div>
+        <Card className="border-none shadow-sm rounded-[1.25rem] bg-white p-6 space-y-4 ring-1 ring-border/50 hover:shadow-lg transition-all group">
+            <div className={cn("p-2 rounded-xl w-fit group-hover:scale-110 transition-transform shadow-sm", bg, color)}><Icon className="size-4" /></div>
             <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1.5">{label}</p>
-                <p className="text-3xl font-black tracking-tighter">{value}</p>
-                <p className="text-[10px] font-bold text-muted-foreground/40 mt-1.5 uppercase tracking-widest">{sub}</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1.5">{label}</p>
+                <p className="text-2xl font-black tracking-tighter">{value}</p>
+                <p className="text-[9px] font-bold text-muted-foreground/40 mt-2 uppercase tracking-widest">{sub}</p>
             </div>
         </Card>
     );
@@ -360,12 +353,14 @@ function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
 
 function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
-        <div className="flex gap-6 items-start relative">
-            <div className={cn("h-8 w-8 rounded-2xl flex items-center justify-center shrink-0 z-10 shadow-sm", color)}><Icon className="size-4" /></div>
-            <div className="space-y-1 pt-0.5">
-                <p className="font-black text-sm uppercase tracking-tight">{title}</p>
-                <p className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest">{time}</p>
-                <p className="text-xs font-medium text-muted-foreground leading-relaxed mt-2 italic">"{desc}"</p>
+        <div className="flex gap-4 items-start relative">
+            <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0 z-10 shadow-sm", color)}><Icon className="size-3" /></div>
+            <div className="space-y-1">
+                <p className="font-black text-xs uppercase tracking-tight">{title}</p>
+                <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{time}</span>
+                    <Badge variant="outline" className="h-3 px-1 text-[7px] font-black uppercase border-none bg-muted/20">{desc}</Badge>
+                </div>
             </div>
         </div>
     );
@@ -373,9 +368,9 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
 
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <div className="flex items-center justify-between py-4 border-b border-dashed border-border/50 last:border-none">
-            <span className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest">{label}</span>
-            <span className="text-sm font-black text-foreground/80">{value}</span>
+        <div className="flex items-center justify-between py-2.5 border-b border-dashed border-border/50 last:border-none">
+            <span className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">{label}</span>
+            <span className="text-xs font-black text-foreground/80 uppercase">{value}</span>
         </div>
     );
 }

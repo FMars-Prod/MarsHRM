@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -238,7 +237,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <PageHeader title="Staff Management" description="Global registry of active and tactical team members.">
+      <PageHeader title="Staff Registry" description="Global directory of active and tactical team members.">
         <div className="flex gap-2">
             {selectedUserIds.length > 0 && (
                 <div className="flex gap-2 animate-in slide-in-from-right-4">
@@ -286,7 +285,7 @@ export default function UsersPage() {
                 <DialogTrigger asChild><Button className="rounded-full h-11 shadow-lg shadow-primary/20"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button></DialogTrigger>
                 <DialogContent className="sm:max-w-md rounded-[2.5rem] p-8 border-none shadow-2xl">
                     <DialogHeader className="text-left">
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Strategic Profile' : 'Register New Staff Member'}</DialogTitle>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Profile' : 'Register New Member'}</DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Provision tactical identity access</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-8 px-8">
@@ -304,10 +303,10 @@ export default function UsersPage() {
                                 
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Assigned Sector</Label>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Work Location</Label>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent>{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></FormItem>
                                     )} />
-                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Tactical Shift</Label><Input {...field} placeholder="e.g. General Shift" className="rounded-xl h-11"/></FormItem>)} />
+                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Work Schedule</Label><Input {...field} placeholder="e.g. General Shift" className="rounded-xl h-11"/></FormItem>)} />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -316,7 +315,7 @@ export default function UsersPage() {
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="role" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">System Tier</Label>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Account Tier</Label>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                 </div>
@@ -394,7 +393,7 @@ export default function UsersPage() {
                                                 <Tabs defaultValue="upload" className="w-full">
                                                     <TabsList className="grid w-full grid-cols-2 h-10 bg-muted/30 p-1 rounded-xl">
                                                         <TabsTrigger value="upload" className="text-[9px] uppercase font-black rounded-lg">Upload Asset</TabsTrigger>
-                                                        <TabsTrigger value="url" className="text-[9px] uppercase font-black rounded-lg">Tactical Link</TabsTrigger>
+                                                        <TabsTrigger value="url" className="text-[9px] uppercase font-black rounded-lg">URL Link</TabsTrigger>
                                                     </TabsList>
                                                     <TabsContent value="upload" className="pt-3">
                                                         <div className="relative group">
@@ -425,7 +424,7 @@ export default function UsersPage() {
                                 <div className="flex items-center justify-between p-5 bg-purple-50/50 rounded-2xl border border-dashed border-purple-200">
                                     <div className="space-y-0.5">
                                         <Label className="text-xs font-black uppercase text-purple-900">Demo Account Tier</Label>
-                                        <p className="text-[9px] text-purple-700 font-bold uppercase opacity-60">Exempt from tactical reporting</p>
+                                        <p className="text-[9px] text-purple-700 font-bold uppercase opacity-60">Exempt from operational reporting</p>
                                     </div>
                                     <FormField control={form.control} name="isDemoAccount" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-purple-600" />)} />
                                 </div>
@@ -447,10 +446,10 @@ export default function UsersPage() {
               <TableHead className="w-[50px] py-6">
                   <Checkbox checked={selectedUserIds.length === (users?.length || 0) && (users?.length || 0) > 0} onCheckedChange={toggleSelectAll} />
               </TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Employee Official</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Operational Sector</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Shift Profile</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">System Tier</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Staff Member</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Work Location</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Work Schedule</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Account Level</TableHead>
               <TableHead className="text-right text-[10px] font-black uppercase tracking-widest py-6">Control</TableHead>
             </TableRow>
           </TableHeader>
@@ -529,11 +528,11 @@ export default function UsersPage() {
       <Dialog open={isBulkBranchDialogOpen} onOpenChange={setIsBulkBranchDialogOpen}>
           <DialogContent className="rounded-[2.5rem] sm:max-w-md p-8 border-none shadow-2xl">
               <DialogHeader className="text-left">
-                  <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Sector Reassignment</DialogTitle>
-                  <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Reassign {selectedUserIds.length} units to a new sector</DialogDescription>
+                  <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Work Location Reassignment</DialogTitle>
+                  <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Reassign {selectedUserIds.length} units to a new work location</DialogDescription>
               </DialogHeader>
               <div className="py-6 space-y-4">
-                  <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Target Sector</Label>
+                  <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Target Location</Label>
                   <Select value={bulkBranchId} onValueChange={setBulkBranchId}>
                       <SelectTrigger className="rounded-xl h-12 shadow-sm"><SelectValue placeholder="Target Branch" /></SelectTrigger>
                       <SelectContent className="rounded-xl border-none shadow-2xl">

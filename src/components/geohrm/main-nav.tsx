@@ -118,8 +118,8 @@ export function MainNav({
         if (visibleLinks.length === 0) return null;
 
         return (
-          <SidebarGroup key={group.label} className="py-1">
-            <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-widest text-white/30 px-2 py-2">
+          <SidebarGroup key={group.label} className="py-2">
+            <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-2 py-4 h-auto">
               {group.label}
             </SidebarGroupLabel>
             <SidebarGroupContent>
