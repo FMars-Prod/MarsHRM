@@ -108,9 +108,9 @@ export default function ProfilePage() {
     }, [todaysAttendance]);
 
     const branchName = React.useMemo(() => {
-        if (!branches || !employee?.branchId) return "HQ Hub";
+        if (!branches || !employee?.branchId) return "Office Hub";
         const b = branches.find((b: any) => b.id === employee.branchId);
-        return b ? b.name : "HQ Hub";
+        return b ? b.name : "Office Hub";
     }, [branches, employee?.branchId]);
 
     const experience = React.useMemo(() => {
@@ -302,7 +302,7 @@ export default function ProfilePage() {
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm transition-transform group-hover:scale-110"><UserCheck className="size-4" /></div>
-                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">Audit Sync</Badge>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase text-muted-foreground tracking-widest bg-muted/20 border-none">Audit Sync</Badge>
                     </div>
                     <div>
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Attendance</p>
@@ -376,7 +376,7 @@ export default function ProfilePage() {
                     <div>
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Payroll Status</p>
                         <h4 className="text-2xl font-black tracking-tighter text-purple-600 uppercase">
-                            {employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : "Audited"}
+                            {employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : (employee.employmentType === 'Intern' ? "Based on Performance" : "Audited")}
                         </h4>
                         <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-1">
                             {employee.payrollDate ? `Issued: ${format(new Date(employee.payrollDate.toDate ? employee.payrollDate.toDate() : employee.payrollDate), 'dd MMM')}` : "Ledger Synced"}

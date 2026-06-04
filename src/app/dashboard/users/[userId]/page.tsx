@@ -277,7 +277,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 <div>
                     <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Payroll Status</p>
                     <h4 className="text-2xl font-black tracking-tighter text-purple-600 uppercase">
-                        {user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : "Audited"}
+                        {user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Based on Performance" : "Audited")}
                     </h4>
                     <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-1">
                         {user.payrollDate ? `Issued: ${format(new Date(user.payrollDate.toDate ? user.payrollDate.toDate() : user.payrollDate), 'dd MMM')}` : "Ledger Synced"}
@@ -461,8 +461,8 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
 
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <div className="flex items-center justify-between py-2 border-b border-dashed border-border/50 last:border-none">
-            <span className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">{label}</span>
+        <div className="flex items-center justify-between py-2 border-b border-dashed border-border/50 last:border-none group">
+            <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest group-hover:text-primary transition-colors">{label}</span>
             <span className="text-[11px] font-black text-foreground/80 uppercase text-right pl-3">{value}</span>
         </div>
     );
