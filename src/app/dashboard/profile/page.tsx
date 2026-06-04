@@ -11,11 +11,10 @@ import { doc, collection, query, where, serverTimestamp, orderBy, limit, getDocs
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
     Edit, MapPin, Camera, CheckCircle2, ShieldCheck, 
-    ExternalLink, FileText, CalendarDays, 
-    FileBox, Loader2, Phone, 
+    FileText, CalendarDays, Loader2, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
-    FileDown, Globe, Laptop, User as UserIcon, CalendarClock, AlertCircle, FileCheck
+    Globe, User as UserIcon, CalendarClock, FileCheck
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
