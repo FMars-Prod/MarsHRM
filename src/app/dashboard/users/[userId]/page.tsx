@@ -9,8 +9,8 @@ import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } fro
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday } from 'date-fns';
-import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon, ChevronRight, CalendarClock, FileCheck } from 'lucide-react';
+import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
+import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck as UserCheckIcon, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon, ChevronRight, CalendarClock, FileCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -74,6 +74,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     }
   }, [currentUser, currentUserData, userId, isUserLoading, router, toast, isAdmin]);
 
+  const monthStart = startOfMonth(new Date());
+  const monthEnd = endOfMonth(new Date());
+
   const attendanceQuery = useMemoFirebase(() => userId ? query(collection(firestore, `users/${userId}/attendances`), orderBy('checkInTime', 'desc')) : null, [firestore, userId]);
   const { data: attendanceData } = useCollection<AttendanceRecord>(attendanceQuery);
   
@@ -94,26 +97,32 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   }, [userId, firestore]);
 
   const attendanceStats = React.useMemo(() => {
-    const startOfCurrentMonth = startOfMonth(new Date());
-    const endOfCurrentMonth = endOfMonth(new Date());
-    const days = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
-    const workingDaysInMonth = days.filter(d => !isSunday(d)).length;
+    const today = startOfDay(new Date());
+    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const totalWorkingDays = daysInMonth.filter(d => !isSunday(d)).length;
 
-    if (!attendanceData) return { present: 0, late: 0, absent: workingDaysInMonth, percentage: 0 };
+    const daysSoFar = eachDayOfInterval({ start: monthStart, end: today });
+    const workingDaysSoFar = daysSoFar.filter(d => !isSunday(d)).length;
+
+    if (!attendanceData) return { present: 0, late: 0, absent: workingDaysSoFar, remaining: totalWorkingDays - workingDaysSoFar, percentage: 0, totalWorkingDays };
     
-    const monthlyAtt = attendanceData.filter(a => a.checkInTime && a.checkInTime.toDate() >= startOfCurrentMonth);
+    const monthlyAtt = attendanceData.filter(a => a.checkInTime && a.checkInTime.toDate() >= monthStart);
     const present = monthlyAtt.filter(a => a.status === 'present').length;
     const late = monthlyAtt.filter(a => a.status === 'late').length;
     const attended = present + late;
-    const absent = Math.max(0, workingDaysInMonth - attended);
+    
+    const absent = Math.max(0, workingDaysSoFar - attended);
+    const remaining = Math.max(0, totalWorkingDays - workingDaysSoFar);
 
     return { 
         present, 
         late, 
         absent, 
-        percentage: Math.min(100, Math.round((attended / workingDaysInMonth) * 100))
+        remaining,
+        totalWorkingDays,
+        percentage: Math.min(100, Math.round((attended / totalWorkingDays) * 100))
     };
-  }, [attendanceData]);
+  }, [attendanceData, monthStart, monthEnd]);
 
   const experience = React.useMemo(() => {
     if (!user?.hireDate) return "N/A";
@@ -144,9 +153,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   return (
     <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
         <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
-            <CardContent className="p-6 lg:p-8">
+            <CardContent className="p-6">
                 <div className="flex flex-col gap-4">
-                    <div className="flex items-start gap-8">
+                    <div className="flex items-start gap-6">
                         <Avatar className="h-24 w-24 rounded-3xl border-4 border-white shadow-2xl ring-1 ring-border shrink-0 bg-muted">
                             {user.avatar?.startsWith('http') ? (
                                 <AvatarImage src={user.avatar} className="object-cover" />
@@ -155,13 +164,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             )}
                         </Avatar>
 
-                        <div className="flex-1 space-y-3 pt-2">
+                        <div className="flex-1 space-y-2 pt-1">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                                 <div className="space-y-0.5">
-                                    <h2 className="text-2xl md:text-3xl font-black tracking-tighter text-foreground leading-none">
+                                    <h2 className="text-2xl font-black tracking-tighter text-foreground leading-none">
                                         {user.firstName} {user.lastName}
                                     </h2>
-                                    <p className="text-sm md:text-lg font-bold text-muted-foreground">{user.jobTitle}</p>
+                                    <p className="text-sm font-bold text-muted-foreground">{user.jobTitle}</p>
                                 </div>
                                 <div className="flex gap-2">
                                     {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest border-none ring-1 ring-border/50 shadow-sm bg-white hover:bg-primary/5 transition-all">Export PDF</Button>}
@@ -174,7 +183,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-4 border-t border-dashed border-border/50">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 py-3 border-t border-dashed border-border/50">
                         <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
                         <DetailItem icon={CalendarDays} label="Joining Date" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
                         <DetailItem icon={Mail} label="Email Directive" value={user.email} />
@@ -183,8 +192,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
                     <Separator className="opacity-50" />
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                        <DetailItem icon={Users} label="Team" value={user.teamId ? "Assigned Fleet" : "General Sector"} />
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <DetailItem icon={Users} label="Team Fleet" value={user.teamId ? "Assigned" : "Unassigned"} />
                         <DetailItem icon={MapPin} label="Work Location" value={branchName} />
                         <DetailItem icon={Briefcase} label="Employment Type" value={user.employmentType || "Employee"} />
                         <DetailItem icon={Clock} label="Account Tier" value={user.role} />
@@ -204,13 +213,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Attendance</p>
                     <div className="flex items-baseline gap-1 mb-2">
                         <span className="text-2xl font-black text-green-600">{attendanceStats.present + attendanceStats.late}</span>
-                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">/ {attendanceStats.present + attendanceStats.late + attendanceStats.absent} Days</span>
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">/ {attendanceStats.totalWorkingDays} Days</span>
                     </div>
                     <Progress value={attendanceStats.percentage} className="h-1.5 mb-4" />
-                    <div className="grid grid-cols-3 gap-1">
+                    <div className="grid grid-cols-4 gap-1">
                         <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Pres</p><p className="text-xs font-black">{attendanceStats.present}</p></div>
                         <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Late</p><p className="text-xs font-black text-amber-500">{attendanceStats.late}</p></div>
                         <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Abs</p><p className="text-xs font-black text-red-500">{attendanceStats.absent}</p></div>
+                        <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Rem</p><p className="text-xs font-black text-blue-400">{attendanceStats.remaining}</p></div>
                     </div>
                 </div>
                 <div className="pt-2 border-t border-dashed flex justify-between items-center">
@@ -460,4 +470,4 @@ function InfoRow({ label, value }: { label: string, value: string }) {
     );
 }
 
-const UserCheckIcon = UserCheck;
+const UserCheckIcon = UserCheckIcon;

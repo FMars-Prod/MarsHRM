@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differenceInDays, eachDayOfInterval, isSunday } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInSeconds, isToday, differenceInDays, eachDayOfInterval, isSunday, startOfDay, isBefore } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
@@ -122,21 +122,29 @@ export default function ProfilePage() {
     }, [employee]);
 
     const attendanceStats = React.useMemo(() => {
-        const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-        const workingDaysInMonth = days.filter(d => !isSunday(d)).length;
+        const today = startOfDay(new Date());
+        const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        const totalWorkingDays = daysInMonth.filter(d => !isSunday(d)).length;
 
-        if (!attendanceData) return { present: 0, late: 0, absent: workingDaysInMonth, percentage: 0 };
+        const daysSoFar = eachDayOfInterval({ start: monthStart, end: today });
+        const workingDaysSoFar = daysSoFar.filter(d => !isSunday(d)).length;
+
+        if (!attendanceData) return { present: 0, late: 0, absent: workingDaysSoFar, remaining: totalWorkingDays - workingDaysSoFar, percentage: 0, totalWorkingDays };
         
         const present = attendanceData.filter(a => a.status === 'present').length;
         const late = attendanceData.filter(a => a.status === 'late').length;
         const attended = present + late;
-        const absent = Math.max(0, workingDaysInMonth - attended);
+        
+        const absent = Math.max(0, workingDaysSoFar - attended);
+        const remaining = Math.max(0, totalWorkingDays - workingDaysSoFar);
 
         return { 
             present, 
             late, 
             absent, 
-            percentage: Math.min(100, Math.round((attended / workingDaysInMonth) * 100))
+            remaining,
+            totalWorkingDays,
+            percentage: Math.min(100, Math.round((attended / totalWorkingDays) * 100))
         };
     }, [attendanceData, monthStart, monthEnd]);
 
@@ -230,9 +238,9 @@ export default function ProfilePage() {
         <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
             {/* Main Profile Header Card */}
             <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
-                <CardContent className="p-6 lg:p-8">
+                <CardContent className="p-6">
                     <div className="flex flex-col gap-4">
-                        <div className="flex items-start gap-8">
+                        <div className="flex items-start gap-6">
                             <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>
                                 <Avatar className="h-24 w-24 rounded-3xl border-4 border-white shadow-2xl ring-1 ring-border">
                                     {employee.avatar?.startsWith('http') ? (
@@ -249,13 +257,13 @@ export default function ProfilePage() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 space-y-3 pt-2">
+                            <div className="flex-1 space-y-2 pt-1">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                                     <div className="space-y-0.5">
-                                        <h2 className="text-2xl md:text-3xl font-black tracking-tighter text-foreground leading-none">
+                                        <h2 className="text-2xl font-black tracking-tighter text-foreground leading-none">
                                             {employee.firstName} {employee.lastName}
                                         </h2>
-                                        <p className="text-sm md:text-lg font-bold text-muted-foreground">{employee.jobTitle}</p>
+                                        <p className="text-sm font-bold text-muted-foreground">{employee.jobTitle}</p>
                                     </div>
                                     <div className="flex gap-2">
                                         <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest shadow-sm border-none ring-1 ring-border/50 bg-white">Edit Profile</Button>
@@ -269,11 +277,11 @@ export default function ProfilePage() {
                                         </DropdownMenu>
                                     </div>
                                 </div>
-                                <Badge className="bg-primary/10 text-primary border-none rounded-full px-2.5 h-4 text-[7px] font-black uppercase tracking-widest">{employee.department} Division</Badge>
+                                <Badge className="bg-primary/10 text-primary border-none rounded-full px-2.5 h-4 text-[7px] font-black uppercase tracking-widest">TACTICAL HUB ACTIVE</Badge>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-4 border-t border-dashed border-border/50">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 py-3 border-t border-dashed border-border/50">
                             <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${employee.id.slice(0, 8).toUpperCase()}`} />
                             <DetailItem icon={CalendarDays} label="Joining Date" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
                             <DetailItem icon={Mail} label="Email Directive" value={employee.email} />
@@ -282,8 +290,8 @@ export default function ProfilePage() {
 
                         <Separator className="opacity-50" />
 
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                            <DetailItem icon={Users} label="Team" value={employee.teamId ? "Assigned" : "Unassigned"} />
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <DetailItem icon={Users} label="Team Fleet" value={employee.teamId ? "Assigned" : "Unassigned"} />
                             <DetailItem icon={MapPin} label="Work Location" value={branchName} />
                             <DetailItem icon={Briefcase} label="Employment Type" value={employee.employmentType || "Employee"} />
                             <DetailItem icon={Clock} label="Account Tier" value={employee.role} />
@@ -298,23 +306,24 @@ export default function ProfilePage() {
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm transition-transform group-hover:scale-110"><UserCheck className="size-4" /></div>
-                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">MTD Sync</Badge>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">Audit Sync</Badge>
                     </div>
                     <div>
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Attendance</p>
                         <div className="flex items-baseline gap-1 mb-2">
                             <span className="text-2xl font-black text-green-600">{attendanceStats.present + attendanceStats.late}</span>
-                            <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">/ {attendanceStats.present + attendanceStats.late + attendanceStats.absent} Days</span>
+                            <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">/ {attendanceStats.totalWorkingDays} Days</span>
                         </div>
                         <Progress value={attendanceStats.percentage} className="h-1.5 mb-4" />
-                        <div className="grid grid-cols-3 gap-1">
+                        <div className="grid grid-cols-4 gap-1">
                             <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Pres</p><p className="text-xs font-black">{attendanceStats.present}</p></div>
                             <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Late</p><p className="text-xs font-black text-amber-500">{attendanceStats.late}</p></div>
                             <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Abs</p><p className="text-xs font-black text-red-500">{attendanceStats.absent}</p></div>
+                            <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Rem</p><p className="text-xs font-black text-blue-400">{attendanceStats.remaining}</p></div>
                         </div>
                     </div>
                     <div className="pt-2 border-t border-dashed flex justify-between items-center">
-                        <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Today's Status:</span>
+                        <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Today's Hub Signal:</span>
                         <Badge className={cn("text-[7px] font-black h-4 px-2 uppercase rounded-full border-none", operationalStatus === 'Active' ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground")}>{operationalStatus}</Badge>
                     </div>
                 </Card>
@@ -323,7 +332,7 @@ export default function ProfilePage() {
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shadow-sm transition-transform group-hover:scale-110"><CalendarClock className="size-4" /></div>
-                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">Leaves</Badge>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">Balance</Badge>
                     </div>
                     <div>
                         <div className="flex items-center justify-between mb-2">
@@ -331,11 +340,11 @@ export default function ProfilePage() {
                             <span className="text-sm font-black text-blue-600">{leaveBal}/{leaveEnt}</span>
                         </div>
                         <Progress value={leavePercentage} className="h-1.5 mb-4" />
-                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none">Days remaining for fiscal year</p>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none">Days remaining for member</p>
                     </div>
                     <div className="pt-2 border-t border-dashed flex justify-between items-center">
-                        <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Intelligence Vault:</span>
-                        <span className="text-[10px] font-black text-blue-600">{documents?.length || 0} Assets</span>
+                        <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Stored Assets:</span>
+                        <span className="text-[10px] font-black text-blue-600">{documents?.length || 0} Files</span>
                     </div>
                 </Card>
 
@@ -381,7 +390,7 @@ export default function ProfilePage() {
                         </p>
                     </div>
                     <div className="pt-2 border-t border-dashed">
-                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Next Mission Dispatch:</p>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Next Objective Cycle:</p>
                         <p className="text-[9px] font-black text-purple-700 uppercase">
                             {employee.employmentType === 'Intern' ? "Based on Performance" : "Scheduled cycle"}
                         </p>
@@ -392,12 +401,11 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
                 <div className="lg:col-span-12">
                     <Card className="border-none shadow-lg rounded-2xl bg-indigo-700 text-white overflow-hidden">
-                        <CardContent className="p-4 h-full flex items-center justify-between gap-4">
+                        <CardContent className="p-3 h-full flex items-center justify-between gap-4">
                             <div className="space-y-1">
                                 <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><Globe className="size-3.5" /> Explore MarsOS</h3>
-                                <p className="text-[9px] text-white/70 uppercase font-bold tracking-tight">Access the high-fidelity operations environment.</p>
                             </div>
-                            <Button asChild size="sm" className="rounded-xl bg-white text-indigo-700 hover:bg-white/90 font-black uppercase text-[9px] tracking-widest px-6 shadow-xl">
+                            <Button asChild size="sm" className="rounded-xl bg-white text-indigo-700 hover:bg-white/90 font-black uppercase text-[9px] tracking-widest px-6 shadow-xl h-8">
                                 <Link href="https://fortumars.com/os.html" target="_blank">Activate Environment</Link>
                             </Button>
                         </CardContent>
@@ -408,7 +416,7 @@ export default function ProfilePage() {
                     <Tabs defaultValue="overview" className="space-y-4">
                         <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-xl p-1 h-auto gap-2">
                             {["Overview", "Attendance", "Documents", "Assets"].map(tab => (
-                                <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white px-6 py-2 font-black uppercase text-[9px] tracking-[0.2em] transition-all">
+                                <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white px-6 py-2 font-black uppercase text-[9px] tracking-[0.2em] transition-all bg-transparent border-none">
                                     {tab}
                                 </TabsTrigger>
                             ))}
@@ -420,7 +428,7 @@ export default function ProfilePage() {
                                     <h3 className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-[0.2em]">Activity Timeline</h3>
                                     <div className="space-y-4">
                                         {userReports.length > 0 ? userReports.map(r => (
-                                            <TimelineItem key={r.id} icon={FileText} title={r.reportType} time={r.date?.toDate ? format(r.date.toDate(), 'dd MMM') : 'N/A'} desc={r.employeeDepartment} color="bg-primary/10 text-primary" />
+                                            <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={r.date?.toDate ? format(r.date.toDate(), 'dd MMM') : 'N/A'} desc={`Shift finalized for ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
                                         )) : <p className="text-[9px] text-center opacity-30 font-black uppercase py-6 tracking-widest flex flex-col items-center gap-2"><Activity className="size-6"/> No activity detected</p>}
                                     </div>
                                     {userReports.length > 0 && <Button variant="ghost" className="w-full h-8 text-[8px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-xl" asChild><Link href="/dashboard/reports">View All</Link></Button>}
@@ -564,3 +572,4 @@ function InfoRow({ label, value }: { label: string, value: string }) {
         </div>
     );
 }
+
