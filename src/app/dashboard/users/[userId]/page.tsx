@@ -135,7 +135,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   return (
     <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-20 space-y-6 font-jakarta">
         <div className="flex flex-col gap-1 mb-2">
-            <h1 className="text-2xl font-black tracking-tighter">
+            <h1 className="text-2xl font-black tracking-tighter text-foreground/90">
                 Personnel Audit: {user.firstName} {user.lastName}
             </h1>
         </div>
@@ -143,7 +143,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden ring-1 ring-border/50">
             <CardContent className="p-6 md:p-8">
                 <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start">
-                    <Avatar className="h-24 w-24 md:h-32 md:w-32 rounded-full border-4 border-white shadow-xl ring-1 ring-border flex items-center justify-center bg-muted">
+                    <Avatar className="h-24 w-24 md:h-28 md:w-28 rounded-full border-4 border-white shadow-xl ring-1 ring-border flex items-center justify-center bg-muted">
                         {user.avatar?.startsWith('http') ? (
                             <AvatarImage src={user.avatar} className="object-cover" />
                         ) : (
@@ -159,7 +159,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     <Badge className="bg-primary/10 text-primary border-none rounded-full px-2 py-0 h-5 text-[8px] font-black uppercase tracking-widest">TACTICAL AUDIT</Badge>
                                 </div>
                                 <p className="text-sm font-semibold text-muted-foreground">{user.jobTitle}</p>
-                                <p className="text-[9px] font-black uppercase text-primary/60 tracking-widest">{user.department} Unit</p>
+                                <p className="text-[9px] font-black uppercase text-primary/60 tracking-widest">{user.department} Designation</p>
                             </div>
                             <div className="flex gap-2">
                                 {isAdmin && <Button onClick={handleExportPdf} className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest shadow-md">Export PDF</Button>}
@@ -173,7 +173,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <DetailItem icon={Mail} label="Email Address" value={user.email} />
                             <DetailItem icon={Phone} label="Phone Line" value={user.phoneNumber || "N/A"} />
                             <DetailItem icon={Building2} label="Work Location" value={branchName} />
-                            <DetailItem icon={CalendarDays} label="Joined Operational" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
+                            <DetailItem icon={CalendarDays} label="Joined" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
                             <DetailItem icon={Clock} label="Experience" value={experience} />
                             <DetailItem icon={ShieldCheck} label="System Level" value={user.role} />
                         </div>

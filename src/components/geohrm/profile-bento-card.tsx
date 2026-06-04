@@ -7,7 +7,7 @@ import { doc, collection, query } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { format, differenceInDays } from 'date-fns';
-import { MapPin } from 'lucide-react';
+import { MapPin, ShieldCheck, CalendarDays, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function ProfileBentoCard() {
@@ -21,9 +21,9 @@ export function ProfileBentoCard() {
     const { data: branches } = useCollection<any>(branchesQuery);
 
     const branchName = React.useMemo(() => {
-        if (!branches || !employee?.branchId) return "Office";
+        if (!branches || !employee?.branchId) return "Office Hub";
         const b = branches.find((b: any) => b.id === employee.branchId);
-        return b ? b.name : "Office";
+        return b ? b.name : "Office Hub";
     }, [branches, employee?.branchId]);
 
     const experience = React.useMemo(() => {
@@ -34,7 +34,11 @@ export function ProfileBentoCard() {
     }, [employee]);
 
     if (isLoading || !employee) {
-        return <div className="h-24 bg-white/50 animate-pulse rounded-xl border-none ring-1 ring-border/50" />;
+        return (
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden ring-1 ring-border/50 h-[220px]">
+                <div className="w-full h-full bg-muted/20 animate-pulse" />
+            </Card>
+        );
     }
 
     const isUrl = employee.avatar && employee.avatar.startsWith('http');
@@ -42,43 +46,53 @@ export function ProfileBentoCard() {
     const joinDate = employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yy') : 'N/A';
 
     return (
-        <Card className="border-none shadow-sm rounded-xl bg-white overflow-hidden font-jakarta ring-1 ring-border/50">
-            <CardContent className="p-4 lg:p-8 h-full flex flex-col md:flex-row items-center justify-between gap-6 lg:gap-12">
-                <div className="flex items-center gap-4 lg:gap-8">
-                    <Avatar className="h-16 w-16 lg:h-24 lg:w-24 rounded-2xl ring-2 ring-border shadow-sm">
-                        {employee.avatar ? (
-                            isUrl ? <AvatarImage src={employee.avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 text-3xl lg:text-5xl font-black">{employee.avatar}</div>
-                        ) : <AvatarFallback className="text-2xl lg:text-4xl font-black bg-primary/10 text-primary">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>}
-                    </Avatar>
-                    <div className="min-w-0 text-center md:text-left">
-                        <div className="flex items-center gap-3 mb-1.5 justify-center md:justify-start">
-                            <h2 className="text-xl lg:text-3xl font-black tracking-tighter truncate leading-none">
-                                {employee.firstName} {employee.lastName}
-                            </h2>
-                            <Badge className="bg-green-500 text-white border-none rounded-full px-2.5 h-4 lg:h-6 text-[10px] lg:text-xs font-black uppercase tracking-widest">Active</Badge>
+        <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden font-jakarta ring-1 ring-border/50 group transition-all duration-500 hover:shadow-primary/5">
+            <CardContent className="p-0">
+                <div className="flex flex-col md:flex-row items-stretch">
+                    {/* Primary Identity Section */}
+                    <div className="flex-1 p-8 lg:p-12 flex flex-col md:flex-row items-center gap-8 lg:gap-12 border-b md:border-b-0 md:border-r border-dashed border-border/50">
+                        <div className="relative shrink-0">
+                            <Avatar className="h-28 w-24 lg:h-36 lg:w-36 rounded-[2.5rem] ring-4 ring-white shadow-2xl transition-transform duration-500 group-hover:scale-105">
+                                {employee.avatar ? (
+                                    isUrl ? <AvatarImage src={employee.avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 text-4xl lg:text-6xl font-black">{employee.avatar}</div>
+                                ) : <AvatarFallback className="text-3xl lg:text-5xl font-black bg-primary/10 text-primary">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>}
+                            </Avatar>
+                            <Badge className="absolute -bottom-2 -right-2 h-7 px-3 bg-green-500 text-white border-4 border-white shadow-lg rounded-full font-black text-[10px] uppercase tracking-widest">Active</Badge>
                         </div>
-                        <p className="text-xs lg:text-lg font-bold text-muted-foreground">{employee.jobTitle}</p>
-                        <div className="flex items-center gap-2 mt-3 text-[10px] lg:text-sm font-black text-muted-foreground/50 uppercase tracking-widest">
-                            <MapPin className="size-3 lg:size-4" /> {branchName} • {employee.department}
+
+                        <div className="flex-1 text-center md:text-left space-y-4 min-w-0">
+                            <div className="space-y-1">
+                                <h2 className="text-3xl lg:text-6xl font-black tracking-tighter truncate leading-none text-foreground">
+                                    {employee.firstName} {employee.lastName}
+                                </h2>
+                                <p className="text-lg lg:text-2xl font-bold text-muted-foreground/80">{employee.jobTitle}</p>
+                            </div>
+                            <div className="flex items-center justify-center md:justify-start gap-2.5 text-[11px] lg:text-sm font-black text-primary/60 uppercase tracking-[0.2em]">
+                                <MapPin className="size-3.5 lg:size-4" /> {branchName} • {employee.department}
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div className="flex gap-10 lg:gap-20 pr-2">
-                    <StatusInfo label="Tier" value={roleName === 'CEO/Admin' ? 'CEO' : roleName} color="text-indigo-600" />
-                    <StatusInfo label="Joined" value={joinDate} color="text-emerald-600" />
-                    <StatusInfo label="Days" value={experience} color="text-primary" />
+
+                    {/* Meta Stats Section */}
+                    <div className="w-full md:w-auto p-8 lg:p-12 bg-muted/5 flex flex-row md:flex-col justify-around md:justify-center gap-6 lg:gap-10">
+                        <StatusInfo icon={ShieldCheck} label="Level" value={roleName === 'CEO/Admin' ? 'CEO' : roleName} color="text-indigo-600" />
+                        <StatusInfo icon={CalendarDays} label="Joined" value={joinDate} color="text-emerald-600" />
+                        <StatusInfo icon={Clock} label="Tenure" value={experience} color="text-primary" />
+                    </div>
                 </div>
             </CardContent>
         </Card>
     );
 }
 
-function StatusInfo({ label, value, color }: any) {
+function StatusInfo({ icon: Icon, label, value, color }: any) {
     return (
-        <div className="flex flex-col text-center md:text-right">
-            <span className="text-[9px] lg:text-xs font-black uppercase text-muted-foreground/40 tracking-widest mb-1.5">{label}</span>
-            <span className={cn("text-sm lg:text-2xl font-black tracking-tighter", color)}>{value}</span>
+        <div className="flex flex-col text-center md:text-left group/item">
+            <div className="flex items-center gap-2 mb-1 justify-center md:justify-start opacity-40 group-hover/item:opacity-100 transition-opacity">
+                <Icon className="size-3 lg:size-3.5" />
+                <span className="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em]">{label}</span>
+            </div>
+            <span className={cn("text-base lg:text-2xl font-black tracking-tighter leading-none whitespace-nowrap", color)}>{value}</span>
         </div>
     );
 }

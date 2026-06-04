@@ -16,7 +16,7 @@ import {
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
     FileDown, Target, ImageIcon,
-    Table as TableIcon, Laptop, Sparkles, Globe
+    Sparkles, Globe, Laptop, ListTodo
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -241,7 +241,7 @@ export default function ProfilePage() {
                 <CardContent className="p-4 md:p-6">
                     <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                         <div className="relative group cursor-pointer" onClick={() => setIsAvatarDialogOpen(true)}>
-                            <Avatar className="h-16 w-16 md:h-24 md:w-24 rounded-full border-2 border-white shadow-md ring-1 ring-border">
+                            <Avatar className="h-16 w-16 md:h-20 md:w-20 rounded-full border-2 border-white shadow-md ring-1 ring-border">
                                 {employee.avatar?.startsWith('http') ? (
                                     <AvatarImage src={employee.avatar} className="object-cover" />
                                 ) : (
@@ -251,38 +251,38 @@ export default function ProfilePage() {
                                     <Camera className="size-5 text-white" />
                                 </div>
                             </Avatar>
-                            <div className={cn("absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white shadow-sm", operationalStatus === 'Active' ? 'bg-green-500' : 'bg-slate-300')} />
+                            <div className={cn("absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm", operationalStatus === 'Active' ? 'bg-green-500' : 'bg-slate-300')} />
                         </div>
 
-                        <div className="flex-1 text-center md:text-left space-y-4 w-full">
+                        <div className="flex-1 text-center md:text-left space-y-3 w-full">
                             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-3 justify-center md:justify-start">
-                                        <h2 className="text-lg md:text-2xl font-black tracking-tighter">{employee.firstName} {employee.lastName}</h2>
-                                        <Badge className="bg-primary/10 text-primary border-none rounded-full px-2 py-0 h-5 text-[8px] font-black uppercase tracking-widest">{operationalStatus}</Badge>
+                                        <h2 className="text-lg md:text-xl font-black tracking-tighter">{employee.firstName} {employee.lastName}</h2>
+                                        <Badge className="bg-primary/10 text-primary border-none rounded-full px-2 py-0 h-4 text-[7px] font-black uppercase tracking-widest">{operationalStatus}</Badge>
                                     </div>
-                                    <p className="text-sm font-semibold text-muted-foreground/80">{employee.jobTitle}</p>
-                                    <p className="text-[9px] font-black uppercase text-primary tracking-[0.2em]">{employee.department}</p>
+                                    <p className="text-xs font-bold text-muted-foreground/80">{employee.jobTitle}</p>
+                                    <p className="text-[8px] font-black uppercase text-primary tracking-[0.2em]">{employee.department}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-xl h-9 px-4 text-[9px] font-black uppercase tracking-[0.1em] shadow-sm border-none ring-1 ring-border/50">Edit Profile</Button>
+                                    <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-xl h-8 px-3 text-[8px] font-black uppercase tracking-[0.1em] shadow-sm border-none ring-1 ring-border/50">Edit Profile</Button>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="sm" className="rounded-xl h-9 px-3 text-[9px] font-black uppercase tracking-[0.1em] bg-white border-none ring-1 ring-border/50">More <MoreHorizontal className="size-4 ml-1" /></Button>
+                                            <Button variant="outline" size="sm" className="rounded-xl h-8 px-2 text-[8px] font-black uppercase tracking-[0.1em] bg-white border-none ring-1 ring-border/50">More <MoreHorizontal className="size-3.5 ml-1" /></Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="rounded-2xl p-2 w-48 border-none shadow-2xl">
-                                            <DropdownMenuItem onClick={handleDownloadIdCard} className="font-black text-[9px] uppercase tracking-widest cursor-pointer gap-2 py-3"><Download className="size-4"/> Save ID Card</DropdownMenuItem>
+                                        <DropdownMenuContent align="end" className="rounded-2xl p-2 w-44 border-none shadow-2xl">
+                                            <DropdownMenuItem onClick={handleDownloadIdCard} className="font-black text-[8px] uppercase tracking-widest cursor-pointer gap-2 py-2.5"><Download className="size-3.5"/> Save ID Card</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t border-dashed border-border/50">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3 border-t border-dashed border-border/50">
                                 <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${employee.id.slice(0, 8).toUpperCase()}`} />
-                                <DetailItem icon={Mail} label="Email Directive" value={employee.email} />
-                                <DetailItem icon={Phone} label="Phone Line" value={employee.phoneNumber || "N/A"} />
+                                <DetailItem icon={Mail} label="Email" value={employee.email} />
+                                <DetailItem icon={Phone} label="Phone" value={employee.phoneNumber || "N/A"} />
                                 <DetailItem icon={MapPin} label="Work Location" value={branchName} />
-                                <DetailItem icon={CalendarDays} label="Joined Operational" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
+                                <DetailItem icon={CalendarDays} label="Joined" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
                                 <DetailItem icon={Clock} label="Experience" value={experience} />
                             </div>
                         </div>
@@ -292,20 +292,20 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <MetricCard label="Attendance (MTD)" value={`${monthlyStats.percentage}%`} sub={`${monthlyStats.count}/26 Days Active`} icon={UserCheck} color="text-green-600" bg="bg-green-50" />
-                <MetricCard label="Intelligence Vault" value={documents?.length || 0} sub="Records Stored" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
-                <MetricCard label="Account Authority" value={employee.role === 'CEO/Admin' ? 'Executive' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
-                <MetricCard label="Tactical Hours" value={`${monthlyStats.hours}h`} sub="MTD Shift Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
+                <MetricCard label="Vault" value={documents?.length || 0} sub="Records Stored" icon={FileBox} color="text-blue-600" bg="bg-blue-50" />
+                <MetricCard label="Level" value={employee.role === 'CEO/Admin' ? 'Executive' : 'Tactical'} sub="System Permission" icon={ShieldCheck} color="text-orange-600" bg="bg-orange-50" />
+                <MetricCard label="Hours" value={`${monthlyStats.hours}h`} sub="MTD Shift Volume" icon={Clock} color="text-purple-600" bg="bg-purple-50" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div className="lg:col-span-4">
                     <Card className="border-none shadow-sm rounded-2xl bg-indigo-700 text-white overflow-hidden h-full">
-                        <CardContent className="p-6 h-full flex flex-col justify-between space-y-4">
-                            <div className="space-y-2">
-                                <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Globe className="size-4" /> Explore MarsOS</h3>
-                                <p className="text-[10px] text-white/70 uppercase leading-relaxed font-bold">Access the next-generation operating system interface for high-fidelity operations.</p>
+                        <CardContent className="p-5 h-full flex flex-col justify-between space-y-4">
+                            <div className="space-y-1.5">
+                                <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Globe className="size-3.5" /> Explore MarsOS</h3>
+                                <p className="text-[9px] text-white/70 uppercase leading-relaxed font-bold">Access the next-generation operating system interface.</p>
                             </div>
-                            <Button asChild className="w-full h-10 rounded-xl bg-white text-indigo-700 hover:bg-white/90 font-black uppercase text-[10px] tracking-widest shadow-xl">
+                            <Button asChild className="w-full h-9 rounded-xl bg-white text-indigo-700 hover:bg-white/90 font-black uppercase text-[9px] tracking-widest shadow-xl">
                                 <Link href="https://fortumars.com/os.html" target="_blank">Activate OS Environment</Link>
                             </Button>
                         </CardContent>
@@ -314,9 +314,9 @@ export default function ProfilePage() {
 
                 <div className="lg:col-span-8">
                     <Tabs defaultValue="overview" className="space-y-4">
-                        <TabsList className="w-full justify-start bg-transparent border-none p-0 h-auto gap-12">
+                        <TabsList className="w-full justify-start bg-transparent border-none p-0 h-auto gap-8">
                             {["Overview", "Attendance", "Documents", "Assets"].map(tab => (
-                                <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary p-0 pb-2 bg-transparent font-black uppercase text-[10px] tracking-[0.2em]">
+                                <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary p-0 pb-1.5 bg-transparent font-black uppercase text-[9px] tracking-[0.2em]">
                                     {tab}
                                 </TabsTrigger>
                             ))}
@@ -324,31 +324,19 @@ export default function ProfilePage() {
 
                         <TabsContent value="overview" className="mt-0 space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Card className="border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
-                                    <h3 className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Activity Timeline</h3>
-                                    <div className="space-y-6">
+                                <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4">
+                                    <h3 className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Activity Timeline</h3>
+                                    <div className="space-y-4">
                                         {userReports.length > 0 ? userReports.map(r => (
                                             <TimelineItem key={r.id} icon={FileText} title={r.reportType} time={r.date?.toDate ? format(r.date.toDate(), 'dd MMM') : 'N/A'} desc={r.employeeDepartment} color="bg-primary/10 text-primary" />
-                                        )) : <p className="text-[10px] text-center opacity-30 font-bold uppercase py-10">No activity detected</p>}
+                                        )) : <p className="text-[9px] text-center opacity-30 font-bold uppercase py-6">No activity detected</p>}
                                     </div>
-                                    <Button variant="ghost" className="w-full h-8 text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-lg" asChild><Link href="/dashboard/reports">View All</Link></Button>
+                                    <Button variant="ghost" className="w-full h-7 text-[8px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-lg" asChild><Link href="/dashboard/reports">View All</Link></Button>
                                 </Card>
                                 <div className="space-y-4">
-                                    <Card className="border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
-                                        <h3 className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Recent Assets</h3>
-                                        <div className="space-y-3">
-                                            {documents && documents.length > 0 ? documents.slice(0, 3).map(doc => (
-                                                <div key={doc.id} className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl border border-transparent hover:border-primary/20 transition-all">
-                                                    <FileBox className="size-4 text-blue-600" />
-                                                    <p className="text-[11px] font-bold truncate">{doc.title}</p>
-                                                </div>
-                                            )) : <p className="text-[10px] text-center opacity-30 font-bold uppercase py-4">Vault Access Empty</p>}
-                                        </div>
-                                        <Button variant="ghost" className="w-full h-8 text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 rounded-lg" asChild><Link href="/dashboard/documents">Vault Access</Link></Button>
-                                    </Card>
-                                    <Card className="border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
-                                        <h3 className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Employment Details</h3>
-                                        <div className="space-y-3">
+                                    <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4">
+                                        <h3 className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Employment Details</h3>
+                                        <div className="space-y-2.5">
                                             <InfoRow label="Designation" value={employee.department} />
                                             <InfoRow label="Work Location" value={branchName} />
                                             <InfoRow label="Work Schedule" value={employee.shiftType || 'General Shift'} />
@@ -362,49 +350,49 @@ export default function ProfilePage() {
                         <TabsContent value="attendance">
                             <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden ring-1 ring-border/50">
                                 <Table>
-                                    <TableHeader className="bg-muted/5 border-b"><TableRow><TableHead className="text-[9px] font-black px-6 uppercase tracking-widest">Mission Date</TableHead><TableHead className="text-[9px] font-black uppercase tracking-widest">Time Sync</TableHead><TableHead className="text-[9px] font-black text-right px-6 uppercase tracking-widest">Verification</TableHead></TableRow></TableHeader>
+                                    <TableHeader className="bg-muted/5 border-b"><TableRow><TableHead className="text-[8px] font-black px-4 uppercase tracking-widest">Mission Date</TableHead><TableHead className="text-[8px] font-black uppercase tracking-widest">Time Sync</TableHead><TableHead className="text-[8px] font-black text-right px-4 uppercase tracking-widest">Map</TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {attendanceData && attendanceData.length > 0 ? attendanceData.map((rec, i) => (
                                             <TableRow key={i} className="border-border/50">
-                                                <TableCell className="text-xs font-black px-6 uppercase">{format(rec.checkInTime.toDate(), 'dd MMM yyyy')}</TableCell>
-                                                <TableCell className="text-xs font-mono font-bold text-primary">{format(rec.checkInTime.toDate(), 'p')}</TableCell>
-                                                <TableCell className="text-right px-6">
-                                                    {rec.locationCheckInLatitude && <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="inline-flex p-2 rounded-lg bg-primary/5 text-primary hover:bg-primary/10 transition-all"><MapPin className="size-4" /></Link>}
+                                                <TableCell className="text-[10px] font-black px-4 uppercase">{format(rec.checkInTime.toDate(), 'dd MMM yyyy')}</TableCell>
+                                                <TableCell className="text-[10px] font-mono font-bold text-primary">{format(rec.checkInTime.toDate(), 'p')}</TableCell>
+                                                <TableCell className="text-right px-4">
+                                                    {rec.locationCheckInLatitude && <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="inline-flex p-1.5 rounded-lg bg-primary/5 text-primary hover:bg-primary/10 transition-all"><MapPin className="size-3" /></Link>}
                                                 </TableCell>
                                             </TableRow>
-                                        )) : <TableRow><TableCell colSpan={3} className="h-40 text-center text-[10px] font-black uppercase opacity-30">Identity Stamped Registry Clear</TableCell></TableRow>}
+                                        )) : <TableRow><TableCell colSpan={3} className="h-32 text-center text-[9px] font-black uppercase opacity-30">Registry Clear</TableCell></TableRow>}
                                     </TableBody>
                                 </Table>
                             </Card>
                         </TabsContent>
-                        
+
                         <TabsContent value="documents">
-                            <Card className="border-none shadow-sm rounded-2xl bg-white p-6">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Card className="border-none shadow-sm rounded-2xl bg-white p-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {documents && documents.length > 0 ? documents.map(doc => (
-                                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center gap-4 p-4 bg-muted/20 rounded-2xl hover:bg-white hover:shadow-lg hover:border-primary/20 border-2 border-transparent transition-all">
-                                            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><FileBox className="size-5" /></div>
-                                            <span className="text-xs font-black truncate uppercase tracking-tight">{doc.title}</span>
+                                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center gap-3 p-3 bg-muted/20 rounded-2xl hover:bg-white hover:shadow-md hover:border-primary/20 border border-transparent transition-all">
+                                            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><FileBox className="size-4" /></div>
+                                            <span className="text-[10px] font-black truncate uppercase tracking-tight">{doc.title}</span>
                                         </Link>
-                                    )) : <div className="col-span-full py-20 text-center opacity-30 font-black uppercase text-[10px] tracking-widest">No assets found</div>}
+                                    )) : <div className="col-span-full py-16 text-center opacity-30 font-black uppercase text-[9px] tracking-widest">No assets found</div>}
                                 </div>
                             </Card>
                         </TabsContent>
 
                         <TabsContent value="assets">
-                            <Card className="border-none shadow-sm rounded-2xl bg-white p-6">
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <Card className="border-none shadow-sm rounded-2xl bg-white p-5">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                     {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
-                                        <div key={asset.id} className="p-4 bg-muted/20 rounded-2xl space-y-4 hover:shadow-lg transition-all border border-transparent hover:border-primary/20">
+                                        <div key={asset.id} className="p-3 bg-muted/20 rounded-2xl space-y-3 hover:shadow-md transition-all border border-transparent hover:border-primary/20">
                                             <div className="aspect-square bg-muted rounded-xl flex items-center justify-center overflow-hidden border border-border/50">
-                                                {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Laptop className="size-8 opacity-20" />}
+                                                {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full" /> : <Laptop className="size-6 opacity-20" />}
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-black truncate uppercase tracking-tighter">{asset.name}</p>
-                                                <p className="text-[8px] font-bold text-muted-foreground uppercase">{asset.category}</p>
+                                                <p className="text-[9px] font-black truncate uppercase tracking-tighter">{asset.name}</p>
+                                                <p className="text-[7px] font-bold text-muted-foreground uppercase">{asset.category}</p>
                                             </div>
                                         </div>
-                                    )) : <div className="col-span-full py-20 text-center opacity-30 font-black uppercase text-[10px] tracking-widest flex flex-col items-center gap-4"><Laptop className="size-10" /> Fleet Hardware Clear</div>}
+                                    )) : <div className="col-span-full py-16 text-center opacity-30 font-black uppercase text-[9px] tracking-widest flex flex-col items-center gap-3"><Laptop className="size-8" /> Fleet Hardware Clear</div>}
                                 </div>
                             </Card>
                         </TabsContent>
@@ -413,30 +401,30 @@ export default function ProfilePage() {
             </div>
 
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
-                <DialogContent className="rounded-[2rem] p-8 sm:max-w-md border-none shadow-2xl">
-                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Modify Identity</DialogTitle></DialogHeader>
-                    <Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">First Name</Label><FormControl><Input {...field} className="h-11 rounded-xl" /></FormControl></FormItem>)} />
-                            <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Last Name</Label><FormControl><Input {...field} className="h-11 rounded-xl" /></FormControl></FormItem>)} />
+                <DialogContent className="rounded-[2rem] p-6 sm:max-w-md border-none shadow-2xl">
+                    <DialogHeader><DialogTitle className="text-lg font-black uppercase tracking-tighter text-primary">Modify Identity</DialogTitle></DialogHeader>
+                    <Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 pt-3">
+                        <div className="grid grid-cols-2 gap-3">
+                            <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[8px] uppercase font-black text-primary">First Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[8px] uppercase font-black text-primary">Last Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
                         </div>
-                        <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Phone Line</Label><FormControl><Input {...field} className="h-11 rounded-xl" /></FormControl></FormItem>)} />
-                        <Button type="submit" className="w-full h-12 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>Synchronize Changes</Button>
+                        <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><Label className="text-[8px] uppercase font-black text-primary">Phone Line</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                        <Button type="submit" className="w-full h-11 rounded-full font-black uppercase text-[9px] tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>Synchronize Changes</Button>
                     </form></Form>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
-                <DialogContent className="rounded-[2rem] p-8 sm:max-w-xs border-none shadow-2xl">
-                    <DialogHeader><DialogTitle className="text-lg font-black uppercase text-primary">Update Visual ID</DialogTitle></DialogHeader>
-                    <div className="py-6 space-y-6">
+                <DialogContent className="rounded-[2rem] p-6 sm:max-w-xs border-none shadow-2xl">
+                    <DialogHeader><DialogTitle className="text-base font-black uppercase text-primary">Update Visual ID</DialogTitle></DialogHeader>
+                    <div className="py-4 space-y-5">
                         <div className="relative">
                             <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={(e) => e.target.files?.[0] && handleAvatarImageUpload(e.target.files[0])} disabled={isUploadingAvatar} />
-                            <Button variant="outline" className="w-full h-16 border-2 border-dashed border-primary/20 bg-primary/5 rounded-2xl text-[10px] uppercase font-black" disabled={isUploadingAvatar}>{isUploadingAvatar ? "Transmitting..." : "Upload Asset"}</Button>
+                            <Button variant="outline" className="w-full h-14 border-2 border-dashed border-primary/20 bg-primary/5 rounded-2xl text-[9px] uppercase font-black" disabled={isUploadingAvatar}>{isUploadingAvatar ? "Transmitting..." : "Upload Asset"}</Button>
                         </div>
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-4 gap-2">
                             {emojiCategories.map(emoji => (
-                                <button key={emoji} onClick={() => handleAvatarEmojiUpdate(emoji)} className="text-2xl p-2 rounded-xl hover:bg-primary/10 transition-all border border-transparent hover:border-primary/20 bg-muted/20">{emoji}</button>
+                                <button key={emoji} onClick={() => handleAvatarEmojiUpdate(emoji)} className="text-xl p-2 rounded-xl hover:bg-primary/10 transition-all border border-transparent hover:border-primary/20 bg-muted/20">{emoji}</button>
                             ))}
                         </div>
                     </div>
@@ -448,11 +436,11 @@ export default function ProfilePage() {
 
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
-        <div className="flex items-start gap-3 min-w-0">
-            <div className="p-2 rounded-xl bg-primary/5 text-primary/60 shrink-0"><Icon className="size-4" /></div>
+        <div className="flex items-start gap-2.5 min-w-0">
+            <div className="p-1.5 rounded-lg bg-primary/5 text-primary/60 shrink-0"><Icon className="size-3.5" /></div>
             <div className="min-w-0">
-                <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none mb-1 tracking-widest">{label}</p>
-                <p className="text-xs font-bold truncate text-foreground/80">{value}</p>
+                <p className="text-[7px] font-black uppercase text-muted-foreground/60 leading-none mb-1 tracking-widest">{label}</p>
+                <p className="text-[10px] font-bold truncate text-foreground/80 uppercase">{value}</p>
             </div>
         </div>
     );
@@ -460,12 +448,12 @@ function DetailItem({ icon: Icon, label, value }: any) {
 
 function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-[1.5rem] bg-white p-5 space-y-3 ring-1 ring-border/50 hover:shadow-xl transition-all">
-            <div className={cn("p-2 rounded-xl w-fit shadow-sm", bg, color)}><Icon className="size-4" /></div>
+        <Card className="border-none shadow-sm rounded-[1.25rem] bg-white p-4 space-y-2.5 ring-1 ring-border/50 hover:shadow-xl transition-all">
+            <div className={cn("p-1.5 rounded-lg w-fit shadow-sm", bg, color)}><Icon className="size-3.5" /></div>
             <div>
-                <p className="text-[9px] font-black uppercase text-muted-foreground/50 leading-none mb-1.5 tracking-[0.15em]">{label}</p>
-                <p className="text-2xl font-black tracking-tighter leading-none">{value}</p>
-                <p className="text-[9px] font-bold text-muted-foreground/40 mt-2 uppercase leading-none">{sub}</p>
+                <p className="text-[8px] font-black uppercase text-muted-foreground/50 leading-none mb-1 tracking-[0.15em]">{label}</p>
+                <p className="text-xl font-black tracking-tighter leading-none">{value}</p>
+                <p className="text-[8px] font-bold text-muted-foreground/40 mt-1.5 uppercase leading-none">{sub}</p>
             </div>
         </Card>
     );
@@ -473,13 +461,13 @@ function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
 
 function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
-        <div className="flex gap-4 items-start relative">
-            <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0 z-10 shadow-sm", color)}><Icon className="size-3" /></div>
-            <div className="space-y-1">
-                <p className="font-black text-[10px] uppercase tracking-tight">{title}</p>
+        <div className="flex gap-3 items-start relative text-[10px]">
+            <div className={cn("h-5 w-5 rounded-lg flex items-center justify-center shrink-0 z-10 shadow-sm", color)}><Icon className="size-2.5" /></div>
+            <div className="space-y-0.5">
+                <p className="font-black uppercase tracking-tight">{title}</p>
                 <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{time}</span>
-                    <Badge variant="outline" className="h-3 px-1 text-[7px] font-black uppercase border-none bg-muted/20">{desc}</Badge>
+                    <span className="text-[7px] font-black text-muted-foreground/40 uppercase tracking-widest">{time}</span>
+                    <Badge variant="outline" className="h-3 px-1 text-[6px] font-black uppercase border-none bg-muted/20">{desc}</Badge>
                 </div>
             </div>
         </div>
@@ -488,9 +476,9 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
 
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <div className="flex items-center justify-between py-2 border-b border-dashed border-border/50 last:border-none">
-            <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest">{label}</span>
-            <span className="text-[11px] font-bold text-foreground/80">{value}</span>
+        <div className="flex items-center justify-between py-1.5 border-b border-dashed border-border/50 last:border-none">
+            <span className="text-[8px] font-black uppercase text-muted-foreground/50 tracking-widest">{label}</span>
+            <span className="text-[10px] font-bold text-foreground/80 uppercase">{value}</span>
         </div>
     );
 }
