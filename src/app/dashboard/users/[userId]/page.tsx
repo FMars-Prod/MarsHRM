@@ -8,8 +8,8 @@ import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } fro
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, differenceInSeconds, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday, startOfDay, isBefore } from 'date-fns';
-import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck as UserCheckIcon, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon, ChevronRight, CalendarClock, FileCheck } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday, startOfDay, isBefore } from 'date-fns';
+import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon, ChevronRight, CalendarClock, FileCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -204,7 +204,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
              <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
                 <div className="flex justify-between items-start">
-                    <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm"><UserCheckIcon className="size-4" /></div>
+                    <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm"><UserCheck className="size-4" /></div>
                     <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Audit Sync</Badge>
                 </div>
                 <div>
@@ -465,4 +465,5 @@ function InfoRow({ label, value }: { label: string, value: string }) {
             <span className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">{label}</span>
             <span className="text-[11px] font-black text-foreground/80 uppercase text-right pl-3">{value}</span>
         </div>
+    );
 }
