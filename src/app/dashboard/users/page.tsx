@@ -103,6 +103,11 @@ export default function UsersPage() {
                 (updateData as any).lastReviewDate = serverTimestamp();
             }
 
+            // Handle payroll date if payroll amount changed
+            if (values.payrollAmount !== editingUser.payrollAmount) {
+                (updateData as any).payrollDate = serverTimestamp();
+            }
+
             batch.update(userRef, updateData);
             
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
@@ -541,7 +546,7 @@ export default function UsersPage() {
                             <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
                                 <AlertDialogHeader>
                                     <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Purge Personnel Record?</AlertDialogTitle>
-                                    <AlertDialogDescription className="text-sm font-medium">This will remove {u.firstName}'s entry from the tactical registry. Access credentials will be blocked.</AlertDialogDescription>
+                                    <AlertDialogDescription>This will remove {u.firstName}'s entry from the tactical registry. Access credentials will be blocked.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>

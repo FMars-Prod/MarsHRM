@@ -301,9 +301,10 @@ export default function ProfilePage() {
                         <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">MTD Sync</Badge>
                     </div>
                     <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Attendance</p>
-                            <span className="text-sm font-black text-green-600">{attendanceStats.percentage}%</span>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Attendance</p>
+                        <div className="flex items-baseline gap-1 mb-2">
+                            <span className="text-2xl font-black text-green-600">{attendanceStats.present + attendanceStats.late}</span>
+                            <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">/ {attendanceStats.present + attendanceStats.late + attendanceStats.absent} Days</span>
                         </div>
                         <Progress value={attendanceStats.percentage} className="h-1.5 mb-4" />
                         <div className="grid grid-cols-3 gap-1">
@@ -342,7 +343,7 @@ export default function ProfilePage() {
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-orange-50 text-orange-600 shadow-sm transition-transform group-hover:scale-110"><Zap className="size-4" /></div>
-                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">Integrity</Badge>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Integrity</Badge>
                     </div>
                     <div>
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Performance Audit</p>
@@ -368,7 +369,7 @@ export default function ProfilePage() {
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
                     <div className="flex justify-between items-start">
                         <div className="p-2 rounded-xl bg-purple-50 text-purple-600 shadow-sm transition-transform group-hover:scale-110"><FileCheck className="size-4" /></div>
-                        <Badge variant="outline" className="text-[7px] font-black uppercase tracking-widest bg-muted/20 border-none">Ledger</Badge>
+                        <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Ledger</Badge>
                     </div>
                     <div>
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Payroll Status</p>

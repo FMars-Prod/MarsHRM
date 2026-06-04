@@ -201,9 +201,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Audit Sync</Badge>
                 </div>
                 <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground">Attendance</p>
-                        <span className="text-sm font-black text-green-600">{attendanceStats.percentage}%</span>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Attendance</p>
+                    <div className="flex items-baseline gap-1 mb-2">
+                        <span className="text-2xl font-black text-green-600">{attendanceStats.present + attendanceStats.late}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">/ {attendanceStats.present + attendanceStats.late + attendanceStats.absent} Days</span>
                     </div>
                     <Progress value={attendanceStats.percentage} className="h-1.5 mb-4" />
                     <div className="grid grid-cols-3 gap-1">
@@ -431,19 +432,6 @@ function DetailItem({ icon: Icon, label, value }: any) {
                 <p className="text-[11px] font-black truncate text-foreground/90 uppercase tracking-tight">{value}</p>
             </div>
         </div>
-    );
-}
-
-function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
-    return (
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-4 space-y-2 ring-1 ring-border/50 hover:shadow-xl transition-all group duration-500">
-            <div className={cn("p-2 rounded-xl w-fit group-hover:scale-110 group-hover:rotate-3 transition-transform shadow-sm", bg, color)}><Icon className="size-4" /></div>
-            <div>
-                <p className="text-[8px] font-black uppercase text-muted-foreground/60 mb-1 leading-none">{label}</p>
-                <p className="text-xl font-black tracking-tighter leading-none">{value}</p>
-                <p className="text-[8px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-widest leading-none">{sub}</p>
-            </div>
-        </Card>
     );
 }
 
