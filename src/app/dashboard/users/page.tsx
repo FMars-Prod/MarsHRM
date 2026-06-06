@@ -342,7 +342,7 @@ export default function UsersPage() {
                                 
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Work Location</Label>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Office Assignment</Label>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent>{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Work Schedule</Label><Input {...field} placeholder="e.g. General Shift" className="rounded-xl h-11"/></FormItem>)} />
@@ -379,7 +379,7 @@ export default function UsersPage() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed border-border/50">
                                         <div className="space-y-0.5">
-                                            <Label className="text-xs font-black uppercase">Allow WFH Access</Label>
+                                            <Label className="text-xs font-black uppercase">Enable WFH Mode</Label>
                                             <p className="text-[9px] text-muted-foreground uppercase font-bold opacity-60">Authorize residential logging</p>
                                         </div>
                                         <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />
@@ -512,7 +512,7 @@ export default function UsersPage() {
                   <Checkbox checked={selectedUserIds.length === (users?.length || 0) && (users?.length || 0) > 0} onCheckedChange={toggleSelectAll} />
               </TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Staff Member</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Work Location</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Work Mode</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Work Schedule</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Account Level</TableHead>
               <TableHead className="text-right text-[10px] font-black uppercase tracking-widest py-6">Control</TableHead>
@@ -538,8 +538,12 @@ export default function UsersPage() {
                     </div>
                 </TableCell>
                 <TableCell>
-                    <Badge variant="outline" className="uppercase text-[9px] font-black tracking-widest bg-muted/30 border-none px-3 h-7 flex items-center w-fit gap-1.5">
-                        <Building2 className="size-3 text-primary opacity-50"/> {getBranchName(u.branchId)}
+                    <Badge variant="outline" className={cn(
+                        "uppercase text-[9px] font-black tracking-widest border-none px-3 h-7 flex items-center w-fit gap-1.5",
+                        u.isWfhAllowed ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
+                    )}>
+                        {u.isWfhAllowed ? <Home className="size-3" /> : <Building2 className="size-3" />}
+                        {u.isWfhAllowed ? "WFH" : "OFFICE"}
                     </Badge>
                 </TableCell>
                 <TableCell className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">{u.shiftType || 'General'}</TableCell>

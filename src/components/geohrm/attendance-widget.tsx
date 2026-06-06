@@ -1,7 +1,8 @@
+
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles, ShieldCheck, RefreshCcw } from "lucide-react";
+import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles, ShieldCheck, RefreshCcw, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -28,12 +29,16 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc, useCollection } from "@/firebase";
-import { doc, serverTimestamp, Timestamp, collection, query, where } from "firebase/firestore";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc } from "@/firebase";
+import { doc, serverTimestamp, collection } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
-import { format, parse, isAfter, startOfToday } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
@@ -72,24 +77,25 @@ export function AttendanceWidget() {
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
   const branchDocRef = useMemoFirebase(() => userData?.branchId ? doc(firestore, 'branches', userData.branchId) : null, [userData, firestore]);
-  const { data: branchData, isLoading: isBranchLoading } = useDoc<any>(branchDocRef);
+  const { data: branchData } = useDoc<any>(branchDocRef);
 
   const globalLocationDocRef = useMemoFirebase(() => doc(firestore, "settings", "location"), [firestore]);
   const { data: globalLocationData } = useDoc<any>(globalLocationDocRef);
   
   const activeGeofence = React.useMemo(() => {
+    if (userData?.isWfhAllowed && typeof userData.homeLatitude === 'number') {
+        return { name: "Home Base", lat: Number(userData.homeLatitude), lng: Number(userData.homeLongitude), radius: Number(userData.homeRadius || 0.5) };
+    }
     if (userData?.branchId && branchData) {
         return { name: branchData.name, lat: Number(branchData.latitude), lng: Number(branchData.longitude), radius: Number(branchData.radius || 0.5) };
     }
-    if (userData?.isWfhAllowed && typeof userData.homeLatitude === 'number') {
-        return { name: "Home", lat: Number(userData.homeLatitude), lng: Number(userData.homeLongitude), radius: Number(userData.homeRadius || 0.5) };
-    }
-    return { name: "HQ", lat: Number(globalLocationData?.latitude || 13.0827), lng: Number(globalLocationData?.longitude || 80.2707), radius: Number(globalLocationData?.maxDistanceKm || 0.5) };
+    return { name: "HQ Sector", lat: Number(globalLocationData?.latitude || 13.0827), lng: Number(globalLocationData?.longitude || 80.2707), radius: Number(globalLocationData?.maxDistanceKm || 0.5) };
   }, [branchData, globalLocationData, userData]);
 
-  const [isOutOfRangeReasonDialogOpen, setIsOutOfRangeReasonDialogOpen] = useState(false);
+  const [isOutOfRangeDialogOpen, setIsOutOfRangeDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
-  const [outOfRangeAction, setOutOfRangeAction] = useState<(() => void) | null>(null);
+  const [outOfRangeType, setOutOfRangeType] = useState<'Check In' | 'Clock Out'>('Check In');
+  const [lastCapturedLoc, setLastCapturedLoc] = useState<Location | null>(null);
 
   const getTodaysAttendanceRef = useMemoFirebase(() => {
       if (!user) return null;
@@ -139,74 +145,152 @@ export function AttendanceWidget() {
     setIsVerifyingLocation(true);
     navigator.geolocation.getCurrentPosition((p) => {
         const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
+        setLastCapturedLoc(userLoc);
         const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
         setIsVerifyingLocation(false);
         if (dist <= activeGeofence.radius) {
             const todayId = format(new Date(), 'yyyy-MM-dd');
-            setDocumentNonBlocking(getTodaysAttendanceRef!, { id: todayId, employeeId: user!.uid, checkInTime: serverTimestamp(), status: 'present', totalBreakDuration: 0, locationCheckInLatitude: userLoc.latitude, locationCheckInLongitude: userLoc.longitude }, { merge: true });
-            toast({ title: "Started" });
+            setDocumentNonBlocking(getTodaysAttendanceRef!, { id: todayId, employeeId: user!.uid, checkInTime: serverTimestamp(), status: 'present', totalBreakDuration: 0, locationCheckInLatitude: userLoc.latitude, locationCheckInLongitude: userLoc.longitude, isOutOfRange: false }, { merge: true });
+            toast({ title: "Shift Active", description: `Sector: ${activeGeofence.name}` });
         } else {
-            toast({ variant: "destructive", title: "Out of range" });
+            setOutOfRangeType('Check In');
+            setIsOutOfRangeDialogOpen(true);
         }
-    }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "GPS Error" }); });
+    }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Satellite Signal Lost", description: "Please enable location services." }); });
   };
 
   const handleClockOut = () => {
       setIsVerifyingLocation(true);
       navigator.geolocation.getCurrentPosition(p => {
+          const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
+          setLastCapturedLoc(userLoc);
+          const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
           setIsVerifyingLocation(false);
-          updateDocumentNonBlocking(getTodaysAttendanceRef!, { checkOutTime: serverTimestamp(), locationCheckOutLatitude: p.coords.latitude, locationCheckOutLongitude: p.coords.longitude });
-          toast({ title: "Finished" });
-          router.push('/dashboard/reports');
-      }, () => { setIsVerifyingLocation(false); });
+          
+          if (dist <= activeGeofence.radius) {
+              updateDocumentNonBlocking(getTodaysAttendanceRef!, { checkOutTime: serverTimestamp(), locationCheckOutLatitude: p.coords.latitude, locationCheckOutLongitude: p.coords.longitude });
+              toast({ title: "Shift Finalized" });
+              router.push('/dashboard/reports');
+          } else {
+              setOutOfRangeType('Clock Out');
+              setIsOutOfRangeDialogOpen(true);
+          }
+      }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Satellite Signal Lost" }); });
   };
 
-  if (isUserDocLoading) return <div className="h-40 flex items-center justify-center text-[8px] font-black uppercase">Loading...</div>;
+  const handleSubmitOutOfRangeRequest = () => {
+      if (!outOfRangeReason.trim() || !user || !userData || !lastCapturedLoc) return;
+
+      const todayId = format(new Date(), 'yyyy-MM-dd');
+      const payload = {
+          employeeId: user.uid,
+          employeeName: `${userData.firstName} ${userData.lastName}`,
+          requestedCheckInTime: format(new Date(), 'PP p'),
+          dateId: todayId,
+          intendedStatus: 'present',
+          requestedLatitude: lastCapturedLoc.latitude,
+          requestedLongitude: lastCapturedLoc.longitude,
+          reason: outOfRangeReason,
+          status: 'Pending',
+          type: outOfRangeType,
+          requestTimestamp: serverTimestamp()
+      };
+
+      addDocumentNonBlocking(collection(firestore, 'attendanceApprovalRequests'), payload);
+      toast({ title: "Approval Request Dispatched", description: "Management has been notified of your remote signal." });
+      setIsOutOfRangeDialogOpen(false);
+      setOutOfRangeReason("");
+  };
+
+  if (isUserDocLoading) return <div className="h-40 flex items-center justify-center text-[8px] font-black uppercase">Synchronizing...</div>;
 
   return (
-    <Card className="animate-fade-in-up border-none shadow-sm rounded-2xl bg-white overflow-hidden font-jakarta">
-        <CardHeader className="p-4 pb-0">
-          <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-black uppercase tracking-tighter flex items-center gap-2 text-primary">
-                <Clock className="size-3" /> Attendance
-              </CardTitle>
-              <Badge variant="outline" className="rounded-full text-[7px] font-black uppercase px-2 h-5 bg-primary/5 border-primary/20">
-                {activeGeofence.name}
-              </Badge>
-          </div>
-        </CardHeader>
+    <>
+        <Card className="animate-fade-in-up border-none shadow-sm rounded-2xl bg-white overflow-hidden font-jakarta">
+            <CardHeader className="p-4 pb-0">
+            <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-black uppercase tracking-tighter flex items-center gap-2 text-primary">
+                    <Clock className="size-3" /> Attendance Hub
+                </CardTitle>
+                <Badge variant="outline" className={cn(
+                    "rounded-full text-[7px] font-black uppercase px-2 h-5 border-none",
+                    userData?.isWfhAllowed ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"
+                )}>
+                    {userData?.isWfhAllowed ? <Home className="size-2.5 mr-1" /> : <Building2 className="size-2.5 mr-1" />}
+                    {userData?.isWfhAllowed ? "WFH Active" : "Office Active"}
+                </Badge>
+            </div>
+            </CardHeader>
 
-        <CardContent className="p-4 flex flex-col items-center gap-4 text-center">
-            <div className="py-2">
-                <div className="text-4xl font-black font-mono tabular-nums tracking-tighter text-primary">
-                    {formatTime(workTimer)}
+            <CardContent className="p-4 flex flex-col items-center gap-4 text-center">
+                <div className="py-2">
+                    <div className="text-4xl font-black font-mono tabular-nums tracking-tighter text-primary">
+                        {formatTime(workTimer)}
+                    </div>
+                    <p className="text-[8px] font-black uppercase text-muted-foreground/40 mt-1 tracking-widest">Shift Progress</p>
                 </div>
-            </div>
 
-            <div className="w-full grid grid-cols-2 gap-2 max-w-sm">
-                <div className="p-2 rounded-xl bg-muted/20 border flex flex-col items-center">
-                    <p className="text-[6px] font-black uppercase text-muted-foreground/60 mb-0.5">Check In</p>
-                    <p className="text-[10px] font-black">{todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'p') : '--:--'}</p>
+                <div className="w-full grid grid-cols-2 gap-2 max-w-sm">
+                    <div className="p-2 rounded-xl bg-muted/20 border border-dashed flex flex-col items-center">
+                        <p className="text-[6px] font-black uppercase text-muted-foreground/60 mb-0.5">Inbound</p>
+                        <p className="text-[10px] font-black">{todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'p') : '--:--'}</p>
+                    </div>
+                    <div className="p-2 rounded-xl bg-muted/20 border border-dashed flex flex-col items-center">
+                        <p className="text-[6px] font-black uppercase text-muted-foreground/60 mb-0.5">Outbound</p>
+                        <p className="text-[10px] font-black">{todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'}</p>
+                    </div>
                 </div>
-                <div className="p-2 rounded-xl bg-muted/20 border flex flex-col items-center">
-                    <p className="text-[6px] font-black uppercase text-muted-foreground/60 mb-0.5">Check Out</p>
-                    <p className="text-[10px] font-black">{todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'}</p>
+                
+                <div className="w-full max-w-sm pt-2">
+                    {isVerifyingLocation ? (
+                        <Button disabled className="w-full h-10 rounded-xl text-sm font-black uppercase tracking-widest bg-muted text-muted-foreground">
+                            <Loader2 className="animate-spin size-4 mr-2" /> Verifying Sector...
+                        </Button>
+                    ) : status === 'out' && !hasClockedOutToday ? (
+                        <Button onClick={handleClockIn} className="w-full h-10 rounded-xl text-sm font-black uppercase tracking-widest shadow-md">
+                            Start Shift
+                        </Button>
+                    ) : status === 'in' ? (
+                        <Button onClick={handleClockOut} variant="destructive" className="w-full h-10 rounded-xl text-sm font-black uppercase tracking-widest">
+                            Finish Shift
+                        </Button>
+                    ) : (
+                        <Badge className="w-full h-10 rounded-xl justify-center bg-green-100 text-green-700 border-none font-black uppercase text-[10px] tracking-widest">
+                            Shift Concluded
+                        </Badge>
+                    )}
                 </div>
-            </div>
-            
-            <div className="w-full max-w-sm pt-2">
-                {status === 'out' && !hasClockedOutToday && (
-                    <Button onClick={handleClockIn} className="w-full h-10 rounded-xl text-sm font-black uppercase tracking-widest shadow-md">
-                        Start Shift
+            </CardContent>
+        </Card>
+
+        <Dialog open={isOutOfRangeDialogOpen} onOpenChange={setIsOutOfRangeDialogOpen}>
+            <DialogContent className="rounded-[2rem] sm:max-w-md p-8 border-none shadow-2xl">
+                <DialogHeader className="text-left">
+                    <div className="size-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mb-4">
+                        <AlertTriangle className="size-6" />
+                    </div>
+                    <DialogTitle className="text-xl font-black uppercase tracking-tighter">Remote Signal Detected</DialogTitle>
+                    <DialogDescription className="text-xs font-medium leading-relaxed">
+                        Your current coordinates are outside the authorized <span className="font-bold text-primary">{activeGeofence.name}</span> radius. 
+                        Please submit a justification for management approval.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-6 space-y-4">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Justification / Reason</Label>
+                    <Textarea 
+                        value={outOfRangeReason} 
+                        onChange={e => setOutOfRangeReason(e.target.value)} 
+                        placeholder="e.g., Client meeting at their headquarters..." 
+                        className="rounded-2xl min-h-[100px] bg-muted/20 border-muted"
+                    />
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim()} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
+                        Dispatch Approval Request
                     </Button>
-                )}
-                {status === 'in' && (
-                    <Button onClick={handleClockOut} variant="destructive" className="w-full h-10 rounded-xl text-sm font-black uppercase tracking-widest">
-                        Finish Shift
-                    </Button>
-                )}
-            </div>
-        </CardContent>
-    </Card>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </>
   );
 }
