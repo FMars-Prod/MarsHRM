@@ -40,7 +40,7 @@ import React from "react";
 
 const groups = [
   {
-    label: "SECTION 01 STRATEGIC HUB",
+    label: "STRATEGIC HUB",
     links: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "totalNotificationsCount" },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
@@ -48,7 +48,7 @@ const groups = [
     ]
   },
   {
-    label: "SECTION 02 WORKFORCE",
+    label: "WORKFORCE",
     links: [
       { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/attendance-requests", label: "Range Approvals", icon: UserCheck, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingAttRequestsCount" },
@@ -62,7 +62,7 @@ const groups = [
     ]
   },
   {
-    label: "SECTION 03 OPERATIONS",
+    label: "OPERATIONS",
     links: [
       { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/monitor", label: "Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
@@ -71,7 +71,7 @@ const groups = [
     ]
   },
   {
-    label: "SECTION 04 COMMUNICATION",
+    label: "COMMUNICATION",
     links: [
       { href: "/dashboard/announcements", label: "Announcements", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
       { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
@@ -80,7 +80,7 @@ const groups = [
     ]
   },
   {
-    label: "SECTION 05 SYSTEM",
+    label: "SYSTEM",
     links: [
       { href: "/dashboard/report-templates", label: "Report Templates", icon: LayoutTemplate, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/settings", label: "System Settings", icon: Settings, roles: ['HR Manager', 'CEO/Admin'] },
