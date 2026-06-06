@@ -8,13 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, FileDown, Trash2, Brain } from "lucide-react";
+import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, FileDown, Trash2, Brain, Users, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
-import { format, isSameDay, startOfDay } from "date-fns";
+import { format, isSameDay, startOfDay, startOfWeek, endOfWeek, differenceInSeconds, eachDayOfInterval } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, useAuth, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, orderBy, doc, getDocs, Timestamp, limit, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, doc, getDocs, Timestamp, limit, serverTimestamp, collectionGroup } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, FormProvider, useFormContext, useFieldArray } from "react-hook-form";
@@ -26,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
@@ -575,6 +576,9 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [selectedReportForReview, setSelectedReportForReview] = React.useState<any | null>(null);
+  const [activeTab, setActiveTab] = React.useState<string>("daily");
+  const [weeklySummaryData, setWeeklySummaryData] = React.useState<any[]>([]);
+  const [isWeeklyLoading, setIsWeeklyLoading] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
@@ -602,6 +606,56 @@ export default function ReportsPage() {
   const mappingDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
   const { data: mappingData } = useDoc<{mappings: Record<string, string>}>(mappingDocRef);
   const currentTemplateId = mappingData?.mappings?.[currentUserData?.jobTitle || ''] || 'Business';
+
+  const fetchWeeklySummary = React.useCallback(async () => {
+    if (!users || !firestore) return;
+    setIsWeeklyLoading(true);
+    try {
+        const now = new Date();
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+
+        const attQuery = query(
+            collectionGroup(firestore, 'attendances'),
+            where('checkInTime', '>=', Timestamp.fromDate(weekStart)),
+            where('checkInTime', '<=', Timestamp.fromDate(weekEnd))
+        );
+        const snap = await getDocs(attQuery);
+        const attData = snap.docs.map(d => d.data());
+
+        const results = users.filter(u => u.role !== 'CEO/Admin' && u.role !== 'HR Manager').map(u => {
+            const userAtts = attData.filter(a => a.employeeId === u.id);
+            const present = userAtts.length;
+            const late = userAtts.filter(a => a.status === 'late').length;
+            let totalSeconds = 0;
+            userAtts.forEach(a => {
+                if (a.checkInTime && a.checkOutTime) {
+                    totalSeconds += differenceInSeconds(a.checkOutTime.toDate(), a.checkInTime.toDate()) - (a.totalBreakDuration || 0);
+                }
+            });
+            return {
+                id: u.id,
+                name: `${u.firstName} ${u.lastName}`,
+                jobTitle: u.jobTitle,
+                present,
+                late,
+                hours: (totalSeconds / 3600).toFixed(1)
+            };
+        });
+
+        setWeeklySummaryData(results);
+    } catch (err) {
+        toast({ variant: 'destructive', title: 'Weekly Sync Failed' });
+    } finally {
+        setIsWeeklyLoading(false);
+    }
+  }, [users, firestore, toast]);
+
+  React.useEffect(() => {
+      if (activeTab === 'weekly' && isLeadOrHigher) {
+          fetchWeeklySummary();
+      }
+  }, [activeTab, isLeadOrHigher, fetchWeeklySummary]);
 
   const form = useForm<any>({
     defaultValues: {
@@ -719,10 +773,94 @@ export default function ReportsPage() {
       )}
 
       {isLeadOrHigher && (
-        <><div className="relative mb-6"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input placeholder="Search employees..." className="pl-10 h-11 rounded-xl bg-white/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
-          <div className="border rounded-2xl overflow-hidden bg-white/50 shadow-sm"><Table><TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[10px] font-black uppercase">Employee</TableHead><TableHead className="text-[10px] font-black uppercase">Job Title</TableHead><TableHead className="text-right text-[10px] font-black uppercase">Action</TableHead></TableRow></TableHeader>
-                <TableBody>{users?.filter(u => u.firstName?.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (<TableRow key={u.id} className="border-border/50 hover:bg-muted/5 transition-colors"><TableCell className="font-bold py-4"><Link href={`/dashboard/users/${u.id}`} className="hover:text-primary transition-colors flex items-center gap-2">{u.firstName} {u.lastName}</Link></TableCell><TableCell className="text-[10px] font-black uppercase text-muted-foreground">{u.jobTitle}</TableCell><TableCell className="text-right py-4"><Button variant="outline" size="sm" className="rounded-full font-bold text-[10px]" onClick={() => handleReviewUser(u)}>View Reports</Button></TableCell></TableRow>))}</TableBody></Table></div>
-        </>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-fit grid-cols-2 h-11 bg-white/50 border rounded-xl p-1 mb-6">
+                <TabsTrigger value="daily" className="rounded-lg font-black uppercase text-[10px] tracking-widest gap-2">
+                    <History className="size-3.5"/> Individual Logs
+                </TabsTrigger>
+                <TabsTrigger value="weekly" className="rounded-lg font-black uppercase text-[10px] tracking-widest gap-2">
+                    <TrendingUp className="size-3.5"/> Weekly Fleet Audit
+                </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="daily" className="mt-0">
+                <div className="relative mb-6">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground opacity-50" />
+                    <Input placeholder="Search employees..." className="pl-10 h-11 rounded-xl bg-white/50 border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                </div>
+                <div className="border rounded-2xl overflow-hidden bg-white/50 shadow-sm ring-1 ring-border/50">
+                    <Table>
+                        <TableHeader className="bg-muted/30">
+                            <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4 px-6">Employee</TableHead>
+                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Job Title</TableHead>
+                                <TableHead className="text-right text-[10px] font-black uppercase tracking-tighter py-4 px-6">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {users?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+                                <TableRow key={u.id} className="border-border/50 hover:bg-primary/5 transition-colors">
+                                    <TableCell className="font-bold py-4 px-6">
+                                        <Link href={`/dashboard/users/${u.id}`} className="hover:text-primary transition-colors flex items-center gap-2">
+                                            {u.firstName} {u.lastName}
+                                        </Link>
+                                    </TableCell>
+                                    <TableCell className="text-[10px] font-black uppercase text-muted-foreground">{u.jobTitle}</TableCell>
+                                    <TableCell className="text-right py-4 px-6">
+                                        <Button variant="outline" size="sm" className="rounded-full font-bold text-[10px] uppercase tracking-widest h-8" onClick={() => handleReviewUser(u)}>View Reports</Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </TabsContent>
+
+            <TabsContent value="weekly" className="mt-0">
+                <div className="border rounded-2xl overflow-hidden bg-white shadow-xl ring-1 ring-border/50">
+                    <Table>
+                        <TableHeader className="bg-muted/10 border-b">
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 px-10">Fleet Member</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Shifts (Week)</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Late Signals</TableHead>
+                                <TableHead className="text-right font-black uppercase tracking-widest text-[10px] py-6 px-10">Total Work Hours</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isWeeklyLoading ? (
+                                <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Syncing Satellite Data...</TableCell></TableRow>
+                            ) : weeklySummaryData.length > 0 ? (
+                                weeklySummaryData.map(row => (
+                                    <TableRow key={row.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
+                                        <TableCell className="py-6 px-10">
+                                            <div className="flex flex-col">
+                                                <span className="font-black text-sm uppercase">{row.name}</span>
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{row.jobTitle}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className="rounded-full bg-emerald-50 text-emerald-700 border-none font-black text-xs h-7 px-3">{row.present} Days</Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className={cn("rounded-full font-black text-xs h-7 px-3 border-none", row.late > 0 ? "bg-amber-50 text-amber-700" : "bg-muted/30 text-muted-foreground")}>{row.late} Signals</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right px-10">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <span className="text-xl font-black text-primary tracking-tighter">{row.hours}</span>
+                                                <span className="text-[9px] font-black uppercase text-muted-foreground">Hours</span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={4} className="h-64 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No fleet activity detected this week.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </TabsContent>
+        </Tabs>
       )}
 
       <Dialog open={!!selectedUser} onOpenChange={o => !o && setSelectedUser(null)}><DialogContent className="max-w-2xl rounded-3xl"><DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Report History: {selectedUser?.firstName}</DialogTitle></DialogHeader><ScrollArea className="max-h-[60vh] pr-4"><div className="space-y-3 py-4">
