@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -34,12 +35,13 @@ import {
   MapPinned,
   UserCheck,
   Building2,
+  ChevronRight,
 } from "lucide-react";
 import React from "react";
 
 const groups = [
   {
-    label: "Main",
+    label: "Command Hub",
     links: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "totalNotificationsCount" },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
@@ -47,26 +49,31 @@ const groups = [
     ]
   },
   {
-    label: "Team",
+    label: "Tactical Ops",
     links: [
       { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/monitor", label: "Live Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/attendance-requests", label: "Approvals", icon: UserCheck, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingAttRequestsCount" },
       { href: "/dashboard/location-requests", label: "Locations", icon: MapPinned, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
-      { href: "/dashboard/leave", label: "Leave", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
-      { href: "/dashboard/documents", label: "Files", icon: FileBox, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/teams", label: "Groups", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/branches", label: "Branches", icon: Building2, roles: ['HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/users", label: "Staff", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/org-structure", label: "Hierarchy", icon: Network, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
   },
   {
-    label: "Tools",
+    label: "Personnel Matrix",
     links: [
-      { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/monitor", label: "Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/assets", label: "Assets", icon: Laptop, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/users", label: "Staff Registry", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/teams", label: "Groups", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/org-structure", label: "Hierarchy", icon: Network, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/leave", label: "Leave", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
       { href: "/dashboard/payslips", label: "Payslips", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
+    ]
+  },
+  {
+    label: "Support & Systems",
+    links: [
+      { href: "/dashboard/documents", label: "Files", icon: FileBox, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/assets", label: "Assets", icon: Laptop, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/announcements", label: "News", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
       { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
       { href: "/dashboard/holidays", label: "Holidays", icon: CalendarDays, roles: ['HR Manager', 'CEO/Admin'] },
