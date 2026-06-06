@@ -1,11 +1,10 @@
-
 'use client';
 
 import * as React from 'react';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, collectionGroup, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { format, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
-import { sendDailySummaryEmail } from '@/app/actions/email-actions';
+import { collection, query, where, getDocs, collectionGroup, doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { format, startOfDay, endOfDay, isWithinInterval, subWeeks, startOfWeek, endOfWeek, differenceInSeconds } from 'date-fns';
+import { sendDailySummaryEmail, sendWeeklySummaryEmail } from '@/app/actions/email-actions';
 
 export function AutomatedReportSender() {
   const firestore = useFirestore();
@@ -47,7 +46,7 @@ export function AutomatedReportSender() {
       const checkDocs = await getDocs(query(collection(firestore, 'automated_reports'), where('__name__', '==', reportId)));
       if (!checkDocs.empty) return;
 
-      console.log(`[MarsHRM] Triggering dynamic automated report for ${slot}...`);
+      console.log(`[MarsHRM] Triggering daily automated report for ${slot}...`);
 
       const usersSnap = await getDocs(collection(firestore, 'users'));
       const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -113,14 +112,94 @@ export function AutomatedReportSender() {
     } catch (err) {
       console.error("[MarsHRM] Automated report fail:", err);
     }
-  }, [firestore, isAdminOrHR, currentUser, configData]);
+  }, [firestore, isAdminOrHR, currentUser, configData, formatDuration]);
+
+  const checkAndSendWeeklyReport = React.useCallback(async () => {
+    if (!isAdminOrHR || !firestore) return;
+
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday
+    const currentTimeStr = format(now, 'HH:mm');
+
+    // Weekly report triggers every Monday at 09:30 AM
+    if (dayOfWeek !== 1 || currentTimeStr !== '09:30') return;
+
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const reportId = `weekly-${todayStr}`;
+    const reportLogRef = doc(firestore, 'automated_reports', reportId);
+
+    try {
+      const checkDocs = await getDocs(query(collection(firestore, 'automated_reports'), where('__name__', '==', reportId)));
+      if (!checkDocs.empty) return;
+
+      console.log(`[MarsHRM] Triggering automated weekly report...`);
+
+      // Date range for previous week (Monday to Sunday)
+      const lastWeekStart = startOfDay(startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }));
+      const lastWeekEnd = endOfDay(endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }));
+      const dateRangeStr = `${format(lastWeekStart, 'PP')} - ${format(lastWeekEnd, 'PP')}`;
+
+      const usersSnap = await getDocs(collection(firestore, 'users'));
+      const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const attendanceQuery = query(
+        collectionGroup(firestore, 'attendances'),
+        where('checkInTime', '>=', lastWeekStart),
+        where('checkInTime', '<=', lastWeekEnd)
+      );
+      const attendanceSnapshot = await getDocs(attendanceQuery);
+      const attendanceData = attendanceSnapshot.docs.map(d => d.data());
+
+      let summaryText = `FortuMars AI Technologies & Business Solutions\nWeekly Performance Summary\nPeriod: ${dateRangeStr}\n\n`;
+      summaryText += `User Performance Matrix:\n`;
+      summaryText += `--------------------------------------------------\n`;
+      summaryText += `${'Employee'.padEnd(25)} | ${'Pres'.padEnd(4)} | ${'Late'.padEnd(4)} | ${'Hours'.padEnd(6)}\n`;
+      summaryText += `--------------------------------------------------\n`;
+
+      users.forEach((u: any) => {
+        if (u.role === 'CEO/Admin' || u.role === 'HR Manager') return;
+
+        const userAtts = attendanceData.filter(a => a.employeeId === u.id);
+        const present = userAtts.filter(a => a.status === 'present').length;
+        const late = userAtts.filter(a => a.status === 'late').length;
+        
+        let totalSeconds = 0;
+        userAtts.forEach(a => {
+            if (a.checkInTime && a.checkOutTime) {
+                const diff = differenceInSeconds(a.checkOutTime.toDate(), a.checkInTime.toDate());
+                totalSeconds += (diff - (a.totalBreakDuration || 0));
+            }
+        });
+        const hours = (totalSeconds / 3600).toFixed(1);
+
+        const name = `${u.firstName} ${u.lastName}`.slice(0, 25);
+        summaryText += `${name.padEnd(25)} | ${present.toString().padEnd(4)} | ${late.toString().padEnd(4)} | ${hours.padEnd(6)}\n`;
+      });
+
+      summaryText += `\n--------------------------------------------------\n`;
+      summaryText += `Report generated automatically by MarsHRM System Protocol.`;
+
+      const recipients = ['ceo@fortumars.com', 'hr@fortumars.com', 'ceo@cognithorz.com'];
+      const result = await sendWeeklySummaryEmail({ dateRange: dateRangeStr, summaryText, recipients });
+
+      if (result.success) {
+        await setDoc(reportLogRef, { id: reportId, sentAt: serverTimestamp(), type: 'weekly', recipients, triggeredBy: currentUser?.uid });
+      }
+    } catch (err) {
+      console.error("[MarsHRM] Weekly report fail:", err);
+    }
+  }, [firestore, isAdminOrHR, currentUser]);
 
   React.useEffect(() => {
     if (!isAdminOrHR) return;
-    const interval = setInterval(checkAndSendReport, 60000);
+    const interval = setInterval(() => {
+      checkAndSendReport();
+      checkAndSendWeeklyReport();
+    }, 60000);
     checkAndSendReport();
+    checkAndSendWeeklyReport();
     return () => clearInterval(interval);
-  }, [isAdminOrHR, checkAndSendReport]);
+  }, [isAdminOrHR, checkAndSendReport, checkAndSendWeeklyReport]);
 
   return null;
 }
