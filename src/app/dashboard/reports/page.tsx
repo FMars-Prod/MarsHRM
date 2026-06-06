@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, FileDown, Trash2, Brain, Users, TrendingUp } from "lucide-react";
+import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -615,31 +615,72 @@ export default function ReportsPage() {
         const weekStart = startOfWeek(now, { weekStartsOn: 1 });
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
+        // Fetch all attendances for the week
         const attQuery = query(
             collectionGroup(firestore, 'attendances'),
             where('checkInTime', '>=', Timestamp.fromDate(weekStart)),
             where('checkInTime', '<=', Timestamp.fromDate(weekEnd))
         );
-        const snap = await getDocs(attQuery);
-        const attData = snap.docs.map(d => d.data());
+        const attSnap = await getDocs(attQuery);
+        const attData = attSnap.docs.map(d => d.data());
+
+        // Fetch all reports for the week
+        const reportsQuery = query(
+            collectionGroup(firestore, 'reports'),
+            where('date', '>=', Timestamp.fromDate(weekStart)),
+            where('date', '<=', Timestamp.fromDate(weekEnd))
+        );
+        const reportsSnap = await getDocs(reportsQuery);
+        const reportsData = reportsSnap.docs.map(d => d.data());
 
         const results = users.filter(u => u.role !== 'CEO/Admin' && u.role !== 'HR Manager').map(u => {
             const userAtts = attData.filter(a => a.employeeId === u.id);
-            const present = userAtts.length;
-            const late = userAtts.filter(a => a.status === 'late').length;
+            const userReports = reportsData.filter(r => r.employeeId === u.id);
+            
             let totalSeconds = 0;
             userAtts.forEach(a => {
                 if (a.checkInTime && a.checkOutTime) {
                     totalSeconds += differenceInSeconds(a.checkOutTime.toDate(), a.checkInTime.toDate()) - (a.totalBreakDuration || 0);
                 }
             });
+
+            // Aggregate Report Data
+            const aggregates = {
+                coldCalls: 0,
+                linkedin: 0,
+                emails: 0,
+                followUps: 0,
+                potentials: 0,
+                revenue: 0,
+                meetingsSecured: 0,
+                links: [] as string[]
+            };
+
+            userReports.forEach((r: any) => {
+                aggregates.coldCalls += Number(r.coldCalls || 0);
+                aggregates.linkedin += Number(r.linkedinOutreach || 0);
+                aggregates.emails += Number(r.emailsSent || 0);
+                aggregates.followUps += Number(r.followUps || 0);
+                aggregates.potentials += Number(r.potentialClients || 0);
+                aggregates.revenue += Number(r.revenueCollected || 0);
+                aggregates.meetingsSecured += Number(r.meetingsSecured || 0);
+                if (r.totalCallRecordings) aggregates.links.push(r.totalCallRecordings);
+                if (r.bestCallRecording) aggregates.links.push(r.bestCallRecording);
+            });
+
+            const totalOutreach = aggregates.coldCalls + aggregates.linkedin + aggregates.emails;
+            const efficiency = totalOutreach > 0 ? (aggregates.potentials / totalOutreach) * 100 : 0;
+
             return {
                 id: u.id,
                 name: `${u.firstName} ${u.lastName}`,
                 jobTitle: u.jobTitle,
-                present,
-                late,
-                hours: (totalSeconds / 3600).toFixed(1)
+                present: userAtts.length,
+                late: userAtts.filter(a => a.status === 'late').length,
+                hours: (totalSeconds / 3600).toFixed(1),
+                aggregates,
+                efficiency,
+                totalOutreach
             };
         });
 
@@ -817,47 +858,106 @@ export default function ReportsPage() {
             </TabsContent>
 
             <TabsContent value="weekly" className="mt-0">
-                <div className="border rounded-2xl overflow-hidden bg-white shadow-xl ring-1 ring-border/50">
-                    <Table>
-                        <TableHeader className="bg-muted/10 border-b">
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 px-10">Fleet Member</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Shifts (Week)</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Late Signals</TableHead>
-                                <TableHead className="text-right font-black uppercase tracking-widest text-[10px] py-6 px-10">Total Work Hours</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isWeeklyLoading ? (
-                                <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Syncing Satellite Data...</TableCell></TableRow>
-                            ) : weeklySummaryData.length > 0 ? (
-                                weeklySummaryData.map(row => (
-                                    <TableRow key={row.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
-                                        <TableCell className="py-6 px-10">
-                                            <div className="flex flex-col">
-                                                <span className="font-black text-sm uppercase">{row.name}</span>
-                                                <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{row.jobTitle}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className="rounded-full bg-emerald-50 text-emerald-700 border-none font-black text-xs h-7 px-3">{row.present} Days</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className={cn("rounded-full font-black text-xs h-7 px-3 border-none", row.late > 0 ? "bg-amber-50 text-amber-700" : "bg-muted/30 text-muted-foreground")}>{row.late} Signals</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right px-10">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <span className="text-xl font-black text-primary tracking-tighter">{row.hours}</span>
-                                                <span className="text-[9px] font-black uppercase text-muted-foreground">Hours</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={4} className="h-64 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No fleet activity detected this week.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                <div className="border rounded-[2rem] overflow-hidden bg-white shadow-xl ring-1 ring-border/50">
+                    <ScrollArea className="w-full">
+                        <Table>
+                            <TableHeader className="bg-muted/10 border-b">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 px-8 min-w-[200px]">Fleet Member</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Attendance</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Efficiency</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Total Outreach</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Potentials</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Revenue</TableHead>
+                                    <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-6 px-8">Audit Assets</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isWeeklyLoading ? (
+                                    <TableRow><TableCell colSpan={7} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Syncing Fleet Intelligence...</TableCell></TableRow>
+                                ) : weeklySummaryData.length > 0 ? (
+                                    weeklySummaryData.map(row => (
+                                        <TableRow key={row.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
+                                            <TableCell className="py-6 px-8">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-xs uppercase text-primary">{row.name}</span>
+                                                    <span className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">{row.jobTitle}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xs font-black">{row.present} / 7</span>
+                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">Shifts Logged</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge variant="outline" className={cn(
+                                                    "rounded-full font-black text-[9px] h-6 px-3 border-none",
+                                                    row.efficiency >= 15 ? "bg-emerald-50 text-emerald-700" : row.efficiency >= 10 ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
+                                                )}>
+                                                    {row.efficiency.toFixed(1)}%
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xs font-black">{row.totalOutreach}</span>
+                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">Calls/Mail/LI</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xs font-black text-indigo-600">{row.aggregates.potentials}</span>
+                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">High-Value</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xs font-black text-emerald-600">${row.aggregates.revenue.toLocaleString()}</span>
+                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">Collected</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right px-8">
+                                                <div className="flex justify-end gap-1.5">
+                                                    {row.aggregates.links.length > 0 ? (
+                                                        <Dialog>
+                                                            <DialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-primary/5 text-primary hover:bg-primary/10">
+                                                                    <Mic className="size-3.5" />
+                                                                </Button>
+                                                            </DialogTrigger>
+                                                            <DialogContent className="rounded-3xl">
+                                                                <DialogHeader>
+                                                                    <DialogTitle className="text-lg font-black uppercase tracking-tighter">Call Intelligence Hub</DialogTitle>
+                                                                    <DialogDescription className="text-xs font-bold uppercase">{row.name}'s Weekly Links</DialogDescription>
+                                                                </DialogHeader>
+                                                                <ScrollArea className="max-h-[300px] py-4">
+                                                                    <div className="space-y-2">
+                                                                        {row.aggregates.links.map((link: string, i: number) => (
+                                                                            <Link href={link} key={i} target="_blank" className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-primary/20">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <div className="p-2 bg-primary/10 text-primary rounded-lg"><LinkIcon className="size-3.5" /></div>
+                                                                                    <span className="text-[10px] font-black uppercase truncate max-w-[200px]">Recording Asset {i+1}</span>
+                                                                                </div>
+                                                                                <ExternalLink className="size-3 opacity-30" />
+                                                                            </Link>
+                                                                        ))}
+                                                                    </div>
+                                                                </ScrollArea>
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                    ) : (
+                                                        <div className="size-8 rounded-xl bg-muted/10 flex items-center justify-center opacity-20"><Mic className="size-3.5" /></div>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No fleet activity detected this week.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
                 </div>
             </TabsContent>
         </Tabs>
@@ -910,3 +1010,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
