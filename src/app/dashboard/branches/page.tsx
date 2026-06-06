@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { Building2, Plus, MapPin, Trash2, Edit, ExternalLink, ShieldCheck, Map as MapIcon, Key, Loader2 } from 'lucide-react';
+import { Building2, Plus, MapPin, Trash2, Edit, ExternalLink, ShieldCheck, Map as MapIcon, Key, Loader2, LocateFixed } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,25 @@ export default function BranchesPage() {
     const configRef = useMemoFirebase(() => doc(firestore, 'settings', 'location'), [firestore]);
     const { data: locationConfig } = useDoc<any>(configRef);
     const apiKey = locationConfig?.googleMapsApiKey;
+
+    const handleGetCurrentLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setCoords({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                    toast({ title: "Branch Signal Captured", description: "GPS coordinates synchronized." });
+                },
+                (error) => {
+                    toast({ variant: "destructive", title: "GPS Error", description: error.message });
+                }
+            );
+        } else {
+            toast({ variant: "destructive", title: "Not Supported", description: "Geolocation is not supported by your browser." });
+        }
+    };
 
     const handleSave = () => {
         if (!branchName || isNaN(coords.lat) || isNaN(coords.lng)) {
@@ -112,26 +131,40 @@ export default function BranchesPage() {
                                             <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="Select point on map or enter..." className="rounded-xl h-12" />
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Latitude</Label>
-                                                <Input 
-                                                    type="number" 
-                                                    step="any" 
-                                                    value={coords.lat} 
-                                                    onChange={e => setCoords({...coords, lat: parseFloat(e.target.value) || 0})} 
-                                                    className="h-12 rounded-xl font-mono text-xs font-bold" 
-                                                />
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Coordinates</Label>
+                                                <Button 
+                                                    type="button" 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-8 rounded-full text-[8px] font-black uppercase tracking-widest px-3 border border-primary/20 hover:bg-primary/5"
+                                                    onClick={handleGetCurrentLocation}
+                                                >
+                                                    <LocateFixed className="size-3 mr-1.5" /> Capture Signal
+                                                </Button>
                                             </div>
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Longitude</Label>
-                                                <Input 
-                                                    type="number" 
-                                                    step="any" 
-                                                    value={coords.lng} 
-                                                    onChange={e => setCoords({...coords, lng: parseFloat(e.target.value) || 0})} 
-                                                    className="h-12 rounded-xl font-mono text-xs font-bold" 
-                                                />
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[9px] uppercase font-bold opacity-40">Latitude</Label>
+                                                    <Input 
+                                                        type="number" 
+                                                        step="any" 
+                                                        value={coords.lat} 
+                                                        onChange={e => setCoords({...coords, lat: parseFloat(e.target.value) || 0})} 
+                                                        className="h-11 rounded-xl font-mono text-xs font-bold" 
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-[9px] uppercase font-bold opacity-40">Longitude</Label>
+                                                    <Input 
+                                                        type="number" 
+                                                        step="any" 
+                                                        value={coords.lng} 
+                                                        onChange={e => setCoords({...coords, lng: parseFloat(e.target.value) || 0})} 
+                                                        className="h-11 rounded-xl font-mono text-xs font-bold" 
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
 
