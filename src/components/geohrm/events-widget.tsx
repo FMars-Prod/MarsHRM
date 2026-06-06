@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -76,107 +75,72 @@ export function EventsWidget() {
     return format(timestamp.toDate(), "MMM do");
   }
 
-  const isLoading = todaysLoading || upcomingLoading;
-
   const EventListItem = ({ item, isToday }: { item: EventItem; isToday?: boolean }) => (
      <div key={item.id} className={cn(
-        "group flex items-center justify-between p-3 rounded-2xl transition-all duration-300 hover:shadow-md border border-transparent hover:border-border/50",
-        isToday ? "bg-primary/5 hover:bg-primary/10" : "bg-white hover:bg-muted/30"
+        "group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200",
+        isToday ? "bg-primary/5" : "hover:bg-muted/30"
      )}>
-        <div className="flex items-center gap-4">
-            <div className="p-2.5 rounded-xl shadow-sm transition-transform group-hover:scale-110" style={{ backgroundColor: item.color + '1A' }}>
-                {renderIcon(item.icon, { className: "size-4", style: { color: item.color } })}
+        <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: item.color + '1A' }}>
+                {renderIcon(item.icon, { className: "size-3.5", style: { color: item.color } })}
             </div>
             <div className="flex flex-col">
-                <span className="font-black text-xs uppercase tracking-tight text-foreground/80">{item.name}</span>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                <span className="font-bold text-xs uppercase tracking-tight">{item.name}</span>
+                <p className="text-[9px] font-bold text-muted-foreground uppercase">
                     {item.event} {isToday ? "Today!" : `on ${formatDate(item.date)}`}
                 </p>
             </div>
         </div>
-        {!isToday && (
-            <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest px-2 py-0 border-none bg-muted/20">
-                {formatDate(item.date)}
-            </Badge>
-        )}
-        {isToday && (
-            <Sparkles className="size-3 text-primary animate-pulse" />
-        )}
+        {!isToday && <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">{formatDate(item.date)}</span>}
+        {isToday && <Sparkles className="size-3 text-primary animate-pulse" />}
       </div>
   );
 
   return (
-    <Card className="h-full flex flex-col animate-fade-in-up border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden font-open-sans" style={{ animationDelay: '600ms' }}>
-      <CardHeader className="p-8 pb-4">
+    <Card className="h-full flex flex-col animate-fade-in-up border-none shadow-sm rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6 pb-2">
         <div className="flex items-center justify-between">
-            <div className="space-y-1">
-                <CardTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-2 text-primary">
-                    <PartyPopper className="size-5" /> Fleet Celebrations
+            <div className="space-y-0.5">
+                <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2 text-primary">
+                    <PartyPopper className="size-4" /> Company Events
                 </CardTitle>
                 <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Birthdays & anniversaries</CardDescription>
             </div>
-            {todaysEvents && todaysEvents.length > 0 && (
-                <Badge className="bg-accent text-white font-black text-[9px] rounded-full px-2.5 py-0.5 animate-bounce">
-                    CELEBRATING
-                </Badge>
-            )}
         </div>
       </CardHeader>
-      <CardContent className="p-8 pt-4 flex-1">
-         {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                 <div className="h-10 w-10 rounded-xl bg-muted animate-pulse" />
-                 <div className="space-y-2">
-                    <div className="h-3 w-24 rounded-md bg-muted animate-pulse" />
-                    <div className="h-2 w-32 rounded-md bg-muted animate-pulse" />
-                 </div>
-              </div>
-            ))}
-          </div>
+      <CardContent className="p-6 pt-2 flex-1">
+         {todaysLoading || upcomingLoading ? (
+          <div className="space-y-3">{[...Array(3)].map((_, i) => (<div key={i} className="h-10 rounded-xl bg-muted animate-pulse" />))}</div>
         ) : (
-          <ScrollArea className="h-full pr-4 -mr-4">
-            <div className="space-y-6">
+          <ScrollArea className="h-full pr-3 -mr-3">
+            <div className="space-y-4">
               {todaysEvents && todaysEvents.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[9px] font-black text-accent tracking-[0.2em] uppercase">Today's Spotlight</span>
-                    <Separator className="flex-1 opacity-20" />
-                  </div>
+                <div className="space-y-2">
+                  <span className="text-[8px] font-black text-accent uppercase tracking-widest">Today</span>
                   {todaysEvents.map((item) => <EventListItem key={item.id} item={item} isToday />)}
                 </div>
               )}
-
               {upcomingEvents && upcomingEvents.length > 0 && (
-                 <div className="space-y-3">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[9px] font-black text-muted-foreground/50 tracking-[0.2em] uppercase">Upcoming Fleet Events</span>
-                        <Separator className="flex-1 opacity-20" />
-                    </div>
+                 <div className="space-y-2">
+                    <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">Upcoming</span>
                     {upcomingEvents.slice(0, 5).map((item) => <EventListItem key={item.id} item={item} />)}
                 </div>
               )}
-              
-              {(!todaysEvents || todaysEvents.length === 0) && (!upcomingEvents || upcomingEvents.length === 0) && (
-                 <div className="flex flex-col items-center justify-center text-center py-16 opacity-30 grayscale">
-                    <CalendarClock className="size-12 mb-4" />
-                    <p className="font-black uppercase text-[10px] tracking-[0.3em]">No Upcoming Events</p>
-                    <p className="text-[10px] font-bold uppercase mt-1">Calendar sector clear</p>
+              {(!todaysEvents?.length && !upcomingEvents?.length) && (
+                 <div className="flex flex-col items-center justify-center text-center py-10 opacity-20">
+                    <CalendarClock className="size-8 mb-2" />
+                    <p className="font-black uppercase text-[9px] tracking-widest">No events</p>
                 </div>
               )}
             </div>
           </ScrollArea>
         )}
       </CardContent>
-      <CardFooter className="p-8 pt-0 mt-auto">
-        <Button variant="outline" className="w-full rounded-full h-11 font-black uppercase text-[9px] tracking-widest bg-white/50 border-none ring-1 ring-border/50 shadow-sm transition-all hover:shadow-md" asChild>
-          <Link href="/dashboard/events">
-            Open Calendar <ChevronRight className="size-3 ml-2 opacity-50" />
-          </Link>
+      <CardFooter className="p-6 pt-0 mt-auto">
+        <Button variant="outline" className="w-full rounded-xl h-9 font-black uppercase text-[9px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50" asChild>
+          <Link href="/dashboard/events">View All <ChevronRight className="size-3 ml-1.5 opacity-50" /></Link>
         </Button>
       </CardFooter>
     </Card>
   );
 }
-

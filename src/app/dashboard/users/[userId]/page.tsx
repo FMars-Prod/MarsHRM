@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -9,8 +8,8 @@ import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } fro
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday, startOfDay, isBefore } from 'date-fns';
-import { ShieldCheck, FileText, ShieldAlert, Clock, Users, Building2, ExternalLink, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MoreHorizontal, Target, Laptop, MapPin, CheckCircle2, User as UserIcon, ChevronRight, CalendarClock, FileCheck } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -19,7 +18,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Link from "next/link";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
@@ -51,14 +49,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
   const { data: branches } = useCollection<any>(branchesQuery);
 
-  const branchName = React.useMemo(() => {
-    if (!branches || !user?.branchId) return "Unassigned Sector";
-    const b = branches.find((b: any) => b.id === user.branchId);
-    return b ? b.name : "Unassigned Sector";
-  }, [branches, user?.branchId]);
-
   const docsQuery = useMemoFirebase(() => userId ? query(collection(firestore, 'vault_assets'), where('ownerId', '==', userId), orderBy('uploadedAt', 'desc')) : null, [userId, firestore]);
   const { data: documents } = useCollection<any>(docsQuery);
+
+  const assetsQuery = useMemoFirebase(() => userId ? query(collection(firestore, "assets"), where("assignedToId", "==", userId)) : null, [userId, firestore]);
+  const { data: assignedAssets } = useCollection<any>(assetsQuery);
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
@@ -68,7 +63,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     if (!isUserLoading && currentUser && currentUserData) {
         const isSelf = currentUser.uid === userId;
         if (!isSelf && !isAdmin) {
-            toast({ variant: 'destructive', title: 'Vertical Block', description: 'Administrative authorization required.' });
+            toast({ variant: 'destructive', title: 'Access Denied', description: 'Administrative authorization required.' });
             router.push('/dashboard');
         }
     }
@@ -79,12 +74,29 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const attendanceQuery = useMemoFirebase(() => userId ? query(collection(firestore, `users/${userId}/attendances`), orderBy('checkInTime', 'desc')) : null, [firestore, userId]);
   const { data: attendanceData } = useCollection<AttendanceRecord>(attendanceQuery);
-  
-  const complianceQuery = useMemoFirebase(() => userId ? query(collection(firestore, 'compliance_reports'), where('employeeId', '==', userId), orderBy('timestamp', 'desc')) : null, [firestore, userId]);
-  const { data: complianceData } = useCollection<any>(complianceQuery);
 
-  const assetsQuery = useMemoFirebase(() => userId ? query(collection(firestore, "assets"), where("assignedToId", "==", userId)) : null, [userId, firestore]);
-  const { data: assignedAssets } = useCollection<any>(assetsQuery);
+  const branchName = React.useMemo(() => {
+    if (!branches || !user?.branchId) return "Unassigned";
+    const b = branches.find((b: any) => b.id === user.branchId);
+    return b ? b.name : "Unassigned";
+  }, [branches, user?.branchId]);
+
+  const attendanceStats = React.useMemo(() => {
+    const today = startOfDay(new Date());
+    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const totalWorkingDays = daysInMonth.filter(d => !isSunday(d)).length;
+    const daysSoFar = eachDayOfInterval({ start: monthStart, end: today });
+    const workingDaysSoFar = daysSoFar.filter(d => !isSunday(d)).length;
+
+    if (!attendanceData) return { present: 0, late: 0, absent: workingDaysSoFar, remaining: totalWorkingDays - workingDaysSoFar, percentage: 0, totalWorkingDays };
+    const monthlyAtt = attendanceData.filter(a => a.checkInTime && a.checkInTime.toDate() >= monthStart);
+    const present = monthlyAtt.filter(a => a.status === 'present').length;
+    const late = monthlyAtt.filter(a => a.status === 'late').length;
+    const attended = present + late;
+    const absent = Math.max(0, workingDaysSoFar - attended);
+    const remaining = Math.max(0, totalWorkingDays - workingDaysSoFar);
+    return { present, late, absent, remaining, totalWorkingDays, percentage: Math.min(100, Math.round((attended / totalWorkingDays) * 100)) };
+  }, [attendanceData, monthStart, monthEnd]);
 
   React.useEffect(() => {
       const fetchReports = async () => {
@@ -96,356 +108,152 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
       fetchReports();
   }, [userId, firestore]);
 
-  const attendanceStats = React.useMemo(() => {
-    const today = startOfDay(new Date());
-    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    const totalWorkingDays = daysInMonth.filter(d => !isSunday(d)).length;
-
-    const daysSoFar = eachDayOfInterval({ start: monthStart, end: today });
-    const workingDaysSoFar = daysSoFar.filter(d => !isSunday(d)).length;
-
-    if (!attendanceData) return { present: 0, late: 0, absent: workingDaysSoFar, remaining: totalWorkingDays - workingDaysSoFar, percentage: 0, totalWorkingDays };
-    
-    const monthlyAtt = attendanceData.filter(a => a.checkInTime && a.checkInTime.toDate() >= monthStart);
-    const present = monthlyAtt.filter(a => a.status === 'present').length;
-    const late = monthlyAtt.filter(a => a.status === 'late').length;
-    const attended = present + late;
-    
-    const absent = Math.max(0, workingDaysSoFar - attended);
-    const remaining = Math.max(0, totalWorkingDays - workingDaysSoFar);
-
-    return { 
-        present, 
-        late, 
-        absent, 
-        remaining,
-        totalWorkingDays,
-        percentage: Math.min(100, Math.round((attended / totalWorkingDays) * 100))
-    };
-  }, [attendanceData, monthStart, monthEnd]);
-
-  const experience = React.useMemo(() => {
-    if (!user?.hireDate) return "N/A";
-    const totalDays = differenceInDays(new Date(), new Date(user.hireDate));
-    return `${totalDays} d`;
-  }, [user]);
-
   const handleExportPdf = () => {
     const pdfDoc = new jsPDF();
-    pdfDoc.text(`Audit: ${user.firstName} ${user.lastName}`, 14, 20);
+    pdfDoc.text(`Employee Audit: ${user.firstName} ${user.lastName}`, 14, 20);
     autoTable(pdfDoc, {
         startY: 30,
         head: [['Metric', 'Value']],
-        body: [['Attendance %', `${attendanceStats.percentage}%`], ['Tenure', experience]]
+        body: [['Attendance %', `${attendanceStats.percentage}%`], ['ID', user.id]]
     });
     pdfDoc.save(`Audit_${user.firstName}.pdf`);
   };
 
-  if (isUserLoading || !user) return <div className="p-20 text-center animate-pulse uppercase font-black text-xs">Syncing Personnel Data...</div>;
+  if (isUserLoading || !user) return <div className="p-10 text-center animate-pulse uppercase font-black text-xs">Loading Profile...</div>;
 
   const leaveBalValue = user.leaveBalance;
   const leaveEntValue = user.totalLeaveEntitlement || 24;
   const isLeaveConfigured = leaveBalValue !== undefined;
-  const leavePercentage = isLeaveConfigured ? Math.round((leaveBalValue / leaveEntValue) * 100) : 0;
-  
-  const todaysAttendance = attendanceData?.find(a => a.checkInTime && isToday(a.checkInTime.toDate()));
-  const operationalStatus = todaysAttendance ? (todaysAttendance.checkOutTime ? "Off-Duty" : "Active") : "Away";
 
   return (
-    <div className="max-w-[1200px] mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
-        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
-            <CardContent className="p-6">
-                <div className="flex flex-col gap-4">
-                    <div className="flex items-start gap-6">
-                        <Avatar className="h-24 w-24 rounded-3xl border-4 border-white shadow-2xl ring-1 ring-border shrink-0 bg-muted">
-                            {user.avatar?.startsWith('http') ? (
-                                <AvatarImage src={user.avatar} className="object-cover" />
-                            ) : (
-                                <AvatarFallback className="text-4xl font-black">{user.avatar || user.firstName?.[0]}</AvatarFallback>
-                            )}
-                        </Avatar>
-
-                        <div className="flex-1 space-y-2 pt-1">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                                <div className="space-y-0.5">
-                                    <h2 className="text-2xl font-black tracking-tighter text-foreground leading-none">
-                                        {user.firstName} {user.lastName}
-                                    </h2>
-                                    <p className="text-sm font-bold text-muted-foreground">{user.jobTitle}</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest border-none ring-1 ring-border/50 shadow-sm bg-white hover:bg-primary/5 transition-all">Export PDF</Button>}
-                                    <Button asChild size="sm" className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest shadow-xl shadow-primary/20">
-                                        <Link href="/dashboard/users"><Users className="size-3.5 mr-1.5" /> Staff Registry</Link>
-                                    </Button>
-                                </div>
+    <div className="max-w-6xl mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
+        <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden p-6">
+            <div className="flex flex-col gap-6">
+                <div className="flex items-start gap-6">
+                    <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-md ring-1 ring-border shrink-0 bg-muted">
+                        <AvatarImage src={user.avatar} className="object-cover" />
+                        <AvatarFallback className="text-3xl font-black">{user.firstName?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="space-y-0.5">
+                                <h2 className="text-2xl font-black tracking-tighter">{user.firstName} {user.lastName}</h2>
+                                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{user.jobTitle}</p>
                             </div>
-                            <Badge className="bg-primary/10 text-primary border-none rounded-full px-2.5 h-4 text-[7px] font-black uppercase tracking-widest">TACTICAL AUDIT ACTIVE</Badge>
+                            <div className="flex gap-2">
+                                {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest">Export PDF</Button>}
+                                <Button asChild size="sm" className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest shadow-xl shadow-primary/20"><Link href="/dashboard/users"><Users className="size-3.5 mr-1.5" /> Staff List</Link></Button>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-4 border-y border-dashed border-border/50">
+                            <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
+                            <DetailItem icon={CalendarDays} label="Joining Date" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
+                            <DetailItem icon={Mail} label="Email Address" value={user.email} />
+                            <DetailItem icon={Phone} label="Phone Number" value={user.phoneNumber || "N/A"} />
+                        </div>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                            <DetailItem icon={Users} label="Team" value={user.teamId ? "Assigned" : "Unassigned"} />
+                            <DetailItem icon={MapPin} label="Work Location" value={branchName} />
+                            <DetailItem icon={Briefcase} label="Employment Type" value={user.employmentType || "Employee"} />
+                            <DetailItem icon={Clock} label="System Level" value={user.role} />
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 py-3 border-t border-dashed border-border/50">
-                        <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
-                        <DetailItem icon={CalendarDays} label="Joining Date" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                        <DetailItem icon={Mail} label="Email Directive" value={user.email} />
-                        <DetailItem icon={Phone} label="Phone Line" value={user.phoneNumber || "N/A"} />
-                    </div>
-
-                    <Separator className="opacity-50" />
-
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <DetailItem icon={Users} label="Team Fleet" value={user.teamId ? "Assigned" : "Unassigned"} />
-                        <DetailItem icon={MapPin} label="Work Location" value={branchName} />
-                        <DetailItem icon={Briefcase} label="Employment Type" value={user.employmentType || "Employee"} />
-                        <DetailItem icon={Clock} label="Account Tier" value={user.role} />
-                    </div>
                 </div>
-            </CardContent>
+            </div>
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-             <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
-                <div className="flex justify-between items-start">
-                    <div className="p-2 rounded-xl bg-green-50 text-green-600 shadow-sm"><UserCheck className="size-4" /></div>
-                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Audit Sync</Badge>
+             <MetricCard icon={UserCheck} title="Attendance" ratio={`${attendanceStats.present + attendanceStats.late} / ${attendanceStats.totalWorkingDays}`} progress={attendanceStats.percentage} color="text-green-600">
+                <div className="grid grid-cols-4 gap-1 mt-4">
+                    <MetricStat label="Pres" val={attendanceStats.present} />
+                    <MetricStat label="Late" val={attendanceStats.late} color="text-amber-500" />
+                    <MetricStat label="Abs" val={attendanceStats.absent} color="text-rose-500" />
+                    <MetricStat label="Rem" val={attendanceStats.remaining} color="text-sky-500" />
                 </div>
-                <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground">Attendance</p>
-                        <span className="text-sm font-black text-green-600">{attendanceStats.present + attendanceStats.late} / {attendanceStats.totalWorkingDays}</span>
-                    </div>
-                    <Progress value={attendanceStats.percentage} className="h-1.5 mb-4" />
-                    <div className="grid grid-cols-4 gap-1">
-                        <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Pres</p><p className="text-xs font-black">{attendanceStats.present}</p></div>
-                        <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Late</p><p className="text-xs font-black text-amber-500">{attendanceStats.late}</p></div>
-                        <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Abs</p><p className="text-xs font-black text-red-500">{attendanceStats.absent}</p></div>
-                        <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">Rem</p><p className="text-xs font-black text-blue-400">{attendanceStats.remaining}</p></div>
-                    </div>
-                </div>
-                <div className="pt-2 border-t border-dashed flex justify-between items-center">
-                    <span className="text-[8px] font-black uppercase opacity-40">Today's Hub Signal:</span>
-                    <Badge className={cn("text-[7px] font-black h-4 px-2 uppercase rounded-full border-none", operationalStatus === 'Active' ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground")}>{operationalStatus}</Badge>
-                </div>
-            </Card>
+            </MetricCard>
 
-            <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
-                <div className="flex justify-between items-start">
-                    <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shadow-sm"><CalendarClock className="size-4" /></div>
-                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Balance</Badge>
-                </div>
-                <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground">Leave Balance</p>
-                        <span className="text-sm font-black text-blue-600">{isLeaveConfigured ? `${leaveBalValue}/${leaveEntValue}` : "NIL"}</span>
-                    </div>
-                    <Progress value={leavePercentage} className="h-1.5 mb-4" />
-                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 leading-none">
-                        {isLeaveConfigured ? "Days available for member" : "Mission parameters pending"}
-                    </p>
-                </div>
-                <div className="pt-2 border-t border-dashed">
-                    <p className="text-[8px] font-black uppercase opacity-40">Entitlement Protocol:</p>
-                    <p className="text-[9px] font-bold uppercase">{isLeaveConfigured ? `Standard ${leaveEntValue}D Plan` : "Awaiting HR Sync"}</p>
-                </div>
-            </Card>
+            <MetricCard icon={CalendarClock} title="Leave Balance" ratio={isLeaveConfigured ? `${leaveBalValue} / ${leaveEntValue}` : "NIL"} progress={isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 0} color="text-sky-600">
+                <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">{isLeaveConfigured ? "Days available for use" : "Awaiting config"}</p>
+            </MetricCard>
 
-            <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
-                <div className="flex justify-between items-start">
-                    <div className="p-2 rounded-xl bg-orange-50 text-orange-600 shadow-sm"><Zap className="size-4" /></div>
-                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Integrity</Badge>
-                </div>
-                <div>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Performance Audit</p>
-                    <h4 className={cn(
-                        "text-2xl font-black tracking-tighter uppercase",
-                        user.performanceRating === 'Excellent' ? "text-green-600" :
-                        user.performanceRating === 'Good' ? "text-blue-600" :
-                        user.performanceRating === 'Average' ? "text-amber-500" : "text-red-500"
-                    )}>
-                        {user.performanceRating || "Good"}
-                    </h4>
-                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-1">Strategic competence tier</p>
-                </div>
-                <div className="pt-2 border-t border-dashed">
-                    <p className="text-[8px] font-black uppercase opacity-40">Last Review Date:</p>
-                    <p className="text-[9px] font-bold">{user.lastReviewDate ? format(new Date(user.lastReviewDate.toDate ? user.lastReviewDate.toDate() : user.lastReviewDate), 'dd MMM yyyy') : 'N/A'}</p>
-                </div>
-            </Card>
+            <MetricCard icon={Zap} title="Performance" ratio={user.performanceRating || "Good"} color="text-orange-600">
+                <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Review: {user.lastReviewDate ? format(user.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
+            </MetricCard>
 
-            <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
-                <div className="flex justify-between items-start">
-                    <div className="p-2 rounded-xl bg-purple-50 text-purple-600 shadow-sm"><FileCheck className="size-4" /></div>
-                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Ledger</Badge>
-                </div>
-                <div>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Payroll Status</p>
-                    <h4 className="text-2xl font-black tracking-tighter text-purple-600 uppercase">
-                        {user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Based on Performance" : "Audited")}
-                    </h4>
-                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-1">
-                        {user.payrollDate ? `Issued: ${format(new Date(user.payrollDate.toDate ? user.payrollDate.toDate() : user.payrollDate), 'dd MMM')}` : "Ledger Synced"}
-                    </p>
-                </div>
-                <div className="pt-2 border-t border-dashed">
-                    <p className="text-[8px] font-black uppercase opacity-40">Next Objective Cycle:</p>
-                    <p className="text-[9px] font-black text-purple-700 uppercase">
-                        {user.employmentType === 'Intern' ? "Based on Performance" : "Scheduled cycle"}
-                    </p>
-                </div>
-            </Card>
+            <MetricCard icon={FileCheck} title="Payroll Status" ratio={user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Based on Performance" : "Audited")} color="text-purple-600">
+                <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Cycle: {user.employmentType === 'Intern' ? "Performance Based" : "Scheduled"}</p>
+            </MetricCard>
 
-            <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
-                <div className="flex justify-between items-start">
-                    <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shadow-sm transition-transform group-hover:scale-110"><FileBox className="size-4" /></div>
-                    <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Vault</Badge>
-                </div>
-                <div>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Stored Intelligence</p>
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-emerald-600 tracking-tighter">{documents?.length || 0}</span>
-                        <span className="text-[10px] font-black uppercase text-muted-foreground/60">Professional Assets</span>
-                    </div>
-                </div>
-                <div className="pt-2 border-t border-dashed">
-                    <p className="text-[8px] font-black uppercase text-muted-foreground opacity-40">Status:</p>
-                    <p className="text-[9px] font-black text-emerald-700 uppercase">Secure Repository Hub</p>
-                </div>
-            </Card>
+            <MetricCard icon={FileBox} title="Documents" ratio={documents?.length || 0} color="text-emerald-600">
+                <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Files in vault</p>
+            </MetricCard>
         </div>
 
         <Tabs defaultValue="activity" className="space-y-4">
             <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-xl p-1 h-auto gap-2">
-                {["Activity", "Attendance", "Documents", "Assets", "Compliance"].map(tab => (
-                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white px-6 py-2 font-black uppercase text-[9px] tracking-[0.2em] transition-all bg-transparent border-none">
+                {["Activity", "Attendance", "Documents", "Assets"].map(tab => (
+                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white px-6 py-2 font-black uppercase text-[9px] tracking-[0.2em] transition-all">
                         {tab}
                     </TabsTrigger>
                 ))}
             </TabsList>
-
             <TabsContent value="activity" className="mt-0">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                     <Card className="lg:col-span-8 border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
-                        <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Mission Log History</h3>
-                        <div className="space-y-6">
+                        <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Recent Activity</h3>
+                        <div className="space-y-4">
                             {userReports.length > 0 ? userReports.map(r => (
-                                <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={r.date?.toDate ? format(r.date.toDate(), 'PPP') : 'N/A'} desc={`Shift finalized for ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
-                            )) : <div className="py-12 text-center opacity-30 text-[10px] font-black uppercase tracking-widest grayscale flex flex-col items-center gap-3"><FileText className="size-8"/> No Recent Submissions</div>}
+                                <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd')} desc={`Finalized for ${r.employeeDepartment}.`} color="bg-primary/10 text-primary" />
+                            )) : <p className="text-[9px] font-black uppercase text-center opacity-30 py-10">No recent activity</p>}
                         </div>
                     </Card>
-                    <div className="lg:col-span-4 space-y-3">
-                        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 space-y-5">
-                            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Employment Details</h3>
-                            <div className="space-y-3">
-                                <InfoRow label="Designation" value={user.jobTitle} />
-                                <InfoRow label="Department" value={user.department} />
-                                <InfoRow label="Work Location" value={branchName} />
-                                <InfoRow label="Work Schedule" value={user.shiftType || 'General Shift'} />
-                                <InfoRow label="Experience" value={experience} />
-                            </div>
-                        </Card>
-                    </div>
+                    <Card className="lg:col-span-4 border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
+                        <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Employment Details</h3>
+                        <div className="space-y-3">
+                            <InfoRow label="Designation" value={user.jobTitle} />
+                            <InfoRow label="Department" value={user.department} />
+                            <InfoRow label="Work Schedule" value={user.shiftType || 'General Shift'} />
+                            <InfoRow label="Experience" value={user.hireDate ? `${differenceInDays(new Date(), new Date(user.hireDate))} d` : 'N/A'} />
+                        </div>
+                    </Card>
                 </div>
             </TabsContent>
-
             <TabsContent value="attendance">
-                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden ring-1 ring-border/50">
+                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
                     <Table>
-                        <TableHeader className="bg-muted/5 border-b">
-                            <TableRow>
-                                <TableHead className="font-black uppercase text-[8px] py-4 px-6 tracking-widest">Mission Date</TableHead>
-                                <TableHead className="font-black uppercase text-[8px] py-4 tracking-widest">Status</TableHead>
-                                <TableHead className="font-black uppercase text-[8px] py-4 tracking-widest">Log In</TableHead>
-                                <TableHead className="font-black uppercase text-[8px] py-4 tracking-widest">Log Out</TableHead>
-                                <TableHead className="text-right px-6 text-[8px] font-black uppercase tracking-widest">Map Point</TableHead>
-                            </TableRow>
-                        </TableHeader>
+                        <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[8px] font-black px-6 py-4 uppercase tracking-widest">Date</TableHead><TableHead className="text-[8px] font-black uppercase tracking-widest">Login</TableHead><TableHead className="text-right px-6 text-[8px] font-black uppercase tracking-widest">Location</TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {attendanceData && attendanceData.length > 0 ? attendanceData.map((rec, i) => (
-                                <TableRow key={i} className="border-border/50 group hover:bg-primary/5 transition-colors">
+                            {attendanceData?.map((rec, i) => (
+                                <TableRow key={i} className="border-border/50">
                                     <TableCell className="py-3 px-6 font-black text-[10px] uppercase">{format(rec.checkInTime?.toDate() || new Date(), 'dd MMM yyyy')}</TableCell>
-                                    <TableCell>
-                                        <Badge className={cn(
-                                            "rounded-full uppercase text-[8px] font-black tracking-widest px-2.5 h-5 border-none",
-                                            rec.status === 'present' ? "bg-green-100 text-green-700" :
-                                            rec.status === 'late' ? "bg-amber-100 text-amber-700" :
-                                            "bg-rose-100 text-rose-700"
-                                        )}>
-                                            {rec.isOutOfRange ? "REMOTE SIGNAL" : rec.status.toUpperCase()}
-                                        </Badge>
-                                    </TableCell>
                                     <TableCell className="font-mono text-[10px] font-bold text-primary">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</TableCell>
-                                    <TableCell className="font-mono text-[10px] font-bold text-primary">{rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}</TableCell>
-                                    <TableCell className="text-right px-6">
-                                        {rec.locationCheckInLatitude && (
-                                            <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="p-1.5 rounded-lg bg-primary/5 text-primary hover:bg-primary/10 transition-all inline-block shadow-sm">
-                                                <MapPin className="size-3" />
-                                            </Link>
-                                        )}
-                                    </TableCell>
+                                    <TableCell className="text-right px-6">{rec.locationCheckInLatitude && <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="p-1.5 rounded-lg bg-primary/5 text-primary inline-block"><MapPin className="size-3" /></Link>}</TableCell>
                                 </TableRow>
-                            )) : (
-                                <TableRow><TableCell colSpan={5} className="h-32 text-center opacity-30 text-[10px] font-black uppercase tracking-[0.4em] grayscale"><CalendarClock className="size-8 mx-auto mb-2"/> Registry Clear</TableCell></TableRow>
-                            )}
+                            )) || <TableRow><TableCell colSpan={3} className="h-32 text-center text-[9px] font-black uppercase opacity-30">No records</TableCell></TableRow>}
                         </TableBody>
                     </Table>
                 </Card>
             </TabsContent>
-
-            <TabsContent value="documents" className="mt-0">
-                <Card className="border-none shadow-sm rounded-2xl bg-white p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {documents && documents.length > 0 ? documents.map(doc => (
-                            <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FileBox className="size-4" /></div>
-                                    <span className="font-black text-[10px] uppercase tracking-tight truncate max-w-[150px]">{doc.title}</span>
-                                </div>
-                                <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-all text-primary" />
-                            </Link>
-                        )) : (
-                            <div className="col-span-full py-12 text-center opacity-30 text-[10px] font-black uppercase tracking-widest grayscale flex flex-col items-center gap-3"><FileBox className="size-8"/> No Intelligence Assets</div>
-                        )}
-                    </div>
-                </Card>
+            <TabsContent value="documents">
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-6"><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {documents?.map(doc => (
+                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
+                            <div className="flex items-center gap-3"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FileBox className="size-4" /></div><span className="font-black text-[10px] uppercase truncate">{doc.title}</span></div>
+                        </Link>
+                    )) || <div className="col-span-full py-10 text-center text-[9px] font-black uppercase opacity-30">No documents</div>}
+                </div></Card>
             </TabsContent>
-            
-            <TabsContent value="assets" className="mt-0">
-                <Card className="border-none shadow-sm rounded-2xl bg-white p-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {assignedAssets && assignedAssets.length > 0 ? assignedAssets.map(asset => (
-                            <div key={asset.id} className="p-4 rounded-xl ring-1 ring-border/50 bg-muted/5 space-y-2 hover:shadow-lg transition-all duration-500">
-                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-dashed border-border/50 p-1">
-                                    {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-md" /> : <Laptop className="size-6 opacity-10" />}
-                                </div>
-                                <div>
-                                    <p className="font-black text-[10px] uppercase tracking-tighter truncate">{asset.name}</p>
-                                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">{asset.category}</p>
-                                </div>
+            <TabsContent value="assets">
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {assignedAssets?.map(asset => (
+                        <div key={asset.id} className="p-4 rounded-xl ring-1 ring-border/50 bg-muted/5 space-y-2">
+                            <div className="aspect-square bg-white rounded-lg flex items-center justify-center border border-dashed p-1">
+                                {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-md" /> : <Laptop className="size-6 opacity-10" />}
                             </div>
-                        )) : (
-                            <div className="col-span-full py-12 text-center opacity-30 text-[10px] font-black uppercase tracking-widest grayscale flex flex-col items-center gap-3"><Laptop className="size-8" /> No Hardware Units Registered</div>
-                        )}
-                    </div>
-                </Card>
-            </TabsContent>
-
-            <TabsContent value="compliance" className="mt-0">
-                <Card className="border-none shadow-sm rounded-2xl bg-white p-6">
-                    <div className="space-y-4">
-                        {complianceData && complianceData.length > 0 ? complianceData.map((report: any) => (
-                            <div key={report.id} className="p-4 rounded-xl bg-red-50/50 border-2 border-dashed border-red-100 flex items-start gap-4 hover:bg-red-50 transition-colors">
-                                <div className="p-2 bg-red-500 text-white rounded-lg shadow-lg shadow-red-500/20"><ShieldAlert className="size-4" /></div>
-                                <div>
-                                    <p className="font-black text-xs text-red-900 uppercase tracking-tight">{report.severity} Priority Violation</p>
-                                    <p className="text-[10px] font-medium text-red-800/70 mt-0.5 leading-relaxed">Reason: {report.reason}</p>
-                                    <p className="text-[7px] font-black text-red-600 uppercase tracking-widest mt-2 flex items-center gap-1.5"><Clock className="size-2"/> Audit Stamped: {report.timestamp?.toDate ? format(report.timestamp.toDate(), 'PPP p') : 'N/A'}</p>
-                                </div>
-                            </div>
-                        )) : (
-                            <div className="py-12 text-center opacity-30 text-[10px] font-black uppercase tracking-widest grayscale flex flex-col items-center gap-3"><CheckCircle2 className="size-8 text-emerald-600"/> Integrity Verified</div>
-                        )}
-                    </div>
-                </Card>
+                            <div><p className="font-black text-[10px] uppercase tracking-tighter truncate">{asset.name}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">{asset.category}</p></div>
+                        </div>
+                    )) || <div className="col-span-full py-10 text-center text-[9px] font-black uppercase opacity-30">No assets assigned</div>}
+                </div></Card>
             </TabsContent>
         </Tabs>
     </div>
@@ -455,27 +263,47 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
         <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-primary/5 text-primary/60 shrink-0 shadow-sm"><Icon className="size-4" /></div>
+            <div className="p-2 rounded-xl bg-primary/5 text-primary/60 shrink-0"><Icon className="size-4" /></div>
             <div className="min-w-0 pt-0.5">
                 <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-1 leading-none">{label}</p>
-                <p className="text-[11px] font-black truncate text-foreground/90 uppercase tracking-tight">{value}</p>
+                <p className="text-[10px] font-black truncate text-foreground/90 uppercase">{value}</p>
             </div>
         </div>
     );
 }
 
+function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any) {
+    return (
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
+            <div className="flex justify-between items-start">
+                <div className={cn("p-2 rounded-xl bg-muted/20 shadow-sm", color)}><Icon className="size-4" /></div>
+                <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Active</Badge>
+            </div>
+            <div>
+                <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-black uppercase text-muted-foreground">{title}</p><span className={cn("text-sm font-black", color)}>{ratio}</span></div>
+                {progress !== undefined && <Progress value={progress} className="h-1.5" />}
+                {children}
+            </div>
+        </Card>
+    );
+}
+
+function MetricStat({ label, val, color }: any) {
+    return <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">{label}</p><p className={cn("text-xs font-black", color)}>{val}</p></div>;
+}
+
 function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
         <div className="flex gap-4 items-start relative group">
-            <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-lg transition-transform group-hover:scale-110 group-hover:rotate-3", color)}><Icon className="size-4" /></div>
+            <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-sm transition-transform", color)}><Icon className="size-4" /></div>
             <div className="space-y-1 flex-1">
                 <p className="font-black text-xs uppercase tracking-tight text-foreground/90">{title}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest flex items-center gap-1"><Clock className="size-2.5"/> {time}</span>
+                <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{time}</span>
                     <Badge variant="outline" className="h-4 px-2 text-[7px] font-black uppercase border-none bg-muted/30 tracking-widest">{desc}</Badge>
                 </div>
             </div>
-            <ChevronRight className="size-4 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+            <ChevronRight className="size-4 text-muted-foreground/20 group-hover:text-primary transition-all" />
         </div>
     );
 }
@@ -483,7 +311,7 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
         <div className="flex items-center justify-between py-2 border-b border-dashed border-border/50 last:border-none group">
-            <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest group-hover:text-primary transition-colors">{label}</span>
+            <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest">{label}</span>
             <span className="text-[11px] font-black text-foreground/80 uppercase text-right pl-3">{value}</span>
         </div>
     );
