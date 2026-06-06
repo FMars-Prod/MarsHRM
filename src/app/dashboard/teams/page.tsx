@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type UserData = {
     id: string;
@@ -39,7 +40,7 @@ type Team = {
     id: string;
     name: string;
     teamLeadId: string;
-    supervisorId?: string; // The Admin/CEO this team reports to
+    supervisorId?: string;
     memberIds: string[];
 };
 
@@ -122,7 +123,6 @@ export default function TeamsPage() {
         const batch = writeBatch(firestore);
         const teamRef = doc(firestore, 'teams', teamId);
         
-        // Find users assigned to this team
         const q = query(collection(firestore, 'users'), where('teamId', '==', teamId));
         const snap = await getDocs(q);
         snap.docs.forEach(uDoc => {
@@ -136,12 +136,12 @@ export default function TeamsPage() {
 
     const isUrl = (str?: string) => str && str.startsWith('http');
 
-    // Supervisors can be Level 1 or 2 (CEO or Admin)
     const potentialSupervisors = React.useMemo(() => {
         return users?.filter(u => u.role === 'CEO/Admin' || u.role === 'HR Manager') || [];
     }, [users]);
 
     return (
+        <TooltipProvider delayDuration={0}>
         <>
             <PageHeader title="Organizational Units" description="Manage tactical team associations and leadership hierarchies.">
                 {canManageAllTeams && (
@@ -156,7 +156,7 @@ export default function TeamsPage() {
                             <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Lead Strategist</TableHead>
                             <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Primary Supervisor</TableHead>
                             <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Fleet Size</TableHead>
-                            <TableHead className="text-right font-black uppercase tracking-tighter text-[10px] py-4">Action</TableHead>
+                            <TableHead className="text-right font-black uppercase tracking-tighter text-[10px] py-4 px-6">Control</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -168,40 +168,55 @@ export default function TeamsPage() {
                                 <TableCell className="font-medium text-xs text-primary">{getTeamLeadName(team.teamLeadId)}</TableCell>
                                 <TableCell className="font-medium text-[10px] uppercase text-muted-foreground">{getSupervisorName(team.supervisorId)}</TableCell>
                                 <TableCell><Badge variant="secondary" className="rounded-full font-bold">{team.memberIds.length}</Badge></TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => setSelectedTeamForSheet(team)}><Users className="mr-2 h-4 w-4"/> Review Fleet</DropdownMenuItem>
-                                            {canManageAllTeams && (
-                                                <>
-                                                    <DropdownMenuItem onClick={() => { 
-                                                        setEditingTeam(team); 
-                                                        setTeamName(team.name); 
-                                                        setTeamLeadId(team.teamLeadId); 
-                                                        setSupervisorId(team.supervisorId || "unassigned");
-                                                        setSelectedMemberIds(team.memberIds.filter(id => id !== team.teamLeadId)); 
-                                                        setIsDialogOpen(true); 
-                                                    }}><Edit className="mr-2 h-4 w-4"/> Reconfigure</DropdownMenuItem>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Dissolve Team</DropdownMenuItem>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Dissolve tactical unit?</AlertDialogTitle>
-                                                                <AlertDialogDescription>This action will unassign all members from "{team.name}" immediately.</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="bg-red-600 text-white rounded-full font-bold uppercase text-[10px]">Confirm Dissolution</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
+                                <TableCell className="text-right px-6">
+                                    <div className="flex justify-end items-center gap-1.5">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/5 transition-all" onClick={() => setSelectedTeamForSheet(team)}>
+                                                    <Users className="size-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase">Review Fleet</TooltipContent>
+                                        </Tooltip>
+
+                                        {canManageAllTeams && (
+                                            <>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/5 transition-all" onClick={() => { 
+                                                            setEditingTeam(team); 
+                                                            setTeamName(team.name); 
+                                                            setTeamLeadId(team.teamLeadId); 
+                                                            setSupervisorId(team.supervisorId || "unassigned");
+                                                            setSelectedMemberIds(team.memberIds.filter(id => id !== team.teamLeadId)); 
+                                                            setIsDialogOpen(true); 
+                                                        }}>
+                                                            <Edit className="size-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase">Reconfigure Unit</TooltipContent>
+                                                </Tooltip>
+
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive hover:bg-red-50 transition-all">
+                                                            <Trash2 className="size-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Dissolve tactical unit?</AlertDialogTitle>
+                                                            <AlertDialogDescription className="text-sm font-medium">This action will unassign all members from "{team.name}" immediately. This cannot be undone.</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter className="mt-6 gap-3">
+                                                            <AlertDialogCancel className="rounded-full font-black uppercase text-[10px]">Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="rounded-full font-black uppercase text-[10px] bg-red-600 hover:bg-red-700">Confirm Dissolution</AlertDialogAction>
+                                                        </AlertDialogFooter>
                                                     </AlertDialog>
-                                                </>
-                                            )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                                </AlertDialog>
+                                            </>
+                                        )}
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -258,7 +273,6 @@ export default function TeamsPage() {
                                     {potentialSupervisors.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role === 'CEO/Admin' ? 'CEO' : 'Admin'})</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <p className="text-[9px] text-muted-foreground italic">Assigning a supervisor creates a vertical reporting branch in the Org structure.</p>
                         </div>
 
                         <div className="space-y-2">
@@ -293,5 +307,6 @@ export default function TeamsPage() {
                 </DialogContent>
             </Dialog>
         </>
+        </TooltipProvider>
     );
 }

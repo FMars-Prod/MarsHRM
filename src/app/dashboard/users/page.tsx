@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const userSchema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -67,7 +68,6 @@ export default function UsersPage() {
   const [isUploadingSignature, setIsUploadingSignature] = React.useState(false);
   const [manualSignatureUrl, setManualSignatureUrl] = React.useState("");
   
-  // Selection State
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
   const [isBulkBranchDialogOpen, setIsBulkBranchDialogOpen] = React.useState(false);
   const [bulkBranchId, setBulkBranchId] = React.useState<string>("");
@@ -77,6 +77,9 @@ export default function UsersPage() {
 
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
   const { data: branches } = useCollection<any>(branchesQuery);
+
+  const { data: currentUserData } = useDoc<any>(useMemoFirebase(() => currentUser ? doc(firestore, "users", currentUser.uid) : null, [currentUser, firestore]));
+  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -275,6 +278,7 @@ export default function UsersPage() {
   };
 
   return (
+    <TooltipProvider delayDuration={0}>
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader title="Staff Registry" description="Global directory of active and tactical team members.">
         <div className="flex gap-2">
@@ -515,7 +519,7 @@ export default function UsersPage() {
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Work Mode</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Work Schedule</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Account Level</TableHead>
-              <TableHead className="text-right text-[10px] font-black uppercase tracking-widest py-6">Control</TableHead>
+              <TableHead className="text-right text-[10px] font-black uppercase tracking-widest py-6 px-6">Control</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -557,35 +561,60 @@ export default function UsersPage() {
                         {u.role}
                     </Badge>
                 </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full h-9 w-9 hover:bg-white hover:shadow-sm"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-2xl border-none shadow-2xl p-2 w-52">
-                        <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Unit Operations</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); if(u.signatureUrl) setManualSignatureUrl(u.signatureUrl); setIsDialogOpen(true); }} className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5"><Edit className="size-3.5" /> Edit Profile</DropdownMenuItem>
-                        <DropdownMenuItem asChild className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5"><Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-3.5" /> Personnel Audit</Link></DropdownMenuItem>
-                        <DropdownMenuSeparator className="opacity-50" />
-                        <DropdownMenuItem onClick={() => handleResetDay(u.id)} className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5 text-orange-600 hover:bg-orange-50"><RotateCcw className="size-3.5" /> Reset Today (Test)</DropdownMenuItem>
-                        <DropdownMenuSeparator className="opacity-50" />
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5 text-destructive hover:bg-red-50">
-                                    <Trash2 className="size-3.5" /> Purge Entry
-                                </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Purge Personnel Record?</AlertDialogTitle>
-                                    <AlertDialogDescription>This will remove {u.firstName}'s entry from the tactical registry. Access credentials will be blocked.</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="rounded-full font-bold uppercase text-[10px] bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Confirm Purge</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TableCell className="text-right px-6">
+                  <div className="flex justify-end items-center gap-1.5">
+                    {isAdmin && (
+                        <>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/5 transition-all" onClick={() => { setEditingUser(u); form.reset(u); if(u.signatureUrl) setManualSignatureUrl(u.signatureUrl); setIsDialogOpen(true); }}>
+                                        <Edit className="size-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase">Edit Profile</TooltipContent>
+                            </Tooltip>
+
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive hover:bg-red-50 transition-all">
+                                        <Trash2 className="size-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Purge Personnel Record?</AlertDialogTitle>
+                                        <AlertDialogDescription className="text-sm font-medium">
+                                            This will remove {u.firstName}'s entry from the tactical registry. Access credentials will be blocked immediately.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter className="mt-6 gap-3">
+                                        <AlertDialogCancel className="rounded-full font-black uppercase text-[10px]">Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="rounded-full font-black uppercase text-[10px] bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Confirm Purge</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </>
+                    )}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 hover:bg-muted/50"><MoreHorizontal className="size-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-2xl border-none shadow-2xl p-2 w-52">
+                            <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Operations</DropdownMenuLabel>
+                            <DropdownMenuItem asChild className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5">
+                                <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-3.5" /> Personnel Audit</Link>
+                            </DropdownMenuItem>
+                            {isAdmin && (
+                                <>
+                                    <DropdownMenuSeparator className="opacity-50" />
+                                    <DropdownMenuItem onClick={() => handleResetDay(u.id)} className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5 text-orange-600 hover:bg-orange-50">
+                                        <RotateCcw className="size-3.5" /> Reset Today (Test)
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -593,7 +622,6 @@ export default function UsersPage() {
         </Table>
       </div>
 
-      {/* Bulk Branch Dialog */}
       <Dialog open={isBulkBranchDialogOpen} onOpenChange={setIsBulkBranchDialogOpen}>
           <DialogContent className="rounded-[2.5rem] sm:max-w-md p-8 border-none shadow-2xl">
               <DialogHeader className="text-left">
@@ -615,5 +643,6 @@ export default function UsersPage() {
           </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
   );
 }

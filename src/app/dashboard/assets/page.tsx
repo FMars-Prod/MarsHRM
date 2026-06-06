@@ -21,6 +21,8 @@ import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type Asset = {
     id: string;
@@ -52,6 +54,7 @@ export default function AssetsPage() {
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [isUploading, setIsUploading] = React.useState(false);
     const [viewingAsset, setViewingAsset] = React.useState<Asset | null>(null);
+    const [editingAsset, setEditingAsset] = React.useState<Asset | null>(null);
     const [assetForm, setAssetForm] = React.useState<Partial<Asset>>({
         name: '', category: '', specs: '', status: 'Available', imageUrl: ''
     });
@@ -73,10 +76,16 @@ export default function AssetsPage() {
     const handleSaveAsset = async () => {
         if (!assetForm.name || !assetForm.category) return;
         
-        const payload = { ...assetForm, createdAt: serverTimestamp() };
-        addDocumentNonBlocking(collection(firestore, 'assets'), payload);
-        toast({ title: "Asset Registry Synchronized" });
+        if (editingAsset) {
+            updateDocumentNonBlocking(doc(firestore, 'assets', editingAsset.id), assetForm);
+            toast({ title: "Asset Updated" });
+        } else {
+            const payload = { ...assetForm, createdAt: serverTimestamp() };
+            addDocumentNonBlocking(collection(firestore, 'assets'), payload);
+            toast({ title: "Asset Provisioned" });
+        }
         setIsAddOpen(false);
+        setEditingAsset(null);
         setAssetForm({ name: '', category: '', specs: '', status: 'Available', imageUrl: '' });
     };
 
@@ -88,9 +97,9 @@ export default function AssetsPage() {
             const snapshot = await uploadBytes(fileRef, file);
             const url = await getDownloadURL(snapshot.ref);
             setAssetForm(prev => ({ ...prev, imageUrl: url }));
-            toast({ title: "Visual Asset Verified" });
+            toast({ title: "Image Synced" });
         } catch (error: any) {
-            toast({ variant: "destructive", title: "Transmission Failed" });
+            toast({ variant: "destructive", title: "Sync Failed" });
         } finally {
             setIsUploading(false);
         }
@@ -107,26 +116,26 @@ export default function AssetsPage() {
             reason: `Standard requisition for ${asset.category} unit.`
         };
         addDocumentNonBlocking(collection(firestore, 'asset_requests'), payload);
-        toast({ title: "Tactical Requisition Dispatched" });
+        toast({ title: "Requisition Dispatched" });
     };
 
     const handleApproveRequest = (req: AssetRequest) => {
-        const batch = doc(firestore, 'asset_requests', req.id);
-        updateDocumentNonBlocking(batch, { status: 'Approved' });
+        updateDocumentNonBlocking(doc(firestore, 'asset_requests', req.id), { status: 'Approved' });
         updateDocumentNonBlocking(doc(firestore, 'assets', req.assetId), { status: 'Assigned', assignedToId: req.requesterId });
         toast({ title: "Asset Allocated" });
     };
 
     return (
+        <TooltipProvider delayDuration={0}>
         <div className="space-y-6">
-            <PageHeader title="Fleet Logistics" description="Command center for physical asset management and personnel requisitions.">
+            <PageHeader title="Fleet Logistics" description="Manage company physical resources and equipment lifecycle.">
                 {isPrivileged && (
-                    <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                    <Dialog open={isAddOpen} onOpenChange={(o) => { if(!o) setEditingAsset(null); setIsAddOpen(o); }}>
                         <DialogTrigger asChild><Button className="rounded-full h-11 shadow-lg"><Plus className="size-4 mr-2"/> Provision Asset</Button></DialogTrigger>
                         <DialogContent className="rounded-3xl sm:max-w-md">
-                            <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">New Asset Provisioning</DialogTitle></DialogHeader>
+                            <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">{editingAsset ? 'Reconfigure Unit' : 'New Asset Provisioning'}</DialogTitle></DialogHeader>
                             <div className="grid gap-6 py-4">
-                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Unit Designation</Label><Input value={assetForm.name} onChange={e => setAssetForm({...assetForm, name: e.target.value})} placeholder="e.g., MacBook Pro M3" /></div>
+                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Unit Name</Label><Input value={assetForm.name} onChange={e => setAssetForm({...assetForm, name: e.target.value})} placeholder="e.g., MacBook Pro M3" /></div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Category</Label>
                                         <Select value={assetForm.category} onValueChange={v => setAssetForm({...assetForm, category: v})}>
@@ -134,15 +143,15 @@ export default function AssetsPage() {
                                             <SelectContent><SelectItem value="Laptop">Laptop</SelectItem><SelectItem value="Mobile">Mobile</SelectItem><SelectItem value="Peripheral">Peripheral</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Initial Status</Label>
+                                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Status</Label>
                                         <Select value={assetForm.status} onValueChange={v => setAssetForm({...assetForm, status: v as any})}>
                                             <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent><SelectItem value="Available">Available</SelectItem><SelectItem value="Maintenance">Maintenance</SelectItem></SelectContent>
+                                            <SelectContent><SelectItem value="Available">Available</SelectItem><SelectItem value="Maintenance">Maintenance</SelectItem><SelectItem value="Assigned">Assigned</SelectItem></SelectContent>
                                         </Select>
                                     </div>
                                 </div>
                                 <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Specifications</Label><Textarea value={assetForm.specs} onChange={e => setAssetForm({...assetForm, specs: e.target.value})} placeholder="e.g., 32GB RAM, 1TB SSD" /></div>
-                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Unit Visualization</Label>
+                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary">Visualization (URL)</Label>
                                     <div className="flex gap-2">
                                         <Input value={assetForm.imageUrl} onChange={e => setAssetForm({...assetForm, imageUrl: e.target.value})} placeholder="Image URL..." className="flex-1" />
                                         <div className="relative">
@@ -152,7 +161,7 @@ export default function AssetsPage() {
                                     </div>
                                 </div>
                             </div>
-                            <Button onClick={handleSaveAsset} className="w-full rounded-full h-12 font-black uppercase">Finalize Provisioning</Button>
+                            <Button onClick={handleSaveAsset} className="w-full rounded-full h-12 font-black uppercase">{editingAsset ? 'Update Registry' : 'Finalize Provisioning'}</Button>
                         </DialogContent>
                     </Dialog>
                 )}
@@ -170,10 +179,35 @@ export default function AssetsPage() {
                             const hasPendingRequest = requests?.some(req => req.assetId === asset.id && req.requesterId === user?.uid && req.status === 'Pending');
 
                             return (
-                                <Card key={asset.id} className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden group">
+                                <Card key={asset.id} className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden group bg-white">
                                     <div className="aspect-square bg-muted relative overflow-hidden">
                                         {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" /> : <div className="w-full h-full flex items-center justify-center opacity-20"><Package className="size-12" /></div>}
-                                        <Badge className={cn("absolute top-3 right-3 rounded-full font-black text-[8px] uppercase tracking-widest", asset.status === 'Available' ? 'bg-green-600' : asset.status === 'Assigned' ? 'bg-blue-600' : 'bg-orange-600')}>{asset.status}</Badge>
+                                        <Badge className={cn("absolute top-3 right-3 rounded-full font-black text-[8px] uppercase tracking-widest border-none", asset.status === 'Available' ? 'bg-green-600 text-white' : asset.status === 'Assigned' ? 'bg-blue-600 text-white' : 'bg-orange-600 text-white')}>{asset.status}</Badge>
+                                        
+                                        {isPrivileged && (
+                                            <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="secondary" size="icon" className="h-7 w-7 rounded-lg shadow-lg" onClick={() => { setEditingAsset(asset); setAssetForm(asset); setIsAddOpen(true); }}>
+                                                    <Edit className="size-3.5" />
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="destructive" size="icon" className="h-7 w-7 rounded-lg shadow-lg">
+                                                            <Trash2 className="size-3.5" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent className="rounded-3xl">
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle className="font-black uppercase tracking-tighter text-primary">Purge Asset Record?</AlertDialogTitle>
+                                                            <AlertDialogDescription className="text-sm">This will permanently remove "{asset.name}" from the company's resource registry.</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel className="rounded-full font-bold text-xs">Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => deleteDocumentNonBlocking(doc(firestore, 'assets', asset.id))} className="bg-red-600 rounded-full font-bold text-xs">Confirm Purge</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        )}
                                     </div>
                                     <CardHeader className="p-4">
                                         <CardTitle className="text-sm font-bold truncate">{asset.name}</CardTitle>
@@ -192,7 +226,7 @@ export default function AssetsPage() {
                                         ) : (
                                             <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-xl">
                                                 <UserCircle className="size-4 opacity-40" />
-                                                <span className="text-[9px] font-black uppercase text-muted-foreground">Assigned to Fleet Member</span>
+                                                <span className="text-[9px] font-black uppercase text-muted-foreground">Assigned to Personnel</span>
                                             </div>
                                         )}
                                     </CardContent>
@@ -211,7 +245,7 @@ export default function AssetsPage() {
                                     <TableHead className="text-[10px] font-black uppercase">Target Unit</TableHead>
                                     <TableHead className="text-[10px] font-black uppercase">Date</TableHead>
                                     <TableHead className="text-[10px] font-black uppercase">Status</TableHead>
-                                    <TableHead className="text-right text-[10px] font-black uppercase">Command</TableHead>
+                                    <TableHead className="text-right text-[10px] font-black uppercase px-6">Command</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -237,14 +271,14 @@ export default function AssetsPage() {
                                         </TableCell>
                                         <TableCell className="text-[10px] font-mono text-muted-foreground">{format(req.requestDate?.toDate() || new Date(), 'PP p')}</TableCell>
                                         <TableCell>
-                                            <Badge variant="outline" className={cn("rounded-full font-black text-[8px] uppercase tracking-widest", req.status === 'Approved' ? 'text-green-600 border-green-200' : req.status === 'Pending' ? 'text-orange-600 border-orange-200' : 'text-red-600 border-red-200')}>
+                                            <Badge variant="outline" className={cn("rounded-full font-black text-[8px] uppercase tracking-widest border-none", req.status === 'Approved' ? 'bg-green-100 text-green-700' : req.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700')}>
                                                 {req.status}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right px-6">
                                             {(isPrivileged && req.status === 'Pending') ? (
                                                 <div className="flex gap-2 justify-end">
-                                                    <Button size="sm" onClick={() => handleApproveRequest(req)} className="bg-green-600 h-8 rounded-full font-black uppercase text-[8px] tracking-widest px-3">Authorize</Button>
+                                                    <Button size="sm" onClick={() => handleApproveRequest(req)} className="bg-green-600 hover:bg-green-700 h-8 rounded-full font-black uppercase text-[8px] tracking-widest px-3">Authorize</Button>
                                                     <Button size="sm" variant="destructive" onClick={() => updateDocumentNonBlocking(doc(firestore, 'asset_requests', req.id), { status: 'Rejected' })} className="h-8 rounded-full font-black uppercase text-[8px] tracking-widest px-3">Deny</Button>
                                                 </div>
                                             ) : <span className="text-[9px] font-black uppercase opacity-20">Cycle Finished</span>}
@@ -269,14 +303,14 @@ export default function AssetsPage() {
                                     <p className="text-[10px] font-black uppercase mt-2">No Visual Asset</p>
                                 </div>
                             )}
-                            <Badge className={cn("absolute top-4 right-4 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg", viewingAsset?.status === 'Available' ? 'bg-green-600' : viewingAsset?.status === 'Assigned' ? 'bg-blue-600' : 'bg-orange-600')}>
+                            <Badge className={cn("absolute top-4 right-4 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg border-none", viewingAsset?.status === 'Available' ? 'bg-green-600 text-white' : viewingAsset?.status === 'Assigned' ? 'bg-blue-600 text-white' : 'bg-orange-600 text-white')}>
                                 {viewingAsset?.status}
                             </Badge>
                         </div>
                         <div className="p-8 space-y-6 bg-white">
                             <DialogHeader className="text-left">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">{viewingAsset?.name}</DialogTitle>
-                                <DialogDescription className="text-xs font-black uppercase tracking-[0.2em] text-primary">{viewingAsset?.category} Intelligence</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{viewingAsset?.name}</DialogTitle>
+                                <DialogDescription className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">{viewingAsset?.category} Intelligence</DialogDescription>
                             </DialogHeader>
                             
                             <div className="space-y-4">
@@ -303,5 +337,6 @@ export default function AssetsPage() {
                 </DialogContent>
             </Dialog>
         </div>
+        </TooltipProvider>
     );
 }
