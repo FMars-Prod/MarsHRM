@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check, LocateFixed } from "lucide-react";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, useStorage, deleteDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, useStorage, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { doc, collection, query, writeBatch, serverTimestamp, deleteDoc, where, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
