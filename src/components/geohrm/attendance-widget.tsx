@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -13,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles, ShieldCheck, RefreshCcw, AlertTriangle } from "lucide-react";
+import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles, ShieldCheck, RefreshCcw, AlertTriangle, Home, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
