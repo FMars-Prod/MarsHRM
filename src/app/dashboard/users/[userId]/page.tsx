@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -45,6 +46,12 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const userDocRef = useMemoFirebase(() => (userId ? doc(firestore, 'users', userId) : null), [firestore, userId]);
   const { data: user, isLoading: isUserLoading } = useDoc<any>(userDocRef);
+
+  const teamDocRef = useMemoFirebase(() => user?.teamId ? doc(firestore, 'teams', user.teamId) : null, [user?.teamId, firestore]);
+  const { data: teamData } = useDoc<any>(teamDocRef);
+
+  const teamLeadDocRef = useMemoFirebase(() => teamData?.teamLeadId ? doc(firestore, 'users', teamData.teamLeadId) : null, [teamData?.teamLeadId, firestore]);
+  const { data: teamLead } = useDoc<any>(teamLeadDocRef);
 
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
   const { data: branches } = useCollection<any>(branchesQuery);
@@ -224,15 +231,48 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             )) : <p className="text-[9px] font-black uppercase text-center opacity-30 py-10">No recent activity</p>}
                         </div>
                     </Card>
-                    <Card className="lg:col-span-4 border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
-                        <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Employment Details</h3>
-                        <div className="space-y-3">
-                            <InfoRow label="Designation" value={user.jobTitle} />
-                            <InfoRow label="Department" value={user.department} />
-                            <InfoRow label="Work Schedule" value={user.shiftType || 'General Shift'} />
-                            <InfoRow label="Experience" value={experience} />
-                        </div>
-                    </Card>
+                    <div className="lg:col-span-4 space-y-3">
+                        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
+                            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Identity Details</h3>
+                            <div className="space-y-3">
+                                <InfoRow label="Birth" value={user.dob ? format(new Date(user.dob), 'dd MMM yyyy') : 'N/A'} />
+                                <InfoRow label="Gender" value={user.gender || 'N/A'} />
+                                <InfoRow label="Origin" value={user.nationality || 'N/A'} />
+                                <InfoRow label="Status" value={user.maritalStatus || 'N/A'} />
+                                <InfoRow label="Blood" value={user.bloodGroup || 'N/A'} />
+                                <div className="pt-1 flex flex-wrap gap-1">
+                                    {user.languages?.map((lang: string) => (
+                                        <Badge key={lang} variant="secondary" className="text-[8px] font-bold px-2 py-0.5 uppercase">{lang}</Badge>
+                                    )) || <span className="text-[9px] opacity-30">No languages</span>}
+                                </div>
+                            </div>
+                        </Card>
+                        
+                        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
+                            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Reporting Protocol</h3>
+                            <div className="space-y-3">
+                                <InfoRow label="Structure" value={user.teamId ? "Tactical Unit" : "Individual Fleet"} />
+                                <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border/50">
+                                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mb-3">Direct Command</p>
+                                    {teamLead ? (
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="size-10 rounded-xl">
+                                                <AvatarImage src={teamLead.avatar} className="object-cover" />
+                                                <AvatarFallback className="font-bold">{teamLead.firstName[0]}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-black text-sm truncate">{teamLead.firstName} {teamLead.lastName}</p>
+                                                <p className="text-[9px] font-bold uppercase text-primary truncate">{teamLead.jobTitle}</p>
+                                            </div>
+                                            <ShieldCheck className="size-4 text-primary" />
+                                        </div>
+                                    ) : (
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-40">Direct reporting to Admin</p>
+                                    )}
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
                 </div>
             </TabsContent>
             <TabsContent value="attendance">

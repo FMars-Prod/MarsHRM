@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -37,6 +38,7 @@ import jsPDF from "jspdf";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "Required"),
@@ -44,6 +46,12 @@ const profileFormSchema = z.object({
     phoneNumber: z.string().min(1, "Required"),
     password: z.string().optional(),
     confirmPassword: z.string().optional(),
+    dob: z.string().optional(),
+    gender: z.string().optional(),
+    nationality: z.string().optional(),
+    maritalStatus: z.string().optional(),
+    bloodGroup: z.string().optional(),
+    languages: z.string().optional(),
 }).refine(data => !data.password || data.password.length >= 6, { message: "Min 6 chars", path: ["password"] })
   .refine(data => data.password === data.confirmPassword, { message: "Mismatch", path: ["confirmPassword"] });
 
@@ -64,6 +72,12 @@ export default function ProfilePage() {
 
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
+
+    const teamDocRef = useMemoFirebase(() => employee?.teamId ? doc(firestore, 'teams', employee.teamId) : null, [employee?.teamId, firestore]);
+    const { data: teamData } = useDoc<any>(teamDocRef);
+
+    const teamLeadDocRef = useMemoFirebase(() => teamData?.teamLeadId ? doc(firestore, 'users', teamData.teamLeadId) : null, [teamData?.teamLeadId, firestore]);
+    const { data: teamLead } = useDoc<any>(teamLeadDocRef);
 
     const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
     const { data: branches } = useCollection<any>(branchesQuery);
@@ -133,11 +147,23 @@ export default function ProfilePage() {
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: { firstName: "", lastName: "", phoneNumber: "", password: "", confirmPassword: "" },
+        defaultValues: { firstName: "", lastName: "", phoneNumber: "", password: "", confirmPassword: "", dob: "", gender: "", nationality: "", maritalStatus: "", bloodGroup: "", languages: "" },
     });
 
     React.useEffect(() => {
-        if (employee) form.reset({ firstName: employee.firstName || '', lastName: employee.lastName || '', phoneNumber: employee.phoneNumber || '', password: '', confirmPassword: '' });
+        if (employee) form.reset({ 
+            firstName: employee.firstName || '', 
+            lastName: employee.lastName || '', 
+            phoneNumber: employee.phoneNumber || '', 
+            dob: employee.dob || '',
+            gender: employee.gender || '',
+            nationality: employee.nationality || '',
+            maritalStatus: employee.maritalStatus || '',
+            bloodGroup: employee.bloodGroup || '',
+            languages: employee.languages?.join(', ') || '',
+            password: '', 
+            confirmPassword: '' 
+        });
     }, [employee, form]);
 
     React.useEffect(() => {
@@ -154,8 +180,14 @@ export default function ProfilePage() {
         setIsSubmitting(true);
         if (!user || !auth.currentUser) return;
         try {
-            const { password, confirmPassword, ...updateData } = data;
-            if (userDocRef) updateDocumentNonBlocking(userDocRef, updateData);
+            const { password, confirmPassword, languages, ...updateData } = data;
+            
+            const finalUpdateData: any = {
+                ...updateData,
+                languages: languages ? languages.split(',').map(s => s.trim()).filter(Boolean) : []
+            };
+
+            if (userDocRef) updateDocumentNonBlocking(userDocRef, finalUpdateData);
             await updateProfile(auth.currentUser, { displayName: `${data.firstName} ${data.lastName}` });
             if (data.password) await updatePassword(auth.currentUser, data.password);
             toast({ title: "Profile updated" });
@@ -246,14 +278,48 @@ export default function ProfilePage() {
                                 )) : <p className="text-[8px] font-black uppercase text-center opacity-30 py-6">No recent handshakes detected</p>}
                             </div>
                         </Card>
-                        <Card className="lg:col-span-4 border-none shadow-sm rounded-2xl bg-white p-4 space-y-3">
-                            <h3 className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Job Spec</h3>
-                            <div className="space-y-2">
-                                <InfoRow label="Dept" value={employee.department} />
-                                <InfoRow label="Shift" value={employee.shiftType || 'General'} />
-                                <InfoRow label="Exp" value={experience} />
-                            </div>
-                        </Card>
+                        <div className="lg:col-span-4 space-y-2">
+                            <Card className="border-none shadow-sm rounded-2xl bg-white p-4 space-y-3">
+                                <h3 className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Identity Details</h3>
+                                <div className="space-y-2">
+                                    <InfoRow label="Birth" value={employee.dob ? format(new Date(employee.dob), 'dd MMM yyyy') : 'N/A'} />
+                                    <InfoRow label="Gender" value={employee.gender || 'N/A'} />
+                                    <InfoRow label="Origin" value={employee.nationality || 'N/A'} />
+                                    <InfoRow label="Status" value={employee.maritalStatus || 'N/A'} />
+                                    <InfoRow label="Blood" value={employee.bloodGroup || 'N/A'} />
+                                    <div className="pt-1 flex flex-wrap gap-1">
+                                        {employee.languages?.map((lang: string) => (
+                                            <Badge key={lang} variant="secondary" className="text-[7px] font-bold px-1.5 h-4 uppercase">{lang}</Badge>
+                                        )) || <span className="text-[8px] opacity-30">No languages registered</span>}
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card className="border-none shadow-sm rounded-2xl bg-white p-4 space-y-3">
+                                <h3 className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Reporting Protocol</h3>
+                                <div className="space-y-2">
+                                     <InfoRow label="Structure" value={employee.teamId ? "Tactical Unit" : "Individual Fleet"} />
+                                     <div className="p-3 bg-muted/20 rounded-xl border border-dashed border-border/50">
+                                        <p className="text-[7px] font-black uppercase text-muted-foreground/60 mb-2">Direct Command</p>
+                                        {teamLead ? (
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="size-8 rounded-lg">
+                                                    <AvatarImage src={teamLead.avatar} className="object-cover" />
+                                                    <AvatarFallback className="text-[10px]">{teamLead.firstName[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="font-bold text-xs truncate">{teamLead.firstName} {teamLead.lastName}</p>
+                                                    <p className="text-[8px] font-black uppercase text-primary truncate">{teamLead.jobTitle}</p>
+                                                </div>
+                                                <ShieldCheck className="size-3 text-primary" />
+                                            </div>
+                                        ) : (
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-40">Direct reporting to Admin</p>
+                                        )}
+                                     </div>
+                                </div>
+                            </Card>
+                        </div>
                     </div>
                 </TabsContent>
                 <TabsContent value="attendance">
@@ -307,14 +373,62 @@ export default function ProfilePage() {
                 />
             </div>
 
-            <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}><DialogContent className="rounded-[2.5rem] p-8 sm:max-w-md border-none shadow-2xl"><DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Edit Identity</DialogTitle></DialogHeader><Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-3">
-                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">First Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Last Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
-                </div>
-                <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Phone Number</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
-                <Button type="submit" className="w-full h-12 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin size-4 mr-2"/> : <UserCheck className="size-4 mr-2"/>} Synchronize Identity</Button>
-            </form></Form></DialogContent></Dialog>
+            <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+                <DialogContent className="rounded-[2.5rem] p-8 sm:max-w-xl border-none shadow-2xl">
+                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Edit Identity</DialogTitle></DialogHeader>
+                    <ScrollArea className="max-h-[70vh] -mx-8 px-8">
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">First Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Last Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Phone Number</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="bloodGroup" render={({ field }) => (
+                                        <FormItem><Label className="text-[9px] uppercase font-black text-primary">Blood Group</Label>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger className="h-10 rounded-xl text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
+                                                <SelectContent><SelectItem value="A+">A+</SelectItem><SelectItem value="A-">A-</SelectItem><SelectItem value="B+">B+</SelectItem><SelectItem value="B-">B-</SelectItem><SelectItem value="O+">O+</SelectItem><SelectItem value="O-">O-</SelectItem><SelectItem value="AB+">AB+</SelectItem><SelectItem value="AB-">AB-</SelectItem></SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <FormField control={form.control} name="dob" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Date of Birth</Label><FormControl><Input type="date" {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="gender" render={({ field }) => (
+                                        <FormItem><Label className="text-[9px] uppercase font-black text-primary">Gender</Label>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger className="h-10 rounded-xl text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
+                                                <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <FormField control={form.control} name="nationality" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Nationality</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="maritalStatus" render={({ field }) => (
+                                        <FormItem><Label className="text-[9px] uppercase font-black text-primary">Marital Status</Label>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger className="h-10 rounded-xl text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
+                                                <SelectContent><SelectItem value="Single">Single</SelectItem><SelectItem value="Married">Married</SelectItem><SelectItem value="Divorced">Divorced</SelectItem><SelectItem value="Widowed">Widowed</SelectItem></SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )} />
+                                </div>
+                                <FormField control={form.control} name="languages" render={({ field }) => (
+                                    <FormItem><Label className="text-[9px] uppercase font-black text-primary">Languages Known (comma separated)</Label><FormControl><Input {...field} placeholder="e.g. English, Tamil, Hindi" className="h-10 rounded-xl text-xs" /></FormControl></FormItem>
+                                )} />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">New Password (optional)</Label><FormControl><Input type="password" {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="confirmPassword" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Confirm Password</Label><FormControl><Input type="password" {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                </div>
+                                <Button type="submit" className="w-full h-12 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin size-4 mr-2"/> : <UserCheck className="size-4 mr-2"/>} Synchronize Identity</Button>
+                            </form>
+                        </Form>
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -27,7 +27,13 @@
         "leaveBalance": { "type": "number" },
         "totalLeaveEntitlement": { "type": "number" },
         "payrollAmount": { "type": "number" },
-        "payrollDate": { "type": "string", "format": "date-time" }
+        "payrollDate": { "type": "string", "format": "date-time" },
+        "dob": { "type": "string", "format": "date-time" },
+        "gender": { "type": "string" },
+        "nationality": { "type": "string" },
+        "maritalStatus": { "type": "string" },
+        "bloodGroup": { "type": "string" },
+        "languages": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["id", "firstName", "lastName", "email", "role"]
     },
