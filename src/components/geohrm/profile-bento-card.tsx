@@ -27,10 +27,18 @@ export function ProfileBentoCard() {
     }, [branches, employee?.branchId]);
 
     const experience = React.useMemo(() => {
-        if (!employee?.hireDate) return "0 d";
+        if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
         const totalDays = differenceInDays(new Date(), start);
-        return `${totalDays} d`;
+        
+        if (totalDays < 30) return `${totalDays} d`;
+        const years = Math.floor(totalDays / 365);
+        const months = Math.floor((totalDays % 365) / 30);
+        
+        if (years > 0) {
+            return `${years} yr${months > 0 ? ` ${months} mo` : ''}`;
+        }
+        return `${months} mo`;
     }, [employee]);
 
     if (isLoading || !employee) {
@@ -79,7 +87,7 @@ export function ProfileBentoCard() {
                     <div className="w-full md:w-[220px] p-6 lg:p-10 bg-muted/5 flex flex-row md:flex-col justify-around md:justify-center gap-6">
                         <StatusInfo icon={ShieldCheck} label="Tier" value={roleName === 'CEO/Admin' ? 'CEO' : roleName} color="text-indigo-600" />
                         <StatusInfo icon={CalendarDays} label="Joined" value={joinDate} color="text-emerald-600" />
-                        <StatusInfo icon={Clock} label="Days" value={experience} color="text-primary" />
+                        <StatusInfo icon={Clock} label="Exp" value={experience} color="text-primary" />
                     </div>
                 </div>
             </CardContent>

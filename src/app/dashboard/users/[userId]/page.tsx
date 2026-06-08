@@ -81,6 +81,21 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     return b ? b.name : "Unassigned";
   }, [branches, user?.branchId]);
 
+  const experience = React.useMemo(() => {
+    if (!user?.hireDate) return "N/A";
+    const start = new Date(user.hireDate);
+    const totalDays = differenceInDays(new Date(), start);
+    
+    if (totalDays < 30) return `${totalDays} d`;
+    const years = Math.floor(totalDays / 365);
+    const months = Math.floor((totalDays % 365) / 30);
+    
+    if (years > 0) {
+        return `${years} yr${months > 0 ? ` ${months} mo` : ''}`;
+    }
+    return `${months} mo`;
+  }, [user]);
+
   const attendanceStats = React.useMemo(() => {
     const today = startOfDay(new Date());
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -213,7 +228,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <InfoRow label="Designation" value={user.jobTitle} />
                             <InfoRow label="Department" value={user.department} />
                             <InfoRow label="Work Schedule" value={user.shiftType || 'General Shift'} />
-                            <InfoRow label="Experience" value={user.hireDate ? `${differenceInDays(new Date(), new Date(user.hireDate))} d` : 'N/A'} />
+                            <InfoRow label="Experience" value={experience} />
                         </div>
                     </Card>
                 </div>

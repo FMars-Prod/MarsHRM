@@ -90,6 +90,21 @@ export default function ProfilePage() {
         return b ? b.name : "Office Hub";
     }, [branches, employee?.branchId]);
 
+    const experience = React.useMemo(() => {
+        if (!employee?.hireDate) return "N/A";
+        const start = new Date(employee.hireDate);
+        const totalDays = differenceInDays(new Date(), start);
+        
+        if (totalDays < 30) return `${totalDays} d`;
+        const years = Math.floor(totalDays / 365);
+        const months = Math.floor((totalDays % 365) / 30);
+        
+        if (years > 0) {
+            return `${years} yr${months > 0 ? ` ${months} mo` : ''}`;
+        }
+        return `${months} mo`;
+    }, [employee]);
+
     const attendanceStats = React.useMemo(() => {
         const today = startOfDay(new Date());
         const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -236,7 +251,7 @@ export default function ProfilePage() {
                                 <InfoRow label="Designation" value={employee.jobTitle} />
                                 <InfoRow label="Department" value={employee.department} />
                                 <InfoRow label="Work Schedule" value={employee.shiftType || 'General Shift'} />
-                                <InfoRow label="Experience" value={employee.hireDate ? `${differenceInDays(new Date(), new Date(employee.hireDate))} d` : 'N/A'} />
+                                <InfoRow label="Experience" value={experience} />
                             </div>
                         </Card>
                     </div>
