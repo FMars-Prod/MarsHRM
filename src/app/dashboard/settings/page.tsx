@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -73,7 +72,8 @@ export default function SettingsPage() {
                 },
                 (error) => {
                     toast({ variant: "destructive", title: "GPS Error", description: error.message });
-                }
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
             );
         } else {
             toast({ variant: "destructive", title: "Not Supported", description: "Geolocation is not supported by your browser." });
@@ -188,7 +188,7 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent className="p-8 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-In Start</Label><Input type="time" value={form.shiftStartTime} onChange={e => setForm({...form, shiftStartTime: e.target.value})} className="rounded-xl h-12" /></div>
+                            <div className="space-y-2"><Label className="text-[10px) font-black uppercase text-primary tracking-widest">Shift Log-In Start</Label><Input type="time" value={form.shiftStartTime} onChange={e => setForm({...form, shiftStartTime: e.target.value})} className="rounded-xl h-12" /></div>
                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-Out Target</Label><Input type="time" value={form.shiftEndTime} onChange={e => setForm({...form, shiftEndTime: e.target.value})} className="rounded-xl h-12" /></div>
                         </div>
                         <Separator className="opacity-50" />

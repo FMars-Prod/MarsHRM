@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -56,7 +55,8 @@ export default function BranchesPage() {
                 },
                 (error) => {
                     toast({ variant: "destructive", title: "GPS Error", description: error.message });
-                }
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
             );
         } else {
             toast({ variant: "destructive", title: "Not Supported", description: "Geolocation is not supported by your browser." });

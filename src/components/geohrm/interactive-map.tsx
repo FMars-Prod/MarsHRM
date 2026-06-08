@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -112,7 +111,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ initialCenter, o
             getAddressFromLatLng(pos);
         }, () => {
             alert('Error: The Geolocation service failed.');
-        });
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
     } else {
         alert('Error: Your browser\'s geolocation is not supported.');
     }

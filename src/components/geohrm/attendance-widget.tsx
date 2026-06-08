@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles, ShieldCheck, RefreshCcw, AlertTriangle, Home, Building2 } from "lucide-react";
+import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles, ShieldCheck, RefreshCcw, AlertTriangle, Home, Building2, LocateFixed } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -155,7 +155,7 @@ export function AttendanceWidget() {
             setOutOfRangeType('Check In');
             setIsOutOfRangeDialogOpen(true);
         }
-    }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Satellite Signal Lost", description: "Please enable location services." }); });
+    }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Satellite Signal Lost", description: "Please enable location services." }); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleClockOut = () => {
@@ -174,7 +174,7 @@ export function AttendanceWidget() {
               setOutOfRangeType('Clock Out');
               setIsOutOfRangeDialogOpen(true);
           }
-      }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Satellite Signal Lost" }); });
+      }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Satellite Signal Lost" }); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleSubmitOutOfRangeRequest = () => {

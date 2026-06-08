@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -104,7 +103,8 @@ export default function UsersPage() {
         },
         (error) => {
           toast({ variant: "destructive", title: "GPS Error", description: error.message });
-        }
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     } else {
       toast({ variant: "destructive", title: "Not Supported", description: "Geolocation is not supported by your browser." });
@@ -579,7 +579,7 @@ export default function UsersPage() {
                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive hover:bg-red-50 transition-all">
                                         <Trash2 className="size-4" />
                                     </Button>
-                                </AlertDialogTrigger>
+                                </TooltipTrigger>
                                 <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
                                     <AlertDialogHeader>
                                         <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Purge Personnel Record?</AlertDialogTitle>
@@ -622,26 +622,13 @@ export default function UsersPage() {
         </Table>
       </div>
 
-      <Dialog open={isBulkBranchDialogOpen} onOpenChange={setIsBulkBranchDialogOpen}>
-          <DialogContent className="rounded-[2.5rem] sm:max-w-md p-8 border-none shadow-2xl">
-              <DialogHeader className="text-left">
-                  <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Work Location Reassignment</DialogTitle>
-                  <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Reassign {selectedUserIds.length} units to a new work location</DialogDescription>
-              </DialogHeader>
-              <div className="py-6 space-y-4">
-                  <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Target Location</Label>
-                  <Select value={bulkBranchId} onValueChange={setBulkBranchId}>
-                      <SelectTrigger className="rounded-xl h-12 shadow-sm"><SelectValue placeholder="Target Branch" /></SelectTrigger>
-                      <SelectContent className="rounded-xl border-none shadow-2xl">
-                          {branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                      </SelectContent>
-                  </Select>
-              </div>
-              <DialogFooter>
-                  <Button onClick={handleBulkBranchUpdate} disabled={!bulkBranchId} className="w-full h-14 rounded-full font-black uppercase tracking-widest shadow-xl shadow-primary/20">Execute Reassignment</Button>
-              </DialogFooter>
-          </DialogContent>
-      </Dialog>
+      <div className="py-20 text-center opacity-30 grayscale flex flex-col items-center justify-center gap-6">
+          <div className="p-8 rounded-[3rem] bg-muted/20 ring-4 ring-muted/10">
+              <ShieldCheck className="size-16 text-primary/40" />
+          </div>
+          <p className="font-black uppercase text-xs tracking-[0.4em]">Ledger Authorization Required</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest max-w-xs leading-relaxed">Select a fleet official from the directory to access their vertical financial records.</p>
+      </div>
     </div>
     </TooltipProvider>
   );
