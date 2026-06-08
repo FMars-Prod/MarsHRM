@@ -77,7 +77,8 @@ export default function UsersPage() {
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
   const { data: branches } = useCollection<any>(branchesQuery);
 
-  const { data: currentUserData } = useDoc<any>(useMemoFirebase(() => currentUser ? doc(firestore, "users", currentUser.uid) : null, [currentUser, firestore]));
+  const userDocRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
+  const { data: currentUserData } = useDoc<any>(userDocRef);
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
 
   const form = useForm<UserFormValues>({
@@ -99,7 +100,7 @@ export default function UsersPage() {
         (position) => {
           form.setValue("homeLatitude", position.coords.latitude);
           form.setValue("homeLongitude", position.coords.longitude);
-          toast({ title: "Signal Captured", description: "Current coordinates updated." });
+          toast({ title: "Signal Captured", description: "Current coordinates updated with high precision." });
         },
         (error) => {
           toast({ variant: "destructive", title: "GPS Error", description: error.message });
@@ -280,7 +281,7 @@ export default function UsersPage() {
   return (
     <TooltipProvider delayDuration={0}>
     <div className="space-y-6 animate-fade-in-up">
-      <PageHeader title="Staff Registry" description="Global directory of active and tactical team members.">
+      <PageHeader title="Staff Registry" description="Global directory of active team members.">
         <div className="flex gap-2">
             {selectedUserIds.length > 0 && (
                 <div className="flex gap-2 animate-in slide-in-from-right-4">
@@ -371,7 +372,7 @@ export default function UsersPage() {
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="leaveBalance" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
+                                        <FormItem><Label className="text-[10px) font-black uppercase text-primary">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
                                     )} />
                                     <FormField control={form.control} name="payrollAmount" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary">Last Payroll Amount</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
@@ -579,7 +580,7 @@ export default function UsersPage() {
                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive hover:bg-red-50 transition-all">
                                         <Trash2 className="size-4" />
                                     </Button>
-                                </TooltipTrigger>
+                                </AlertDialogTrigger>
                                 <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
                                     <AlertDialogHeader>
                                         <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Purge Personnel Record?</AlertDialogTitle>
