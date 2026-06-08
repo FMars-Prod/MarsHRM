@@ -8,7 +8,7 @@ import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } fro
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, differenceInMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
 import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -84,16 +84,16 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const experience = React.useMemo(() => {
     if (!user?.hireDate) return "N/A";
     const start = new Date(user.hireDate);
-    const totalDays = differenceInDays(new Date(), start);
+    const now = new Date();
     
-    if (totalDays < 30) return `${totalDays} d`;
-    const years = Math.floor(totalDays / 365);
-    const months = Math.floor((totalDays % 365) / 30);
-    
+    const totalMonths = differenceInMonths(now, start);
+    const years = Math.floor(totalMonths / 12);
+    const remainingMonths = totalMonths % 12;
+
     if (years > 0) {
-        return `${years} yr${months > 0 ? ` ${months} mo` : ''}`;
+        return `${years} yr${remainingMonths > 0 ? ` ${remainingMonths} mo` : ''}`;
     }
-    return `${months} mo`;
+    return `${totalMonths} mo`;
   }, [user]);
 
   const attendanceStats = React.useMemo(() => {

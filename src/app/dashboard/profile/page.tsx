@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInDays, eachDayOfInterval, isSunday, isToday, startOfDay, isBefore } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInMonths, eachDayOfInterval, isSunday, isToday, startOfDay, isBefore } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
@@ -93,16 +93,16 @@ export default function ProfilePage() {
     const experience = React.useMemo(() => {
         if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
-        const totalDays = differenceInDays(new Date(), start);
+        const now = new Date();
         
-        if (totalDays < 30) return `${totalDays} d`;
-        const years = Math.floor(totalDays / 365);
-        const months = Math.floor((totalDays % 365) / 30);
-        
+        const totalMonths = differenceInMonths(now, start);
+        const years = Math.floor(totalMonths / 12);
+        const remainingMonths = totalMonths % 12;
+
         if (years > 0) {
-            return `${years} yr${months > 0 ? ` ${months} mo` : ''}`;
+            return `${years} yr${remainingMonths > 0 ? ` ${remainingMonths} mo` : ''}`;
         }
-        return `${months} mo`;
+        return `${totalMonths} mo`;
     }, [employee]);
 
     const attendanceStats = React.useMemo(() => {
@@ -360,7 +360,7 @@ function InfoRow({ label, value }: { label: string, value: string }) {
     return (
         <div className="flex items-center justify-between py-2 border-b border-dashed border-border/50 last:border-none group">
             <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest">{label}</span>
-            <span className="text-[11px] font-black text-foreground/80 uppercase text-right pl-3">{value}</span>
+            <span className="text-11px] font-black text-foreground/80 uppercase text-right pl-3">{value}</span>
         </div>
     );
 }

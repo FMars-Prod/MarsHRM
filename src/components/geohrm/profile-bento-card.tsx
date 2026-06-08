@@ -6,7 +6,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@
 import { doc, collection, query } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInMonths } from 'date-fns';
 import { MapPin, ShieldCheck, CalendarDays, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -29,16 +29,16 @@ export function ProfileBentoCard() {
     const experience = React.useMemo(() => {
         if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
-        const totalDays = differenceInDays(new Date(), start);
+        const now = new Date();
         
-        if (totalDays < 30) return `${totalDays} d`;
-        const years = Math.floor(totalDays / 365);
-        const months = Math.floor((totalDays % 365) / 30);
-        
+        const totalMonths = differenceInMonths(now, start);
+        const years = Math.floor(totalMonths / 12);
+        const remainingMonths = totalMonths % 12;
+
         if (years > 0) {
-            return `${years} yr${months > 0 ? ` ${months} mo` : ''}`;
+            return `${years} yr${remainingMonths > 0 ? ` ${remainingMonths} mo` : ''}`;
         }
-        return `${months} mo`;
+        return `${totalMonths} mo`;
     }, [employee]);
 
     if (isLoading || !employee) {
