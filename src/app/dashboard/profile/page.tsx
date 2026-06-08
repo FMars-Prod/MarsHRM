@@ -14,7 +14,8 @@ import {
     FileText, CalendarDays, Loader2, Phone, 
     Mail, Briefcase, MoreHorizontal, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
-    Globe, ShieldAlert, FileCheck, FileBox, Users, ListTodo, Laptop, MapPin, CalendarClock
+    Globe, ShieldAlert, FileCheck, FileBox, Users, ListTodo, Laptop, MapPin, CalendarClock,
+    History, MessageSquareWarning, Timer
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,19 @@ export default function ProfilePage() {
     const assetsQuery = useMemoFirebase(() => user ? query(collection(firestore, "assets"), where("assignedToId", "==", user.uid)) : null, [user, firestore]);
     const { data: assignedAssets } = useCollection<any>(assetsQuery);
 
+    // Activity Handshake Queries
+    const lastAttQuery = useMemoFirebase(() => user ? query(collection(firestore, `users/${user.uid}/attendances`), orderBy('checkInTime', 'desc'), limit(1)) : null, [user, firestore]);
+    const { data: lastAtt } = useCollection<any>(lastAttQuery);
+
+    const lastLeaveQuery = useMemoFirebase(() => user ? query(collection(firestore, 'leave_requests'), where('employeeId', '==', user.uid), orderBy('createdAt', 'desc'), limit(1)) : null, [user, firestore]);
+    const { data: lastLeave } = useCollection<any>(lastLeaveQuery);
+
+    const lastTicketQuery = useMemoFirebase(() => user ? query(collection(firestore, 'issue_reports'), where('employeeId', '==', user.uid), orderBy('submissionDate', 'desc'), limit(1)) : null, [user, firestore]);
+    const { data: lastTicket } = useCollection<any>(lastTicketQuery);
+
+    const lastReportQuery = useMemoFirebase(() => user ? query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(1)) : null, [user, firestore]);
+    const { data: lastReport } = useCollection<any>(lastReportQuery);
+
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
     
@@ -94,14 +108,10 @@ export default function ProfilePage() {
         if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
         const now = new Date();
-        
         const totalMonths = differenceInMonths(now, start);
         const years = Math.floor(totalMonths / 12);
         const remainingMonths = totalMonths % 12;
-
-        if (years > 0) {
-            return `${years} yr${remainingMonths > 0 ? ` ${remainingMonths} mo` : ''}`;
-        }
+        if (years > 0) return `${years} yr${remainingMonths > 0 ? ` ${remainingMonths} mo` : ''}`;
         return `${totalMonths} mo`;
     }, [employee]);
 
@@ -161,160 +171,171 @@ export default function ProfilePage() {
     const isLeaveConfigured = leaveBalValue !== undefined;
 
     return (
-        <div className="max-w-6xl mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
-            <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden p-6">
-                <div className="flex flex-col gap-6">
-                    <div className="flex items-start gap-6">
-                        <div className="relative group cursor-pointer" onClick={() => setIsAvatarDialogOpen(true)}>
-                            <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-md ring-1 ring-border">
-                                <AvatarImage src={employee.avatar} className="object-cover" />
-                                <AvatarFallback className="text-3xl font-black bg-muted">{employee.firstName?.[0]}</AvatarFallback>
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"><Camera className="size-6 text-white" /></div>
-                            </Avatar>
+        <div className="max-w-6xl mx-auto animate-fade-in-up pb-4 space-y-3 font-jakarta">
+            {/* Main Identity Hub */}
+            <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden p-4">
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                    <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>
+                        <Avatar className="h-16 w-16 rounded-xl border-2 border-white shadow-md ring-1 ring-border">
+                            <AvatarImage src={employee.avatar} className="object-cover" />
+                            <AvatarFallback className="text-xl font-black bg-muted">{employee.firstName?.[0]}</AvatarFallback>
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"><Camera className="size-4 text-white" /></div>
+                        </Avatar>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <div>
+                                <h2 className="text-lg font-black tracking-tighter leading-none">{employee.firstName} {employee.lastName}</h2>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{employee.jobTitle}</p>
+                            </div>
+                            <div className="flex gap-1.5">
+                                <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-lg font-black uppercase text-[8px] tracking-widest h-7 px-3">Edit Profile</Button>
+                                <Button asChild size="sm" className="rounded-lg font-black uppercase text-[8px] tracking-widest h-7 px-3 shadow-sm shadow-primary/20"><Link href="https://fortumars.com/os.html" target="_blank">Activate MarsOS</Link></Button>
+                            </div>
                         </div>
-                        <div className="flex-1 space-y-4">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <div className="space-y-0.5">
-                                    <h2 className="text-2xl font-black tracking-tighter">{employee.firstName} {employee.lastName}</h2>
-                                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{employee.jobTitle}</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-xl font-bold uppercase text-[9px] tracking-widest h-9 px-4">Edit Profile</Button>
-                                    <Button asChild size="sm" className="rounded-xl font-bold uppercase text-[9px] tracking-widest h-9 px-4 shadow-lg shadow-primary/20"><Link href="https://fortumars.com/os.html" target="_blank">Activate MarsOS</Link></Button>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-4 border-y border-dashed border-border/50">
-                                <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${employee.id.slice(0, 8).toUpperCase()}`} />
-                                <DetailItem icon={CalendarDays} label="Joining Date" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                                <DetailItem icon={Mail} label="Email Address" value={employee.email} />
-                                <DetailItem icon={Phone} label="Phone Number" value={employee.phoneNumber || "N/A"} />
-                            </div>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                                <DetailItem icon={Users} label="Team" value={employee.teamId ? "Assigned" : "Unassigned"} />
-                                <DetailItem icon={MapPin} label="Work Location" value={branchName} />
-                                <DetailItem icon={Briefcase} label="Employment Type" value={employee.employmentType || "Employee"} />
-                                <DetailItem icon={Clock} label="System Level" value={employee.role} />
-                            </div>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 mt-3 pt-3 border-t border-dashed border-border/50">
+                            <DetailItem icon={ShieldCheck} label="ID" value={`MR-${employee.id.slice(0, 8).toUpperCase()}`} />
+                            <DetailItem icon={CalendarDays} label="Joined" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yy') : 'N/A'} />
+                            <DetailItem icon={Mail} label="Email" value={employee.email} />
+                            <DetailItem icon={MapPin} label="Sector" value={branchName} />
                         </div>
                     </div>
                 </div>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                <MetricCard icon={UserCheck} title="Attendance" ratio={`${attendanceStats.present + attendanceStats.late} / ${attendanceStats.totalWorkingDays}`} progress={attendanceStats.percentage} color="text-green-600">
-                    <div className="grid grid-cols-4 gap-1 mt-4">
-                        <MetricStat label="Pres" val={attendanceStats.present} />
-                        <MetricStat label="Late" val={attendanceStats.late} color="text-amber-500" />
-                        <MetricStat label="Abs" val={attendanceStats.absent} color="text-rose-500" />
-                        <MetricStat label="Rem" val={attendanceStats.remaining} color="text-sky-500" />
+            {/* Performance Matrix */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                <MetricCard icon={UserCheck} title="Attendance" ratio={`${attendanceStats.present + attendanceStats.late}/${attendanceStats.totalWorkingDays}`} progress={attendanceStats.percentage} color="text-green-600">
+                    <div className="grid grid-cols-4 gap-0.5 mt-2">
+                        <MetricStat label="P" val={attendanceStats.present} />
+                        <MetricStat label="L" val={attendanceStats.late} color="text-amber-500" />
+                        <MetricStat label="A" val={attendanceStats.absent} color="text-rose-500" />
+                        <MetricStat label="R" val={attendanceStats.remaining} color="text-sky-500" />
                     </div>
                 </MetricCard>
-
-                <MetricCard icon={CalendarClock} title="Leave Balance" ratio={isLeaveConfigured ? `${leaveBalValue} / ${leaveEntValue}` : "NIL"} progress={isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 0} color="text-sky-600">
-                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">{isLeaveConfigured ? "Days available for use" : "Awaiting HR configuration"}</p>
-                </MetricCard>
-
-                <MetricCard icon={Zap} title="Performance" ratio={employee.performanceRating || "Good"} color="text-orange-600">
-                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Review: {employee.lastReviewDate ? format(employee.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
-                </MetricCard>
-
-                <MetricCard icon={FileCheck} title="Payroll Status" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : (employee.employmentType === 'Intern' ? "Based on Performance" : "Audited")} color="text-purple-600">
-                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Next: {employee.employmentType === 'Intern' ? "Based on Performance" : "Scheduled cycle"}</p>
-                </MetricCard>
-
-                <MetricCard icon={FileBox} title="Stored Intelligence" ratio={documents?.length || 0} color="text-emerald-600">
-                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Professional assets in vault</p>
-                </MetricCard>
+                <MetricCard icon={CalendarClock} title="Leave" ratio={isLeaveConfigured ? `${leaveBalValue}/${leaveEntValue}` : "NIL"} progress={isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 0} color="text-sky-600" />
+                <MetricCard icon={Zap} title="Efficiency" ratio={employee.performanceRating || "Good"} color="text-orange-600" />
+                <MetricCard icon={FileCheck} title="Payroll" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : "Audited"} color="text-purple-600" />
+                <MetricCard icon={FileBox} title="Vault" ratio={documents?.length || 0} color="text-emerald-600" />
             </div>
 
-            <Tabs defaultValue="activity" className="space-y-4">
-                <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-xl p-1 h-auto gap-2">
+            {/* Tactical Handshake (Linear Tasks) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <ActivityBarItem 
+                    icon={Clock} 
+                    title="Last Shift" 
+                    value={lastAtt?.[0]?.checkInTime ? format(lastAtt[0].checkInTime.toDate(), 'dd MMM, p') : 'None'} 
+                    status={lastAtt?.[0]?.status === 'present' ? 'Verified' : 'Flagged'}
+                    color="bg-green-500"
+                />
+                <ActivityBarItem 
+                    icon={CalendarClock} 
+                    title="Leave Pulse" 
+                    value={lastLeave?.[0] ? `${lastLeave[0].category}` : 'No Records'} 
+                    status={lastLeave?.[0]?.status || 'Inactive'}
+                    color="bg-sky-500"
+                />
+                <ActivityBarItem 
+                    icon={MessageSquareWarning} 
+                    title="Support Desk" 
+                    value={lastTicket?.[0] ? `${lastTicket[0].category.split(' ')[0]}` : 'Zero Tickets'} 
+                    status={lastTicket?.[0]?.status || 'Resolved'}
+                    color="bg-amber-500"
+                />
+                <ActivityBarItem 
+                    icon={FileText} 
+                    title="Last Audit" 
+                    value={lastReport?.[0] ? `${lastReport[0].reportType}` : 'No Reports'} 
+                    status={lastReport?.[0] ? format(lastReport[0].date.toDate(), 'MMM dd') : 'Awaiting'}
+                    color="bg-purple-500"
+                />
+            </div>
+
+            {/* Content Tabs */}
+            <Tabs defaultValue="activity" className="space-y-2">
+                <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-xl p-1 h-auto gap-1">
                     {["Activity", "Attendance", "Documents", "Assets"].map(tab => (
-                        <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white px-6 py-2 font-black uppercase text-[9px] tracking-[0.2em] transition-all">
+                        <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-1.5 font-black uppercase text-[8px] tracking-[0.2em] transition-all">
                             {tab}
                         </TabsTrigger>
                     ))}
                 </TabsList>
                 <TabsContent value="activity" className="mt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                        <Card className="lg:col-span-8 border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
-                            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Report History</h3>
-                            <div className="space-y-4">
-                                {userReports.length > 0 ? userReports.map(r => (
-                                    <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd')} desc={`Finalized for ${r.employeeDepartment} sector.`} color="bg-primary/10 text-primary" />
-                                )) : <p className="text-[9px] font-black uppercase text-center opacity-30 py-10">No recent activity detected</p>}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-2">
+                        <Card className="lg:col-span-8 border-none shadow-sm rounded-2xl bg-white p-4 space-y-4">
+                            <h3 className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Registry Log</h3>
+                            <div className="space-y-2.5">
+                                {userReports.length > 0 ? userReports.slice(0, 3).map(r => (
+                                    <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd')} desc={`Finalized.`} color="bg-primary/10 text-primary" />
+                                )) : <p className="text-[8px] font-black uppercase text-center opacity-30 py-6">No recent handshakes detected</p>}
                             </div>
                         </Card>
-                        <Card className="lg:col-span-4 border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
-                            <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Employment Details</h3>
-                            <div className="space-y-3">
-                                <InfoRow label="Designation" value={employee.jobTitle} />
-                                <InfoRow label="Department" value={employee.department} />
-                                <InfoRow label="Work Schedule" value={employee.shiftType || 'General Shift'} />
-                                <InfoRow label="Experience" value={experience} />
+                        <Card className="lg:col-span-4 border-none shadow-sm rounded-2xl bg-white p-4 space-y-3">
+                            <h3 className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Job Spec</h3>
+                            <div className="space-y-2">
+                                <InfoRow label="Dept" value={employee.department} />
+                                <InfoRow label="Shift" value={employee.shiftType || 'General'} />
+                                <InfoRow label="Exp" value={experience} />
                             </div>
                         </Card>
                     </div>
                 </TabsContent>
                 <TabsContent value="attendance">
-                    <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
-                        <Table>
-                            <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[8px] font-black px-6 py-4 uppercase tracking-widest">Date</TableHead><TableHead className="text-[8px] font-black uppercase tracking-widest">Login</TableHead><TableHead className="text-[8px] font-black uppercase tracking-widest text-right px-6">Location</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {attendanceData?.map((rec, i) => (
-                                    <TableRow key={i} className="border-border/50">
-                                        <TableCell className="text-[10px] font-black px-6 py-3 uppercase">{format(rec.checkInTime.toDate(), 'dd MMM yyyy')}</TableCell>
-                                        <TableCell className="text-[10px] font-mono font-bold text-primary">{format(rec.checkInTime.toDate(), 'p')}</TableCell>
-                                        <TableCell className="text-right px-6">{rec.locationCheckInLatitude && <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="p-1.5 rounded-lg bg-primary/5 text-primary inline-block"><MapPin className="size-3" /></Link>}</TableCell>
-                                    </TableRow>
-                                )) || <TableRow><TableCell colSpan={3} className="h-32 text-center text-[9px] font-black uppercase opacity-30">No records found</TableCell></TableRow>}
-                            </TableBody>
-                        </Table>
+                    <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden max-h-[250px]">
+                        <ScrollArea className="h-full">
+                            <Table>
+                                <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[8px] font-black px-6 py-2 uppercase tracking-widest">Date</TableHead><TableHead className="text-[8px] font-black py-2 uppercase tracking-widest text-right pr-6">Status</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {attendanceData?.slice(0, 10).map((rec, i) => (
+                                        <TableRow key={i} className="border-border/50">
+                                            <TableCell className="text-[9px] font-black px-6 py-2 uppercase">{format(rec.checkInTime.toDate(), 'dd MMM yy')}</TableCell>
+                                            <TableCell className="text-right pr-6"><Badge variant="outline" className="text-[7px] font-black uppercase border-none bg-green-50 text-green-600">{rec.status}</Badge></TableCell>
+                                        </TableRow>
+                                    )) || <TableRow><TableCell colSpan={2} className="h-20 text-center text-[8px] font-black uppercase opacity-30">No records</TableCell></TableRow>}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
                     </Card>
-                </TabsContent>
-                <TabsContent value="documents">
-                    <Card className="border-none shadow-sm rounded-2xl bg-white p-6"><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {documents?.map(doc => (
-                            <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center gap-3 p-3 bg-muted/10 rounded-xl hover:bg-white hover:shadow-md transition-all group">
-                                <div className="p-2 bg-sky-50 text-sky-600 rounded-lg"><FileBox className="size-4" /></div>
-                                <span className="text-[10px] font-black uppercase truncate">{doc.title}</span>
-                            </Link>
-                        )) || <div className="col-span-full py-10 text-center text-[9px] font-black uppercase opacity-30">No documents found</div>}
-                    </div></Card>
-                </TabsContent>
-                <TabsContent value="assets">
-                    <Card className="border-none shadow-sm rounded-2xl bg-white p-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {assignedAssets?.map(asset => (
-                            <div key={asset.id} className="p-3 bg-muted/5 rounded-xl space-y-2">
-                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center border border-dashed p-1">
-                                    {asset.imageUrl ? <img src={asset.imageUrl} className="object-cover w-full h-full rounded-md" /> : <Laptop className="size-6 opacity-10" />}
-                                </div>
-                                <div><p className="text-[9px] font-black truncate uppercase">{asset.name}</p><p className="text-[7px] font-bold text-muted-foreground uppercase">{asset.category}</p></div>
-                            </div>
-                        )) || <div className="col-span-full py-10 text-center text-[9px] font-black uppercase opacity-30">No assets assigned</div>}
-                    </div></Card>
                 </TabsContent>
             </Tabs>
 
-            <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}><DialogContent className="rounded-3xl p-8 sm:max-w-md"><DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Edit Profile</DialogTitle></DialogHeader><Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+            <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}><DialogContent className="rounded-[2.5rem] p-8 sm:max-w-md border-none shadow-2xl"><DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Edit Identity</DialogTitle></DialogHeader><Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                 <div className="grid grid-cols-2 gap-3">
-                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">First Name</Label><FormControl><Input {...field} className="h-10 rounded-lg text-xs" /></FormControl></FormItem>)} />
-                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Last Name</Label><FormControl><Input {...field} className="h-10 rounded-lg text-xs" /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">First Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Last Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
                 </div>
-                <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Phone Number</Label><FormControl><Input {...field} className="h-10 rounded-lg text-xs" /></FormControl></FormItem>)} />
-                <Button type="submit" className="w-full h-12 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin size-4 mr-2"/> : <UserCheck className="size-4 mr-2"/>} Update Identity</Button>
+                <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Phone Number</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                <Button type="submit" className="w-full h-12 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin size-4 mr-2"/> : <UserCheck className="size-4 mr-2"/>} Synchronize Identity</Button>
             </form></Form></DialogContent></Dialog>
         </div>
     );
 }
 
+function ActivityBarItem({ icon: Icon, title, value, status, color }: any) {
+    return (
+        <Card className="border-none shadow-sm rounded-xl bg-white p-2.5 flex items-center gap-3 group hover:shadow-md transition-all ring-1 ring-border/50">
+            <div className={cn("p-1.5 rounded-lg text-white shrink-0 group-hover:scale-105 transition-transform", color)}>
+                <Icon className="size-3" />
+            </div>
+            <div className="min-w-0 flex-1">
+                <p className="text-[8px] font-black uppercase text-muted-foreground/50 tracking-widest leading-none mb-0.5">{title}</p>
+                <p className="text-[10px] font-black truncate text-foreground leading-tight">{value}</p>
+                <div className="flex items-center gap-1 mt-0.5">
+                    <div className="h-1 w-1 rounded-full bg-current opacity-40" />
+                    <p className="text-[7px] font-bold uppercase opacity-40">{status}</p>
+                </div>
+            </div>
+        </Card>
+    );
+}
+
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
-        <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-primary/5 text-primary/60 shrink-0"><Icon className="size-4" /></div>
-            <div className="min-w-0 pt-0.5">
-                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 leading-none mb-1">{label}</p>
-                <p className="text-[10px] font-black truncate text-foreground/90 uppercase">{value}</p>
+        <div className="flex items-start gap-2">
+            <div className="p-1.5 rounded-lg bg-primary/5 text-primary/60 shrink-0"><Icon className="size-3" /></div>
+            <div className="min-w-0">
+                <p className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 leading-none mb-0.5">{label}</p>
+                <p className="text-[9px] font-black truncate text-foreground/90 uppercase">{value}</p>
             </div>
         </div>
     );
@@ -322,14 +343,14 @@ function DetailItem({ icon: Icon, label, value }: any) {
 
 function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-3 space-y-2 ring-1 ring-border/50 group">
             <div className="flex justify-between items-start">
-                <div className={cn("p-2 rounded-xl bg-muted/20 shadow-sm", color)}><Icon className="size-4" /></div>
-                <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Active Sync</Badge>
+                <div className={cn("p-1.5 rounded-lg bg-muted/20 shadow-sm", color)}><Icon className="size-3" /></div>
+                <Badge variant="outline" className="text-[6px] font-black uppercase bg-muted/20 border-none px-1 h-3.5">Active</Badge>
             </div>
             <div>
-                <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-black uppercase text-muted-foreground">{title}</p><span className={cn("text-sm font-black", color)}>{ratio}</span></div>
-                {progress !== undefined && <Progress value={progress} className="h-1.5" />}
+                <div className="flex items-center justify-between mb-1"><p className="text-[8px] font-black uppercase text-muted-foreground">{title}</p><span className={cn("text-xs font-black", color)}>{ratio}</span></div>
+                {progress !== undefined && <Progress value={progress} className="h-1 rounded-none bg-muted/30" />}
                 {children}
             </div>
         </Card>
@@ -337,30 +358,30 @@ function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any
 }
 
 function MetricStat({ label, val, color }: any) {
-    return <div className="text-center"><p className="text-[8px] font-bold text-muted-foreground/60 uppercase">{label}</p><p className={cn("text-xs font-black", color)}>{val}</p></div>;
+    return <div className="text-center"><p className="text-[7px] font-bold text-muted-foreground/60 uppercase">{label}</p><p className={cn("text-[9px] font-black", color)}>{val}</p></div>;
 }
 
 function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
-        <div className="flex gap-4 items-start relative group">
-            <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-sm transition-transform group-hover:scale-105", color)}><Icon className="size-4" /></div>
-            <div className="space-y-1 flex-1">
-                <p className="font-black text-xs uppercase tracking-tight text-foreground/90">{title}</p>
+        <div className="flex gap-3 items-start relative group">
+            <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0 z-10 shadow-sm transition-transform", color)}><Icon className="size-3" /></div>
+            <div className="space-y-0.5 flex-1">
+                <p className="font-black text-[10px] uppercase tracking-tight text-foreground/90">{title}</p>
                 <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{time}</span>
-                    <Badge variant="outline" className="h-4 px-2 text-[7px] font-black uppercase border-none bg-muted/30 tracking-widest">{desc}</Badge>
+                    <span className="text-[7px] font-black text-muted-foreground/40 uppercase tracking-widest">{time}</span>
+                    <Badge variant="outline" className="h-3 px-1.5 text-[6px] font-black uppercase border-none bg-muted/30 tracking-widest">{desc}</Badge>
                 </div>
             </div>
-            <ChevronRight className="size-4 text-muted-foreground/20 group-hover:text-primary transition-all" />
+            <ChevronRight className="size-3 text-muted-foreground/20 group-hover:text-primary transition-all" />
         </div>
     );
 }
 
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <div className="flex items-center justify-between py-2 border-b border-dashed border-border/50 last:border-none group">
-            <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-widest">{label}</span>
-            <span className="text-11px] font-black text-foreground/80 uppercase text-right pl-3">{value}</span>
+        <div className="flex items-center justify-between py-1.5 border-b border-dashed border-border/50 last:border-none group">
+            <span className="text-[8px] font-black uppercase text-muted-foreground/50 tracking-widest">{label}</span>
+            <span className="text-[9px] font-black text-foreground/80 uppercase text-right pl-3 truncate">{value}</span>
         </div>
     );
 }
