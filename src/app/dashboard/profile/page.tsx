@@ -219,38 +219,6 @@ export default function ProfilePage() {
                 <MetricCard icon={FileBox} title="Vault" ratio={documents?.length || 0} color="text-emerald-600" />
             </div>
 
-            {/* Tactical Handshake (Linear Tasks) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <ActivityBarItem 
-                    icon={Clock} 
-                    title="Last Shift" 
-                    value={lastAtt?.[0]?.checkInTime ? format(lastAtt[0].checkInTime.toDate(), 'dd MMM, p') : 'None'} 
-                    status={lastAtt?.[0]?.status === 'present' ? 'Verified' : 'Flagged'}
-                    color="bg-green-500"
-                />
-                <ActivityBarItem 
-                    icon={CalendarClock} 
-                    title="Leave Pulse" 
-                    value={lastLeave?.[0] ? `${lastLeave[0].category}` : 'No Records'} 
-                    status={lastLeave?.[0]?.status || 'Inactive'}
-                    color="bg-sky-500"
-                />
-                <ActivityBarItem 
-                    icon={MessageSquareWarning} 
-                    title="Support Desk" 
-                    value={lastTicket?.[0] ? `${lastTicket[0].category.split(' ')[0]}` : 'Zero Tickets'} 
-                    status={lastTicket?.[0]?.status || 'Resolved'}
-                    color="bg-amber-500"
-                />
-                <ActivityBarItem 
-                    icon={FileText} 
-                    title="Last Audit" 
-                    value={lastReport?.[0] ? `${lastReport[0].reportType}` : 'No Reports'} 
-                    status={lastReport?.[0] ? format(lastReport[0].date.toDate(), 'MMM dd') : 'Awaiting'}
-                    color="bg-purple-500"
-                />
-            </div>
-
             {/* Content Tabs */}
             <Tabs defaultValue="activity" className="space-y-2">
                 <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-xl p-1 h-auto gap-1">
@@ -299,6 +267,38 @@ export default function ProfilePage() {
                 </TabsContent>
             </Tabs>
 
+            {/* Tactical Handshake (Linear Tasks) - MOVED TO LAST */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <ActivityBarItem 
+                    icon={Clock} 
+                    title="Last Shift" 
+                    value={lastAtt?.[0]?.checkInTime ? format(lastAtt[0].checkInTime.toDate(), 'dd MMM, p') : 'None'} 
+                    status={lastAtt?.[0]?.status === 'present' ? 'Verified' : 'Flagged'}
+                    color="bg-green-500"
+                />
+                <ActivityBarItem 
+                    icon={CalendarClock} 
+                    title="Leave Pulse" 
+                    value={lastLeave?.[0] ? `${lastLeave[0].category}` : 'No Records'} 
+                    status={lastLeave?.[0]?.status || 'Inactive'}
+                    color="bg-sky-500"
+                />
+                <ActivityBarItem 
+                    icon={MessageSquareWarning} 
+                    title="Support Desk" 
+                    value={lastTicket?.[0] ? `${lastTicket[0].category.split(' ')[0]}` : 'Zero Tickets'} 
+                    status={lastTicket?.[0]?.status || 'Resolved'}
+                    color="bg-amber-500"
+                />
+                <ActivityBarItem 
+                    icon={FileText} 
+                    title="Last Audit" 
+                    value={lastReport?.[0] ? `${lastReport[0].reportType}` : 'No Reports'} 
+                    status={lastReport?.[0] ? format(lastReport[0].date.toDate(), 'MMM dd') : 'Awaiting'}
+                    color="bg-purple-500"
+                />
+            </div>
+
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}><DialogContent className="rounded-[2.5rem] p-8 sm:max-w-md border-none shadow-2xl"><DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Edit Identity</DialogTitle></DialogHeader><Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                 <div className="grid grid-cols-2 gap-3">
                     <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">First Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
@@ -345,7 +345,7 @@ function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any
     return (
         <Card className="border-none shadow-sm rounded-2xl bg-white p-3 space-y-2 ring-1 ring-border/50 group">
             <div className="flex justify-between items-start">
-                <div className={cn("p-1.5 rounded-lg bg-muted/20 shadow-sm", color)}><Icon className="size-3" /></div>
+                <div className={cn("p-1.5 rounded-xl bg-muted/20 shadow-sm", color)}><Icon className="size-3" /></div>
                 <Badge variant="outline" className="text-[6px] font-black uppercase bg-muted/20 border-none px-1 h-3.5">Active</Badge>
             </div>
             <div>
