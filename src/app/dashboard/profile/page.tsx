@@ -214,9 +214,17 @@ export default function ProfilePage() {
                     </div>
                 </MetricCard>
                 <MetricCard icon={CalendarClock} title="Leave" ratio={isLeaveConfigured ? `${leaveBalValue}/${leaveEntValue}` : "NIL"} progress={isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 0} color="text-sky-600" />
-                <MetricCard icon={Zap} title="Efficiency" ratio={employee.performanceRating || "Good"} color="text-orange-600" />
-                <MetricCard icon={FileCheck} title="Payroll" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : "Audited"} color="text-purple-600" />
-                <MetricCard icon={FileBox} title="Vault" ratio={documents?.length || 0} color="text-emerald-600" />
+                <MetricCard icon={Zap} title="Performance" ratio={employee.performanceRating || "Good"} color="text-orange-600">
+                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-2">Review: {employee.lastReviewDate ? format(employee.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
+                </MetricCard>
+                <MetricCard icon={FileCheck} title="Payroll" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : (employee.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600">
+                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-2">Next: {employee.employmentType === 'Intern' ? "Performance Based" : "Scheduled cycle"}</p>
+                </MetricCard>
+                <MetricCard icon={FileBox} title="Vault" ratio={documents?.length || 0} color="text-emerald-600">
+                    <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-2">
+                        {documents?.[0] ? `Updated: ${format(documents[0].uploadedAt.toDate(), 'dd MMM yy')}` : "Empty"}
+                    </p>
+                </MetricCard>
             </div>
 
             {/* Content Tabs */}
@@ -267,7 +275,7 @@ export default function ProfilePage() {
                 </TabsContent>
             </Tabs>
 
-            {/* Tactical Handshake (Linear Tasks) - MOVED TO LAST */}
+            {/* Tactical Handshake (Linear Tasks) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <ActivityBarItem 
                     icon={Clock} 

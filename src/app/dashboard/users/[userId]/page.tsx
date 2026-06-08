@@ -195,12 +195,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Review: {user.lastReviewDate ? format(user.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
             </MetricCard>
 
-            <MetricCard icon={FileCheck} title="Payroll Status" ratio={user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Based on Performance" : "Audited")} color="text-purple-600">
-                <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Cycle: {user.employmentType === 'Intern' ? "Performance Based" : "Scheduled"}</p>
+            <MetricCard icon={FileCheck} title="Payroll Status" ratio={user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600">
+                <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Next: {user.employmentType === 'Intern' ? "Performance Based" : "Scheduled"}</p>
             </MetricCard>
 
             <MetricCard icon={FileBox} title="Documents" ratio={documents?.length || 0} color="text-emerald-600">
-                <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">Files in vault</p>
+                <p className="text-[8px] font-black uppercase text-muted-foreground/60 mt-4">
+                    {documents?.[0] ? `Updated: ${format(documents[0].uploadedAt.toDate(), 'dd MMM yy')}` : "Empty Vault"}
+                </p>
             </MetricCard>
         </div>
 
