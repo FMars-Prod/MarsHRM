@@ -192,12 +192,12 @@ export default function UsersPage() {
 
   return (
     <TooltipProvider delayDuration={0}>
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-8 animate-fade-in-up">
       <PageHeader title="Staff Registry" description="Global directory of active team members.">
         <div className="flex gap-2">
             <Dialog open={isDialogOpen} onOpenChange={(open) => { if(!open) { setEditingUser(null); setManualSignatureUrl(""); } setIsDialogOpen(open); }}>
-                <DialogTrigger asChild><Button className="rounded-full h-11 shadow-lg shadow-primary/20"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button></DialogTrigger>
-                <DialogContent className="sm:max-w-2xl rounded-[2.5rem] p-8 border-none shadow-2xl">
+                <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button></DialogTrigger>
+                <DialogContent className="sm:max-w-2xl rounded-none p-8 border-none shadow-2xl">
                     <DialogHeader className="text-left">
                         <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Profile' : 'Register New Member'}</DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Provision tactical identity access</DialogDescription>
@@ -206,25 +206,25 @@ export default function UsersPage() {
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-8">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">First Name</Label><Input {...field} className="rounded-xl h-11"/></FormItem>)} />
-                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Last Name</Label><Input {...field} className="rounded-xl h-11"/></FormItem>)} />
+                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">First Name</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
+                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Last Name</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
                                 </div>
-                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Email Directive</Label><Input {...field} className="rounded-xl h-11"/></FormItem>)} />
+                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Email Directive</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
                                 
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting Command Heads</Label>
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="outline" className="w-full justify-between h-11 rounded-xl bg-muted/20 border-none ring-1 ring-border/50">
-                                                <span className="text-xs font-bold uppercase">
+                                            <Button variant="outline" className="w-full justify-between h-12 rounded-none bg-muted/20 border-none ring-1 ring-border/50 px-4">
+                                                <span className="text-xs font-black uppercase tracking-tight">
                                                     {selectedHeadIds.length === 0 ? "Assign Managers" : `${selectedHeadIds.length} Managers Selected`}
                                                 </span>
                                                 <ChevronDown className="size-4 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-[350px] p-0 rounded-none border-none shadow-2xl" align="start">
-                                            <div className="p-3 border-b bg-muted/10">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-primary">Fleet Roster</p>
+                                            <div className="p-4 border-b bg-muted/10">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Fleet Roster</p>
                                             </div>
                                             <ScrollArea className="h-64">
                                                 <div className="p-2 space-y-1">
@@ -234,7 +234,7 @@ export default function UsersPage() {
                                                             <div 
                                                                 key={manager.id} 
                                                                 className={cn(
-                                                                    "flex items-center gap-3 p-2 rounded-none transition-colors cursor-pointer",
+                                                                    "flex items-center gap-3 p-3 rounded-none transition-colors cursor-pointer",
                                                                     isSelected ? "bg-primary/5" : "hover:bg-muted/50"
                                                                 )}
                                                                 onClick={(e) => {
@@ -250,8 +250,8 @@ export default function UsersPage() {
                                                             >
                                                                 <Checkbox checked={isSelected} className="rounded-none pointer-events-none" />
                                                                 <div className="min-w-0 flex-1">
-                                                                    <p className="text-xs font-black uppercase truncate">{manager.firstName} {manager.lastName}</p>
-                                                                    <p className="text-[9px] font-bold text-muted-foreground truncate">{manager.jobTitle}</p>
+                                                                    <p className="text-sm font-black uppercase truncate">{manager.firstName} {manager.lastName}</p>
+                                                                    <p className="text-[10px] font-bold text-muted-foreground truncate uppercase">{manager.jobTitle}</p>
                                                                 </div>
                                                             </div>
                                                         );
@@ -263,26 +263,26 @@ export default function UsersPage() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Job Title</Label><Input {...field} className="rounded-xl h-11"/></FormItem>)} />
-                                    <FormField control={form.control} name="department" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Department</Label><Input {...field} className="rounded-xl h-11"/></FormItem>)} />
+                                    <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Job Title</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
+                                    <FormField control={form.control} name="department" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Department</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Office Assignment</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent>{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></FormItem>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Office Assignment</Label>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent className="rounded-none">{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></FormItem>
                                     )} />
-                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Work Schedule</Label><Input {...field} placeholder="e.g. General Shift" className="rounded-xl h-11"/></FormItem>)} />
+                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Work Schedule</Label><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="employmentType" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Classification</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Classification</Label>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="role" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Account Tier</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Account Tier</Label>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                 </div>
 
@@ -290,30 +290,30 @@ export default function UsersPage() {
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormField control={form.control} name="performanceRating" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Performance Rating</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Performance Rating</Label>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="leaveBalance" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>
                                     )} />
                                     <FormField control={form.control} name="payrollAmount" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Last Payroll Amount</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Last Payroll Amount</Label><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>
                                     )} />
                                 </div>
 
                                 <Separator className="my-4 opacity-50" />
                                 
                                 <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed border-border/50">
+                                    <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
                                         <div className="space-y-0.5">
-                                            <Label className="text-xs font-black uppercase">Enable WFH Mode</Label>
-                                            <p className="text-[9px] text-muted-foreground uppercase font-bold opacity-60">Authorize residential logging</p>
+                                            <Label className="text-sm font-black uppercase tracking-tight">Enable WFH Mode</Label>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Authorize residential logging</p>
                                         </div>
-                                        <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />
+                                        <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} className="rounded-none" />)} />
                                     </div>
 
                                     {isWfhAllowedValue && (
-                                        <div className="p-5 bg-primary/5 rounded-3xl border-2 border-primary/10 space-y-5 animate-fade-in-up">
+                                        <div className="p-6 bg-primary/5 rounded-none border-2 border-primary/10 space-y-6 animate-fade-in-up">
                                             <div className="flex items-center justify-between">
                                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
                                                     <MapPin className="size-3" /> Home Base Coordinates
@@ -322,39 +322,39 @@ export default function UsersPage() {
                                                     type="button" 
                                                     variant="ghost" 
                                                     size="sm" 
-                                                    className="h-7 rounded-full text-[8px] font-black uppercase tracking-widest px-3 border border-primary/20 hover:bg-primary/5"
+                                                    className="h-8 rounded-none text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5"
                                                     onClick={handleGetCurrentLocation}
                                                 >
-                                                    <LocateFixed className="size-2.5 mr-1.5" /> Capture Signal
+                                                    <LocateFixed className="size-3 mr-1.5" /> Capture Signal
                                                 </Button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <FormField control={form.control} name="homeLatitude" render={({ field }) => (
                                                     <FormItem>
-                                                        <Label className="text-[9px] uppercase font-bold opacity-40">Latitude</Label>
-                                                        <Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-xl h-10 font-mono text-xs" />
+                                                        <Label className="text-[9px] uppercase font-black opacity-40">Latitude</Label>
+                                                        <Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-none h-11 font-mono text-sm font-bold" />
                                                     </FormItem>
                                                 )} />
                                                 <FormField control={form.control} name="homeLongitude" render={({ field }) => (
                                                     <FormItem>
-                                                        <Label className="text-[9px] uppercase font-bold opacity-40">Longitude</Label>
-                                                        <Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-xl h-10 font-mono text-xs" />
+                                                        <Label className="text-[9px] uppercase font-black opacity-40">Longitude</Label>
+                                                        <Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-none h-11 font-mono text-sm font-bold" />
                                                     </FormItem>
                                                 )} />
                                             </div>
                                             <FormField control={form.control} name="homeRadius" render={({ field }) => (
                                                 <FormItem>
-                                                    <Label className="text-[9px] uppercase font-bold opacity-40">Geofence Radius (KM)</Label>
-                                                    <Input type="number" step="0.1" {...field} value={field.value ?? ""} className="rounded-xl h-10" />
-                                                    <p className="text-[8px] text-muted-foreground italic mt-1.5">Standard precision: 0.5 KM</p>
+                                                    <Label className="text-[9px] uppercase font-black opacity-40">Geofence Radius (KM)</Label>
+                                                    <Input type="number" step="0.1" {...field} value={field.value ?? ""} className="rounded-none h-11 font-bold" />
+                                                    <p className="text-[9px] text-muted-foreground italic mt-2 font-bold">Standard precision: 0.5 KM</p>
                                                 </FormItem>
                                             )} />
                                         </div>
                                     )}
                                 </div>
                                 
-                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Temporary Cipher</Label><Input type="password" {...field} className="rounded-xl h-11"/></FormItem>)} />}
-                                <Button type="submit" className="w-full h-14 rounded-full font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Finalize Dispatch Protocol</Button>
+                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Temporary Cipher</Label><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />}
+                                <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Finalize Dispatch Protocol</Button>
                             </form>
                         </Form>
                     </ScrollArea>
@@ -363,82 +363,82 @@ export default function UsersPage() {
         </div>
       </PageHeader>
 
-      <div className="border-none ring-1 ring-border/50 rounded-[2.5rem] overflow-hidden bg-white shadow-xl">
+      <div className="border-none ring-1 ring-border/50 rounded-none overflow-hidden bg-white shadow-xl">
         <Table>
           <TableHeader className="bg-muted/10 border-b">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[50px] py-6">
-                  <Checkbox checked={selectedUserIds.length === (users?.length || 0) && (users?.length || 0) > 0} onCheckedChange={toggleSelectAll} />
+              <TableHead className="w-[60px] py-6 px-6">
+                  <Checkbox checked={selectedUserIds.length === (users?.length || 0) && (users?.length || 0) > 0} onCheckedChange={toggleSelectAll} className="rounded-none" />
               </TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Staff Member</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Command Matrix</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Control</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-8">Control</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Synchronizing Registry...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Synchronizing Registry...</TableCell></TableRow>
             ) : users?.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No tactical units registered.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No tactical units registered.</TableCell></TableRow>
             ) : users?.map(u => (
               <TableRow key={u.id} className={cn("border-border/50 group hover:bg-primary/5 transition-colors", selectedUserIds.includes(u.id) && "bg-primary/5")}>
-                <TableCell className="py-5">
-                    <Checkbox checked={selectedUserIds.includes(u.id)} onCheckedChange={(c) => toggleSelectUser(u.id, !!c)} />
+                <TableCell className="py-6 px-6">
+                    <Checkbox checked={selectedUserIds.includes(u.id)} onCheckedChange={(c) => toggleSelectUser(u.id, !!c)} className="rounded-none" />
                 </TableCell>
-                <TableCell className="py-5">
+                <TableCell className="py-6">
                     <div className="flex flex-col">
-                        <Link href={`/dashboard/users/${u.id}`} className="font-black text-sm group-hover:text-primary transition-colors flex items-center gap-2">
+                        <Link href={`/dashboard/users/${u.id}`} className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors flex items-center gap-2 leading-none">
                             {u.firstName} {u.lastName} 
-                            {u.isDemoAccount && <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase border-none px-2 h-4">DEMO</Badge>}
+                            {u.isDemoAccount && <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase border-none px-2 h-4 rounded-none">DEMO</Badge>}
                         </Link>
-                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{u.jobTitle}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{u.jobTitle}</span>
                     </div>
                 </TableCell>
                 <TableCell>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1.5">
                         {u.reportingHeadIds?.length ? (
                             u.reportingHeadIds.map((headId: string) => {
                                 const head = users.find(h => h.id === headId);
                                 return head ? (
-                                    <Badge key={headId} variant="outline" className="text-[8px] font-black uppercase bg-primary/5 border-primary/10 text-primary px-2">
+                                    <Badge key={headId} variant="outline" className="text-[9px] font-black uppercase bg-primary/5 border-primary/10 text-primary px-2.5 h-6 rounded-none">
                                         {head.firstName}
                                     </Badge>
                                 ) : null;
                             })
                         ) : (
-                            <span className="text-[9px] font-black uppercase opacity-20">Direct to Admin</span>
+                            <span className="text-[10px] font-black uppercase opacity-20 tracking-tighter">Direct to Admin</span>
                         )}
                     </div>
                 </TableCell>
-                <TableCell className="text-right px-6">
-                  <div className="flex justify-end items-center gap-1.5">
+                <TableCell className="text-right px-8">
+                  <div className="flex justify-end items-center gap-2">
                     {isAdmin && (
                         <>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/5 transition-all" onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }}>
-                                        <Edit className="size-4" />
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-primary hover:bg-primary/5 transition-all" onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }}>
+                                        <Edit className="size-4.5" />
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase">Edit Profile</TooltipContent>
+                                <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Edit Profile</TooltipContent>
                             </Tooltip>
 
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive hover:bg-red-50 transition-all">
-                                        <Trash2 className="size-4" />
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-destructive hover:bg-red-50 transition-all">
+                                        <Trash2 className="size-4.5" />
                                     </Button>
-                                </TooltipTrigger>
-                                <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="rounded-none border-none shadow-2xl">
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Purge Personnel Record?</AlertDialogTitle>
-                                        <AlertDialogDescription className="text-sm font-medium">
-                                            This will remove {u.firstName}'s entry from the tactical registry. Access credentials will be blocked immediately.
+                                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Personnel Record?</AlertDialogTitle>
+                                        <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+                                            This will remove <span className="font-bold text-foreground">{u.firstName}</span>'s entry from the tactical registry. Access credentials will be blocked immediately.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
-                                    <AlertDialogFooter className="mt-6 gap-3">
-                                        <AlertDialogCancel className="rounded-full font-black uppercase text-[10px]">Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="rounded-full font-black uppercase text-[10px] bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Confirm Purge</AlertDialogAction>
+                                    <AlertDialogFooter className="mt-8 gap-3">
+                                        <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Confirm Purge</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
@@ -446,12 +446,12 @@ export default function UsersPage() {
                     )}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 hover:bg-muted/50"><MoreHorizontal className="size-4" /></Button>
+                            <Button variant="ghost" size="icon" className="rounded-none h-9 w-9 hover:bg-muted/50"><MoreHorizontal className="size-4.5" /></Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-2xl border-none shadow-2xl p-2 w-52">
-                            <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Operations</DropdownMenuLabel>
-                            <DropdownMenuItem asChild className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5">
-                                <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-3.5" /> Personnel Audit</Link>
+                        <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-52">
+                            <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2">Operations</DropdownMenuLabel>
+                            <DropdownMenuItem asChild className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
+                                <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-4 text-primary" /> Personnel Audit</Link>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -466,4 +466,3 @@ export default function UsersPage() {
     </TooltipProvider>
   );
 }
-
