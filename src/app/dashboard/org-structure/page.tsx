@@ -7,7 +7,7 @@ import { collection, query, doc, orderBy } from 'firebase/firestore';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Network, Settings2, ShieldCheck, Check, ChevronDown, UserCircle, Search, X } from 'lucide-react';
+import { Network, Settings2, ShieldCheck, Check, ChevronDown, UserCircle, Search, X, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 
 type UserData = {
     id: string;
@@ -108,6 +109,7 @@ export default function OrgStructurePage() {
     const { toast } = useToast();
 
     const [isConfigOpen, setIsConfigOpen] = React.useState(false);
+    const [searchQuery, setSearchQuery] = React.useState("");
 
     const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
     const { data: userData, isLoading: isUserLoading } = useDoc<UserData>(currentUserDocRef);
@@ -157,7 +159,7 @@ export default function OrgStructurePage() {
                                 <Settings2 className="mr-3 size-4" /> Configure Structure
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-none sm:max-w-3xl p-0 border-none shadow-2xl overflow-hidden flex flex-col h-[85vh] z-[60]">
+                        <DialogContent className="rounded-none sm:max-w-4xl p-0 border-none shadow-2xl overflow-hidden flex flex-col h-[85vh] z-[60]">
                             <DialogHeader className="p-10 border-b bg-white shrink-0">
                                 <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Command Mapping Matrix</DialogTitle>
                                 <DialogDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60 mt-1">
@@ -167,8 +169,8 @@ export default function OrgStructurePage() {
                             <ScrollArea className="flex-1 bg-muted/5">
                                 <div className="p-10 space-y-4">
                                     {users?.map(u => (
-                                        <div key={u.id} className="flex items-center justify-between p-6 bg-white border border-dashed border-border group hover:border-primary/40 transition-all shadow-sm">
-                                            <div className="flex items-center gap-5">
+                                        <div key={u.id} className="flex flex-col md:flex-row md:items-center justify-between p-6 bg-white border border-dashed border-border group hover:border-primary/40 transition-all shadow-sm gap-6">
+                                            <div className="flex items-center gap-5 shrink-0">
                                                 <Avatar className="size-14 rounded-none border ring-1 ring-border/50 shadow-sm">
                                                     <AvatarImage src={u.avatar} className="object-cover rounded-none" />
                                                     <AvatarFallback className="rounded-none text-sm font-black">{u.firstName[0]}{u.lastName[0]}</AvatarFallback>
@@ -178,27 +180,54 @@ export default function OrgStructurePage() {
                                                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{u.jobTitle}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-6">
+
+                                            <div className="flex-1 min-w-0">
                                                 <Popover>
                                                     <PopoverTrigger asChild>
-                                                        <Button variant="outline" className="h-11 rounded-none bg-white text-[11px] font-black uppercase border-none ring-1 ring-border/50 min-w-[220px] justify-between px-5 shadow-sm hover:ring-primary/40 active:scale-[0.98] transition-all">
-                                                            <span>{u.reportingHeadIds?.length || 0} Managers Assigned</span>
-                                                            <ChevronDown className="size-4 opacity-50" />
-                                                        </Button>
+                                                        <div className="w-full cursor-pointer p-4 bg-muted/20 hover:bg-muted/30 transition-all ring-1 ring-border/50 flex flex-wrap items-center gap-2 min-h-[56px]">
+                                                            {(u.reportingHeadIds?.length || 0) === 0 ? (
+                                                                <span className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest">Unassigned - Tap to add managers</span>
+                                                            ) : (
+                                                                u.reportingHeadIds?.map(headId => {
+                                                                    const head = users.find(h => h.id === headId);
+                                                                    return head ? (
+                                                                        <Badge key={headId} variant="secondary" className="bg-primary text-white font-black text-[9px] uppercase tracking-widest rounded-none h-6 px-3 border-none gap-2">
+                                                                            {head.firstName} {head.lastName}
+                                                                            <X className="size-3 cursor-pointer opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleToggleHead(u.id, headId, u.reportingHeadIds || []); }} />
+                                                                        </Badge>
+                                                                    ) : null;
+                                                                })
+                                                            )}
+                                                            <div className="ml-auto flex items-center gap-2 text-primary">
+                                                                <Users className="size-4" />
+                                                                <ChevronDown className="size-4" />
+                                                            </div>
+                                                        </div>
                                                     </PopoverTrigger>
-                                                    <PopoverContent className="w-[320px] p-0 rounded-none border-none shadow-2xl z-[100]" align="end">
-                                                        <div className="p-4 bg-muted/10 border-b">
-                                                            <p className="text-[10px] font-black uppercase text-primary tracking-widest">Select Command Tiers</p>
+                                                    <PopoverContent className="w-[400px] p-0 rounded-none border-none shadow-2xl z-[100]" align="end">
+                                                        <div className="p-4 border-b bg-muted/10 space-y-4">
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Fleet Command Directory</p>
+                                                            <div className="relative">
+                                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
+                                                                <Input 
+                                                                    placeholder="Search for Reporting Heads..." 
+                                                                    className="h-10 pl-10 rounded-none border-none ring-1 ring-border/50 text-xs font-bold uppercase tracking-tight focus-visible:ring-primary"
+                                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                                />
+                                                            </div>
                                                         </div>
                                                         <ScrollArea className="h-72">
                                                             <div className="p-2 space-y-1">
-                                                                {users.filter(manager => manager.id !== u.id).map(manager => {
+                                                                {users.filter(manager => {
+                                                                    const matchesSearch = `${manager.firstName} ${manager.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || manager.jobTitle.toLowerCase().includes(searchQuery.toLowerCase());
+                                                                    return manager.id !== u.id && matchesSearch;
+                                                                }).map(manager => {
                                                                     const isSelected = !!u.reportingHeadIds?.includes(manager.id);
                                                                     return (
                                                                         <div 
                                                                             key={manager.id} 
                                                                             className={cn(
-                                                                                "flex items-center gap-4 p-3 rounded-none transition-colors cursor-pointer",
+                                                                                "flex items-center gap-4 p-4 rounded-none transition-all cursor-pointer group",
                                                                                 isSelected ? "bg-primary/5" : "hover:bg-muted/50"
                                                                             )}
                                                                             onClick={(e) => {
@@ -207,14 +236,25 @@ export default function OrgStructurePage() {
                                                                                 handleToggleHead(u.id, manager.id, u.reportingHeadIds || []);
                                                                             }}
                                                                         >
-                                                                            <Checkbox checked={isSelected} className="rounded-none pointer-events-none" />
+                                                                            <Checkbox checked={isSelected} className="rounded-none pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                                                                            <Avatar className="size-10 rounded-none border ring-1 ring-border/50 shrink-0">
+                                                                                <AvatarImage src={manager.avatar} className="object-cover rounded-none" />
+                                                                                <AvatarFallback className="rounded-none text-xs font-black">{manager.firstName[0]}{manager.lastName[0]}</AvatarFallback>
+                                                                            </Avatar>
                                                                             <div className="min-w-0 flex-1">
-                                                                                <p className="text-sm font-black uppercase truncate">{manager.firstName} {manager.lastName}</p>
+                                                                                <p className="text-sm font-black uppercase truncate group-hover:text-primary transition-colors">{manager.firstName} {manager.lastName}</p>
                                                                                 <p className="text-[10px] font-bold text-muted-foreground truncate uppercase">{manager.jobTitle}</p>
                                                                             </div>
+                                                                            {isSelected && <Check className="size-4 text-primary" />}
                                                                         </div>
                                                                     );
                                                                 })}
+                                                                {users.filter(m => m.id !== u.id && `${m.firstName} ${m.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                                                                    <div className="py-10 text-center opacity-20 grayscale flex flex-col items-center">
+                                                                        <Users className="size-10 mb-2" />
+                                                                        <p className="text-[10px] font-black uppercase tracking-widest">No matching command found</p>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </ScrollArea>
                                                     </PopoverContent>
