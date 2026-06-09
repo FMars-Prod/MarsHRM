@@ -43,6 +43,7 @@ const groups = [
     label: "STRATEGIC HUB",
     links: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "totalNotificationsCount" },
+      { href: "https://studio--studio-6104224101-c3e7e.us-central1.hosted.app/", label: "Admin RWT", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
@@ -142,7 +143,10 @@ export function MainNav({
                   return (
                     <SidebarMenuItem key={link.href}>
                       <SidebarMenuButton asChild isActive={isActive} tooltip={link.label}>
-                        <Link href={link.href}>
+                        <Link 
+                          href={link.href} 
+                          target={link.href.startsWith('http') ? "_blank" : undefined}
+                        >
                           <link.icon className="size-4" />
                           <span className="font-bold">{link.label}</span>
                         </Link>
