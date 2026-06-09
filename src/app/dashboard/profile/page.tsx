@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInMonths, eachDayOfInterval, isSunday, isToday, startOfDay, isBefore } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay, isBefore } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
@@ -121,11 +121,20 @@ export default function ProfilePage() {
         if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
         const now = new Date();
+        
         const totalMonths = differenceInMonths(now, start);
         const years = Math.floor(totalMonths / 12);
         const remainingMonths = totalMonths % 12;
-        if (years > 0) return `${years} yr${remainingMonths > 0 ? ` ${remainingMonths} mo` : ''}`;
-        return `${totalMonths} mo`;
+
+        const dateAfterMonths = addMonths(start, totalMonths);
+        const days = differenceInDays(now, dateAfterMonths);
+
+        let parts = [];
+        if (years > 0) parts.push(`${years} yr`);
+        parts.push(`${remainingMonths} mo`);
+        if (days > 0) parts.push(`${days} d`);
+        
+        return parts.join(' ');
     }, [employee]);
 
     const attendanceStats = React.useMemo(() => {
@@ -338,6 +347,28 @@ export default function ProfilePage() {
                         </ScrollArea>
                     </Card>
                 </TabsContent>
+                <TabsContent value="documents">
+                    <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {documents?.map(doc => (
+                            <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-5 rounded-none bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
+                                <div className="flex items-center gap-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-none"><FileBox className="size-5" /></div><span className="font-black text-xs uppercase truncate">{doc.title}</span></div>
+                            </Link>
+                        )) || <div className="col-span-full py-12 text-center text-[11px] font-black uppercase opacity-30">No documents in vault</div>}
+                    </div></Card>
+                </TabsContent>
+                <TabsContent value="assets">
+                    <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {assignedAssets?.map(asset => (
+                            <div key={asset.id} className="p-5 rounded-none ring-1 ring-border/50 bg-muted/5 space-y-3">
+                                <div className="aspect-square bg-white rounded-none flex items-center justify-center border border-dashed p-2">
+                                    {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-none" /> : <Laptop className="size-8 opacity-10" />}
+                                </div>
+                                <div><p className="font-black text-xs uppercase tracking-tighter truncate">{asset.name}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">{asset.category}</p></div>
+                            </div>
+                        )) || <div className="col-span-full py-12 text-center text-[11px] font-black uppercase opacity-30">No assets assigned</div>}
+                    </div></Card>
+                </TabsContent>
+                {/* Additional tabs like Reports can be added here if needed */}
             </Tabs>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
