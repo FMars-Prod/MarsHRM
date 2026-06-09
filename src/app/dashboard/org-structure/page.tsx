@@ -185,21 +185,26 @@ export default function OrgStructurePage() {
                                             <div className="flex-1 min-w-0">
                                                 <Popover>
                                                     <PopoverTrigger asChild>
-                                                        <div className="w-full cursor-pointer p-4 bg-muted/20 hover:bg-muted/30 transition-all ring-1 ring-border/50 flex flex-wrap items-center gap-2 min-h-[56px] rounded-none active:scale-[0.99] transition-transform">
+                                                        <div className={cn(
+                                                            "w-full cursor-pointer p-4 transition-all ring-1 flex flex-wrap items-center gap-2 min-h-[64px] rounded-none active:scale-[0.99] transition-transform",
+                                                            (u.reportingHeadIds?.length || 0) === 0 
+                                                                ? "bg-muted/10 border-dashed border-2 border-border/50 hover:bg-muted/20" 
+                                                                : "bg-white ring-primary/20 hover:ring-primary/40 shadow-sm"
+                                                        )}>
                                                             {(u.reportingHeadIds?.length || 0) === 0 ? (
-                                                                <span className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest px-1">Unassigned - Tap to add managers</span>
+                                                                <span className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-widest px-1">Unassigned - Tap to add managers</span>
                                                             ) : (
                                                                 u.reportingHeadIds?.map(headId => {
                                                                     const head = users.find(h => h.id === headId);
                                                                     return head ? (
-                                                                        <Badge key={headId} variant="secondary" className="bg-primary text-white font-black text-[9px] uppercase tracking-widest rounded-none h-6 px-3 border-none gap-2">
+                                                                        <Badge key={headId} variant="secondary" className="bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-none h-7 px-4 border-none gap-2 shadow-sm">
                                                                             {head.firstName} {head.lastName}
-                                                                            <X className="size-3 cursor-pointer opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleToggleHead(u.id, headId, u.reportingHeadIds || []); }} />
+                                                                            <X className="size-3.5 cursor-pointer opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleToggleHead(u.id, headId, u.reportingHeadIds || []); }} />
                                                                         </Badge>
                                                                     ) : null;
                                                                 })
                                                             )}
-                                                            <div className="ml-auto flex items-center gap-2 text-primary">
+                                                            <div className="ml-auto flex items-center gap-2 text-primary opacity-40 group-hover:opacity-100 transition-opacity">
                                                                 <Users className="size-4" />
                                                                 <ChevronDown className="size-4" />
                                                             </div>
