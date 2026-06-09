@@ -151,9 +151,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden p-6">
             <div className="flex flex-col gap-6">
                 <div className="flex items-start gap-6">
-                    <Avatar className="h-24 w-24 rounded-none border-4 border-white shadow-md ring-1 ring-border shrink-0 bg-muted">
+                    <Avatar className="h-32 w-32 rounded-none border-4 border-white shadow-md ring-1 ring-border shrink-0 bg-muted">
                         <AvatarImage src={user.avatar} className="object-cover" />
-                        <AvatarFallback className="text-3xl font-black rounded-none">{user.firstName?.[0]}</AvatarFallback>
+                        <AvatarFallback className="text-4xl font-black rounded-none">{user.firstName?.[0]}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-4">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

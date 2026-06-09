@@ -205,18 +205,18 @@ export default function ProfilePage() {
         <div className="max-w-6xl mx-auto animate-fade-in-up pb-4 space-y-3 font-jakarta">
             {/* Main Identity Hub */}
             <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden p-4">
-                <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="flex flex-col md:flex-row items-center gap-6">
                     <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>
-                        <Avatar className="h-16 w-16 rounded-none border-2 border-white shadow-md ring-1 ring-border">
+                        <Avatar className="h-32 w-32 rounded-none border-2 border-white shadow-md ring-1 ring-border">
                             <AvatarImage src={employee.avatar} className="object-cover" />
-                            <AvatarFallback className="text-xl font-black bg-muted rounded-none">{employee.firstName?.[0]}</AvatarFallback>
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-none opacity-0 group-hover:opacity-100 transition-opacity"><Camera className="size-4 text-white" /></div>
+                            <AvatarFallback className="text-4xl font-black bg-muted rounded-none">{employee.firstName?.[0]}</AvatarFallback>
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-none opacity-0 group-hover:opacity-100 transition-opacity"><Camera className="size-8 text-white" /></div>
                         </Avatar>
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
-                                <h2 className="text-lg font-black tracking-tighter leading-none">{employee.firstName} {employee.lastName}</h2>
+                                <h2 className="text-xl font-black tracking-tighter leading-none">{employee.firstName} {employee.lastName}</h2>
                                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{employee.jobTitle}</p>
                             </div>
                             <div className="flex gap-1.5">
