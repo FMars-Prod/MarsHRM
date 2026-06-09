@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -205,13 +204,13 @@ export default function ProfilePage() {
     return (
         <div className="max-w-6xl mx-auto animate-fade-in-up pb-4 space-y-3 font-jakarta">
             {/* Main Identity Hub */}
-            <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden p-4">
+            <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden p-4">
                 <div className="flex flex-col md:flex-row items-center gap-4">
                     <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>
-                        <Avatar className="h-16 w-16 rounded-xl border-2 border-white shadow-md ring-1 ring-border">
+                        <Avatar className="h-16 w-16 rounded-none border-2 border-white shadow-md ring-1 ring-border">
                             <AvatarImage src={employee.avatar} className="object-cover" />
-                            <AvatarFallback className="text-xl font-black bg-muted">{employee.firstName?.[0]}</AvatarFallback>
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"><Camera className="size-4 text-white" /></div>
+                            <AvatarFallback className="text-xl font-black bg-muted rounded-none">{employee.firstName?.[0]}</AvatarFallback>
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-none opacity-0 group-hover:opacity-100 transition-opacity"><Camera className="size-4 text-white" /></div>
                         </Avatar>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -221,8 +220,8 @@ export default function ProfilePage() {
                                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{employee.jobTitle}</p>
                             </div>
                             <div className="flex gap-1.5">
-                                <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-lg font-black uppercase text-[8px] tracking-widest h-7 px-3">Edit Profile</Button>
-                                <Button asChild size="sm" className="rounded-lg font-black uppercase text-[8px] tracking-widest h-7 px-3 shadow-sm shadow-primary/20"><Link href="https://fortumars.com/os.html" target="_blank">Activate MarsOS</Link></Button>
+                                <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-none font-black uppercase text-[8px] tracking-widest h-7 px-3">Edit Profile</Button>
+                                <Button asChild size="sm" className="rounded-none font-black uppercase text-[8px] tracking-widest h-7 px-3 shadow-sm shadow-primary/20"><Link href="https://fortumars.com/os.html" target="_blank">Activate MarsOS</Link></Button>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 mt-3 pt-3 border-t border-dashed border-border/50">
@@ -261,16 +260,16 @@ export default function ProfilePage() {
 
             {/* Content Tabs */}
             <Tabs defaultValue="activity" className="space-y-2">
-                <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-xl p-1 h-auto gap-1">
+                <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-none p-1 h-auto gap-1">
                     {["Activity", "Attendance", "Documents", "Assets"].map(tab => (
-                        <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-1.5 font-black uppercase text-[8px] tracking-[0.2em] transition-all">
+                        <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-1.5 font-black uppercase text-[8px] tracking-[0.2em] transition-all">
                             {tab}
                         </TabsTrigger>
                     ))}
                 </TabsList>
                 <TabsContent value="activity" className="mt-0">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-2">
-                        <Card className="lg:col-span-8 border-none shadow-sm rounded-2xl bg-white p-4 space-y-4">
+                        <Card className="lg:col-span-8 border-none shadow-sm rounded-none bg-white p-4 space-y-4">
                             <h3 className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Registry Log</h3>
                             <div className="space-y-2.5">
                                 {userReports.length > 0 ? userReports.slice(0, 3).map(r => (
@@ -279,7 +278,7 @@ export default function ProfilePage() {
                             </div>
                         </Card>
                         <div className="lg:col-span-4 space-y-2">
-                            <Card className="border-none shadow-sm rounded-2xl bg-white p-4 space-y-3">
+                            <Card className="border-none shadow-sm rounded-none bg-white p-4 space-y-3">
                                 <h3 className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Identity Details</h3>
                                 <div className="space-y-2">
                                     <InfoRow label="Birth" value={employee.dob ? format(new Date(employee.dob), 'dd MMM yyyy') : 'N/A'} />
@@ -289,23 +288,23 @@ export default function ProfilePage() {
                                     <InfoRow label="Blood" value={employee.bloodGroup || 'N/A'} />
                                     <div className="pt-1 flex flex-wrap gap-1">
                                         {employee.languages?.map((lang: string) => (
-                                            <Badge key={lang} variant="secondary" className="text-[7px] font-bold px-1.5 h-4 uppercase">{lang}</Badge>
+                                            <Badge key={lang} variant="secondary" className="text-[7px] font-bold px-1.5 h-4 uppercase rounded-none">{lang}</Badge>
                                         )) || <span className="text-[8px] opacity-30">No languages registered</span>}
                                     </div>
                                 </div>
                             </Card>
 
-                            <Card className="border-none shadow-sm rounded-2xl bg-white p-4 space-y-3">
+                            <Card className="border-none shadow-sm rounded-none bg-white p-4 space-y-3">
                                 <h3 className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Reporting Protocol</h3>
                                 <div className="space-y-2">
                                      <InfoRow label="Structure" value={employee.teamId ? "Tactical Unit" : "Individual Fleet"} />
-                                     <div className="p-3 bg-muted/20 rounded-xl border border-dashed border-border/50">
+                                     <div className="p-3 bg-muted/20 rounded-none border border-dashed border-border/50">
                                         <p className="text-[7px] font-black uppercase text-muted-foreground/60 mb-2">Direct Command</p>
                                         {teamLead ? (
                                             <div className="flex items-center gap-3">
-                                                <Avatar className="size-8 rounded-lg">
+                                                <Avatar className="size-8 rounded-none">
                                                     <AvatarImage src={teamLead.avatar} className="object-cover" />
-                                                    <AvatarFallback className="text-[10px]">{teamLead.firstName[0]}</AvatarFallback>
+                                                    <AvatarFallback className="text-[10px] rounded-none">{teamLead.firstName[0]}</AvatarFallback>
                                                 </Avatar>
                                                 <div className="min-w-0 flex-1">
                                                     <p className="font-bold text-xs truncate">{teamLead.firstName} {teamLead.lastName}</p>
@@ -323,7 +322,7 @@ export default function ProfilePage() {
                     </div>
                 </TabsContent>
                 <TabsContent value="attendance">
-                    <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden max-h-[250px]">
+                    <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden max-h-[250px]">
                         <ScrollArea className="h-full">
                             <Table>
                                 <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[8px] font-black px-6 py-2 uppercase tracking-widest">Date</TableHead><TableHead className="text-[8px] font-black py-2 uppercase tracking-widest text-right pr-6">Status</TableHead></TableRow></TableHeader>
@@ -331,7 +330,7 @@ export default function ProfilePage() {
                                     {attendanceData?.slice(0, 10).map((rec, i) => (
                                         <TableRow key={i} className="border-border/50">
                                             <TableCell className="text-[9px] font-black px-6 py-2 uppercase">{format(rec.checkInTime.toDate(), 'dd MMM yy')}</TableCell>
-                                            <TableCell className="text-right pr-6"><Badge variant="outline" className="text-[7px] font-black uppercase border-none bg-green-50 text-green-600">{rec.status}</Badge></TableCell>
+                                            <TableCell className="text-right pr-6"><Badge variant="outline" className="text-[7px] font-black uppercase border-none bg-green-50 text-green-600 rounded-none">{rec.status}</Badge></TableCell>
                                         </TableRow>
                                     )) || <TableRow><TableCell colSpan={2} className="h-20 text-center text-[8px] font-black uppercase opacity-30">No records</TableCell></TableRow>}
                                 </TableBody>
@@ -341,7 +340,6 @@ export default function ProfilePage() {
                 </TabsContent>
             </Tabs>
 
-            {/* Tactical Handshake (Linear Tasks) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <ActivityBarItem 
                     icon={Clock} 
@@ -374,56 +372,56 @@ export default function ProfilePage() {
             </div>
 
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
-                <DialogContent className="rounded-[2.5rem] p-8 sm:max-w-xl border-none shadow-2xl">
+                <DialogContent className="rounded-none p-8 sm:max-w-xl border-none shadow-2xl">
                     <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter">Edit Identity</DialogTitle></DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-8 px-8">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                                 <div className="grid grid-cols-2 gap-3">
-                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">First Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
-                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Last Name</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">First Name</Label><FormControl><Input {...field} className="h-10 rounded-none text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Last Name</Label><FormControl><Input {...field} className="h-10 rounded-none text-xs" /></FormControl></FormItem>)} />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Phone Number</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Phone Number</Label><FormControl><Input {...field} className="h-10 rounded-none text-xs" /></FormControl></FormItem>)} />
                                     <FormField control={form.control} name="bloodGroup" render={({ field }) => (
                                         <FormItem><Label className="text-[9px] uppercase font-black text-primary">Blood Group</Label>
                                             <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger className="h-10 rounded-xl text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
-                                                <SelectContent><SelectItem value="A+">A+</SelectItem><SelectItem value="A-">A-</SelectItem><SelectItem value="B+">B+</SelectItem><SelectItem value="B-">B-</SelectItem><SelectItem value="O+">O+</SelectItem><SelectItem value="O-">O-</SelectItem><SelectItem value="AB+">AB+</SelectItem><SelectItem value="AB-">AB-</SelectItem></SelectContent>
+                                                <FormControl><SelectTrigger className="h-10 rounded-none text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
+                                                <SelectContent className="rounded-none"><SelectItem value="A+">A+</SelectItem><SelectItem value="A-">A-</SelectItem><SelectItem value="B+">B+</SelectItem><SelectItem value="B-">B-</SelectItem><SelectItem value="O+">O+</SelectItem><SelectItem value="O-">O-</SelectItem><SelectItem value="AB+">AB+</SelectItem><SelectItem value="AB-">AB-</SelectItem></SelectContent>
                                             </Select>
                                         </FormItem>
                                     )} />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <FormField control={form.control} name="dob" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Date of Birth</Label><FormControl><Input type="date" {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="dob" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Date of Birth</Label><FormControl><Input type="date" {...field} className="h-10 rounded-none text-xs" /></FormControl></FormItem>)} />
                                     <FormField control={form.control} name="gender" render={({ field }) => (
                                         <FormItem><Label className="text-[9px] uppercase font-black text-primary">Gender</Label>
                                             <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger className="h-10 rounded-xl text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
-                                                <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
+                                                <FormControl><SelectTrigger className="h-10 rounded-none text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
+                                                <SelectContent className="rounded-none"><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
                                             </Select>
                                         </FormItem>
                                     )} />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <FormField control={form.control} name="nationality" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Nationality</Label><FormControl><Input {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="nationality" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Nationality</Label><FormControl><Input {...field} className="h-10 rounded-none text-xs" /></FormControl></FormItem>)} />
                                     <FormField control={form.control} name="maritalStatus" render={({ field }) => (
                                         <FormItem><Label className="text-[9px] uppercase font-black text-primary">Marital Status</Label>
                                             <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger className="h-10 rounded-xl text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
-                                                <SelectContent><SelectItem value="Single">Single</SelectItem><SelectItem value="Married">Married</SelectItem><SelectItem value="Divorced">Divorced</SelectItem><SelectItem value="Widowed">Widowed</SelectItem></SelectContent>
+                                                <FormControl><SelectTrigger className="h-10 rounded-none text-xs"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
+                                                <SelectContent className="rounded-none"><SelectItem value="Single">Single</SelectItem><SelectItem value="Married">Married</SelectItem><SelectItem value="Divorced">Divorced</SelectItem><SelectItem value="Widowed">Widowed</SelectItem></SelectContent>
                                             </Select>
                                         </FormItem>
                                     )} />
                                 </div>
                                 <FormField control={form.control} name="languages" render={({ field }) => (
-                                    <FormItem><Label className="text-[9px] uppercase font-black text-primary">Languages Known (comma separated)</Label><FormControl><Input {...field} placeholder="e.g. English, Tamil, Hindi" className="h-10 rounded-xl text-xs" /></FormControl></FormItem>
+                                    <FormItem><Label className="text-[9px] uppercase font-black text-primary">Languages Known (comma separated)</Label><FormControl><Input {...field} placeholder="e.g. English, Tamil, Hindi" className="h-10 rounded-none text-xs" /></FormControl></FormItem>
                                 )} />
                                 <div className="grid grid-cols-2 gap-3">
-                                    <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">New Password (optional)</Label><FormControl><Input type="password" {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
-                                    <FormField control={form.control} name="confirmPassword" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Confirm Password</Label><FormControl><Input type="password" {...field} className="h-10 rounded-xl text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">New Password (optional)</Label><FormControl><Input type="password" {...field} className="h-10 rounded-none text-xs" /></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="confirmPassword" render={({ field }) => (<FormItem><Label className="text-[9px] uppercase font-black text-primary">Confirm Password</Label><FormControl><Input type="password" {...field} className="h-10 rounded-none text-xs" /></FormControl></FormItem>)} />
                                 </div>
-                                <Button type="submit" className="w-full h-12 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin size-4 mr-2"/> : <UserCheck className="size-4 mr-2"/>} Synchronize Identity</Button>
+                                <Button type="submit" className="w-full h-12 rounded-none font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin size-4 mr-2"/> : <UserCheck className="size-4 mr-2"/>} Synchronize Identity</Button>
                             </form>
                         </Form>
                     </ScrollArea>
@@ -435,15 +433,15 @@ export default function ProfilePage() {
 
 function ActivityBarItem({ icon: Icon, title, value, status, color }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-xl bg-white p-2.5 flex items-center gap-3 group hover:shadow-md transition-all ring-1 ring-border/50">
-            <div className={cn("p-1.5 rounded-lg text-white shrink-0 group-hover:scale-105 transition-transform", color)}>
+        <Card className="border-none shadow-sm rounded-none bg-white p-2.5 flex items-center gap-3 group hover:shadow-md transition-all ring-1 ring-border/50">
+            <div className={cn("p-1.5 rounded-none text-white shrink-0 group-hover:scale-105 transition-transform", color)}>
                 <Icon className="size-3" />
             </div>
             <div className="min-w-0 flex-1">
                 <p className="text-[8px] font-black uppercase text-muted-foreground/50 tracking-widest leading-none mb-0.5">{title}</p>
                 <p className="text-[10px] font-black truncate text-foreground leading-tight">{value}</p>
                 <div className="flex items-center gap-1 mt-0.5">
-                    <div className="h-1 w-1 rounded-full bg-current opacity-40" />
+                    <div className="h-1 w-1 rounded-none bg-current opacity-40" />
                     <p className="text-[7px] font-bold uppercase opacity-40">{status}</p>
                 </div>
             </div>
@@ -454,7 +452,7 @@ function ActivityBarItem({ icon: Icon, title, value, status, color }: any) {
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
         <div className="flex items-start gap-2">
-            <div className="p-1.5 rounded-lg bg-primary/5 text-primary/60 shrink-0"><Icon className="size-3" /></div>
+            <div className="p-1.5 rounded-none bg-primary/5 text-primary/60 shrink-0"><Icon className="size-3" /></div>
             <div className="min-w-0">
                 <p className="text-[7px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 leading-none mb-0.5">{label}</p>
                 <p className="text-[9px] font-black truncate text-foreground/90 uppercase">{value}</p>
@@ -465,10 +463,10 @@ function DetailItem({ icon: Icon, label, value }: any) {
 
 function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-3 space-y-2 ring-1 ring-border/50 group">
+        <Card className="border-none shadow-sm rounded-none bg-white p-3 space-y-2 ring-1 ring-border/50 group">
             <div className="flex justify-between items-start">
-                <div className={cn("p-1.5 rounded-xl bg-muted/20 shadow-sm", color)}><Icon className="size-3" /></div>
-                <Badge variant="outline" className="text-[6px] font-black uppercase bg-muted/20 border-none px-1 h-3.5">Active</Badge>
+                <div className={cn("p-1.5 rounded-none bg-muted/20 shadow-sm", color)}><Icon className="size-3" /></div>
+                <Badge variant="outline" className="text-[6px] font-black uppercase bg-muted/20 border-none px-1 h-3.5 rounded-none">Active</Badge>
             </div>
             <div>
                 <div className="flex items-center justify-between mb-1"><p className="text-[8px] font-black uppercase text-muted-foreground">{title}</p><span className={cn("text-xs font-black", color)}>{ratio}</span></div>
@@ -486,12 +484,12 @@ function MetricStat({ label, val, color }: any) {
 function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
         <div className="flex gap-3 items-start relative group">
-            <div className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0 z-10 shadow-sm transition-transform", color)}><Icon className="size-3" /></div>
+            <div className={cn("h-6 w-6 rounded-none flex items-center justify-center shrink-0 z-10 shadow-sm transition-transform", color)}><Icon className="size-3" /></div>
             <div className="space-y-0.5 flex-1">
                 <p className="font-black text-[10px] uppercase tracking-tight text-foreground/90">{title}</p>
                 <div className="flex items-center gap-2">
-                    <span className="text-[7px] font-black text-muted-foreground/40 uppercase tracking-widest">{time}</span>
-                    <Badge variant="outline" className="h-3 px-1.5 text-[6px] font-black uppercase border-none bg-muted/30 tracking-widest">{desc}</Badge>
+                    <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{time}</span>
+                    <Badge variant="outline" className="h-3 px-1.5 text-[6px] font-black uppercase border-none bg-muted/30 tracking-widest rounded-none">{desc}</Badge>
                 </div>
             </div>
             <ChevronRight className="size-3 text-muted-foreground/20 group-hover:text-primary transition-all" />

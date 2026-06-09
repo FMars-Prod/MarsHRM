@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -149,12 +148,12 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
-        <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden p-6">
+        <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden p-6">
             <div className="flex flex-col gap-6">
                 <div className="flex items-start gap-6">
-                    <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-md ring-1 ring-border shrink-0 bg-muted">
+                    <Avatar className="h-24 w-24 rounded-none border-4 border-white shadow-md ring-1 ring-border shrink-0 bg-muted">
                         <AvatarImage src={user.avatar} className="object-cover" />
-                        <AvatarFallback className="text-3xl font-black">{user.firstName?.[0]}</AvatarFallback>
+                        <AvatarFallback className="text-3xl font-black rounded-none">{user.firstName?.[0]}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-4">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -163,8 +162,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{user.jobTitle}</p>
                             </div>
                             <div className="flex gap-2">
-                                {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest">Export PDF</Button>}
-                                <Button asChild size="sm" className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest shadow-xl shadow-primary/20"><Link href="/dashboard/users"><Users className="size-3.5 mr-1.5" /> Staff List</Link></Button>
+                                {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-none h-9 px-4 font-black uppercase text-[9px] tracking-widest">Export PDF</Button>}
+                                <Button asChild size="sm" className="rounded-none h-9 px-4 font-black uppercase text-[9px] tracking-widest shadow-xl shadow-primary/20"><Link href="/dashboard/users"><Users className="size-3.5 mr-1.5" /> Staff List</Link></Button>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-4 border-y border-dashed border-border/50">
@@ -214,16 +213,16 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         </div>
 
         <Tabs defaultValue="activity" className="space-y-4">
-            <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-xl p-1 h-auto gap-2">
+            <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-none p-1 h-auto gap-2">
                 {["Activity", "Attendance", "Documents", "Assets"].map(tab => (
-                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white px-6 py-2 font-black uppercase text-[9px] tracking-[0.2em] transition-all">
+                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-white px-6 py-2 font-black uppercase text-[9px] tracking-[0.2em] transition-all">
                         {tab}
                     </TabsTrigger>
                 ))}
             </TabsList>
             <TabsContent value="activity" className="mt-0">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                    <Card className="lg:col-span-8 border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
+                    <Card className="lg:col-span-8 border-none shadow-sm rounded-none bg-white p-6 space-y-6">
                         <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Recent Activity</h3>
                         <div className="space-y-4">
                             {userReports.length > 0 ? userReports.map(r => (
@@ -232,7 +231,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         </div>
                     </Card>
                     <div className="lg:col-span-4 space-y-3">
-                        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
+                        <Card className="border-none shadow-sm rounded-none bg-white p-6 space-y-6">
                             <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Identity Details</h3>
                             <div className="space-y-3">
                                 <InfoRow label="Birth" value={user.dob ? format(new Date(user.dob), 'dd MMM yyyy') : 'N/A'} />
@@ -242,23 +241,23 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 <InfoRow label="Blood" value={user.bloodGroup || 'N/A'} />
                                 <div className="pt-1 flex flex-wrap gap-1">
                                     {user.languages?.map((lang: string) => (
-                                        <Badge key={lang} variant="secondary" className="text-[8px] font-bold px-2 py-0.5 uppercase">{lang}</Badge>
+                                        <Badge key={lang} variant="secondary" className="text-[8px] font-bold px-2 py-0.5 uppercase rounded-none">{lang}</Badge>
                                     )) || <span className="text-[9px] opacity-30">No languages</span>}
                                 </div>
                             </div>
                         </Card>
                         
-                        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 space-y-6">
+                        <Card className="border-none shadow-sm rounded-none bg-white p-6 space-y-6">
                             <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Reporting Protocol</h3>
                             <div className="space-y-3">
                                 <InfoRow label="Structure" value={user.teamId ? "Tactical Unit" : "Individual Fleet"} />
-                                <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border/50">
+                                <div className="p-4 bg-muted/20 rounded-none border border-dashed border-border/50">
                                     <p className="text-[8px] font-black uppercase text-muted-foreground/60 mb-3">Direct Command</p>
                                     {teamLead ? (
                                         <div className="flex items-center gap-3">
-                                            <Avatar className="size-10 rounded-xl">
+                                            <Avatar className="size-10 rounded-none">
                                                 <AvatarImage src={teamLead.avatar} className="object-cover" />
-                                                <AvatarFallback className="font-bold">{teamLead.firstName[0]}</AvatarFallback>
+                                                <AvatarFallback className="font-bold rounded-none">{teamLead.firstName[0]}</AvatarFallback>
                                             </Avatar>
                                             <div className="min-w-0 flex-1">
                                                 <p className="font-black text-sm truncate">{teamLead.firstName} {teamLead.lastName}</p>
@@ -276,7 +275,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 </div>
             </TabsContent>
             <TabsContent value="attendance">
-                <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
+                <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden">
                     <Table>
                         <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[8px] font-black px-6 py-4 uppercase tracking-widest">Date</TableHead><TableHead className="text-[8px] font-black uppercase tracking-widest">Login</TableHead><TableHead className="text-right px-6 text-[8px] font-black uppercase tracking-widest">Location</TableHead></TableRow></TableHeader>
                         <TableBody>
@@ -284,7 +283,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 <TableRow key={i} className="border-border/50">
                                     <TableCell className="py-3 px-6 font-black text-[10px] uppercase">{format(rec.checkInTime?.toDate() || new Date(), 'dd MMM yyyy')}</TableCell>
                                     <TableCell className="font-mono text-[10px] font-bold text-primary">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</TableCell>
-                                    <TableCell className="text-right px-6">{rec.locationCheckInLatitude && <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="p-1.5 rounded-lg bg-primary/5 text-primary inline-block"><MapPin className="size-3" /></Link>}</TableCell>
+                                    <TableCell className="text-right px-6">{rec.locationCheckInLatitude && <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="p-1.5 rounded-none bg-primary/5 text-primary inline-block"><MapPin className="size-3" /></Link>}</TableCell>
                                 </TableRow>
                             )) || <TableRow><TableCell colSpan={3} className="h-32 text-center text-[9px] font-black uppercase opacity-30">No records</TableCell></TableRow>}
                         </TableBody>
@@ -292,20 +291,20 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 </Card>
             </TabsContent>
             <TabsContent value="documents">
-                <Card className="border-none shadow-sm rounded-2xl bg-white p-6"><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {documents?.map(doc => (
-                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
-                            <div className="flex items-center gap-3"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FileBox className="size-4" /></div><span className="font-black text-[10px] uppercase truncate">{doc.title}</span></div>
+                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-4 rounded-none bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
+                            <div className="flex items-center gap-3"><div className="p-2 bg-blue-50 text-blue-600 rounded-none"><FileBox className="size-4" /></div><span className="font-black text-[10px] uppercase truncate">{doc.title}</span></div>
                         </Link>
                     )) || <div className="col-span-full py-10 text-center text-[9px] font-black uppercase opacity-30">No documents</div>}
                 </div></Card>
             </TabsContent>
             <TabsContent value="assets">
-                <Card className="border-none shadow-sm rounded-2xl bg-white p-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {assignedAssets?.map(asset => (
-                        <div key={asset.id} className="p-4 rounded-xl ring-1 ring-border/50 bg-muted/5 space-y-2">
-                            <div className="aspect-square bg-white rounded-lg flex items-center justify-center border border-dashed p-1">
-                                {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-md" /> : <Laptop className="size-6 opacity-10" />}
+                        <div key={asset.id} className="p-4 rounded-none ring-1 ring-border/50 bg-muted/5 space-y-2">
+                            <div className="aspect-square bg-white rounded-none flex items-center justify-center border border-dashed p-1">
+                                {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-none" /> : <Laptop className="size-6 opacity-10" />}
                             </div>
                             <div><p className="font-black text-[10px] uppercase tracking-tighter truncate">{asset.name}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">{asset.category}</p></div>
                         </div>
@@ -320,7 +319,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
         <div className="flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-primary/5 text-primary/60 shrink-0"><Icon className="size-4" /></div>
+            <div className="p-2 rounded-none bg-primary/5 text-primary/60 shrink-0"><Icon className="size-4" /></div>
             <div className="min-w-0 pt-0.5">
                 <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-1 leading-none">{label}</p>
                 <p className="text-[10px] font-black truncate text-foreground/90 uppercase">{value}</p>
@@ -331,14 +330,14 @@ function DetailItem({ icon: Icon, label, value }: any) {
 
 function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-5 space-y-4 ring-1 ring-border/50 group">
+        <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group">
             <div className="flex justify-between items-start">
-                <div className={cn("p-2 rounded-xl bg-muted/20 shadow-sm", color)}><Icon className="size-4" /></div>
-                <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none">Active</Badge>
+                <div className={cn("p-2 rounded-none bg-muted/20 shadow-sm", color)}><Icon className="size-4" /></div>
+                <Badge variant="outline" className="text-[7px] font-black uppercase bg-muted/20 border-none rounded-none">Active</Badge>
             </div>
             <div>
                 <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-black uppercase text-muted-foreground">{title}</p><span className={cn("text-sm font-black", color)}>{ratio}</span></div>
-                {progress !== undefined && <Progress value={progress} className="h-1.5" />}
+                {progress !== undefined && <Progress value={progress} className="h-1.5 rounded-none" />}
                 {children}
             </div>
         </Card>
@@ -352,12 +351,12 @@ function MetricStat({ label, val, color }: any) {
 function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
     return (
         <div className="flex gap-4 items-start relative group">
-            <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0 z-10 shadow-sm transition-transform", color)}><Icon className="size-4" /></div>
+            <div className={cn("h-8 w-8 rounded-none flex items-center justify-center shrink-0 z-10 shadow-sm transition-transform", color)}><Icon className="size-4" /></div>
             <div className="space-y-1 flex-1">
                 <p className="font-black text-xs uppercase tracking-tight text-foreground/90">{title}</p>
                 <div className="flex items-center gap-2">
                     <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">{time}</span>
-                    <Badge variant="outline" className="h-4 px-2 text-[7px] font-black uppercase border-none bg-muted/30 tracking-widest">{desc}</Badge>
+                    <Badge variant="outline" className="h-4 px-2 text-[7px] font-black uppercase border-none bg-muted/30 tracking-widest rounded-none">{desc}</Badge>
                 </div>
             </div>
             <ChevronRight className="size-4 text-muted-foreground/20 group-hover:text-primary transition-all" />
