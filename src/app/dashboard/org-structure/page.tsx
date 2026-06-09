@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -254,7 +253,7 @@ export default function OrgStructurePage() {
                         <TreeLevel 
                             users={roots} 
                             allUsers={users || []} 
-                            depth={depth + 1} 
+                            depth={0} 
                             currentUserData={userData} 
                         />
                     </div>
