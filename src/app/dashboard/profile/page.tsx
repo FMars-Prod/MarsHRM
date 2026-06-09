@@ -105,6 +105,27 @@ export default function ProfilePage() {
     ) : null, [user, firestore]);
     const { data: attendanceData } = useCollection<any>(attendanceQuery);
 
+    // Pulse Indicators
+    const lastAtt = attendanceData;
+    
+    const leavePulseQuery = useMemoFirebase(() => user ? query(
+        collection(firestore, "leave_requests"),
+        where("employeeId", "==", user.uid),
+        orderBy("createdAt", "desc"),
+        limit(1)
+    ) : null, [user, firestore]);
+    const { data: lastLeave } = useCollection<any>(leavePulseQuery);
+
+    const ticketPulseQuery = useMemoFirebase(() => user ? query(
+        collection(firestore, "issue_reports"),
+        where("employeeId", "==", user.uid),
+        orderBy("submissionDate", "desc"),
+        limit(1)
+    ) : null, [user, firestore]);
+    const { data: lastTicket } = useCollection<any>(ticketPulseQuery);
+
+    const lastReport = userReports;
+
     const branchName = React.useMemo(() => {
         if (!branches || !employee?.branchId) return "Office Hub";
         const b = branches.find((b: any) => b.id === employee.branchId);
@@ -312,7 +333,7 @@ export default function ProfilePage() {
                             <Table>
                                 <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[10px] font-black px-6 py-3 uppercase tracking-widest">Date</TableHead><TableHead className="text-[10px] font-black py-3 uppercase tracking-widest text-right pr-6">Status</TableHead></TableRow></TableHeader>
                                 <TableBody>
-                                    {attendanceData?.slice(0, 10).map((rec, i) => (
+                                    {attendanceData?.slice(0, 10).map((rec: any, i: number) => (
                                         <TableRow key={i} className="border-border/50">
                                             <TableCell className="text-[11px] font-black px-6 py-3 uppercase">{format(rec.checkInTime.toDate(), 'dd MMM yy')}</TableCell>
                                             <TableCell className="text-right pr-6"><Badge variant="outline" className="text-[9px] font-black uppercase border-none bg-green-50 text-green-600 rounded-none">{rec.status}</Badge></TableCell>
@@ -392,7 +413,7 @@ export default function ProfilePage() {
                 </TabsContent>
                 <TabsContent value="documents">
                     <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {documents?.map(doc => (
+                        {documents?.map((doc: any) => (
                             <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-5 rounded-none bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
                                 <div className="flex items-center gap-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-none"><FileBox className="size-5" /></div><span className="font-black text-xs uppercase truncate">{doc.title}</span></div>
                             </Link>
@@ -401,7 +422,7 @@ export default function ProfilePage() {
                 </TabsContent>
                 <TabsContent value="assets">
                     <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                        {assignedAssets?.map(asset => (
+                        {assignedAssets?.map((asset: any) => (
                             <div key={asset.id} className="p-5 rounded-none ring-1 ring-border/50 bg-muted/5 space-y-3">
                                 <div className="aspect-square bg-white rounded-none flex items-center justify-center border border-dashed p-2">
                                     {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-none" /> : <Laptop className="size-8 opacity-10" />}
