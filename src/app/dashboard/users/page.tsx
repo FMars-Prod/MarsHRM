@@ -71,8 +71,6 @@ export default function UsersPage() {
   const [manualSignatureUrl, setManualSignatureUrl] = React.useState("");
   
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
-  const [isBulkBranchDialogOpen, setIsBulkBranchDialogOpen] = React.useState(false);
-  const [bulkBranchId, setBulkBranchId] = React.useState<string>("");
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users"), orderBy("firstName", "asc")), [firestore]);
   const { data: users, isLoading } = useCollection<any>(usersQuery);
@@ -231,7 +229,7 @@ export default function UsersPage() {
                                             <ScrollArea className="h-64">
                                                 <div className="p-2 space-y-1">
                                                     {users?.filter(u => u.id !== editingUser?.id).map(manager => {
-                                                        const isSelected = selectedHeadIds.includes(manager.id);
+                                                        const isSelected = !!selectedHeadIds.includes(manager.id);
                                                         return (
                                                             <div 
                                                                 key={manager.id} 
@@ -239,16 +237,18 @@ export default function UsersPage() {
                                                                     "flex items-center gap-3 p-2 rounded-none transition-colors cursor-pointer",
                                                                     isSelected ? "bg-primary/5" : "hover:bg-muted/50"
                                                                 )}
-                                                                onClick={() => {
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    e.preventDefault();
                                                                     const current = form.getValues("reportingHeadIds");
                                                                     if (isSelected) {
-                                                                        form.setValue("reportingHeadIds", current.filter(id => id !== manager.id));
+                                                                        form.setValue("reportingHeadIds", current.filter(id => id !== manager.id), { shouldDirty: true, shouldValidate: true });
                                                                     } else {
-                                                                        form.setValue("reportingHeadIds", [...current, manager.id]);
+                                                                        form.setValue("reportingHeadIds", [...current, manager.id], { shouldDirty: true, shouldValidate: true });
                                                                     }
                                                                 }}
                                                             >
-                                                                <Checkbox checked={isSelected} className="rounded-none" />
+                                                                <Checkbox checked={isSelected} className="rounded-none pointer-events-none" />
                                                                 <div className="min-w-0 flex-1">
                                                                     <p className="text-xs font-black uppercase truncate">{manager.firstName} {manager.lastName}</p>
                                                                     <p className="text-[9px] font-bold text-muted-foreground truncate">{manager.jobTitle}</p>
@@ -428,7 +428,7 @@ export default function UsersPage() {
                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive hover:bg-red-50 transition-all">
                                         <Trash2 className="size-4" />
                                     </Button>
-                                </AlertDialogTrigger>
+                                </TooltipTrigger>
                                 <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
                                     <AlertDialogHeader>
                                         <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Purge Personnel Record?</AlertDialogTitle>
@@ -466,3 +466,4 @@ export default function UsersPage() {
     </TooltipProvider>
   );
 }
+

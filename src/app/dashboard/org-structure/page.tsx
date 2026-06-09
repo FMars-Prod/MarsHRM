@@ -196,7 +196,7 @@ export default function OrgStructurePage() {
                                                         <ScrollArea className="h-64">
                                                             <div className="p-2 space-y-1">
                                                                 {users.filter(manager => manager.id !== u.id).map(manager => {
-                                                                    const isSelected = u.reportingHeadIds?.includes(manager.id);
+                                                                    const isSelected = !!u.reportingHeadIds?.includes(manager.id);
                                                                     return (
                                                                         <div 
                                                                             key={manager.id} 
@@ -204,9 +204,13 @@ export default function OrgStructurePage() {
                                                                                 "flex items-center gap-3 p-2 rounded-none transition-colors cursor-pointer",
                                                                                 isSelected ? "bg-primary/5" : "hover:bg-muted/50"
                                                                             )}
-                                                                            onClick={() => handleToggleHead(u.id, manager.id, u.reportingHeadIds || [])}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                e.preventDefault();
+                                                                                handleToggleHead(u.id, manager.id, u.reportingHeadIds || []);
+                                                                            }}
                                                                         >
-                                                                            <Checkbox checked={isSelected} className="rounded-none" />
+                                                                            <Checkbox checked={isSelected} className="rounded-none pointer-events-none" />
                                                                             <div className="min-w-0 flex-1">
                                                                                 <p className="text-xs font-black uppercase truncate">{manager.firstName} {manager.lastName}</p>
                                                                                 <p className="text-[9px] font-bold text-muted-foreground truncate">{manager.jobTitle}</p>
@@ -252,6 +256,7 @@ export default function OrgStructurePage() {
                         <TreeLevel 
                             users={roots} 
                             allUsers={users || []} 
+                            depth={depth + 1} 
                             currentUserData={userData} 
                         />
                     </div>
@@ -270,3 +275,4 @@ export default function OrgStructurePage() {
         </div>
     );
 }
+
