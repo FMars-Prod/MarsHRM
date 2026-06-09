@@ -94,19 +94,6 @@ export default function ProfilePage() {
     const assetsQuery = useMemoFirebase(() => user ? query(collection(firestore, "assets"), where("assignedToId", "==", user.uid)) : null, [user, firestore]);
     const { data: assignedAssets } = useCollection<any>(assetsQuery);
 
-    // Activity Handshake Queries
-    const lastAttQuery = useMemoFirebase(() => user ? query(collection(firestore, `users/${user.uid}/attendances`), orderBy('checkInTime', 'desc'), limit(1)) : null, [user, firestore]);
-    const { data: lastAtt } = useCollection<any>(lastAttQuery);
-
-    const lastLeaveQuery = useMemoFirebase(() => user ? query(collection(firestore, 'leave_requests'), where('employeeId', '==', user.uid), orderBy('createdAt', 'desc'), limit(1)) : null, [user, firestore]);
-    const { data: lastLeave } = useCollection<any>(lastLeaveQuery);
-
-    const lastTicketQuery = useMemoFirebase(() => user ? query(collection(firestore, 'issue_reports'), where('employeeId', '==', user.uid), orderBy('submissionDate', 'desc'), limit(1)) : null, [user, firestore]);
-    const { data: lastTicket } = useCollection<any>(lastTicketQuery);
-
-    const lastReportQuery = useMemoFirebase(() => user ? query(collection(firestore, `users/${user.uid}/reports`), orderBy('date', 'desc'), limit(1)) : null, [user, firestore]);
-    const { data: lastReport } = useCollection<any>(lastReportQuery);
-
     const monthStart = startOfMonth(new Date());
     const monthEnd = endOfMonth(new Date());
     
@@ -123,22 +110,6 @@ export default function ProfilePage() {
         const b = branches.find((b: any) => b.id === employee.branchId);
         return b ? b.name : "Office Hub";
     }, [branches, employee?.branchId]);
-
-    const experience = React.useMemo(() => {
-        if (!employee?.hireDate) return "N/A";
-        const start = new Date(employee.hireDate);
-        const now = new Date();
-        const totalMonths = differenceInMonths(now, start);
-        const years = Math.floor(totalMonths / 12);
-        const remainingMonths = totalMonths % 12;
-        const dateAfterMonths = addMonths(start, totalMonths);
-        const days = differenceInDays(now, dateAfterMonths);
-        let parts = [];
-        if (years > 0) parts.push(`${years} yr`);
-        parts.push(`${remainingMonths} mo`);
-        parts.push(`${days} d`);
-        return parts.join(' ');
-    }, [employee]);
 
     const attendanceStats = React.useMemo(() => {
         const today = startOfDay(new Date());
@@ -355,7 +326,7 @@ export default function ProfilePage() {
                 <TabsContent value="hierarchy">
                     <Card className="border-none shadow-sm rounded-none bg-white p-6 overflow-x-auto min-h-[500px]">
                         <div className="flex flex-col items-center space-y-12 py-10 min-w-fit">
-                            {/* Managers Section */}
+                            {/* Managers Section (Upward) */}
                             <div className="flex flex-col items-center space-y-4 w-full">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Command Level (Managers)</h4>
                                 <div className="flex flex-wrap justify-center gap-8 w-full">
@@ -394,7 +365,7 @@ export default function ProfilePage() {
                                 {directReports.length > 0 && <div className="w-px h-12 bg-border" />}
                             </div>
 
-                            {/* Direct Reports Section */}
+                            {/* Direct Reports Section (Downward) */}
                             {directReports.length > 0 && (
                                 <div className="flex flex-col items-center space-y-4 w-full">
                                     <div className="h-px bg-border w-1/2 max-w-[400px]" />

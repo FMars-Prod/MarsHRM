@@ -63,9 +63,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const teamDocRef = useMemoFirebase(() => user?.teamId ? doc(firestore, 'teams', user.teamId) : null, [user?.teamId, firestore]);
   const { data: teamData } = useDoc<any>(teamDocRef);
 
-  const teamLeadDocRef = useMemoFirebase(() => teamData?.teamLeadId ? doc(firestore, 'users', teamData.teamLeadId) : null, [teamData?.teamLeadId, firestore]);
-  const { data: teamLead } = useDoc<any>(teamLeadDocRef);
-
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
   const { data: branches } = useCollection<any>(branchesQuery);
 
@@ -100,26 +97,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     const b = branches.find((b: any) => b.id === user.branchId);
     return b ? b.name : "Unassigned";
   }, [branches, user?.branchId]);
-
-  const experience = React.useMemo(() => {
-    if (!user?.hireDate) return "N/A";
-    const start = new Date(user.hireDate);
-    const now = new Date();
-    
-    const totalMonths = differenceInMonths(now, start);
-    const years = Math.floor(totalMonths / 12);
-    const remainingMonths = totalMonths % 12;
-
-    const dateAfterMonths = addMonths(start, totalMonths);
-    const days = differenceInDays(now, dateAfterMonths);
-
-    let parts = [];
-    if (years > 0) parts.push(`${years} yr`);
-    parts.push(`${remainingMonths} mo`);
-    parts.push(`${days} d`);
-    
-    return parts.join(' ');
-  }, [user]);
 
   const attendanceStats = React.useMemo(() => {
     const today = startOfDay(new Date());
@@ -272,17 +249,21 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 <InfoRow label="Structure" value={user.teamId ? "Tactical Unit" : "Individual Fleet"} />
                                 <div className="p-4 bg-muted/20 rounded-none border border-dashed border-border/50">
                                     <p className="text-[9px] font-black uppercase text-muted-foreground/60 mb-4">Direct Command</p>
-                                    {teamLead ? (
-                                        <div className="flex items-center gap-4">
-                                            <Avatar className="size-12 rounded-none">
-                                                <AvatarImage src={teamLead.avatar} className="object-cover" />
-                                                <AvatarFallback className="font-bold rounded-none">{teamLead.firstName[0]}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="font-black text-sm truncate">{teamLead.firstName} {teamLead.lastName}</p>
-                                                <p className="text-[10px] font-bold uppercase text-primary truncate">{teamLead.jobTitle}</p>
-                                            </div>
-                                            <ShieldCheck className="size-5 text-primary" />
+                                    {reportingHeads.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {reportingHeads.map(head => (
+                                                <div key={head.id} className="flex items-center gap-4">
+                                                    <Avatar className="size-12 rounded-none">
+                                                        <AvatarImage src={head.avatar} className="object-cover" />
+                                                        <AvatarFallback className="font-bold rounded-none">{head.firstName[0]}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="font-black text-sm truncate">{head.firstName} {head.lastName}</p>
+                                                        <p className="text-[10px] font-bold uppercase text-primary truncate">{head.jobTitle}</p>
+                                                    </div>
+                                                    <ShieldCheck className="size-5 text-primary" />
+                                                </div>
+                                            ))}
                                         </div>
                                     ) : (
                                         <p className="text-sm font-bold text-muted-foreground uppercase opacity-40">Direct reporting to Admin</p>
@@ -312,7 +293,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <TabsContent value="hierarchy">
                 <Card className="border-none shadow-sm rounded-none bg-white p-6 overflow-x-auto min-h-[500px]">
                     <div className="flex flex-col items-center space-y-12 py-10 min-w-fit">
-                        {/* Managers Section */}
+                        {/* Managers Section (Upward) */}
                         <div className="flex flex-col items-center space-y-4 w-full">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Command Level (Managers)</h4>
                             <div className="flex flex-wrap justify-center gap-8 w-full">
@@ -337,7 +318,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             </div>
                         </div>
 
-                        {/* Current User Section */}
+                        {/* Target User Section */}
                         <div className="relative flex flex-col items-center w-full">
                             <div className="p-6 bg-primary text-white shadow-xl rounded-none w-64 text-center ring-4 ring-primary/10">
                                 <Avatar className="size-16 rounded-none mx-auto mb-4 border-2 border-white/20 shadow-md">
@@ -351,7 +332,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             {directReports.length > 0 && <div className="w-px h-12 bg-border" />}
                         </div>
 
-                        {/* Direct Reports Section */}
+                        {/* Direct Reports Section (Downward) */}
                         {directReports.length > 0 && (
                             <div className="flex flex-col items-center space-y-4 w-full">
                                 <div className="h-px bg-border w-1/2 max-w-[400px]" />
