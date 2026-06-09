@@ -43,7 +43,7 @@ export function ProfileBentoCard() {
 
     if (isLoading || !employee) {
         return (
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden ring-1 ring-border/50 h-[220px]">
+            <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden ring-1 ring-border/50 h-[220px]">
                 <div className="w-full h-full bg-muted/20 animate-pulse" />
             </Card>
         );
@@ -54,18 +54,18 @@ export function ProfileBentoCard() {
     const joinDate = employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yy') : 'N/A';
 
     return (
-        <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden font-jakarta ring-1 ring-border/50 group transition-all duration-500 hover:shadow-primary/5">
+        <Card className="border-none shadow-2xl rounded-none bg-white overflow-hidden font-jakarta ring-1 ring-border/50 group transition-all duration-500 hover:shadow-primary/5">
             <CardContent className="p-0">
                 <div className="flex flex-col md:flex-row items-stretch">
                     {/* Primary Identity Section - Linear Layout */}
                     <div className="flex-1 p-6 lg:p-10 flex flex-col sm:flex-row items-start gap-6 lg:gap-10 border-b md:border-b-0 md:border-r border-dashed border-border/50">
                         <div className="relative shrink-0">
-                            <Avatar className="h-24 w-24 lg:h-32 lg:w-32 rounded-3xl ring-4 ring-white shadow-2xl transition-transform duration-500 group-hover:scale-105">
+                            <Avatar className="h-24 w-24 lg:h-32 lg:w-32 rounded-none ring-4 ring-white shadow-2xl transition-transform duration-500 group-hover:scale-105">
                                 {employee.avatar ? (
                                     isUrl ? <AvatarImage src={employee.avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 text-4xl lg:text-5xl font-black">{employee.avatar}</div>
-                                ) : <AvatarFallback className="text-3xl lg:text-4xl font-black bg-primary/10 text-primary">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>}
+                                ) : <AvatarFallback className="text-3xl lg:text-4xl font-black bg-primary/10 text-primary rounded-none">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>}
                             </Avatar>
-                            <Badge className="absolute -bottom-2 -right-2 h-6 px-3 bg-green-500 text-white border-2 border-white shadow-lg rounded-full font-black text-[8px] uppercase tracking-widest flex items-center gap-1">
+                            <Badge className="absolute -bottom-2 -right-2 h-6 px-3 bg-green-500 text-white border-2 border-white shadow-lg rounded-none font-black text-[8px] uppercase tracking-widest flex items-center gap-1">
                                 Active
                             </Badge>
                         </div>

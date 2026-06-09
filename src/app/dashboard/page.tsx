@@ -66,7 +66,7 @@ export default function DashboardPage() {
 
       {/* Notifications */}
       {isCEO && hasCriticalAlert && latestCompliance?.[0] && (
-          <Alert className="mb-4 bg-red-50 border-red-200 animate-pulse rounded-2xl border-2 p-3 shadow-md">
+          <Alert className="mb-4 bg-red-50 border-red-200 animate-pulse rounded-none border-2 p-3 shadow-md">
               <ShieldAlert className="size-4 text-red-600" />
               <AlertTitle className="text-red-700 font-black uppercase text-[10px] tracking-widest">Alert</AlertTitle>
               <AlertDescription className="flex justify-between items-center mt-1">
@@ -77,7 +77,7 @@ export default function DashboardPage() {
       )}
 
       {recentTicketUpdates.length > 0 && (
-          <Alert className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-2xl p-3 shadow-md">
+          <Alert className="mb-4 bg-blue-50 border-2 border-blue-200 rounded-none p-3 shadow-md">
               <MessageSquareWarning className="size-4 text-blue-600" />
               <AlertTitle className="text-blue-700 font-black uppercase text-[10px] tracking-widest">Update</AlertTitle>
               <AlertDescription className="flex justify-between items-center mt-1">

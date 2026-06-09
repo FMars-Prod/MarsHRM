@@ -173,10 +173,10 @@ export function DailyMonitorWidget() {
   };
 
   const UserListCard = ({ title, users, Icon, iconColor, onClick, gradient, description }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; onClick: () => void; gradient: string; description: string }) => (
-    <Card className={cn("group hover:bg-muted/50 transition-all duration-300 cursor-pointer border-none ring-1 ring-border/50 rounded-2xl overflow-hidden", gradient)} onClick={onClick}>
+    <Card className={cn("group hover:bg-muted/50 transition-all duration-300 cursor-pointer border-none ring-1 ring-border/50 rounded-none overflow-hidden", gradient)} onClick={onClick}>
       <CardHeader className="p-4 pb-1">
         <div className="flex items-center justify-between">
-            <div className={cn("p-2 rounded-xl shadow-sm transition-transform group-hover:scale-105", iconColor)}>
+            <div className={cn("p-2 rounded-none shadow-sm transition-transform group-hover:scale-105", iconColor)}>
                 <Icon className="h-4 w-4" />
             </div>
             <span className="text-2xl font-black">{users.length}</span>
@@ -191,7 +191,7 @@ export function DailyMonitorWidget() {
 
   return (
     <Sheet onOpenChange={(isOpen) => !isOpen && setSheetContent(null)}>
-        <Card className="animate-fade-in-up bg-white border-none shadow-sm rounded-2xl overflow-hidden">
+        <Card className="animate-fade-in-up bg-white border-none shadow-sm rounded-none overflow-hidden">
             <CardHeader className="p-6 pb-2">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="space-y-0.5">
@@ -202,7 +202,7 @@ export function DailyMonitorWidget() {
                             Attendance status for {format(new Date(), 'MMM dd')}
                         </CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleExportPdf} className="rounded-xl h-9 px-4 font-black uppercase text-[9px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50">
+                    <Button variant="outline" size="sm" onClick={handleExportPdf} className="rounded-none h-9 px-4 font-black uppercase text-[9px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50">
                         <Download className="mr-1.5 h-3 w-3" />
                         Download PDF
                     </Button>
@@ -213,7 +213,7 @@ export function DailyMonitorWidget() {
                 {summary.isLoading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[...Array(4)].map((_, i) => (
-                            <div key={i} className="h-24 rounded-2xl bg-muted animate-pulse" />
+                            <div key={i} className="h-24 rounded-none bg-muted animate-pulse" />
                         ))}
                     </div>
                 ) : (
@@ -268,18 +268,18 @@ export function DailyMonitorWidget() {
         </Card>
 
         {sheetContent && (
-            <SheetContent className="rounded-l-3xl border-none shadow-2xl w-full sm:max-w-md p-0 overflow-hidden">
+            <SheetContent className="rounded-none border-none shadow-2xl w-full sm:max-w-md p-0 overflow-hidden">
                 <SheetHeader className="p-6 border-b bg-white">
                     <SheetTitle className={cn("text-xl font-black uppercase tracking-tighter", sheetContent.color)}>{sheetContent.title}</SheetTitle>
                 </SheetHeader>
                 <ScrollArea className="flex-1">
                   <div className="p-6 space-y-3">
                      {sheetContent.users.map(member => (
-                        <Card key={member.id} className="border-none ring-1 ring-border/50 rounded-xl p-4 bg-white">
+                        <Card key={member.id} className="border-none ring-1 ring-border/50 rounded-none p-4 bg-white">
                             <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10 rounded-lg">
-                                    <AvatarImage src={member.avatar} />
-                                    <AvatarFallback className="font-bold">{member.firstName?.[0]}</AvatarFallback>
+                                <Avatar className="h-10 w-10 rounded-none">
+                                    <AvatarImage src={member.avatar} className="object-cover" />
+                                    <AvatarFallback className="font-bold rounded-none">{member.firstName?.[0]}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                     <p className="font-black text-sm">{member.firstName} {member.lastName}</p>

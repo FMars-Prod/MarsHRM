@@ -77,11 +77,11 @@ export function EventsWidget() {
 
   const EventListItem = ({ item, isToday }: { item: EventItem; isToday?: boolean }) => (
      <div key={item.id} className={cn(
-        "group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200",
+        "group flex items-center justify-between p-2.5 rounded-none transition-all duration-200",
         isToday ? "bg-primary/5" : "hover:bg-muted/30"
      )}>
         <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: item.color + '1A' }}>
+            <div className="p-2 rounded-none" style={{ backgroundColor: item.color + '1A' }}>
                 {renderIcon(item.icon, { className: "size-3.5", style: { color: item.color } })}
             </div>
             <div className="flex flex-col">
@@ -97,7 +97,7 @@ export function EventsWidget() {
   );
 
   return (
-    <Card className="h-full flex flex-col animate-fade-in-up border-none shadow-sm rounded-2xl bg-white overflow-hidden">
+    <Card className="h-full flex flex-col animate-fade-in-up border-none shadow-sm rounded-none bg-white overflow-hidden">
       <CardHeader className="p-6 pb-2">
         <div className="flex items-center justify-between">
             <div className="space-y-0.5">
@@ -110,7 +110,7 @@ export function EventsWidget() {
       </CardHeader>
       <CardContent className="p-6 pt-2 flex-1">
          {todaysLoading || upcomingLoading ? (
-          <div className="space-y-3">{[...Array(3)].map((_, i) => (<div key={i} className="h-10 rounded-xl bg-muted animate-pulse" />))}</div>
+          <div className="space-y-3">{[...Array(3)].map((_, i) => (<div key={i} className="h-10 rounded-none bg-muted animate-pulse" />))}</div>
         ) : (
           <ScrollArea className="h-full pr-3 -mr-3">
             <div className="space-y-4">
@@ -137,7 +137,7 @@ export function EventsWidget() {
         )}
       </CardContent>
       <CardFooter className="p-6 pt-0 mt-auto">
-        <Button variant="outline" className="w-full rounded-xl h-9 font-black uppercase text-[9px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50" asChild>
+        <Button variant="outline" className="w-full rounded-none h-9 font-black uppercase text-[9px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50" asChild>
           <Link href="/dashboard/events">View All <ChevronRight className="size-3 ml-1.5 opacity-50" /></Link>
         </Button>
       </CardFooter>

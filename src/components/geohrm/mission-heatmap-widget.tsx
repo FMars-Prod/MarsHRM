@@ -53,7 +53,7 @@ export function MissionHeatmapWidget() {
     }, [attendanceData]);
 
     return (
-        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden h-full">
+        <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden h-full">
             <CardHeader className="p-8 pb-4">
                 <div className="flex items-center justify-between">
                     <div>
@@ -86,11 +86,11 @@ export function MissionHeatmapWidget() {
                                 <Tooltip key={i}>
                                     <TooltipTrigger asChild>
                                         <div className={cn(
-                                            "aspect-square rounded-md transition-all duration-300 hover:scale-110 shadow-sm",
+                                            "aspect-square rounded-none transition-all duration-300 hover:scale-110 shadow-sm",
                                             getIntensity(hours)
                                         )} />
                                     </TooltipTrigger>
-                                    <TooltipContent className="rounded-xl border-none shadow-2xl bg-sidebar text-white p-3">
+                                    <TooltipContent className="rounded-none border-none shadow-2xl bg-sidebar text-white p-3">
                                         <div className="text-center">
                                             <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">{format(day, 'MMM dd, yyyy')}</p>
                                             <p className="text-sm font-bold">{hours.toFixed(1)} Tactical Hours</p>
@@ -105,10 +105,10 @@ export function MissionHeatmapWidget() {
                 <div className="mt-8 pt-6 border-t border-dashed border-border/50 flex items-center justify-between">
                     <div className="flex gap-1.5 items-center">
                         <span className="text-[8px] font-bold text-muted-foreground uppercase mr-1">Less</span>
-                        {[0, 2, 5, 8, 10].map(h => <div key={h} className={cn("size-2.5 rounded-sm shadow-sm", getIntensity(h))} />)}
+                        {[0, 2, 5, 8, 10].map(h => <div key={h} className={cn("size-2.5 rounded-none shadow-sm", getIntensity(h))} />)}
                         <span className="text-[8px] font-bold text-muted-foreground uppercase ml-1">More</span>
                     </div>
-                    <Badge variant="outline" className="text-[8px] font-black uppercase rounded-full bg-muted/20 border-none px-3">Monthly Audit</Badge>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none bg-muted/20 border-none px-3">Monthly Audit</Badge>
                 </div>
             </CardContent>
         </Card>

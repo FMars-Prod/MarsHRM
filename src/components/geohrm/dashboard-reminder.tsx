@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -53,12 +52,12 @@ export function DashboardReminder() {
     }
 
     return (
-        <Alert className="mb-6 animate-fade-in-up bg-primary/5 border-primary/20">
+        <Alert className="mb-6 animate-fade-in-up bg-primary/5 border-primary/20 rounded-none">
             <Megaphone className="h-4 w-4 text-primary" />
             <AlertTitle className="font-bold text-primary">Strategic Submission Window</AlertTitle>
             <AlertDescription className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <p className="text-sm font-medium">Shift completion protocols are active. Please finalize your Daily Strategic Log before signing out.</p>
-                <Button asChild size="sm" className="rounded-full font-bold uppercase text-[10px]">
+                <Button asChild size="sm" className="rounded-none font-bold uppercase text-[10px]">
                     <Link href="/dashboard/reports">Submit Strategic Log</Link>
                 </Button>
             </AlertDescription>

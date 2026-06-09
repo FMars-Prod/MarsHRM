@@ -114,7 +114,7 @@ export function WorkHoursSummaryWidget() {
     }, [chartData]);
 
     return (
-        <Card className="animate-fade-in-up border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden h-full flex flex-col font-open-sans">
+        <Card className="animate-fade-in-up border-none shadow-xl rounded-none bg-white overflow-hidden h-full flex flex-col font-open-sans">
             <CardHeader className="p-8 pb-4">
                 <div className="flex items-start justify-between">
                     <div className="space-y-1">
@@ -122,7 +122,7 @@ export function WorkHoursSummaryWidget() {
                             <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">
                                 Mission Intensity
                             </CardTitle>
-                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[8px] font-black uppercase rounded-full px-2">
+                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[8px] font-black uppercase rounded-none px-2">
                                 <Zap className="size-2 mr-1 fill-primary" /> Tactical Pulse
                             </Badge>
                         </div>
@@ -131,22 +131,22 @@ export function WorkHoursSummaryWidget() {
                         </CardDescription>
                     </div>
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'weekly' | 'monthly')}>
-                        <TabsList className="h-9 bg-muted/30 p-1 rounded-xl">
-                            <TabsTrigger value="weekly" className="h-7 px-3 text-[9px] font-black uppercase rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Week</TabsTrigger>
-                            <TabsTrigger value="monthly" className="h-7 px-3 text-[9px] font-black uppercase rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Month</TabsTrigger>
+                        <TabsList className="h-9 bg-muted/30 p-1 rounded-none">
+                            <TabsTrigger value="weekly" className="h-7 px-3 text-[9px] font-black uppercase rounded-none data-[state=active]:bg-white data-[state=active]:shadow-sm">Week</TabsTrigger>
+                            <TabsTrigger value="monthly" className="h-7 px-3 text-[9px] font-black uppercase rounded-none data-[state=active]:bg-white data-[state=active]:shadow-sm">Month</TabsTrigger>
                         </TabsList>
                     </Tabs>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mt-6">
-                    <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                    <div className="p-4 bg-primary/5 rounded-none border border-primary/10">
                         <p className="text-[8px] font-black uppercase text-primary/60 tracking-widest mb-1">Total Effort</p>
                         <div className="flex items-baseline gap-1">
                             <span className="text-2xl font-black tracking-tighter text-primary">{totalHours}</span>
                             <span className="text-[10px] font-bold text-primary/40 uppercase">hrs</span>
                         </div>
                     </div>
-                    <div className="p-4 bg-muted/20 rounded-2xl border border-border/50">
+                    <div className="p-4 bg-muted/20 rounded-none border border-border/50">
                         <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest mb-1">Peak Intensity</p>
                         <div className="flex items-baseline gap-1">
                             <span className="text-2xl font-black tracking-tighter text-foreground/80">{peakHours}</span>
@@ -213,7 +213,7 @@ export function WorkHoursSummaryWidget() {
                 <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
                     <TrendingUp className="size-3" /> Mission Velocity Audit
                 </div>
-                <div className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse" />
+                <div className="h-1.5 w-1.5 rounded-none bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse" />
             </div>
         </Card>
     );

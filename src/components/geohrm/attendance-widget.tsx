@@ -205,14 +205,14 @@ export function AttendanceWidget() {
 
   return (
     <>
-        <Card className="animate-fade-in-up border-none shadow-sm rounded-2xl bg-white overflow-hidden font-jakarta">
+        <Card className="animate-fade-in-up border-none shadow-sm rounded-none bg-white overflow-hidden font-jakarta">
             <CardHeader className="p-4 pb-0">
             <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-black uppercase tracking-tighter flex items-center gap-2 text-primary">
                     <Clock className="size-3" /> Attendance Hub
                 </CardTitle>
                 <Badge variant="outline" className={cn(
-                    "rounded-full text-[7px] font-black uppercase px-2 h-5 border-none",
+                    "rounded-none text-[7px] font-black uppercase px-2 h-5 border-none",
                     userData?.isWfhAllowed ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"
                 )}>
                     {userData?.isWfhAllowed ? <Home className="size-2.5 mr-1" /> : <Building2 className="size-2.5 mr-1" />}
@@ -230,11 +230,11 @@ export function AttendanceWidget() {
                 </div>
 
                 <div className="w-full grid grid-cols-2 gap-2 max-w-sm">
-                    <div className="p-2 rounded-xl bg-muted/20 border border-dashed flex flex-col items-center">
+                    <div className="p-2 rounded-none bg-muted/20 border border-dashed flex flex-col items-center">
                         <p className="text-[6px] font-black uppercase text-muted-foreground/60 mb-0.5">Inbound</p>
                         <p className="text-[10px] font-black">{todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'p') : '--:--'}</p>
                     </div>
-                    <div className="p-2 rounded-xl bg-muted/20 border border-dashed flex flex-col items-center">
+                    <div className="p-2 rounded-none bg-muted/20 border border-dashed flex flex-col items-center">
                         <p className="text-[6px] font-black uppercase text-muted-foreground/60 mb-0.5">Outbound</p>
                         <p className="text-[10px] font-black">{todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'}</p>
                     </div>
@@ -242,19 +242,19 @@ export function AttendanceWidget() {
                 
                 <div className="w-full max-w-sm pt-2">
                     {isVerifyingLocation ? (
-                        <Button disabled className="w-full h-10 rounded-xl text-sm font-black uppercase tracking-widest bg-muted text-muted-foreground">
+                        <Button disabled className="w-full h-10 rounded-none text-sm font-black uppercase tracking-widest bg-muted text-muted-foreground">
                             <Loader2 className="animate-spin size-4 mr-2" /> Verifying Sector...
                         </Button>
                     ) : status === 'out' && !hasClockedOutToday ? (
-                        <Button onClick={handleClockIn} className="w-full h-10 rounded-xl text-sm font-black uppercase tracking-widest shadow-md">
+                        <Button onClick={handleClockIn} className="w-full h-10 rounded-none text-sm font-black uppercase tracking-widest shadow-md">
                             Start Shift
                         </Button>
                     ) : status === 'in' ? (
-                        <Button onClick={handleClockOut} variant="destructive" className="w-full h-10 rounded-xl text-sm font-black uppercase tracking-widest">
+                        <Button onClick={handleClockOut} variant="destructive" className="w-full h-10 rounded-none text-sm font-black uppercase tracking-widest">
                             Finish Shift
                         </Button>
                     ) : (
-                        <Badge className="w-full h-10 rounded-xl justify-center bg-green-100 text-green-700 border-none font-black uppercase text-[10px] tracking-widest">
+                        <Badge className="w-full h-10 rounded-none justify-center bg-green-100 text-green-700 border-none font-black uppercase text-[10px] tracking-widest">
                             Shift Concluded
                         </Badge>
                     )}
@@ -263,9 +263,9 @@ export function AttendanceWidget() {
         </Card>
 
         <Dialog open={isOutOfRangeDialogOpen} onOpenChange={setIsOutOfRangeDialogOpen}>
-            <DialogContent className="rounded-[2rem] sm:max-w-md p-8 border-none shadow-2xl">
+            <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-2xl">
                 <DialogHeader className="text-left">
-                    <div className="size-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mb-4">
+                    <div className="size-12 rounded-none bg-orange-100 text-orange-600 flex items-center justify-center mb-4">
                         <AlertTriangle className="size-6" />
                     </div>
                     <DialogTitle className="text-xl font-black uppercase tracking-tighter">Remote Signal Detected</DialogTitle>
@@ -280,11 +280,11 @@ export function AttendanceWidget() {
                         value={outOfRangeReason} 
                         onChange={e => setOutOfRangeReason(e.target.value)} 
                         placeholder="e.g., Client meeting at their headquarters..." 
-                        className="rounded-2xl min-h-[100px] bg-muted/20 border-muted"
+                        className="rounded-none min-h-[100px] bg-muted/20 border-muted"
                     />
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim()} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
+                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim()} className="w-full rounded-none h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
                         Dispatch Approval Request
                     </Button>
                 </DialogFooter>

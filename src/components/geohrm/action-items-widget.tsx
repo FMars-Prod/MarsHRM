@@ -114,7 +114,7 @@ export function ActionItemsWidget() {
     };
 
     return (
-        <Card className="animate-fade-in-up border-none shadow-sm rounded-2xl bg-white overflow-hidden h-full flex flex-col">
+        <Card className="animate-fade-in-up border-none shadow-sm rounded-none bg-white overflow-hidden h-full flex flex-col">
             <CardHeader className="p-6 pb-2">
                 <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
@@ -123,20 +123,20 @@ export function ActionItemsWidget() {
                         </CardTitle>
                         <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Items requiring attention</CardDescription>
                     </div>
-                    {actionItems.length > 0 && <Badge className="bg-primary text-white font-black text-[9px] rounded-full">{actionItems.length}</Badge>}
+                    {actionItems.length > 0 && <Badge className="bg-primary text-white font-black text-[9px] rounded-none">{actionItems.length}</Badge>}
                 </div>
             </CardHeader>
             <CardContent className="p-6 pt-2 flex-1">
                 {leavesLoading || policiesLoading || acksLoading || issuesLoading || rangeLoading ? (
-                    <div className="space-y-3">{[...Array(3)].map((_, i) => (<div key={i} className="h-14 rounded-xl bg-muted animate-pulse" />))}</div>
+                    <div className="space-y-3">{[...Array(3)].map((_, i) => (<div key={i} className="h-14 rounded-none bg-muted animate-pulse" />))}</div>
                 ) : actionItems.length > 0 ? (
                     <ScrollArea className="h-full pr-3 -mr-3">
                         <div className="space-y-2 pb-2">
                             {actionItems.map(item => (
                                 <Link href={item.href} key={item.id} className="block group">
-                                    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white hover:shadow-sm transition-all">
+                                    <div className="flex items-center justify-between p-3 rounded-none bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white hover:shadow-sm transition-all">
                                         <div className="flex items-center gap-3">
-                                            <div className={cn("p-2 rounded-lg text-white", item.type === 'compliance' || item.type === 'issue' ? "bg-rose-500" : item.type === 'leave' || item.type === 'range_approval' ? "bg-sky-500" : "bg-amber-500")}>
+                                            <div className={cn("p-2 rounded-none text-white", item.type === 'compliance' || item.type === 'issue' ? "bg-rose-500" : item.type === 'leave' || item.type === 'range_approval' ? "bg-sky-500" : "bg-amber-500")}>
                                                 {iconMap[item.type]}
                                             </div>
                                             <div className="space-y-0.5">
