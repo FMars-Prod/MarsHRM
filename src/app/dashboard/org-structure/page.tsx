@@ -153,11 +153,11 @@ export default function OrgStructurePage() {
                 {isLeadership && (
                     <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
                         <DialogTrigger asChild>
-                            <Button className="rounded-none h-12 shadow-xl bg-primary text-white font-black uppercase text-[11px] tracking-[0.2em] px-8">
+                            <Button className="rounded-none h-12 shadow-xl bg-primary text-white font-black uppercase text-[11px] tracking-[0.2em] px-8 active:scale-[0.98] transition-transform">
                                 <Settings2 className="mr-3 size-4" /> Configure Structure
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-none sm:max-w-3xl p-0 border-none shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+                        <DialogContent className="rounded-none sm:max-w-3xl p-0 border-none shadow-2xl overflow-hidden flex flex-col h-[85vh] z-[60]">
                             <DialogHeader className="p-10 border-b bg-white shrink-0">
                                 <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Command Mapping Matrix</DialogTitle>
                                 <DialogDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60 mt-1">
@@ -181,12 +181,12 @@ export default function OrgStructurePage() {
                                             <div className="flex items-center gap-6">
                                                 <Popover>
                                                     <PopoverTrigger asChild>
-                                                        <Button variant="outline" className="h-11 rounded-none bg-white text-[11px] font-black uppercase border-none ring-1 ring-border/50 min-w-[220px] justify-between px-5 shadow-sm hover:ring-primary/40">
+                                                        <Button variant="outline" className="h-11 rounded-none bg-white text-[11px] font-black uppercase border-none ring-1 ring-border/50 min-w-[220px] justify-between px-5 shadow-sm hover:ring-primary/40 active:scale-[0.98] transition-all">
                                                             <span>{u.reportingHeadIds?.length || 0} Managers Assigned</span>
                                                             <ChevronDown className="size-4 opacity-50" />
                                                         </Button>
                                                     </PopoverTrigger>
-                                                    <PopoverContent className="w-[320px] p-0 rounded-none border-none shadow-2xl" align="end">
+                                                    <PopoverContent className="w-[320px] p-0 rounded-none border-none shadow-2xl z-[100]" align="end">
                                                         <div className="p-4 bg-muted/10 border-b">
                                                             <p className="text-[10px] font-black uppercase text-primary tracking-widest">Select Command Tiers</p>
                                                         </div>

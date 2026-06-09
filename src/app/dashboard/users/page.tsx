@@ -214,14 +214,14 @@ export default function UsersPage() {
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting Command Heads</Label>
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="outline" className="w-full justify-between h-12 rounded-none bg-muted/20 border-none ring-1 ring-border/50 px-4">
+                                            <Button variant="outline" className="w-full justify-between h-12 rounded-none bg-muted/20 border-none ring-1 ring-border/50 px-4 active:scale-[0.98] transition-all">
                                                 <span className="text-xs font-black uppercase tracking-tight">
                                                     {selectedHeadIds.length === 0 ? "Assign Managers" : `${selectedHeadIds.length} Managers Selected`}
                                                 </span>
                                                 <ChevronDown className="size-4 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-[350px] p-0 rounded-none border-none shadow-2xl" align="start">
+                                        <PopoverContent className="w-[350px] p-0 rounded-none border-none shadow-2xl z-[100]" align="start">
                                             <div className="p-4 border-b bg-muted/10">
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-primary">Fleet Roster</p>
                                             </div>
