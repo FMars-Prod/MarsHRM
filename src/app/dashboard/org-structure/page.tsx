@@ -124,6 +124,7 @@ export default function OrgStructurePage() {
         return users.filter(u => {
             const hasHeads = (u.reportingHeadIds?.length || 0) > 0;
             if (!hasHeads) return true;
+            // If all reporting heads don't exist in the current set, it's a root
             return !u.reportingHeadIds?.some(headId => users.some(existing => existing.id === headId));
         });
     }, [users]);
@@ -184,7 +185,7 @@ export default function OrgStructurePage() {
                                             <div className="flex-1 min-w-0">
                                                 <Popover>
                                                     <PopoverTrigger asChild>
-                                                        <div className="w-full cursor-pointer p-4 bg-muted/20 hover:bg-muted/30 transition-all ring-1 ring-border/50 flex flex-wrap items-center gap-2 min-h-[56px]">
+                                                        <div className="w-full cursor-pointer p-4 bg-muted/20 hover:bg-muted/30 transition-all ring-1 ring-border/50 flex flex-wrap items-center gap-2 min-h-[56px] rounded-none">
                                                             {(u.reportingHeadIds?.length || 0) === 0 ? (
                                                                 <span className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest">Unassigned - Tap to add managers</span>
                                                             ) : (
