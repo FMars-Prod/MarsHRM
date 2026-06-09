@@ -268,6 +268,10 @@ export default function DashboardLayout({
                     </div>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg p-0 rounded-none overflow-hidden border-none shadow-2xl">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Menu Search</DialogTitle>
+                        <DialogDescription>Search for dashboard modules and navigation links.</DialogDescription>
+                    </DialogHeader>
                     <div className="flex items-center border-b px-4 h-14">
                         <Search className="mr-3 h-5 w-5 text-muted-foreground" />
                         <Input 
