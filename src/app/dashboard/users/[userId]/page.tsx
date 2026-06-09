@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop } from 'lucide-react';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +46,19 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const userDocRef = useMemoFirebase(() => (userId ? doc(firestore, 'users', userId) : null), [firestore, userId]);
   const { data: user, isLoading: isUserLoading } = useDoc<any>(userDocRef);
+
+  const allUsersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+  const { data: allUsers } = useCollection<any>(allUsersQuery);
+
+  const reportingHeads = React.useMemo(() => {
+    if (!user?.reportingHeadIds || !allUsers) return [];
+    return allUsers.filter((u: any) => user.reportingHeadIds.includes(u.id));
+  }, [user?.reportingHeadIds, allUsers]);
+
+  const directReports = React.useMemo(() => {
+      if (!user || !allUsers) return [];
+      return allUsers.filter((u: any) => u.reportingHeadIds?.includes(user.id));
+  }, [user?.id, allUsers]);
 
   const teamDocRef = useMemoFirebase(() => user?.teamId ? doc(firestore, 'teams', user.teamId) : null, [user?.teamId, firestore]);
   const { data: teamData } = useDoc<any>(teamDocRef);
@@ -102,7 +116,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     let parts = [];
     if (years > 0) parts.push(`${years} yr`);
     parts.push(`${remainingMonths} mo`);
-    if (days > 0) parts.push(`${days} d`);
+    parts.push(`${days} d`);
     
     return parts.join(' ');
   }, [user]);
@@ -219,7 +233,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
         <Tabs defaultValue="activity" className="space-y-4">
             <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-none p-1.5 h-auto gap-2">
-                {["Activity", "Attendance", "Documents", "Assets"].map(tab => (
+                {["Activity", "Attendance", "Hierarchy", "Documents", "Assets"].map(tab => (
                     <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-white px-8 py-2.5 font-black uppercase text-[10px] tracking-[0.2em] transition-all">
                         {tab}
                     </TabsTrigger>
@@ -293,6 +307,73 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             )) || <TableRow><TableCell colSpan={3} className="h-40 text-center text-[11px] font-black uppercase opacity-30">No records</TableCell></TableRow>}
                         </TableBody>
                     </Table>
+                </Card>
+            </TabsContent>
+            <TabsContent value="hierarchy">
+                <Card className="border-none shadow-sm rounded-none bg-white p-6 overflow-x-auto min-h-[500px]">
+                    <div className="flex flex-col items-center space-y-12 py-10 min-w-fit">
+                        {/* Managers Section */}
+                        <div className="flex flex-col items-center space-y-4 w-full">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Command Level (Managers)</h4>
+                            <div className="flex flex-wrap justify-center gap-8 w-full">
+                                {reportingHeads.length > 0 ? reportingHeads.map((head: any) => (
+                                    <div key={head.id} className="flex flex-col items-center">
+                                         <div className="p-4 bg-muted/20 border-2 border-dashed border-border/50 rounded-none w-48 text-center group hover:border-primary/40 transition-all">
+                                            <Avatar className="size-12 rounded-none mx-auto mb-3 shadow-sm border border-white">
+                                                <AvatarImage src={head.avatar} className="object-cover" />
+                                                <AvatarFallback className="font-black">{head.firstName[0]}</AvatarFallback>
+                                            </Avatar>
+                                            <p className="font-black text-xs uppercase tracking-tight truncate">{head.firstName} {head.lastName}</p>
+                                            <p className="text-[9px] font-bold text-primary uppercase truncate">{head.jobTitle}</p>
+                                         </div>
+                                         <div className="w-px h-8 bg-border mt-0" />
+                                    </div>
+                                )) : (
+                                    <div className="flex flex-col items-center">
+                                        <Badge variant="outline" className="rounded-none font-black text-[9px] uppercase tracking-widest bg-primary/5 text-primary border-primary/20 h-8 px-4">Top Tier Command</Badge>
+                                        <div className="w-px h-8 bg-border" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Current User Section */}
+                        <div className="relative flex flex-col items-center w-full">
+                            <div className="p-6 bg-primary text-white shadow-xl rounded-none w-64 text-center ring-4 ring-primary/10">
+                                <Avatar className="size-16 rounded-none mx-auto mb-4 border-2 border-white/20 shadow-md">
+                                    <AvatarImage src={user.avatar} className="object-cover" />
+                                    <AvatarFallback className="font-black text-primary bg-white">{user.firstName[0]}</AvatarFallback>
+                                </Avatar>
+                                <p className="font-black text-sm uppercase tracking-widest">TARGET UNIT</p>
+                                <p className="font-black text-base uppercase tracking-tighter mt-1">{user.firstName} {user.lastName}</p>
+                                <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mt-1">{user.jobTitle}</p>
+                            </div>
+                            {directReports.length > 0 && <div className="w-px h-12 bg-border" />}
+                        </div>
+
+                        {/* Direct Reports Section */}
+                        {directReports.length > 0 && (
+                            <div className="flex flex-col items-center space-y-4 w-full">
+                                <div className="h-px bg-border w-1/2 max-w-[400px]" />
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mt-4">Fleet Division (Direct Reports)</h4>
+                                <div className="flex flex-wrap justify-center gap-8 w-full pt-4">
+                                    {directReports.map((report: any) => (
+                                        <div key={report.id} className="flex flex-col items-center">
+                                            <div className="w-px h-4 bg-border mb-0" />
+                                            <div className="p-4 bg-white ring-1 ring-border/50 shadow-md rounded-none w-48 text-center group hover:ring-primary/40 transition-all">
+                                                <Avatar className="size-10 rounded-none mx-auto mb-3 border border-muted">
+                                                    <AvatarImage src={report.avatar} className="object-cover" />
+                                                    <AvatarFallback className="font-black">{report.firstName[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <p className="font-black text-xs uppercase tracking-tight truncate">{report.firstName} {report.lastName}</p>
+                                                <p className="text-[9px] font-bold text-muted-foreground uppercase truncate">{report.jobTitle}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </Card>
             </TabsContent>
             <TabsContent value="documents">
