@@ -17,7 +17,7 @@
         "branchId": { "type": "string" },
         "avatar": { "type": "string" },
         "shiftType": { "type": "string" },
-        "reportsToId": { "type": "string" },
+        "reportingHeadIds": { "type": "array", "items": { "type": "string" }, "description": "Array of user IDs representing the managers this employee reports to." },
         "isWfhAllowed": { "type": "boolean" },
         "homeLatitude": { "type": "number" },
         "homeLongitude": { "type": "number" },

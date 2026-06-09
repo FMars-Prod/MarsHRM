@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -10,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check, LocateFixed } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check, LocateFixed, Users } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, useStorage, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { doc, collection, query, writeBatch, serverTimestamp, deleteDoc, where, getDocs, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -30,6 +31,7 @@ import { format, startOfDay, endOfDay } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const userSchema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -51,6 +53,7 @@ const userSchema = z.object({
   performanceRating: z.string().optional(),
   leaveBalance: z.coerce.number().default(24),
   payrollAmount: z.coerce.number().optional(),
+  reportingHeadIds: z.array(z.string()).default([]),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -71,7 +74,7 @@ export default function UsersPage() {
   const [isBulkBranchDialogOpen, setIsBulkBranchDialogOpen] = React.useState(false);
   const [bulkBranchId, setBulkBranchId] = React.useState<string>("");
 
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, "users"), orderBy("firstName", "asc")), [firestore]);
   const { data: users, isLoading } = useCollection<any>(usersQuery);
 
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
@@ -88,11 +91,12 @@ export default function UsersPage() {
       branchId: undefined, shiftType: "General Shift",
       employmentType: "Intern", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
       homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5,
-      performanceRating: "Average", leaveBalance: 24, payrollAmount: 0
+      performanceRating: "Average", leaveBalance: 24, payrollAmount: 0, reportingHeadIds: []
     },
   });
 
   const isWfhAllowedValue = form.watch("isWfhAllowed");
+  const selectedHeadIds = form.watch("reportingHeadIds");
 
   const handleGetCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -176,96 +180,6 @@ export default function UsersPage() {
       }
   };
 
-  const handleBulkDelete = async () => {
-      const batch = writeBatch(firestore);
-      selectedUserIds.forEach(id => {
-          batch.delete(doc(firestore, 'users', id));
-      });
-      await batch.commit();
-      toast({ title: "Bulk Purge Complete", description: `${selectedUserIds.length} records removed.` });
-      setSelectedUserIds([]);
-  };
-
-  const handleBulkBranchUpdate = async () => {
-      if (!bulkBranchId) return;
-      const batch = writeBatch(firestore);
-      selectedUserIds.forEach(id => {
-          batch.update(doc(firestore, 'users', id), { branchId: bulkBranchId });
-      });
-      await batch.commit();
-      toast({ title: "Sector Reassigned", description: `Reassigned ${selectedUserIds.length} units to ${getBranchName(bulkBranchId)}.` });
-      setSelectedUserIds([]);
-      setIsBulkBranchDialogOpen(false);
-  };
-
-  const handleBulkToggleWfh = async (allowed: boolean) => {
-      const batch = writeBatch(firestore);
-      selectedUserIds.forEach(id => {
-          batch.update(doc(firestore, 'users', id), { isWfhAllowed: allowed });
-      });
-      await batch.commit();
-      toast({ title: "Protocol Updated", description: `WFH Access ${allowed ? 'Authorized' : 'Rescinded'} for ${selectedUserIds.length} units.` });
-      setSelectedUserIds([]);
-  };
-
-  const handleResetDay = async (userId: string) => {
-      const todayId = format(new Date(), 'yyyy-MM-dd');
-      const attRef = doc(firestore, `users/${userId}/attendances`, todayId);
-      
-      try {
-          await deleteDoc(attRef);
-          const reportsRef = collection(firestore, `users/${userId}/reports`);
-          const todayStart = startOfDay(new Date());
-          const todayEnd = endOfDay(new Date());
-          const q = query(reportsRef, where('date', '>=', todayStart), where('date', '<=', todayEnd));
-          const snap = await getDocs(q);
-          const batch = writeBatch(firestore);
-          snap.docs.forEach(d => batch.delete(d.ref));
-          await batch.commit();
-          toast({ title: "Day Reset Completed" });
-      } catch (err: any) {
-          toast({ variant: 'destructive', title: "Reset Failed", description: err.message });
-      }
-  };
-
-  const handleSignatureUpload = async (file: File) => {
-    if (!editingUser) return;
-    setIsUploadingSignature(true);
-    try {
-        const sigRef = ref(storage, `signatures/${editingUser.id}/${Date.now()}-${file.name}`);
-        const snap = await uploadBytes(sigRef, file);
-        const url = await getDownloadURL(snap.ref);
-        const userRef = doc(firestore, 'users', editingUser.id);
-        updateDocumentNonBlocking(userRef, { signatureUrl: url, signatureStatus: 'approved', canUpdateSignature: false });
-        toast({ title: "Signature provisioned." });
-        setEditingUser({ ...editingUser, signatureUrl: url, signatureStatus: 'approved', canUpdateSignature: false });
-    } catch (e: any) {
-        toast({ variant: 'destructive', title: "Upload Error" });
-    } finally {
-        setIsUploadingSignature(false);
-    }
-  };
-
-  const handleManualSignatureSave = () => {
-      if (!editingUser || !manualSignatureUrl) return;
-      const userRef = doc(firestore, 'users', editingUser.id);
-      updateDocumentNonBlocking(userRef, { signatureUrl: manualSignatureUrl, signatureStatus: 'approved', canUpdateSignature: false });
-      toast({ title: "Signature Synced" });
-      setEditingUser({ ...editingUser, signatureUrl: manualSignatureUrl, signatureStatus: 'approved', canUpdateSignature: false });
-  };
-
-  const handleResetSignaturePermission = () => {
-      if (!editingUser) return;
-      const userRef = doc(firestore, 'users', editingUser.id);
-      updateDocumentNonBlocking(userRef, { canUpdateSignature: true });
-      toast({ title: "Re-upload Permission Granted" });
-      setEditingUser({ ...editingUser, canUpdateSignature: true });
-  };
-
-  const getBranchName = (bId?: string) => {
-      return branches?.find(b => b.id === bId)?.name || 'Unassigned';
-  };
-
   const toggleSelectAll = (checked: boolean) => {
       if (checked && users) {
           setSelectedUserIds(users.map(u => u.id));
@@ -283,48 +197,6 @@ export default function UsersPage() {
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader title="Staff Registry" description="Global directory of active team members.">
         <div className="flex gap-2">
-            {selectedUserIds.length > 0 && (
-                <div className="flex gap-2 animate-in slide-in-from-right-4">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="rounded-full h-11 px-6 border-primary/20 bg-primary/5 text-primary font-black uppercase text-[10px] tracking-widest shadow-sm">
-                                Bulk Operations ({selectedUserIds.length}) <ChevronDown className="ml-2 size-3" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 border-none shadow-2xl">
-                            <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Tactical Command</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => setIsBulkBranchDialogOpen(true)} className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5">
-                                <Building2 className="size-3.5" /> Reassign Sector
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleBulkToggleWfh(true)} className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5 text-blue-600">
-                                <Home className="size-3.5" /> Authorize WFH
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleBulkToggleWfh(false)} className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5 text-orange-600">
-                                <ShieldCheck className="size-3.5" /> Rescind WFH
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5 text-destructive">
-                                        <Trash className="size-3.5" /> Bulk Purge Registry
-                                    </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-3xl">
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle className="font-black uppercase tracking-tighter">Purge Multiple Records?</AlertDialogTitle>
-                                        <AlertDialogDescription>This will remove {selectedUserIds.length} units from the tactical registry. This action cannot be reversed.</AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleBulkDelete} className="rounded-full font-bold uppercase text-[10px] bg-red-600">Confirm Bulk Purge</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            )}
             <Dialog open={isDialogOpen} onOpenChange={(open) => { if(!open) { setEditingUser(null); setManualSignatureUrl(""); } setIsDialogOpen(open); }}>
                 <DialogTrigger asChild><Button className="rounded-full h-11 shadow-lg shadow-primary/20"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button></DialogTrigger>
                 <DialogContent className="sm:max-w-2xl rounded-[2.5rem] p-8 border-none shadow-2xl">
@@ -340,6 +212,56 @@ export default function UsersPage() {
                                     <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Last Name</Label><Input {...field} className="rounded-xl h-11"/></FormItem>)} />
                                 </div>
                                 <FormField control={form.control} name="email" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Email Directive</Label><Input {...field} className="rounded-xl h-11"/></FormItem>)} />
+                                
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting Command Heads</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className="w-full justify-between h-11 rounded-xl bg-muted/20 border-none ring-1 ring-border/50">
+                                                <span className="text-xs font-bold uppercase">
+                                                    {selectedHeadIds.length === 0 ? "Assign Managers" : `${selectedHeadIds.length} Managers Selected`}
+                                                </span>
+                                                <ChevronDown className="size-4 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[350px] p-0 rounded-none border-none shadow-2xl" align="start">
+                                            <div className="p-3 border-b bg-muted/10">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-primary">Fleet Roster</p>
+                                            </div>
+                                            <ScrollArea className="h-64">
+                                                <div className="p-2 space-y-1">
+                                                    {users?.filter(u => u.id !== editingUser?.id).map(manager => {
+                                                        const isSelected = selectedHeadIds.includes(manager.id);
+                                                        return (
+                                                            <div 
+                                                                key={manager.id} 
+                                                                className={cn(
+                                                                    "flex items-center gap-3 p-2 rounded-none transition-colors cursor-pointer",
+                                                                    isSelected ? "bg-primary/5" : "hover:bg-muted/50"
+                                                                )}
+                                                                onClick={() => {
+                                                                    const current = form.getValues("reportingHeadIds");
+                                                                    if (isSelected) {
+                                                                        form.setValue("reportingHeadIds", current.filter(id => id !== manager.id));
+                                                                    } else {
+                                                                        form.setValue("reportingHeadIds", [...current, manager.id]);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <Checkbox checked={isSelected} className="rounded-none" />
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-xs font-black uppercase truncate">{manager.firstName} {manager.lastName}</p>
+                                                                    <p className="text-[9px] font-bold text-muted-foreground truncate">{manager.jobTitle}</p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </ScrollArea>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Job Title</Label><Input {...field} className="rounded-xl h-11"/></FormItem>)} />
                                     <FormField control={form.control} name="department" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Department</Label><Input {...field} className="rounded-xl h-11"/></FormItem>)} />
@@ -372,7 +294,7 @@ export default function UsersPage() {
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="leaveBalance" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px) font-black uppercase text-primary">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
+                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
                                     )} />
                                     <FormField control={form.control} name="payrollAmount" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary">Last Payroll Amount</Label><FormControl><Input type="number" {...field} className="rounded-xl h-11"/></FormControl></FormItem>
@@ -430,74 +352,6 @@ export default function UsersPage() {
                                         </div>
                                     )}
                                 </div>
-
-                                <Separator className="my-4 opacity-50" />
-
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Identity Authentication Assets</Label>
-                                    {editingUser ? (
-                                        <div className="space-y-4">
-                                            {editingUser.signatureUrl ? (
-                                                <div className="p-4 bg-muted/20 rounded-2xl border-2 border-dashed border-primary/20 flex flex-col items-center gap-3">
-                                                    <img src={editingUser.signatureUrl} alt="Signature" className="h-14 object-contain" />
-                                                    <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[8px] font-black uppercase px-3 py-1"><CheckCircle2 className="size-2.5 mr-1.5" /> Verified Signature</Badge>
-                                                </div>
-                                            ) : (
-                                                <div className="h-24 bg-muted/10 rounded-2xl border-2 border-dashed border-muted/30 flex flex-col items-center justify-center gap-2">
-                                                    <Camera className="size-6 opacity-20" />
-                                                    <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">No Signature Asset Provisioned</p>
-                                                </div>
-                                            )}
-                                            
-                                            {editingUser.signatureUrl && !editingUser.canUpdateSignature ? (
-                                                <Button 
-                                                    type="button" 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    className="w-full rounded-2xl border-2 border-dashed border-primary/30 text-primary font-black text-[9px] uppercase tracking-widest h-12 hover:bg-primary/5 transition-all"
-                                                    onClick={handleResetSignaturePermission}
-                                                >
-                                                    <RotateCcw className="size-3.5 mr-2" /> Allow Signature Recalibration
-                                                </Button>
-                                            ) : (
-                                                <Tabs defaultValue="upload" className="w-full">
-                                                    <TabsList className="grid w-full grid-cols-2 h-10 bg-muted/30 p-1 rounded-xl">
-                                                        <TabsTrigger value="upload" className="text-[9px] uppercase font-black rounded-lg">Upload Asset</TabsTrigger>
-                                                        <TabsTrigger value="url" className="text-[9px] uppercase font-black rounded-lg">URL Link</TabsTrigger>
-                                                    </TabsList>
-                                                    <TabsContent value="upload" className="pt-3">
-                                                        <div className="relative group">
-                                                            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={(e) => e.target.files?.[0] && handleSignatureUpload(e.target.files[0])} disabled={isUploadingSignature} />
-                                                            <Button variant="outline" className="w-full h-12 rounded-xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary font-black uppercase text-[10px] group-hover:bg-primary/10 transition-all" disabled={isUploadingSignature}>
-                                                                {isUploadingSignature ? <Clock className="size-4 animate-spin mr-2"/> : <Camera className="size-4 mr-2" />}
-                                                                {isUploadingSignature ? "Transmitting..." : "Update via Binary File"}
-                                                            </Button>
-                                                        </div>
-                                                    </TabsContent>
-                                                    <TabsContent value="url" className="pt-3 space-y-3">
-                                                        <div className="flex gap-2">
-                                                            <Input value={manualSignatureUrl} onChange={e => setManualSignatureUrl(e.target.value)} placeholder="Paste asset URL here" className="h-12 rounded-xl text-xs" />
-                                                            <Button type="button" size="icon" className="h-12 w-12 rounded-xl shrink-0" onClick={handleManualSignatureSave}><Save className="size-5" /></Button>
-                                                        </div>
-                                                    </TabsContent>
-                                                </Tabs>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="p-6 bg-muted/5 rounded-2xl border-2 border-dashed border-border/50 text-center">
-                                            <p className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest leading-relaxed">Registry entry required before identity asset provisioning.</p>
-                                        </div>
-                                    )}
-                                </div>
-                                <Separator className="my-4 opacity-50" />
-
-                                <div className="flex items-center justify-between p-5 bg-purple-50/50 rounded-2xl border border-dashed border-purple-200">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-xs font-black uppercase text-purple-900">Demo Account Tier</Label>
-                                        <p className="text-[9px] text-purple-700 font-bold uppercase opacity-60">Exempt from operational reporting</p>
-                                    </div>
-                                    <FormField control={form.control} name="isDemoAccount" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-purple-600" />)} />
-                                </div>
                                 
                                 {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary">Temporary Cipher</Label><Input type="password" {...field} className="rounded-xl h-11"/></FormItem>)} />}
                                 <Button type="submit" className="w-full h-14 rounded-full font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Finalize Dispatch Protocol</Button>
@@ -517,17 +371,15 @@ export default function UsersPage() {
                   <Checkbox checked={selectedUserIds.length === (users?.length || 0) && (users?.length || 0) > 0} onCheckedChange={toggleSelectAll} />
               </TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Staff Member</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Work Mode</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Work Schedule</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Account Level</TableHead>
-              <TableHead className="text-right text-[10px] font-black uppercase tracking-widest py-6 px-6">Control</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Command Matrix</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Control</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Synchronizing Registry...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Synchronizing Registry...</TableCell></TableRow>
             ) : users?.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No tactical units registered.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No tactical units registered.</TableCell></TableRow>
             ) : users?.map(u => (
               <TableRow key={u.id} className={cn("border-border/50 group hover:bg-primary/5 transition-colors", selectedUserIds.includes(u.id) && "bg-primary/5")}>
                 <TableCell className="py-5">
@@ -543,24 +395,20 @@ export default function UsersPage() {
                     </div>
                 </TableCell>
                 <TableCell>
-                    <Badge variant="outline" className={cn(
-                        "uppercase text-[9px] font-black tracking-widest border-none px-3 h-7 flex items-center w-fit gap-1.5",
-                        u.isWfhAllowed ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
-                    )}>
-                        {u.isWfhAllowed ? <Home className="size-3" /> : <Building2 className="size-3" />}
-                        {u.isWfhAllowed ? "WFH" : "OFFICE"}
-                    </Badge>
-                </TableCell>
-                <TableCell className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">{u.shiftType || 'General'}</TableCell>
-                <TableCell>
-                    <Badge className={cn(
-                        "rounded-full text-[8px] font-black uppercase tracking-[0.2em] border-none px-3",
-                        u.role === 'CEO/Admin' ? 'bg-indigo-600 text-white' : 
-                        u.role === 'HR Manager' ? 'bg-blue-600 text-white' :
-                        u.role === 'Team Lead' ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'
-                    )}>
-                        {u.role}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                        {u.reportingHeadIds?.length ? (
+                            u.reportingHeadIds.map((headId: string) => {
+                                const head = users.find(h => h.id === headId);
+                                return head ? (
+                                    <Badge key={headId} variant="outline" className="text-[8px] font-black uppercase bg-primary/5 border-primary/10 text-primary px-2">
+                                        {head.firstName}
+                                    </Badge>
+                                ) : null;
+                            })
+                        ) : (
+                            <span className="text-[9px] font-black uppercase opacity-20">Direct to Admin</span>
+                        )}
+                    </div>
                 </TableCell>
                 <TableCell className="text-right px-6">
                   <div className="flex justify-end items-center gap-1.5">
@@ -568,7 +416,7 @@ export default function UsersPage() {
                         <>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/5 transition-all" onClick={() => { setEditingUser(u); form.reset(u); if(u.signatureUrl) setManualSignatureUrl(u.signatureUrl); setIsDialogOpen(true); }}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/5 transition-all" onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }}>
                                         <Edit className="size-4" />
                                     </Button>
                                 </TooltipTrigger>
@@ -605,14 +453,6 @@ export default function UsersPage() {
                             <DropdownMenuItem asChild className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5">
                                 <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-3.5" /> Personnel Audit</Link>
                             </DropdownMenuItem>
-                            {isAdmin && (
-                                <>
-                                    <DropdownMenuSeparator className="opacity-50" />
-                                    <DropdownMenuItem onClick={() => handleResetDay(u.id)} className="rounded-xl font-bold text-xs uppercase cursor-pointer gap-2 py-2.5 text-orange-600 hover:bg-orange-50">
-                                        <RotateCcw className="size-3.5" /> Reset Today (Test)
-                                    </DropdownMenuItem>
-                                </>
-                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -621,14 +461,6 @@ export default function UsersPage() {
             ))}
           </TableBody>
         </Table>
-      </div>
-
-      <div className="py-20 text-center opacity-30 grayscale flex flex-col items-center justify-center gap-6">
-          <div className="p-8 rounded-[3rem] bg-muted/20 ring-4 ring-muted/10">
-              <ShieldCheck className="size-16 text-primary/40" />
-          </div>
-          <p className="font-black uppercase text-xs tracking-[0.4em]">Ledger Authorization Required</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest max-w-xs leading-relaxed">Select a fleet official from the directory to access their vertical financial records.</p>
       </div>
     </div>
     </TooltipProvider>

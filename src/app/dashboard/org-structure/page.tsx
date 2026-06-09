@@ -8,7 +8,7 @@ import { collection, query, doc, orderBy } from 'firebase/firestore';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Network, ArrowDown, Target, LayoutGrid, ShieldCheck, UserCircle, Briefcase, ChevronDown, Settings2, UserPlus, Check, X } from 'lucide-react';
+import { Network, Settings2, ShieldCheck, Check, ChevronDown, UserCircle, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -21,9 +21,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 
 type UserData = {
     id: string;
@@ -33,7 +35,7 @@ type UserData = {
     role: string;
     avatar?: string;
     teamId?: string;
-    reportsToId?: string | null;
+    reportingHeadIds?: string[];
 };
 
 const isUrl = (str?: string) => str && str.startsWith('http');
@@ -47,8 +49,8 @@ const UserNode = ({ user, highlight, isRoot }: { user: UserData, highlight?: boo
         <CardContent className="p-4 flex items-center gap-3">
             <Avatar className="size-12 ring-2 ring-white/20 shrink-0 rounded-none">
                 {user.avatar ? (
-                    isUrl(user.avatar) ? <AvatarImage src={user.avatar} className="object-cover rounded-none" /> : <span className="text-xl">{user.avatar}</span>
-                ) : <AvatarFallback className="text-xs rounded-none">{user.firstName[0]}{user.lastName[0]}</AvatarFallback>}
+                    isUrl(user.avatar) ? <AvatarImage src={user.avatar} className="object-cover rounded-none" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 font-black text-lg">{user.avatar}</div>
+                ) : <AvatarFallback className="text-xs rounded-none bg-muted font-bold text-muted-foreground">{user.firstName[0]}{user.lastName[0]}</AvatarFallback>}
             </Avatar>
             <div className="flex-1 min-w-0">
                 <p className={cn("font-black text-sm truncate", isRoot ? "text-white" : "text-foreground")}>{user.firstName} {user.lastName}</p>
@@ -70,10 +72,10 @@ const TreeLevel = ({ users, allUsers, depth = 0, currentUserData }: { users: Use
     return (
         <div className="flex flex-col items-center w-full">
             <div className="flex flex-wrap justify-center gap-12 w-full">
-                {users.map(user => {
-                    const children = allUsers.filter(u => u.reportsToId === user.id);
+                {users.map((user, idx) => {
+                    const children = allUsers.filter(u => u.reportingHeadIds?.includes(user.id));
                     return (
-                        <div key={user.id} className="flex flex-col items-center relative flex-1 min-w-[320px]">
+                        <div key={`${user.id}-${depth}-${idx}`} className="flex flex-col items-center relative flex-1 min-w-[320px]">
                             <UserNode 
                                 user={user} 
                                 highlight={currentUserData?.id === user.id} 
@@ -118,19 +120,25 @@ export default function OrgStructurePage() {
 
     const roots = React.useMemo(() => {
         if (!users) return [];
-        // Root users are those who don't report to anyone or whose reporting officer doesn't exist
-        return users.filter(u => !u.reportsToId || !users.some(manager => manager.id === u.reportsToId));
+        return users.filter(u => {
+            const hasHeads = (u.reportingHeadIds?.length || 0) > 0;
+            if (!hasHeads) return true;
+            // Also a root if none of the reporting heads actually exist in the registry
+            return !u.reportingHeadIds?.some(headId => users.some(existing => existing.id === headId));
+        });
     }, [users]);
 
-    const handleUpdateReportsTo = (targetUserId: string, managerId: string) => {
+    const handleToggleHead = (targetUserId: string, headId: string, currentHeads: string[]) => {
         const userRef = doc(firestore, 'users', targetUserId);
-        const finalManagerId = managerId === 'none' ? null : managerId;
+        let updatedHeads = [...currentHeads];
         
-        updateDocumentNonBlocking(userRef, { reportsToId: finalManagerId });
-        toast({ 
-            title: "Command Updated", 
-            description: "Reporting line has been synchronized manually." 
-        });
+        if (updatedHeads.includes(headId)) {
+            updatedHeads = updatedHeads.filter(h => h !== headId);
+        } else {
+            updatedHeads.push(headId);
+        }
+        
+        updateDocumentNonBlocking(userRef, { reportingHeadIds: updatedHeads });
     };
 
     if (isUserLoading || usersLoading) {
@@ -143,7 +151,7 @@ export default function OrgStructurePage() {
 
     return (
         <div className="space-y-12 animate-fade-in-up max-w-full mx-auto pb-32 font-jakarta">
-            <PageHeader title="Organization Structure" description="Manually configured tactical tree mapping vertical reporting lines.">
+            <PageHeader title="Organization Structure" description="Manually configured tactical matrix mapping vertical and horizontal reporting heads.">
                 {isLeadership && (
                     <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
                         <DialogTrigger asChild>
@@ -151,11 +159,11 @@ export default function OrgStructurePage() {
                                 <Settings2 className="mr-2 size-4" /> Configure Structure
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-none sm:max-w-2xl p-0 border-none shadow-2xl overflow-hidden flex flex-col h-[80vh]">
+                        <DialogContent className="rounded-none sm:max-w-3xl p-0 border-none shadow-2xl overflow-hidden flex flex-col h-[85vh]">
                             <DialogHeader className="p-8 border-b bg-white shrink-0">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Command Mapping</DialogTitle>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Command Mapping Matrix</DialogTitle>
                                 <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">
-                                    Manually define reporting protocols for every unit
+                                    Assign one or multiple reporting heads to establish the organizational matrix
                                 </DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1">
@@ -165,7 +173,7 @@ export default function OrgStructurePage() {
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="size-10 rounded-none border ring-1 ring-border/50">
                                                     <AvatarImage src={u.avatar} className="object-cover rounded-none" />
-                                                    <AvatarFallback className="rounded-none text-xs">{u.firstName[0]}</AvatarFallback>
+                                                    <AvatarFallback className="rounded-none text-xs font-bold">{u.firstName[0]}{u.lastName[0]}</AvatarFallback>
                                                 </Avatar>
                                                 <div className="space-y-0.5">
                                                     <p className="font-black text-xs uppercase">{u.firstName} {u.lastName}</p>
@@ -173,31 +181,54 @@ export default function OrgStructurePage() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-4">
-                                                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Reports To</p>
-                                                <Select 
-                                                    value={u.reportsToId || "none"} 
-                                                    onValueChange={(val) => handleUpdateReportsTo(u.id, val)}
-                                                >
-                                                    <SelectTrigger className="w-[180px] h-9 rounded-none bg-white text-[10px] font-bold uppercase border-none ring-1 ring-border/50">
-                                                        <SelectValue placeholder="Pick Manager" />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="rounded-none border-none shadow-2xl">
-                                                        <SelectItem value="none" className="text-[10px] font-bold uppercase">No Manager (Root)</SelectItem>
-                                                        {users.filter(manager => manager.id !== u.id).map(manager => (
-                                                            <SelectItem key={manager.id} value={manager.id} className="text-[10px] font-bold uppercase">
-                                                                {manager.firstName} {manager.lastName}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Reporting Heads</p>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="outline" className="h-9 rounded-none bg-white text-[10px] font-black uppercase border-none ring-1 ring-border/50 min-w-[160px] justify-between">
+                                                            <span>{u.reportingHeadIds?.length || 0} Managers Assigned</span>
+                                                            <ChevronDown className="size-3 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-[280px] p-0 rounded-none border-none shadow-2xl" align="end">
+                                                        <div className="p-3 bg-muted/5 border-b">
+                                                            <p className="text-[9px] font-black uppercase text-primary tracking-widest">Select Command Tiers</p>
+                                                        </div>
+                                                        <ScrollArea className="h-64">
+                                                            <div className="p-2 space-y-1">
+                                                                {users.filter(manager => manager.id !== u.id).map(manager => {
+                                                                    const isSelected = u.reportingHeadIds?.includes(manager.id);
+                                                                    return (
+                                                                        <div 
+                                                                            key={manager.id} 
+                                                                            className={cn(
+                                                                                "flex items-center gap-3 p-2 rounded-none transition-colors cursor-pointer",
+                                                                                isSelected ? "bg-primary/5" : "hover:bg-muted/50"
+                                                                            )}
+                                                                            onClick={() => handleToggleHead(u.id, manager.id, u.reportingHeadIds || [])}
+                                                                        >
+                                                                            <Checkbox checked={isSelected} className="rounded-none" />
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <p className="text-xs font-black uppercase truncate">{manager.firstName} {manager.lastName}</p>
+                                                                                <p className="text-[9px] font-bold text-muted-foreground truncate">{manager.jobTitle}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </ScrollArea>
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </ScrollArea>
                             <div className="p-8 border-t bg-muted/5 shrink-0">
-                                <Button className="w-full h-12 rounded-none font-black uppercase tracking-widest" onClick={() => setIsConfigOpen(false)}>
-                                    Finalize Configuration
+                                <Button className="w-full h-12 rounded-none font-black uppercase tracking-widest" onClick={() => {
+                                    setIsConfigOpen(false);
+                                    toast({ title: "Command Matrix Refreshed", description: "The organizational structure has been synchronized." });
+                                }}>
+                                    Finalize Matrix Configuration
                                 </Button>
                             </div>
                         </DialogContent>
@@ -208,9 +239,9 @@ export default function OrgStructurePage() {
             {userData && (
                 <Alert className="bg-primary/5 border-primary/20 shadow-sm rounded-none p-6 mx-4">
                     <ShieldCheck className="size-5 text-primary" />
-                    <AlertTitle className="text-primary font-black uppercase text-xs tracking-widest mb-1">Command Oversight Confirmation</AlertTitle>
+                    <AlertTitle className="text-primary font-black uppercase text-xs tracking-widest mb-1">Matrix Oversight Directive</AlertTitle>
                     <AlertDescription className="text-sm font-medium">
-                        Manual Mode Active: This structure is currently defined by executive designation rather than automatic roles.
+                        Tactical matrix active: Employees may be displayed under multiple command lines representing cross-functional reporting.
                     </AlertDescription>
                 </Alert>
             )}
@@ -229,7 +260,7 @@ export default function OrgStructurePage() {
                         <div className="p-8 rounded-none bg-muted/20 ring-4 ring-muted/10">
                             <Network className="size-20 text-primary/40" />
                         </div>
-                        <p className="font-black uppercase text-xs tracking-[0.4em]">Structure Not Initiated</p>
+                        <p className="font-black uppercase text-xs tracking-[0.4em]">Matrix Not Initiated</p>
                         <p className="text-[10px] font-bold uppercase tracking-widest max-w-xs leading-relaxed">
                             Start by manually assigning reporting lines in the Configuration portal.
                         </p>
@@ -239,4 +270,3 @@ export default function OrgStructurePage() {
         </div>
     );
 }
-

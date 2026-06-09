@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -12,10 +13,10 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
     Edit, Camera, CheckCircle2, ShieldCheck, 
     FileText, CalendarDays, Loader2, Phone, 
-    Mail, Briefcase, MoreHorizontal, Download, 
+    Mail, Briefcase, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
-    Globe, ShieldAlert, FileCheck, FileBox, Users, ListTodo, Laptop, MapPin, CalendarClock,
-    History, MessageSquareWarning, Timer
+    FileCheck, FileBox, Users, Laptop, MapPin, CalendarClock,
+    MessageSquareWarning, RotateCcw
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -30,8 +31,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
-import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay, isBefore } from "date-fns";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -72,11 +72,13 @@ export default function ProfilePage() {
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
 
-    const teamDocRef = useMemoFirebase(() => employee?.teamId ? doc(firestore, 'teams', employee.teamId) : null, [employee?.teamId, firestore]);
-    const { data: teamData } = useDoc<any>(teamDocRef);
+    const allUsersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+    const { data: allUsers } = useCollection<any>(allUsersQuery);
 
-    const teamLeadDocRef = useMemoFirebase(() => teamData?.teamLeadId ? doc(firestore, 'users', teamData.teamLeadId) : null, [teamData?.teamLeadId, firestore]);
-    const { data: teamLead } = useDoc<any>(teamLeadDocRef);
+    const reportingHeads = React.useMemo(() => {
+        if (!employee?.reportingHeadIds || !allUsers) return [];
+        return allUsers.filter((u: any) => employee.reportingHeadIds.includes(u.id));
+    }, [employee?.reportingHeadIds, allUsers]);
 
     const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
     const { data: branches } = useCollection<any>(branchesQuery);
@@ -121,19 +123,15 @@ export default function ProfilePage() {
         if (!employee?.hireDate) return "N/A";
         const start = new Date(employee.hireDate);
         const now = new Date();
-        
         const totalMonths = differenceInMonths(now, start);
         const years = Math.floor(totalMonths / 12);
         const remainingMonths = totalMonths % 12;
-
         const dateAfterMonths = addMonths(start, totalMonths);
         const days = differenceInDays(now, dateAfterMonths);
-
         let parts = [];
         if (years > 0) parts.push(`${years} yr`);
         parts.push(`${remainingMonths} mo`);
         if (days > 0) parts.push(`${days} d`);
-        
         return parts.join(' ');
     }, [employee]);
 
@@ -189,12 +187,10 @@ export default function ProfilePage() {
         if (!user || !auth.currentUser) return;
         try {
             const { password, confirmPassword, languages, ...updateData } = data;
-            
             const finalUpdateData: any = {
                 ...updateData,
                 languages: languages ? languages.split(',').map(s => s.trim()).filter(Boolean) : []
             };
-
             if (userDocRef) updateDocumentNonBlocking(userDocRef, finalUpdateData);
             await updateProfile(auth.currentUser, { displayName: `${data.firstName} ${data.lastName}` });
             if (data.password) await updatePassword(auth.currentUser, data.password);
@@ -305,25 +301,29 @@ export default function ProfilePage() {
 
                             <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4">
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Reporting Protocol</h3>
-                                <div className="space-y-3">
-                                     <InfoRow label="Structure" value={employee.teamId ? "Tactical Unit" : "Individual Fleet"} />
+                                <div className="space-y-4">
+                                     <InfoRow label="Structure" value={employee.reportingHeadIds?.length ? "Tactical Matrix" : "Individual Fleet"} />
                                      <div className="p-4 bg-muted/20 rounded-none border border-dashed border-border/50">
-                                        <p className="text-[9px] font-black uppercase text-muted-foreground/60 mb-3">Direct Command</p>
-                                        {teamLead ? (
-                                            <div className="flex items-center gap-4">
-                                                <Avatar className="size-10 rounded-none">
-                                                    <AvatarImage src={teamLead.avatar} className="object-cover" />
-                                                    <AvatarFallback className="text-xs rounded-none">{teamLead.firstName[0]}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="font-bold text-sm truncate">{teamLead.firstName} {teamLead.lastName}</p>
-                                                    <p className="text-[9px] font-black uppercase text-primary truncate">{teamLead.jobTitle}</p>
-                                                </div>
-                                                <ShieldCheck className="size-4 text-primary" />
+                                        <p className="text-[9px] font-black uppercase text-muted-foreground/60 mb-3">Direct Command Matrix</p>
+                                        <ScrollArea className={cn(reportingHeads.length > 2 ? "h-32" : "h-auto")}>
+                                            <div className="space-y-3">
+                                                {reportingHeads.length > 0 ? reportingHeads.map((head: any) => (
+                                                    <div key={head.id} className="flex items-center gap-4">
+                                                        <Avatar className="size-10 rounded-none">
+                                                            <AvatarImage src={head.avatar} className="object-cover" />
+                                                            <AvatarFallback className="text-xs font-bold rounded-none">{head.firstName[0]}{head.lastName[0]}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="font-bold text-sm truncate">{head.firstName} {head.lastName}</p>
+                                                            <p className="text-[9px] font-black uppercase text-primary truncate">{head.jobTitle}</p>
+                                                        </div>
+                                                        <ShieldCheck className="size-4 text-primary" />
+                                                    </div>
+                                                )) : (
+                                                    <p className="text-sm font-bold text-muted-foreground uppercase opacity-40">Direct reporting to Admin</p>
+                                                )}
                                             </div>
-                                        ) : (
-                                            <p className="text-sm font-bold text-muted-foreground uppercase opacity-40">Direct reporting to Admin</p>
-                                        )}
+                                        </ScrollArea>
                                      </div>
                                 </div>
                             </Card>
@@ -368,7 +368,6 @@ export default function ProfilePage() {
                         )) || <div className="col-span-full py-12 text-center text-[11px] font-black uppercase opacity-30">No assets assigned</div>}
                     </div></Card>
                 </TabsContent>
-                {/* Additional tabs like Reports can be added here if needed */}
             </Tabs>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
