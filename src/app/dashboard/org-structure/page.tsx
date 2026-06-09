@@ -131,7 +131,7 @@ export default function OrgStructurePage() {
 
     const handleToggleHead = (targetUserId: string, headId: string, currentHeads: string[]) => {
         const userRef = doc(firestore, 'users', targetUserId);
-        let updatedHeads = [...currentHeads];
+        let updatedHeads = Array.isArray(currentHeads) ? [...currentHeads] : [];
         
         if (updatedHeads.includes(headId)) {
             updatedHeads = updatedHeads.filter(h => h !== headId);
@@ -185,9 +185,9 @@ export default function OrgStructurePage() {
                                             <div className="flex-1 min-w-0">
                                                 <Popover>
                                                     <PopoverTrigger asChild>
-                                                        <div className="w-full cursor-pointer p-4 bg-muted/20 hover:bg-muted/30 transition-all ring-1 ring-border/50 flex flex-wrap items-center gap-2 min-h-[56px] rounded-none">
+                                                        <div className="w-full cursor-pointer p-4 bg-muted/20 hover:bg-muted/30 transition-all ring-1 ring-border/50 flex flex-wrap items-center gap-2 min-h-[56px] rounded-none active:scale-[0.99] transition-transform">
                                                             {(u.reportingHeadIds?.length || 0) === 0 ? (
-                                                                <span className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest">Unassigned - Tap to add managers</span>
+                                                                <span className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest px-1">Unassigned - Tap to add managers</span>
                                                             ) : (
                                                                 u.reportingHeadIds?.map(headId => {
                                                                     const head = users.find(h => h.id === headId);

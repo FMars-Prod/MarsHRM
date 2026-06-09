@@ -213,14 +213,14 @@ export default function UsersPage() {
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting Command Heads</Label>
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <div className="w-full cursor-pointer p-4 bg-muted/20 hover:bg-muted/30 transition-all ring-1 ring-border/50 flex flex-wrap items-center gap-2 min-h-[56px] rounded-none">
+                                            <div className="w-full cursor-pointer p-4 bg-muted/20 hover:bg-muted/30 transition-all ring-1 ring-border/50 flex flex-wrap items-center gap-2 min-h-[56px] rounded-none active:scale-[0.99] transition-transform">
                                                 {selectedHeadIds.length === 0 ? (
                                                     <span className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest px-1">Assign Command Managers</span>
                                                 ) : (
                                                     selectedHeadIds.map(headId => {
                                                         const head = users?.find(h => h.id === headId);
                                                         return head ? (
-                                                            <Badge key={headId} variant="secondary" className="bg-primary text-white font-black text-[8px] uppercase tracking-widest rounded-none h-6 px-3 border-none gap-2">
+                                                            <Badge key={headId} variant="secondary" className="bg-primary text-white font-black text-[9px] uppercase tracking-widest rounded-none h-6 px-3 border-none gap-2">
                                                                 {head.firstName} {head.lastName}
                                                                 <X className="size-3 cursor-pointer opacity-60 hover:opacity-100" onClick={(e) => { 
                                                                     e.stopPropagation(); 
