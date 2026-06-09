@@ -23,7 +23,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 
@@ -124,7 +123,6 @@ export default function OrgStructurePage() {
         return users.filter(u => {
             const hasHeads = (u.reportingHeadIds?.length || 0) > 0;
             if (!hasHeads) return true;
-            // If all reporting heads don't exist in the current set, it's a root
             return !u.reportingHeadIds?.some(headId => users.some(existing => existing.id === headId));
         });
     }, [users]);
@@ -160,7 +158,7 @@ export default function OrgStructurePage() {
                                 <Settings2 className="mr-3 size-4" /> Configure Structure
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-none sm:max-w-4xl p-0 border-none shadow-2xl overflow-hidden flex flex-col h-[85vh] z-[60]">
+                        <DialogContent className="rounded-none sm:max-w-4xl p-0 border-none shadow-2xl overflow-hidden flex flex-col h-[85vh]">
                             <DialogHeader className="p-10 border-b bg-white shrink-0">
                                 <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Command Mapping Matrix</DialogTitle>
                                 <DialogDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60 mt-1">
@@ -168,103 +166,82 @@ export default function OrgStructurePage() {
                                 </DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
-                                <div className="p-10 space-y-4">
+                                <div className="p-10 space-y-8">
                                     {users?.map(u => (
-                                        <div key={u.id} className="flex flex-col md:flex-row md:items-center justify-between p-6 bg-white border border-dashed border-border group hover:border-primary/40 transition-all shadow-sm gap-6">
-                                            <div className="flex items-center gap-5 shrink-0">
-                                                <Avatar className="size-14 rounded-none border ring-1 ring-border/50 shadow-sm">
+                                        <div key={u.id} className="p-8 bg-white border-2 border-dashed border-border group hover:border-primary/40 transition-all shadow-sm space-y-6">
+                                            <div className="flex items-center gap-5">
+                                                <Avatar className="size-16 rounded-none border-2 ring-1 ring-border/50 shadow-sm">
                                                     <AvatarImage src={u.avatar} className="object-cover rounded-none" />
-                                                    <AvatarFallback className="rounded-none text-sm font-black">{u.firstName[0]}{u.lastName[0]}</AvatarFallback>
+                                                    <AvatarFallback className="rounded-none text-base font-black">{u.firstName[0]}{u.lastName[0]}</AvatarFallback>
                                                 </Avatar>
                                                 <div className="space-y-1">
-                                                    <p className="font-black text-base uppercase tracking-tight">{u.firstName} {u.lastName}</p>
-                                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{u.jobTitle}</p>
+                                                    <p className="font-black text-lg uppercase tracking-tight leading-none">{u.firstName} {u.lastName}</p>
+                                                    <p className="text-[11px] font-black text-primary uppercase tracking-widest">{u.jobTitle}</p>
                                                 </div>
                                             </div>
 
-                                            <div className="flex-1 min-w-0">
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <div className={cn(
-                                                            "w-full cursor-pointer p-4 transition-all ring-1 flex flex-wrap items-center gap-2 min-h-[64px] rounded-none active:scale-[0.99] transition-transform",
-                                                            (u.reportingHeadIds?.length || 0) === 0 
-                                                                ? "bg-muted/10 border-dashed border-2 border-border/50 hover:bg-muted/20" 
-                                                                : "bg-white ring-primary/20 hover:ring-primary/40 shadow-sm"
-                                                        )}>
-                                                            {(u.reportingHeadIds?.length || 0) === 0 ? (
-                                                                <span className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-widest px-1">Unassigned - Tap to add managers</span>
-                                                            ) : (
-                                                                u.reportingHeadIds?.map(headId => {
-                                                                    const head = users.find(h => h.id === headId);
-                                                                    return head ? (
-                                                                        <Badge key={headId} variant="secondary" className="bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-none h-7 px-4 border-none gap-2 shadow-sm">
-                                                                            {head.firstName} {head.lastName}
-                                                                            <X className="size-3.5 cursor-pointer opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleToggleHead(u.id, headId, u.reportingHeadIds || []); }} />
-                                                                        </Badge>
-                                                                    ) : null;
-                                                                })
-                                                            )}
-                                                            <div className="ml-auto flex items-center gap-2 text-primary opacity-40 group-hover:opacity-100 transition-opacity">
-                                                                <Users className="size-4" />
-                                                                <ChevronDown className="size-4" />
-                                                            </div>
-                                                        </div>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-[400px] p-0 rounded-none border-none shadow-2xl z-[100]" align="end">
-                                                        <div className="p-4 border-b bg-muted/10 space-y-4">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Fleet Command Directory</p>
-                                                            <div className="relative">
-                                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
-                                                                <Input 
-                                                                    placeholder="Search for Reporting Heads..." 
-                                                                    className="h-10 pl-10 rounded-none border-none ring-1 ring-border/50 text-xs font-bold uppercase tracking-tight focus-visible:ring-primary"
-                                                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <ScrollArea className="h-72">
-                                                            <div className="p-2 space-y-1">
-                                                                {users.filter(manager => {
-                                                                    const matchesSearch = `${manager.firstName} ${manager.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || manager.jobTitle.toLowerCase().includes(searchQuery.toLowerCase());
-                                                                    return manager.id !== u.id && matchesSearch;
-                                                                }).map(manager => {
-                                                                    const isSelected = !!u.reportingHeadIds?.includes(manager.id);
-                                                                    return (
-                                                                        <div 
-                                                                            key={manager.id} 
-                                                                            className={cn(
-                                                                                "flex items-center gap-4 p-4 rounded-none transition-all cursor-pointer group",
-                                                                                isSelected ? "bg-primary/5" : "hover:bg-muted/50"
-                                                                            )}
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                e.preventDefault();
-                                                                                handleToggleHead(u.id, manager.id, u.reportingHeadIds || []);
-                                                                            }}
-                                                                        >
-                                                                            <Checkbox checked={isSelected} className="rounded-none pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
-                                                                            <Avatar className="size-10 rounded-none border ring-1 ring-border/50 shrink-0">
-                                                                                <AvatarImage src={manager.avatar} className="object-cover rounded-none" />
-                                                                                <AvatarFallback className="rounded-none text-xs font-black">{manager.firstName[0]}{manager.lastName[0]}</AvatarFallback>
-                                                                            </Avatar>
-                                                                            <div className="min-w-0 flex-1">
-                                                                                <p className="text-sm font-black uppercase truncate group-hover:text-primary transition-colors">{manager.firstName} {manager.lastName}</p>
-                                                                                <p className="text-[10px] font-bold text-muted-foreground truncate uppercase">{manager.jobTitle}</p>
-                                                                            </div>
-                                                                            {isSelected && <Check className="size-4 text-primary" />}
+                                            <div className="space-y-4">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Fleet Command Assignment</Label>
+                                                
+                                                {/* Selected Summary Area */}
+                                                <div className="flex flex-wrap gap-2 min-h-[44px] p-3 bg-muted/10 border border-border/50">
+                                                    {(u.reportingHeadIds?.length || 0) === 0 ? (
+                                                        <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier Command (Direct reporting to Admin)</span>
+                                                    ) : (
+                                                        u.reportingHeadIds?.map(headId => {
+                                                            const head = users.find(h => h.id === headId);
+                                                            return head ? (
+                                                                <Badge key={headId} className="bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-none h-8 px-4 border-none gap-2 shadow-sm">
+                                                                    {head.firstName} {head.lastName}
+                                                                    <X className="size-3.5 cursor-pointer opacity-60 hover:opacity-100" onClick={() => handleToggleHead(u.id, headId, u.reportingHeadIds || [])} />
+                                                                </Badge>
+                                                            ) : null;
+                                                        })
+                                                    )}
+                                                </div>
+
+                                                {/* Selection Matrix */}
+                                                <div className="border border-border">
+                                                    <div className="p-4 border-b bg-muted/20 flex items-center gap-4">
+                                                        <Search className="size-4 text-muted-foreground/50" />
+                                                        <Input 
+                                                            placeholder="Search Fleet Roster..." 
+                                                            className="h-8 border-none ring-0 focus-visible:ring-0 bg-transparent text-xs font-bold uppercase tracking-tight p-0"
+                                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <ScrollArea className="h-64 bg-white">
+                                                        <div className="p-2 space-y-1">
+                                                            {users.filter(manager => {
+                                                                const matchesSearch = `${manager.firstName} ${manager.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || manager.jobTitle.toLowerCase().includes(searchQuery.toLowerCase());
+                                                                return manager.id !== u.id && matchesSearch;
+                                                            }).map(manager => {
+                                                                const isSelected = !!u.reportingHeadIds?.includes(manager.id);
+                                                                return (
+                                                                    <div 
+                                                                        key={manager.id} 
+                                                                        className={cn(
+                                                                            "flex items-center gap-4 p-4 rounded-none transition-all cursor-pointer group border border-transparent",
+                                                                            isSelected ? "bg-primary/5 border-primary/20" : "hover:bg-muted/50"
+                                                                        )}
+                                                                        onClick={() => handleToggleHead(u.id, manager.id, u.reportingHeadIds || [])}
+                                                                    >
+                                                                        <Checkbox checked={isSelected} className="rounded-none pointer-events-none" />
+                                                                        <Avatar className="size-10 rounded-none border shrink-0">
+                                                                            <AvatarImage src={manager.avatar} className="object-cover rounded-none" />
+                                                                            <AvatarFallback className="rounded-none text-xs font-black">{manager.firstName[0]}{manager.lastName[0]}</AvatarFallback>
+                                                                        </Avatar>
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <p className="text-sm font-black uppercase truncate group-hover:text-primary transition-colors">{manager.firstName} {manager.lastName}</p>
+                                                                            <p className="text-[10px] font-bold text-muted-foreground truncate uppercase">{manager.jobTitle}</p>
                                                                         </div>
-                                                                    );
-                                                                })}
-                                                                {users.filter(m => m.id !== u.id && `${m.firstName} ${m.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                                                                    <div className="py-10 text-center opacity-20 grayscale flex flex-col items-center">
-                                                                        <Users className="size-10 mb-2" />
-                                                                        <p className="text-[10px] font-black uppercase tracking-widest">No matching command found</p>
+                                                                        {isSelected && <Check className="size-4 text-primary" />}
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        </ScrollArea>
-                                                    </PopoverContent>
-                                                </Popover>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </ScrollArea>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -273,7 +250,7 @@ export default function OrgStructurePage() {
                             <div className="p-10 border-t bg-white shrink-0">
                                 <Button className="w-full h-14 rounded-none font-black uppercase text-[12px] tracking-[0.3em] shadow-xl shadow-primary/20" onClick={() => {
                                     setIsConfigOpen(false);
-                                    toast({ title: "Command Matrix Refreshed", description: "The organizational structure has been synchronized." });
+                                    toast({ title: "Command Matrix Synchronized" });
                                 }}>
                                     Finalize Matrix Configuration
                                 </Button>

@@ -30,7 +30,6 @@ import { format, startOfDay, endOfDay } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const userSchema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -67,7 +66,6 @@ export default function UsersPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<any | null>(null);
   const [managerSearchQuery, setManagerSearchQuery] = React.useState("");
-  
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users"), orderBy("firstName", "asc")), [firestore]);
@@ -100,15 +98,13 @@ export default function UsersPage() {
         (position) => {
           form.setValue("homeLatitude", position.coords.latitude);
           form.setValue("homeLongitude", position.coords.longitude);
-          toast({ title: "Signal Captured", description: "Current coordinates updated with high precision." });
+          toast({ title: "Signal Captured" });
         },
         (error) => {
           toast({ variant: "destructive", title: "GPS Error", description: error.message });
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
-    } else {
-      toast({ variant: "destructive", title: "Not Supported", description: "Geolocation is not supported by your browser." });
     }
   };
 
@@ -157,19 +153,19 @@ export default function UsersPage() {
             else if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', newUserId), { employeeId: newUserId });
             
             await batch.commit();
-            toast({ title: "Employee Dispatched" });
+            toast({ title: "Employee Registered" });
         }
         setIsDialogOpen(false);
         form.reset();
     } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Dispatch Failed', description: e.message });
+        toast({ variant: 'destructive', title: 'Action Failed', description: e.message });
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
       try {
           await deleteDoc(doc(firestore, 'users', userId));
-          toast({ title: "Registry Purged", description: "User document removed from Firestore." });
+          toast({ title: "Registry Purged" });
           setSelectedUserIds(prev => prev.filter(id => id !== userId));
       } catch (err: any) {
           toast({ variant: 'destructive', title: "Purge Failed", description: err.message });
@@ -177,11 +173,8 @@ export default function UsersPage() {
   };
 
   const toggleSelectAll = (checked: boolean) => {
-      if (checked && users) {
-          setSelectedUserIds(users.map(u => u.id));
-      } else {
-          setSelectedUserIds([]);
-      }
+      if (checked && users) setSelectedUserIds(users.map(u => u.id));
+      else setSelectedUserIds([]);
   };
 
   const toggleSelectUser = (id: string, checked: boolean) => {
@@ -202,106 +195,82 @@ export default function UsersPage() {
                     </DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-8 px-8">
                         <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4 pb-8">
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-4 pb-8">
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">First Name</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
                                     <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Last Name</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
                                 </div>
                                 <FormField control={form.control} name="email" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Email Directive</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
                                 
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting Command Heads</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <div className={cn(
-                                                "w-full cursor-pointer p-4 transition-all ring-1 flex flex-wrap items-center gap-2 min-h-[64px] rounded-none active:scale-[0.99] transition-transform",
-                                                selectedHeadIds.length === 0 
-                                                    ? "bg-muted/10 border-dashed border-2 border-border/50 hover:bg-muted/20" 
-                                                    : "bg-white ring-primary/20 hover:ring-primary/40 shadow-sm"
-                                            )}>
-                                                {selectedHeadIds.length === 0 ? (
-                                                    <span className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-widest px-1">Assign Command Managers</span>
-                                                ) : (
-                                                    selectedHeadIds.map(headId => {
-                                                        const head = users?.find(h => h.id === headId);
-                                                        return head ? (
-                                                            <Badge key={headId} variant="secondary" className="bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-none h-7 px-4 border-none gap-2 shadow-sm">
-                                                                {head.firstName} {head.lastName}
-                                                                <X className="size-3.5 cursor-pointer opacity-60 hover:opacity-100" onClick={(e) => { 
-                                                                    e.stopPropagation(); 
-                                                                    const current = form.getValues("reportingHeadIds");
-                                                                    form.setValue("reportingHeadIds", current.filter(id => id !== headId));
-                                                                }} />
-                                                            </Badge>
-                                                        ) : null;
-                                                    })
-                                                )}
-                                                <div className="ml-auto flex items-center gap-2 text-primary opacity-40 group-hover:opacity-100 transition-opacity">
-                                                    <Users className="size-4" />
-                                                    <ChevronDown className="size-4" />
-                                                </div>
-                                            </div>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[400px] p-0 rounded-none border-none shadow-2xl z-[100]" align="start">
-                                            <div className="p-4 border-b bg-muted/10 space-y-4">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Command Roster</p>
-                                                <div className="relative">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
-                                                    <Input 
-                                                        placeholder="Search Fleet Members..." 
-                                                        className="h-10 pl-10 rounded-none border-none ring-1 ring-border/50 text-xs font-bold uppercase tracking-tight focus-visible:ring-primary"
-                                                        onChange={(e) => setManagerSearchQuery(e.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <ScrollArea className="h-64">
-                                                <div className="p-2 space-y-1">
-                                                    {users?.filter(u => {
-                                                        const matchesSearch = `${u.firstName} ${u.lastName}`.toLowerCase().includes(managerSearchQuery.toLowerCase()) || u.jobTitle.toLowerCase().includes(managerSearchQuery.toLowerCase());
-                                                        return u.id !== editingUser?.id && matchesSearch;
-                                                    }).map(manager => {
-                                                        const isSelected = !!selectedHeadIds.includes(manager.id);
-                                                        return (
-                                                            <div 
-                                                                key={manager.id} 
-                                                                className={cn(
-                                                                    "flex items-center gap-4 p-4 rounded-none transition-all cursor-pointer group",
-                                                                    isSelected ? "bg-primary/5" : "hover:bg-muted/50"
-                                                                )}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    e.preventDefault();
-                                                                    const current = form.getValues("reportingHeadIds");
-                                                                    if (isSelected) {
-                                                                        form.setValue("reportingHeadIds", current.filter(id => id !== manager.id));
-                                                                    } else {
-                                                                        form.setValue("reportingHeadIds", [...current, manager.id]);
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <Checkbox checked={isSelected} className="rounded-none pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
-                                                                <Avatar className="size-10 rounded-none border ring-1 ring-border/50 shrink-0">
-                                                                    <AvatarImage src={manager.avatar} className="object-cover rounded-none" />
-                                                                    <AvatarFallback className="rounded-none text-xs font-black">{manager.firstName[0]}{manager.lastName[0]}</AvatarFallback>
-                                                                </Avatar>
-                                                                <div className="min-w-0 flex-1">
-                                                                    <p className="text-sm font-black uppercase truncate group-hover:text-primary transition-colors">{manager.firstName} {manager.lastName}</p>
-                                                                    <p className="text-[10px] font-bold text-muted-foreground truncate uppercase">{manager.jobTitle}</p>
-                                                                </div>
-                                                                {isSelected && <Check className="size-4 text-primary" />}
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Command Matrix Assignment</Label>
+                                    
+                                    {/* Selected Heads View */}
+                                    <div className="flex flex-wrap gap-2 min-h-[48px] p-3 bg-muted/10 border-2 border-dashed border-border/50">
+                                        {selectedHeadIds.length === 0 ? (
+                                            <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier Command (Unassigned)</span>
+                                        ) : (
+                                            selectedHeadIds.map(headId => {
+                                                const head = users?.find(h => h.id === headId);
+                                                return head ? (
+                                                    <Badge key={headId} className="bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-none h-8 px-4 border-none gap-2 shadow-sm">
+                                                        {head.firstName} {head.lastName}
+                                                        <X className="size-3.5 cursor-pointer opacity-60 hover:opacity-100" onClick={() => { 
+                                                            const current = form.getValues("reportingHeadIds");
+                                                            form.setValue("reportingHeadIds", current.filter(id => id !== headId));
+                                                        }} />
+                                                    </Badge>
+                                                ) : null;
+                                            })
+                                        )}
+                                    </div>
+
+                                    {/* Direct Roster Selection */}
+                                    <div className="border border-border">
+                                        <div className="p-4 border-b bg-muted/20 flex items-center gap-4">
+                                            <Search className="size-4 text-muted-foreground/50" />
+                                            <Input 
+                                                placeholder="Search Fleet Roster..." 
+                                                className="h-8 border-none ring-0 focus-visible:ring-0 bg-transparent text-xs font-bold uppercase tracking-tight p-0"
+                                                onChange={(e) => setManagerSearchQuery(e.target.value)}
+                                            />
+                                        </div>
+                                        <ScrollArea className="h-48 bg-white">
+                                            <div className="p-2 space-y-1">
+                                                {users?.filter(u => {
+                                                    const matchesSearch = `${u.firstName} ${u.lastName}`.toLowerCase().includes(managerSearchQuery.toLowerCase()) || u.jobTitle.toLowerCase().includes(managerSearchQuery.toLowerCase());
+                                                    return u.id !== editingUser?.id && matchesSearch;
+                                                }).map(manager => {
+                                                    const isSelected = !!selectedHeadIds.includes(manager.id);
+                                                    return (
+                                                        <div 
+                                                            key={manager.id} 
+                                                            className={cn(
+                                                                "flex items-center gap-4 p-4 rounded-none transition-all cursor-pointer group border border-transparent",
+                                                                isSelected ? "bg-primary/5 border-primary/20" : "hover:bg-muted/50"
+                                                            )}
+                                                            onClick={() => {
+                                                                const current = form.getValues("reportingHeadIds");
+                                                                if (isSelected) form.setValue("reportingHeadIds", current.filter(id => id !== manager.id));
+                                                                else form.setValue("reportingHeadIds", [...current, manager.id]);
+                                                            }}
+                                                        >
+                                                            <Checkbox checked={isSelected} className="rounded-none pointer-events-none" />
+                                                            <Avatar className="size-10 rounded-none border shrink-0">
+                                                                <AvatarImage src={manager.avatar} className="object-cover rounded-none" />
+                                                                <AvatarFallback className="rounded-none text-xs font-black">{manager.firstName[0]}{manager.lastName[0]}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-sm font-black uppercase truncate group-hover:text-primary transition-colors">{manager.firstName} {manager.lastName}</p>
+                                                                <p className="text-[10px] font-bold text-muted-foreground truncate uppercase">{manager.jobTitle}</p>
                                                             </div>
-                                                        );
-                                                    })}
-                                                    {users?.filter(m => m.id !== editingUser?.id && `${m.firstName} ${m.lastName}`.toLowerCase().includes(managerSearchQuery.toLowerCase())).length === 0 && (
-                                                        <div className="py-10 text-center opacity-20 grayscale flex flex-col items-center">
-                                                            <Users className="size-10 mb-2" />
-                                                            <p className="text-[10px] font-black uppercase tracking-widest">No matching command found</p>
+                                                            {isSelected && <Check className="size-4 text-primary" />}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            </ScrollArea>
-                                        </PopoverContent>
-                                    </Popover>
+                                                    );
+                                                })}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
