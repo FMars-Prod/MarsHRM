@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -112,7 +113,11 @@ export function AttendanceWidget() {
         setTotalBreakTime(Number(todaysAttendance.totalBreakDuration || 0));
         setLastClockInTime(checkIn);
         if (checkOut && checkIn) { setStatus("out"); setHasClockedOutToday(true); }
-        else if (checkIn) { setHasClockedOutToday(false); if (lunchOut && !lunchIn) { setStatus("lunch"); setCurrentBreakStartTime(lunchOut); } else { setStatus("in"); setCurrentBreakStartTime(null); } }
+        else if (checkIn) { 
+          setHasClockedOutToday(false); 
+          if (lunchOut && !lunchIn) { setStatus("lunch"); setCurrentBreakStartTime(lunchOut); } 
+          else { setStatus("in"); setCurrentBreakStartTime(null); } 
+        }
     } else { setStatus("out"); setHasClockedOutToday(false); setTotalBreakTime(0); setLastClockInTime(null); }
   }, [todaysAttendance]);
 
@@ -177,6 +182,25 @@ export function AttendanceWidget() {
       }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Satellite Signal Lost" }); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
+  const handleLunchOut = () => {
+    updateDocumentNonBlocking(getTodaysAttendanceRef!, {
+      lunchOutTime: serverTimestamp()
+    });
+    toast({ title: "Lunch Break Active", description: "Strategic pause initiated." });
+  };
+
+  const handleLunchIn = () => {
+    const breakStart = todaysAttendance?.lunchOutTime?.toDate();
+    const breakEnd = new Date();
+    const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
+    
+    updateDocumentNonBlocking(getTodaysAttendanceRef!, {
+      lunchInTime: serverTimestamp(),
+      totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
+    });
+    toast({ title: "Back from Lunch", description: "Operational duties resumed." });
+  };
+
   const handleSubmitOutOfRangeRequest = () => {
       if (!outOfRangeReason.trim() || !user || !userData || !lastCapturedLoc) return;
 
@@ -222,11 +246,15 @@ export function AttendanceWidget() {
             </CardHeader>
 
             <CardContent className="p-4 flex flex-col items-center gap-4 text-center">
-                <div className="py-2">
+                <div className="py-2 relative">
                     <div className="text-4xl font-black font-mono tabular-nums tracking-tighter text-primary">
                         {formatTime(workTimer)}
                     </div>
-                    <p className="text-[8px] font-black uppercase text-muted-foreground/40 mt-1 tracking-widest">Shift Progress</p>
+                    <div className="flex items-center justify-center gap-2 mt-1">
+                      <p className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest">Shift Progress</p>
+                      {status === 'lunch' && <Badge className="h-4 px-1.5 rounded-none bg-amber-500 text-white border-none text-[6px] font-black uppercase">ON BREAK</Badge>}
+                      {status === 'in' && <Badge className="h-4 px-1.5 rounded-none bg-green-500 text-white border-none text-[6px] font-black uppercase">ACTIVE</Badge>}
+                    </div>
                 </div>
 
                 <div className="w-full grid grid-cols-2 gap-2 max-w-sm">
@@ -250,8 +278,17 @@ export function AttendanceWidget() {
                             Start Shift
                         </Button>
                     ) : status === 'in' ? (
-                        <Button onClick={handleClockOut} variant="destructive" className="w-full h-10 rounded-none text-sm font-black uppercase tracking-widest">
-                            Finish Shift
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button onClick={handleLunchOut} variant="secondary" className="h-10 rounded-none text-xs font-black uppercase tracking-widest">
+                              <Utensils className="size-3 mr-2" /> Lunch Out
+                          </Button>
+                          <Button onClick={handleClockOut} variant="destructive" className="h-10 rounded-none text-xs font-black uppercase tracking-widest">
+                              <LogOut className="size-3 mr-2" /> Finish Shift
+                          </Button>
+                        </div>
+                    ) : status === 'lunch' ? (
+                        <Button onClick={handleLunchIn} className="w-full h-10 rounded-none text-sm font-black uppercase tracking-widest shadow-md bg-amber-500 hover:bg-amber-600">
+                            <Clock className="size-4 mr-2" /> Lunch In (Resume Shift)
                         </Button>
                     ) : (
                         <Badge className="w-full h-10 rounded-none justify-center bg-green-100 text-green-700 border-none font-black uppercase text-[10px] tracking-widest">
