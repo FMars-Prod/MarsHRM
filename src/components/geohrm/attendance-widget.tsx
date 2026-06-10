@@ -8,24 +8,9 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, MapPinned, LogIn, RotateCcw, Zap, Loader2, Timer, Sparkles, ShieldCheck, RefreshCcw, AlertTriangle, Home, Building2, LocateFixed } from "lucide-react";
+import { Clock, Coffee, Briefcase, MapPin, Utensils, LogOut, LogIn, Loader2, Timer, Sparkles, ShieldCheck, AlertTriangle, Home, Building2, LocateFixed, Coffee as ShortBreakIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -36,9 +21,9 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc } from "@/firebase";
-import { doc, serverTimestamp, collection } from "firebase/firestore";
+import { doc, serverTimestamp, collection, Timestamp } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
-import { format, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
@@ -102,7 +87,7 @@ export function AttendanceWidget() {
       return doc(firestore, `users/${user.uid}/attendances`, format(new Date(), 'yyyy-MM-dd'));
   }, [user, firestore]);
   
-  const {data: todaysAttendance} = useDoc(getTodaysAttendanceRef);
+  const {data: todaysAttendance} = useDoc<any>(getTodaysAttendanceRef);
 
   useEffect(() => {
     if (todaysAttendance) {
@@ -110,15 +95,34 @@ export function AttendanceWidget() {
         const checkOut = todaysAttendance.checkOutTime?.toDate?.() || null;
         const lunchOut = todaysAttendance.lunchOutTime?.toDate?.() || null;
         const lunchIn = todaysAttendance.lunchInTime?.toDate?.() || null;
+        const breakOut = todaysAttendance.breakOutTime?.toDate?.() || null;
+        const breakIn = todaysAttendance.breakInTime?.toDate?.() || null;
+
         setTotalBreakTime(Number(todaysAttendance.totalBreakDuration || 0));
         setLastClockInTime(checkIn);
-        if (checkOut && checkIn) { setStatus("out"); setHasClockedOutToday(true); }
-        else if (checkIn) { 
-          setHasClockedOutToday(false); 
-          if (lunchOut && !lunchIn) { setStatus("lunch"); setCurrentBreakStartTime(lunchOut); } 
-          else { setStatus("in"); setCurrentBreakStartTime(null); } 
+
+        if (checkOut && checkIn) { 
+            setStatus("out"); 
+            setHasClockedOutToday(true); 
+        } else if (checkIn) { 
+            setHasClockedOutToday(false); 
+            if (lunchOut && !lunchIn) { 
+                setStatus("lunch"); 
+                setCurrentBreakStartTime(lunchOut); 
+            } else if (breakOut && !breakIn) {
+                setStatus("short_break");
+                setCurrentBreakStartTime(breakOut);
+            } else { 
+                setStatus("in"); 
+                setCurrentBreakStartTime(null); 
+            } 
         }
-    } else { setStatus("out"); setHasClockedOutToday(false); setTotalBreakTime(0); setLastClockInTime(null); }
+    } else { 
+        setStatus("out"); 
+        setHasClockedOutToday(false); 
+        setTotalBreakTime(0); 
+        setLastClockInTime(null); 
+    }
   }, [todaysAttendance]);
 
   useEffect(() => {
@@ -154,13 +158,25 @@ export function AttendanceWidget() {
         setIsVerifyingLocation(false);
         if (dist <= activeGeofence.radius) {
             const todayId = format(new Date(), 'yyyy-MM-dd');
-            setDocumentNonBlocking(getTodaysAttendanceRef!, { id: todayId, employeeId: user!.uid, checkInTime: serverTimestamp(), status: 'present', totalBreakDuration: 0, locationCheckInLatitude: userLoc.latitude, locationCheckInLongitude: userLoc.longitude, isOutOfRange: false }, { merge: true });
+            setDocumentNonBlocking(getTodaysAttendanceRef!, { 
+                id: todayId, 
+                employeeId: user!.uid, 
+                checkInTime: serverTimestamp(), 
+                status: 'present', 
+                totalBreakDuration: 0, 
+                locationCheckInLatitude: userLoc.latitude, 
+                locationCheckInLongitude: userLoc.longitude, 
+                isOutOfRange: false 
+            }, { merge: true });
             toast({ title: "Shift Active", description: `Sector: ${activeGeofence.name}` });
         } else {
             setOutOfRangeType('Check In');
             setIsOutOfRangeDialogOpen(true);
         }
-    }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Satellite Signal Lost", description: "Please enable location services." }); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    }, () => { 
+        setIsVerifyingLocation(false); 
+        toast({ variant: "destructive", title: "Satellite Signal Lost", description: "Please enable location services." }); 
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleClockOut = () => {
@@ -172,19 +188,27 @@ export function AttendanceWidget() {
           setIsVerifyingLocation(false);
           
           if (dist <= activeGeofence.radius) {
-              updateDocumentNonBlocking(getTodaysAttendanceRef!, { checkOutTime: serverTimestamp(), locationCheckOutLatitude: p.coords.latitude, locationCheckOutLongitude: p.coords.longitude });
+              updateDocumentNonBlocking(getTodaysAttendanceRef!, { 
+                  checkOutTime: serverTimestamp(), 
+                  locationCheckOutLatitude: p.coords.latitude, 
+                  locationCheckOutLongitude: p.coords.longitude 
+              });
               toast({ title: "Shift Finalized" });
               router.push('/dashboard/reports');
           } else {
               setOutOfRangeType('Clock Out');
               setIsOutOfRangeDialogOpen(true);
           }
-      }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Satellite Signal Lost" }); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+      }, () => { 
+          setIsVerifyingLocation(false); 
+          toast({ variant: "destructive", title: "Satellite Signal Lost" }); 
+      }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleLunchOut = () => {
     updateDocumentNonBlocking(getTodaysAttendanceRef!, {
-      lunchOutTime: serverTimestamp()
+      lunchOutTime: serverTimestamp(),
+      lunchInTime: null // Reset in case of multiple breaks
     });
     toast({ title: "Lunch Break Active", description: "Strategic pause initiated." });
   };
@@ -199,6 +223,26 @@ export function AttendanceWidget() {
       totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
     });
     toast({ title: "Back from Lunch", description: "Operational duties resumed." });
+  };
+
+  const handleShortBreakOut = () => {
+    updateDocumentNonBlocking(getTodaysAttendanceRef!, {
+        breakOutTime: serverTimestamp(),
+        breakInTime: null
+    });
+    toast({ title: "Short Break Started" });
+  };
+
+  const handleShortBreakIn = () => {
+    const breakStart = todaysAttendance?.breakOutTime?.toDate();
+    const breakEnd = new Date();
+    const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
+    
+    updateDocumentNonBlocking(getTodaysAttendanceRef!, {
+      breakInTime: serverTimestamp(),
+      totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
+    });
+    toast({ title: "Short Break Finished" });
   };
 
   const handleSubmitOutOfRangeRequest = () => {
@@ -225,79 +269,100 @@ export function AttendanceWidget() {
       setOutOfRangeReason("");
   };
 
-  if (isUserDocLoading) return <div className="h-40 flex items-center justify-center text-[8px] font-black uppercase">Synchronizing...</div>;
+  if (isUserDocLoading) return <div className="h-64 flex items-center justify-center text-[10px] font-black uppercase opacity-20 tracking-[0.2em]">Synchronizing Command Hub...</div>;
+
+  const showActiveUI = status !== 'out' || (status === 'out' && !hasClockedOutToday);
 
   return (
     <>
-        <Card className="animate-fade-in-up border-none shadow-sm rounded-none bg-white overflow-hidden font-jakarta">
-            <CardHeader className="p-4 pb-0">
-            <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-black uppercase tracking-tighter flex items-center gap-2 text-primary">
-                    <Clock className="size-3" /> Attendance Hub
-                </CardTitle>
-                <Badge variant="outline" className={cn(
-                    "rounded-none text-[7px] font-black uppercase px-2 h-5 border-none",
-                    userData?.isWfhAllowed ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"
-                )}>
-                    {userData?.isWfhAllowed ? <Home className="size-2.5 mr-1" /> : <Building2 className="size-2.5 mr-1" />}
-                    {userData?.isWfhAllowed ? "WFH Active" : "Office Active"}
+        <div className="w-full flex flex-col items-center gap-8 py-10 animate-fade-in-up font-jakarta max-w-5xl mx-auto">
+            {/* Status Badge */}
+            {status !== 'out' && (
+                <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 shadow-sm animate-pulse">
+                    <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Operational Status: On Shift</span>
+                </div>
+            )}
+
+            {/* Main Timer Display */}
+            <div className="flex flex-col items-center gap-2">
+                <h1 className="text-[100px] lg:text-[140px] font-black leading-none tracking-tighter text-primary drop-shadow-sm font-mono">
+                    {formatTime(workTimer)}
+                </h1>
+                <Badge variant="outline" className="rounded-full px-6 h-8 bg-white/50 border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest">
+                   Target Sector: {activeGeofence.name}
                 </Badge>
             </div>
-            </CardHeader>
 
-            <CardContent className="p-4 flex flex-col items-center gap-4 text-center">
-                <div className="py-2 relative">
-                    <div className="text-4xl font-black font-mono tabular-nums tracking-tighter text-primary">
-                        {formatTime(workTimer)}
-                    </div>
-                    <div className="flex items-center justify-center gap-2 mt-1">
-                      <p className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest">Shift Progress</p>
-                      {status === 'lunch' && <Badge className="h-4 px-1.5 rounded-none bg-amber-500 text-white border-none text-[6px] font-black uppercase">ON BREAK</Badge>}
-                      {status === 'in' && <Badge className="h-4 px-1.5 rounded-none bg-green-500 text-white border-none text-[6px] font-black uppercase">ACTIVE</Badge>}
-                    </div>
-                </div>
+            {/* Status Grid */}
+            <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                <StatusStep 
+                    icon={LogIn} 
+                    label="Clock In" 
+                    time={todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'p') : '--:--'} 
+                    isActive={!!todaysAttendance?.checkInTime}
+                    subValue={todaysAttendance?.locationCheckInLatitude ? `${todaysAttendance.locationCheckInLatitude.toFixed(3)}, ${todaysAttendance.locationCheckInLongitude.toFixed(3)}` : undefined}
+                />
+                <StatusStep 
+                    icon={Utensils} 
+                    label="Lunch Start" 
+                    time={todaysAttendance?.lunchOutTime ? format(todaysAttendance.lunchOutTime.toDate(), 'p') : '--:--'} 
+                    isActive={!!todaysAttendance?.lunchOutTime}
+                />
+                <StatusStep 
+                    icon={LogIn} 
+                    label="Lunch End" 
+                    time={todaysAttendance?.lunchInTime ? format(todaysAttendance.lunchInTime.toDate(), 'p') : '--:--'} 
+                    isActive={!!todaysAttendance?.lunchInTime}
+                />
+                <StatusStep 
+                    icon={LogOut} 
+                    label="Clock Out" 
+                    time={todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'} 
+                    isActive={!!todaysAttendance?.checkOutTime}
+                />
+            </div>
 
-                <div className="w-full grid grid-cols-2 gap-2 max-w-sm">
-                    <div className="p-2 rounded-none bg-muted/20 border border-dashed flex flex-col items-center">
-                        <p className="text-[6px] font-black uppercase text-muted-foreground/60 mb-0.5">Inbound</p>
-                        <p className="text-[10px] font-black">{todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'p') : '--:--'}</p>
-                    </div>
-                    <div className="p-2 rounded-none bg-muted/20 border border-dashed flex flex-col items-center">
-                        <p className="text-[6px] font-black uppercase text-muted-foreground/60 mb-0.5">Outbound</p>
-                        <p className="text-[10px] font-black">{todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'}</p>
-                    </div>
-                </div>
-                
-                <div className="w-full max-w-sm pt-2">
-                    {isVerifyingLocation ? (
-                        <Button disabled className="w-full h-10 rounded-none text-sm font-black uppercase tracking-widest bg-muted text-muted-foreground">
-                            <Loader2 className="animate-spin size-4 mr-2" /> Verifying Sector...
+            {/* Action Buttons */}
+            <div className="w-full max-w-4xl pt-12 flex flex-wrap items-center justify-center gap-4">
+                {isVerifyingLocation ? (
+                    <Button disabled className="h-16 rounded-3xl px-12 bg-muted text-muted-foreground font-black uppercase tracking-widest flex items-center gap-3">
+                        <Loader2 className="size-6 animate-spin" /> Verifying Satellite Signal...
+                    </Button>
+                ) : status === 'out' && !hasClockedOutToday ? (
+                    <Button onClick={handleClockIn} className="h-16 rounded-3xl px-12 text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                        <LogIn className="size-6 mr-3" /> Initiate Deployment
+                    </Button>
+                ) : status === 'in' ? (
+                    <>
+                        <Button onClick={handleLunchOut} variant="outline" className="h-16 rounded-3xl px-10 bg-white border-2 font-black uppercase tracking-widest hover:bg-primary/5 transition-all">
+                            Lunch Out
                         </Button>
-                    ) : status === 'out' && !hasClockedOutToday ? (
-                        <Button onClick={handleClockIn} className="w-full h-10 rounded-none text-sm font-black uppercase tracking-widest shadow-md">
-                            Start Shift
+                        <Button onClick={handleShortBreakOut} variant="outline" className="h-16 rounded-3xl px-10 bg-white border-2 font-black uppercase tracking-widest hover:bg-primary/5 transition-all">
+                            Short Break
                         </Button>
-                    ) : status === 'in' ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button onClick={handleLunchOut} variant="secondary" className="h-10 rounded-none text-xs font-black uppercase tracking-widest">
-                              <Utensils className="size-3 mr-2" /> Lunch Out
-                          </Button>
-                          <Button onClick={handleClockOut} variant="destructive" className="h-10 rounded-none text-xs font-black uppercase tracking-widest">
-                              <LogOut className="size-3 mr-2" /> Finish Shift
-                          </Button>
+                        <Button onClick={handleClockOut} className="h-16 rounded-3xl px-12 bg-rose-500 hover:bg-rose-600 text-white font-black uppercase tracking-widest shadow-xl shadow-rose-500/20 transition-all hover:scale-[1.02]">
+                            Deactivate Shift
+                        </Button>
+                    </>
+                ) : status === 'lunch' ? (
+                    <Button onClick={handleLunchIn} className="h-16 rounded-3xl px-16 bg-primary text-white font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
+                        Lunch In (Resume Ops)
+                    </Button>
+                ) : status === 'short_break' ? (
+                    <Button onClick={handleShortBreakIn} className="h-16 rounded-3xl px-16 bg-primary text-white font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
+                        End Break (Resume Ops)
+                    </Button>
+                ) : (
+                    <div className="flex flex-col items-center gap-4 py-6">
+                        <div className="p-4 bg-emerald-50 rounded-full border-2 border-dashed border-emerald-200">
+                            <ShieldCheck className="size-10 text-emerald-500" />
                         </div>
-                    ) : status === 'lunch' ? (
-                        <Button onClick={handleLunchIn} className="w-full h-10 rounded-none text-sm font-black uppercase tracking-widest shadow-md bg-amber-500 hover:bg-amber-600">
-                            <Clock className="size-4 mr-2" /> Lunch In (Resume Shift)
-                        </Button>
-                    ) : (
-                        <Badge className="w-full h-10 rounded-none justify-center bg-green-100 text-green-700 border-none font-black uppercase text-[10px] tracking-widest">
-                            Shift Concluded
-                        </Badge>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                        <p className="font-black uppercase tracking-[0.3em] text-emerald-700 text-sm">Mission Accomplished</p>
+                    </div>
+                )}
+            </div>
+        </div>
 
         <Dialog open={isOutOfRangeDialogOpen} onOpenChange={setIsOutOfRangeDialogOpen}>
             <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-2xl">
@@ -330,3 +395,27 @@ export function AttendanceWidget() {
     </>
   );
 }
+
+function StatusStep({ icon: Icon, label, time, isActive, subValue }: { icon: any, label: string, time: string, isActive: boolean, subValue?: string }) {
+    return (
+        <Card className={cn(
+            "border-none shadow-sm rounded-3xl transition-all duration-500 overflow-hidden",
+            isActive ? "bg-white ring-1 ring-border shadow-lg" : "bg-transparent opacity-20 grayscale"
+        )}>
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+                <div className={cn(
+                    "p-3 rounded-full transition-colors",
+                    isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                )}>
+                    <Icon className="size-5" />
+                </div>
+                <div>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+                    <p className="text-xl font-black tabular-nums">{time}</p>
+                    {subValue && <p className="text-[8px] font-mono font-bold text-primary/40 mt-1 uppercase">{subValue}</p>}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
