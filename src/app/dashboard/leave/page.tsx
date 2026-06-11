@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -706,13 +707,13 @@ export default function LeavePage() {
         </Dialog>
 
         {selectedRequest && (
-          <SheetContent className="rounded-l-3xl border-none shadow-2xl">
-              <SheetHeader className="pb-6 border-b">
+          <SheetContent className="rounded-l-3xl border-none shadow-2xl flex flex-col sm:max-w-md p-0">
+              <SheetHeader className="p-8 pb-6 border-b shrink-0">
                   <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">Request Details</SheetTitle>
                   <SheetDescription>ID: {selectedRequest.id.slice(0, 8)} • {selectedRequest.category} Submission</SheetDescription>
               </SheetHeader>
-              <ScrollArea className="h-full py-8 pr-4">
-                <div className="space-y-8">
+              <ScrollArea className="flex-1">
+                <div className="p-8 space-y-8 pb-20">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Type</p><Badge variant="secondary" className="rounded-lg">{selectedRequest.category}</Badge></div>
                         {selectedRequest.leaveType && <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Class</p><p className="font-bold">{selectedRequest.leaveType}</p></div>}
@@ -727,7 +728,7 @@ export default function LeavePage() {
                         )}
                     </div>
 
-                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reason</p><p className="text-sm italic leading-relaxed">"{selectedRequest.reason}"</p></div>
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reason</p><p className="text-sm italic leading-relaxed whitespace-pre-wrap">"{selectedRequest.reason}"</p></div>
                     
                     {selectedRequest.rejectionReason && (
                         <div className="p-4 bg-red-50 rounded-2xl border border-red-100">

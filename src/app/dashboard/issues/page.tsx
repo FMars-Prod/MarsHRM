@@ -231,42 +231,44 @@ export default function TicketsPage() {
       </div>
 
       <Sheet open={!!selectedTicket} onOpenChange={o => !o && setSelectedTicket(null)}>
-        <SheetContent className="rounded-l-3xl border-none shadow-2xl">
-            <SheetHeader>
+        <SheetContent className="rounded-l-3xl border-none shadow-2xl flex flex-col sm:max-w-md p-0">
+            <SheetHeader className="p-8 pb-6 border-b shrink-0">
                 <SheetTitle className="text-xl font-black uppercase tracking-tighter">Support Ticket Details</SheetTitle>
                 <SheetDescription>Reference ID: {selectedTicket?.id.slice(0,8)}</SheetDescription>
             </SheetHeader>
-            <div className="py-8 space-y-6">
-                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Subject</p><p className="font-bold">{selectedTicket?.title}</p></div>
-                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Classification</p><p className="font-bold">{selectedTicket?.category}</p></div>
-                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Status</p>
-                    <Badge variant="outline" className={cn("rounded-full text-[10px] font-black", selectedTicket?.status === 'Open' ? 'text-red-600 border-red-200' : selectedTicket?.status === 'In Progress' ? 'text-yellow-600 border-yellow-200' : 'text-green-600 border-green-200')}>
-                        {selectedTicket?.status.toUpperCase()}
-                    </Badge>
-                </div>
-                
-                {selectedTicket?.resolvedByName && (
-                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-green-600 text-white"><ShieldCheck className="size-4" /></div>
-                        <div>
-                            <p className="text-[9px] font-black uppercase text-green-700">Resolution Authenticated By</p>
-                            <p className="text-sm font-bold text-green-900">{selectedTicket.resolvedByName}</p>
-                        </div>
-                    </div>
-                )}
+            <ScrollArea className="flex-1">
+              <div className="p-8 space-y-6 pb-20">
+                  <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Subject</p><p className="font-bold">{selectedTicket?.title}</p></div>
+                  <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Classification</p><p className="font-bold">{selectedTicket?.category}</p></div>
+                  <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Status</p>
+                      <Badge variant="outline" className={cn("rounded-full text-[10px] font-black", selectedTicket?.status === 'Open' ? 'text-red-600 border-red-200' : selectedTicket?.status === 'In Progress' ? 'text-yellow-600 border-yellow-200' : 'text-green-600 border-green-200')}>
+                          {selectedTicket?.status.toUpperCase()}
+                      </Badge>
+                  </div>
+                  
+                  {selectedTicket?.resolvedByName && (
+                      <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-3">
+                          <div className="p-2 rounded-xl bg-green-600 text-white"><ShieldCheck className="size-4" /></div>
+                          <div>
+                              <p className="text-[9px] font-black uppercase text-green-700">Resolution Authenticated By</p>
+                              <p className="text-sm font-bold text-green-900">{selectedTicket.resolvedByName}</p>
+                          </div>
+                      </div>
+                  )}
 
-                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Description</p><p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">{selectedTicket?.description}</p></div>
-                
-                <Separator />
-                
-                <div className="space-y-1">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase">Submitted By</p>
-                    <div className="flex items-center gap-2">
-                        <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary border border-primary/20">{selectedTicket?.submittedBy[0]}</div>
-                        <p className="text-sm font-bold">{selectedTicket?.submittedBy}</p>
-                    </div>
-                </div>
-            </div>
+                  <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Description</p><p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">{selectedTicket?.description}</p></div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-1">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase">Submitted By</p>
+                      <div className="flex items-center gap-2">
+                          <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary border border-primary/20">{selectedTicket?.submittedBy[0]}</div>
+                          <p className="text-sm font-bold">{selectedTicket?.submittedBy}</p>
+                      </div>
+                  </div>
+              </div>
+            </ScrollArea>
         </SheetContent>
       </Sheet>
     </>

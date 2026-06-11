@@ -58,6 +58,7 @@ import { useDoc } from "@/firebase/firestore/use-doc";
 import { doc, collection, serverTimestamp, orderBy, query } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { WithId } from "@/firebase/firestore/use-collection";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Announcement = { 
   title: string;
@@ -206,7 +207,7 @@ export default function AnnouncementsPage() {
           </Dialog>
         )}
       </PageHeader>
-      <Sheet>
+      <Sheet open={!!selectedAnnouncement} onOpenChange={o => !o && setSelectedAnnouncement(null)}>
         <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
@@ -258,19 +259,17 @@ export default function AnnouncementsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <SheetTrigger asChild>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedAnnouncement(announcement);
-                                if (announcement.status === "Unread") {
-                                  handleMarkAsRead(announcement.id);
-                                }
-                              }}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </DropdownMenuItem>
-                          </SheetTrigger>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedAnnouncement(announcement);
+                              if (announcement.status === "Unread") {
+                                handleMarkAsRead(announcement.id);
+                              }
+                            }}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </DropdownMenuItem>
                           {isAdmin && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -305,19 +304,20 @@ export default function AnnouncementsPage() {
           </Table>
         </div>
         {selectedAnnouncement && (
-          <SheetContent>
-            <SheetHeader>
+          <SheetContent className="rounded-l-3xl border-none shadow-2xl flex flex-col sm:max-w-md p-0">
+            <SheetHeader className="p-8 pb-6 border-b shrink-0">
               <SheetTitle>{selectedAnnouncement.title}</SheetTitle>
               <SheetDescription>
                 Published on {formatDate(selectedAnnouncement.publishDate)}
               </SheetDescription>
             </SheetHeader>
-            <Separator className="my-4" />
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {selectedAnnouncement.content}
-              </p>
-            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-8 space-y-4 pb-20">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {selectedAnnouncement.content}
+                </p>
+              </div>
+            </ScrollArea>
           </SheetContent>
         )}
       </Sheet>
