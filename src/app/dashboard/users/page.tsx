@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -10,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check, LocateFixed, Users, Search, X } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check, LocateFixed, Users, Search, X, Loader2 } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, useStorage, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { doc, collection, query, writeBatch, serverTimestamp, deleteDoc, where, getDocs, Timestamp, orderBy } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -19,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "react-hook-form";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -67,6 +68,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = React.useState<any | null>(null);
   const [managerSearchQuery, setManagerSearchQuery] = React.useState("");
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
+  const [isPurging, setIsPurging] = React.useState(false);
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users"), orderBy("firstName", "asc")), [firestore]);
   const { data: users, isLoading } = useCollection<any>(usersQuery);
@@ -163,13 +165,70 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-      try {
-          await deleteDoc(doc(firestore, 'users', userId));
-          toast({ title: "Registry Purged" });
-          setSelectedUserIds(prev => prev.filter(id => id !== userId));
-      } catch (err: any) {
-          toast({ variant: 'destructive', title: "Purge Failed", description: err.message });
-      }
+    setIsPurging(true);
+    try {
+        const batch = writeBatch(firestore);
+
+        // 1. Core User Doc & System Roles
+        batch.delete(doc(firestore, 'users', userId));
+        batch.delete(doc(firestore, 'system_roles_admin', userId));
+        batch.delete(doc(firestore, 'system_roles_hr', userId));
+        batch.delete(doc(firestore, 'system_roles_teamlead', userId));
+
+        // 2. Clear from Other Collections (Queries Required)
+        const purgeMappings = [
+            { path: 'leave_requests', field: 'employeeId' },
+            { path: 'issue_reports', field: 'employeeId' },
+            { path: 'location_change_requests', field: 'employeeId' },
+            { path: 'attendanceApprovalRequests', field: 'employeeId' },
+            { path: 'compliance_reports', field: 'employeeId' },
+            { path: 'payslips', field: 'employeeId' },
+            { path: 'vault_assets', field: 'ownerId' },
+            { path: 'folders', field: 'ownerId' },
+        ];
+
+        for (const mapping of purgeMappings) {
+            const q = query(collection(firestore, mapping.path), where(mapping.field, '==', userId));
+            const snap = await getDocs(q);
+            snap.docs.forEach(d => batch.delete(d.ref));
+        }
+
+        // 3. User Sub-Collections (attendances, reports, etc.)
+        const subCollections = ['attendances', 'reports', 'todos', 'readAnnouncements', 'policy_acknowledgments'];
+        for (const sub of subCollections) {
+            const q = collection(firestore, `users/${userId}/${sub}`);
+            const snap = await getDocs(q);
+            snap.docs.forEach(d => batch.delete(d.ref));
+        }
+
+        // 4. Team Structure De-escalation
+        const teamsQuery = query(collection(firestore, 'teams'), where('memberIds', 'array-contains', userId));
+        const teamsSnap = await getDocs(teamsQuery);
+        teamsSnap.docs.forEach(tDoc => {
+            const data = tDoc.data();
+            const updatedMembers = data.memberIds.filter((id: string) => id !== userId);
+            const teamUpdate: any = { memberIds: updatedMembers };
+            if (data.teamLeadId === userId) teamUpdate.teamLeadId = null;
+            batch.update(tDoc.ref, teamUpdate);
+        });
+
+        // 5. Matrix Reporting Recalibration
+        const subordinatesQuery = query(collection(firestore, 'users'), where('reportingHeadIds', 'array-contains', userId));
+        const subSnap = await getDocs(subordinatesQuery);
+        subSnap.docs.forEach(sDoc => {
+            const data = sDoc.data();
+            const updatedHeads = data.reportingHeadIds.filter((id: string) => id !== userId);
+            batch.update(sDoc.ref, { reportingHeadIds: updatedHeads });
+        });
+
+        await batch.commit();
+        toast({ title: "Purge Protocol Finalized", description: "Identity and associated tactical signals wiped." });
+        setSelectedUserIds(prev => prev.filter(id => id !== userId));
+    } catch (err: any) {
+        toast({ variant: 'destructive', title: "Purge Interrupted", description: err.message });
+    } finally {
+        setIsPurging(false);
+    }
   };
 
   const toggleSelectAll = (checked: boolean) => {
@@ -281,7 +340,7 @@ export default function UsersPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Office Assignment</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent className="rounded-none">{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent className="rounded-none">{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Work Schedule</Label><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormItem>)} />
                                 </div>
@@ -289,11 +348,11 @@ export default function UsersPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="employmentType" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Classification</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="role" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Account Tier</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></Select></FormItem>
                                     )} />
                                 </div>
 
@@ -302,7 +361,7 @@ export default function UsersPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormField control={form.control} name="performanceRating" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Performance Rating</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="leaveBalance" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
@@ -444,12 +503,15 @@ export default function UsersPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Personnel Record?</AlertDialogTitle>
                                         <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                                            This will remove <span className="font-bold text-foreground">{u.firstName}</span>'s entry from the tactical registry. Access credentials will be blocked immediately.
+                                            This will remove <span className="font-bold text-foreground">{u.firstName}</span>'s entry from the tactical registry. All associated shift logs, reports, and tactical signals will be permanently wiped.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter className="mt-8 gap-3">
                                         <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteUser(u.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Confirm Purge</AlertDialogAction>
+                                        <AlertDialogAction disabled={isPurging} onClick={() => handleDeleteUser(u.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">
+                                            {isPurging ? <Loader2 className="size-4 animate-spin mr-2"/> : null}
+                                            Confirm Deep Purge
+                                        </AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
