@@ -1,4 +1,3 @@
-
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -334,8 +333,8 @@ export default function LeavePage() {
   };
 
   const handleRejectionSubmit = () => {
-    if (!requestToReject || !rejectionReason) {
-        toast({ variant: 'destructive', title: 'Reason Required' });
+    if (!requestToReject) {
+        toast({ variant: 'destructive', title: 'Target Identification Lost' });
         return;
     }
     if (!user) return;
@@ -355,7 +354,7 @@ export default function LeavePage() {
     updateDocumentNonBlocking(requestDocRef, {
       status: newStatus,
       [approvalField]: user.uid,
-      rejectionReason: rejectionReason,
+      rejectionReason: rejectionReason.trim() || null,
     });
 
     toast({ title: `Request Rejected` });
@@ -688,10 +687,10 @@ export default function LeavePage() {
             <DialogContent className="rounded-3xl sm:max-w-md border-none shadow-2xl">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Deny Request</DialogTitle>
-                    <DialogDescription>Please provide a specific reason for rejecting {requestToReject?.employeeName}'s request.</DialogDescription>
+                    <DialogDescription>Provide an optional reason for rejecting {requestToReject?.employeeName}'s request.</DialogDescription>
                 </DialogHeader>
                 <div className="py-6 space-y-4">
-                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Rejection Justification</Label>
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Rejection Justification (Optional)</Label>
                     <Textarea 
                         value={rejectionReason} 
                         onChange={e => setRejectionReason(e.target.value)} 
