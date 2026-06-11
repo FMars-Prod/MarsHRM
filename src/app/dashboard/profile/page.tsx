@@ -105,7 +105,6 @@ export default function ProfilePage() {
     ) : null, [user, firestore]);
     const { data: attendanceData } = useCollection<any>(attendanceQuery);
 
-    // Pulse Indicators
     const lastAtt = attendanceData;
     
     const leavePulseQuery = useMemoFirebase(() => user ? query(
@@ -308,17 +307,17 @@ export default function ProfilePage() {
                                         <ScrollArea className={cn(reportingHeads.length > 2 ? "h-32" : "h-auto")}>
                                             <div className="space-y-3">
                                                 {reportingHeads.length > 0 ? reportingHeads.map((head: any) => (
-                                                    <div key={head.id} className="flex items-center gap-4">
+                                                    <Link key={head.id} href={`/dashboard/users/${head.id}`} className="flex items-center gap-4 group">
                                                         <Avatar className="size-10 rounded-none">
                                                             <AvatarImage src={head.avatar} className="object-cover rounded-none" />
                                                             <AvatarFallback className="text-xs font-bold rounded-none">{head.firstName[0]}{head.lastName[0]}</AvatarFallback>
                                                         </Avatar>
                                                         <div className="min-w-0 flex-1">
-                                                            <p className="font-bold text-sm truncate">{head.firstName} {head.lastName}</p>
+                                                            <p className="font-bold text-sm truncate group-hover:text-primary transition-colors">{head.firstName} {head.lastName}</p>
                                                             <p className="text-[9px] font-black uppercase text-primary truncate">{head.jobTitle}</p>
                                                         </div>
                                                         <ShieldCheck className="size-4 text-primary" />
-                                                    </div>
+                                                    </Link>
                                                 )) : (
                                                     <p className="text-sm font-bold text-muted-foreground uppercase opacity-40">Direct reporting to Admin</p>
                                                 )}
@@ -356,14 +355,14 @@ export default function ProfilePage() {
                                 <div className="flex flex-wrap justify-center gap-8 w-full">
                                     {reportingHeads.length > 0 ? reportingHeads.map((head: any) => (
                                         <div key={head.id} className="flex flex-col items-center">
-                                             <div className="p-4 bg-muted/20 border-2 border-dashed border-border/50 rounded-none w-48 text-center group hover:border-primary/40 transition-all">
+                                             <Link href={`/dashboard/users/${head.id}`} className="p-4 bg-muted/20 border-2 border-dashed border-border/50 rounded-none w-48 text-center group hover:border-primary/40 transition-all cursor-pointer">
                                                 <Avatar className="size-12 rounded-none mx-auto mb-3 shadow-sm border border-white">
                                                     <AvatarImage src={head.avatar} className="object-cover" />
                                                     <AvatarFallback className="font-black">{head.firstName[0]}</AvatarFallback>
                                                 </Avatar>
                                                 <p className="font-black text-xs uppercase tracking-tight truncate">{head.firstName} {head.lastName}</p>
                                                 <p className="text-[9px] font-bold text-primary uppercase truncate">{head.jobTitle}</p>
-                                             </div>
+                                             </Link>
                                              <div className="w-px h-8 bg-border mt-0" />
                                         </div>
                                     )) : (
@@ -397,14 +396,14 @@ export default function ProfilePage() {
                                         {directReports.map((report: any) => (
                                             <div key={report.id} className="flex flex-col items-center">
                                                 <div className="w-px h-4 bg-border mb-0" />
-                                                <div className="p-4 bg-white ring-1 ring-border/50 shadow-md rounded-none w-48 text-center group hover:ring-primary/40 transition-all">
+                                                <Link href={`/dashboard/users/${report.id}`} className="p-4 bg-white ring-1 ring-border/50 shadow-md rounded-none w-48 text-center group hover:ring-primary/40 transition-all cursor-pointer">
                                                     <Avatar className="size-10 rounded-none mx-auto mb-3 border border-muted">
-                                                        <AvatarImage src={report.avatar} className="object-cover" />
+                                                        <AvatarImage src={report.avatar} className="object-cover rounded-none" />
                                                         <AvatarFallback className="font-black">{report.firstName[0]}</AvatarFallback>
                                                     </Avatar>
                                                     <p className="font-black text-xs uppercase tracking-tight truncate">{report.firstName} {report.lastName}</p>
                                                     <p className="text-[9px] font-bold text-muted-foreground uppercase truncate">{report.jobTitle}</p>
-                                                </div>
+                                                </Link>
                                             </div>
                                         ))}
                                     </div>
