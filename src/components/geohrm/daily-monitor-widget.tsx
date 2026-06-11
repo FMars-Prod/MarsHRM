@@ -14,6 +14,7 @@ import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 type UserData = {
   id: string;
@@ -275,18 +276,20 @@ export function DailyMonitorWidget() {
                 <ScrollArea className="flex-1">
                   <div className="p-6 space-y-3">
                      {sheetContent.users.map(member => (
-                        <Card key={member.id} className="border-none ring-1 ring-border/50 rounded-none p-4 bg-white">
-                            <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10 rounded-none">
-                                    <AvatarImage src={member.avatar} className="object-cover" />
-                                    <AvatarFallback className="font-bold rounded-none">{member.firstName?.[0]}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-black text-sm">{member.firstName} {member.lastName}</p>
-                                    <p className="text-[10px] font-bold uppercase opacity-50">{member.jobTitle}</p>
+                        <Link key={member.id} href={`/dashboard/users/${member.id}`} className="block">
+                            <Card className="border-none ring-1 ring-border/50 rounded-none p-4 bg-white hover:bg-primary/5 transition-colors cursor-pointer group">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10 rounded-none">
+                                        <AvatarImage src={member.avatar} className="object-cover" />
+                                        <AvatarFallback className="font-bold rounded-none">{member.firstName?.[0]}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-black text-sm group-hover:text-primary transition-colors">{member.firstName} {member.lastName}</p>
+                                        <p className="text-[10px] font-bold uppercase opacity-50">{member.jobTitle}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
+                            </Card>
+                        </Link>
                      ))}
                   </div>
                 </ScrollArea>
