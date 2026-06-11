@@ -50,7 +50,7 @@ const userSchema = z.object({
   homeLongitude: z.coerce.number().optional(),
   homeRadius: z.coerce.number().optional().default(0.5),
   performanceRating: z.string().optional(),
-  leaveBalance: z.coerce.number().default(24),
+  leaveBalance: z.coerce.number().default(12),
   payrollAmount: z.coerce.number().optional(),
   reportingHeadIds: z.array(z.string()).default([]),
 });
@@ -87,7 +87,7 @@ export default function UsersPage() {
       branchId: undefined, shiftType: "General Shift",
       employmentType: "Intern", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
       homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5,
-      performanceRating: "Average", leaveBalance: 24, payrollAmount: 0, reportingHeadIds: []
+      performanceRating: "Average", leaveBalance: 12, payrollAmount: 0, reportingHeadIds: []
     },
   });
 
@@ -146,7 +146,7 @@ export default function UsersPage() {
                 hireDate: new Date().toISOString(), 
                 ...userData, 
                 canUpdateSignature: true,
-                totalLeaveEntitlement: 24,
+                totalLeaveEntitlement: values.employmentType === 'Employee' ? 12 : 0,
                 lastReviewDate: serverTimestamp()
             });
             

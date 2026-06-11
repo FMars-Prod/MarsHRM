@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -29,7 +30,7 @@ export default function SettingsPage() {
         latitude: '', longitude: '', maxDistanceKm: '0.5', shiftStartTime: '09:00', shiftEndTime: '18:00',
         morningReportSlot: '09:50', eveningReportSlot: '18:50', companyName: 'FortuMars AI',
         googleMapsApiKey: 'AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI',
-        defaultLeaveEntitlement: '24'
+        defaultLeaveEntitlement: '12'
     });
 
     React.useEffect(() => {
@@ -54,7 +55,7 @@ export default function SettingsPage() {
         if (personnelData) {
             setForm((prev: any) => ({
                 ...prev,
-                defaultLeaveEntitlement: personnelData.defaultLeaveEntitlement || '24'
+                defaultLeaveEntitlement: personnelData.defaultLeaveEntitlement || '12'
             }));
         }
     }, [locationData, reportData, personnelData]);
@@ -99,7 +100,7 @@ export default function SettingsPage() {
         };
 
         const personnelPayload = {
-            defaultLeaveEntitlement: parseInt(form.defaultLeaveEntitlement) || 24,
+            defaultLeaveEntitlement: parseInt(form.defaultLeaveEntitlement) || 12,
             updatedAt: serverTimestamp()
         };
 
@@ -126,7 +127,7 @@ export default function SettingsPage() {
                                 type="button" 
                                 variant="outline" 
                                 size="sm" 
-                                className="rounded-full font-black uppercase text-[9px] tracking-widest h-9 bg-white border-primary/20 text-primary hover:bg-primary/5"
+                                className="rounded-none font-black uppercase text-[9px] tracking-widest h-9 bg-white border-primary/20 text-primary hover:bg-primary/5"
                                 onClick={handleGetCurrentLocation}
                             >
                                 <LocateFixed className="size-3 mr-2" /> Capture HQ Signal
@@ -135,10 +136,10 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent className="p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Latitude</Label><Input type="number" step="any" value={form.latitude} onChange={e => setForm({...form, latitude: e.target.value})} placeholder="e.g., 28.6139" className="rounded-xl h-12 font-mono" /></div>
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Longitude</Label><Input type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: e.target.value})} placeholder="e.g., 77.2090" className="rounded-xl h-12 font-mono" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Latitude</Label><Input type="number" step="any" value={form.latitude} onChange={e => setForm({...form, latitude: e.target.value})} placeholder="e.g., 28.6139" className="rounded-none h-12 font-mono" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Longitude</Label><Input type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: e.target.value})} placeholder="e.g., 77.2090" className="rounded-none h-12 font-mono" /></div>
                         </div>
-                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Verification Radius (KM)</Label><Input type="number" step="0.1" value={form.maxDistanceKm} onChange={e => setForm({...form, maxDistanceKm: e.target.value})} className="rounded-xl h-12 w-full md:w-1/3" /></div>
+                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Verification Radius (KM)</Label><Input type="number" step="0.1" value={form.maxDistanceKm} onChange={e => setForm({...form, maxDistanceKm: e.target.value})} className="rounded-none h-12 w-full md:w-1/3" /></div>
                     </CardContent>
                 </Card>
 
@@ -155,7 +156,7 @@ export default function SettingsPage() {
                                 value={form.googleMapsApiKey} 
                                 onChange={e => setForm({...form, googleMapsApiKey: e.target.value})} 
                                 placeholder="Paste API Key here..." 
-                                className="rounded-xl h-12 font-mono" 
+                                className="rounded-none h-12 font-mono" 
                             />
                             <p className="text-[9px] text-muted-foreground font-medium italic mt-2">Required for the Live Operational Monitor and precise address lookups. Enable "Maps JavaScript API" and "Geocoding API".</p>
                         </div>
@@ -174,7 +175,7 @@ export default function SettingsPage() {
                                 type="number" 
                                 value={form.defaultLeaveEntitlement} 
                                 onChange={e => setForm({...form, defaultLeaveEntitlement: e.target.value})} 
-                                className="rounded-xl h-12 w-full md:w-1/3 font-black" 
+                                className="rounded-none h-12 w-full md:w-1/3 font-black" 
                             />
                             <p className="text-[9px] text-muted-foreground italic mt-2">This serves as the default mission capacity for all fleet members until manually overridden.</p>
                         </div>
@@ -188,20 +189,20 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent className="p-8 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="space-y-2"><Label className="text-[10px) font-black uppercase text-primary tracking-widest">Shift Log-In Start</Label><Input type="time" value={form.shiftStartTime} onChange={e => setForm({...form, shiftStartTime: e.target.value})} className="rounded-xl h-12" /></div>
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-Out Target</Label><Input type="time" value={form.shiftEndTime} onChange={e => setForm({...form, shiftEndTime: e.target.value})} className="rounded-xl h-12" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-In Start</Label><Input type="time" value={form.shiftStartTime} onChange={e => setForm({...form, shiftStartTime: e.target.value})} className="rounded-none h-12" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-Out Target</Label><Input type="time" value={form.shiftEndTime} onChange={e => setForm({...form, shiftEndTime: e.target.value})} className="rounded-none h-12" /></div>
                         </div>
                         <Separator className="opacity-50" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Morning Report Trigger</Label><Input type="time" value={form.morningReportSlot} onChange={e => setForm({...form, morningReportSlot: e.target.value})} className="rounded-xl h-12" /><p className="text-[9px] text-muted-foreground italic font-bold">Standard: 09:50 AM IST</p></div>
-                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Evening Report Trigger</Label><Input type="time" value={form.eveningReportSlot} onChange={e => setForm({...form, eveningReportSlot: e.target.value})} className="rounded-xl h-12" /><p className="text-[9px] text-muted-foreground italic font-bold">Standard: 06:50 PM IST</p></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Morning Report Trigger</Label><Input type="time" value={form.morningReportSlot} onChange={e => setForm({...form, morningReportSlot: e.target.value})} className="rounded-none h-12" /><p className="text-[9px] text-muted-foreground italic font-bold">Standard: 09:50 AM IST</p></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Evening Report Trigger</Label><Input type="time" value={form.eveningReportSlot} onChange={e => setForm({...form, eveningReportSlot: e.target.value})} className="rounded-none h-12" /><p className="text-[9px] text-muted-foreground italic font-bold">Standard: 06:50 PM IST</p></div>
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
             <div className="pt-6 flex justify-end">
-                <Button onClick={handleSave} className="rounded-full h-14 px-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"><Save className="mr-2 size-5" /> Save Platform Config</Button>
+                <Button onClick={handleSave} className="rounded-none h-14 px-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"><Save className="mr-2 size-5" /> Save Platform Config</Button>
             </div>
         </div>
     );

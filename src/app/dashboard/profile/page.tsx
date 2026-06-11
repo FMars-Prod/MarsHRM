@@ -16,7 +16,7 @@ import {
     Mail, Briefcase, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
     FileCheck, FileBox, Users, Laptop, MapPin, CalendarClock,
-    MessageSquareWarning, RotateCcw, Network
+    MessageSquareWarning, RotateCcw, Network, Check, X
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -124,8 +124,6 @@ export default function ProfilePage() {
     ) : null, [user, firestore]);
     const { data: lastTicket } = useCollection<any>(ticketPulseQuery);
 
-    const lastReport = userReports;
-
     const branchName = React.useMemo(() => {
         if (!branches || !employee?.branchId) return "Office Hub";
         const b = branches.find((b: any) => b.id === employee.branchId);
@@ -199,9 +197,10 @@ export default function ProfilePage() {
 
     if (isEmployeeLoading || !employee) return <div className="p-10 text-center animate-pulse uppercase font-black text-sm">Loading Hub...</div>;
 
+    const isEmployeeType = employee.employmentType === 'Employee';
     const leaveBalValue = employee.leaveBalance;
-    const leaveEntValue = employee.totalLeaveEntitlement || 24;
-    const isLeaveConfigured = leaveBalValue !== undefined;
+    const leaveEntValue = employee.totalLeaveEntitlement || (isEmployeeType ? 12 : 0);
+    const isLeaveConfigured = leaveBalValue !== undefined && isEmployeeType;
 
     return (
         <div className="max-w-6xl mx-auto animate-fade-in-up pb-4 space-y-3 font-jakarta">
@@ -246,13 +245,17 @@ export default function ProfilePage() {
                         <MetricStat label="R" val={attendanceStats.remaining} color="text-sky-500" />
                     </div>
                 </MetricCard>
-                <MetricCard icon={CalendarClock} title="Leave" ratio={isLeaveConfigured ? `${leaveBalValue}/${leaveEntValue}` : "NIL"} progress={isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 0} color="text-sky-600" />
+                <MetricCard 
+                    icon={CalendarClock} 
+                    title="Leave" 
+                    ratio={isEmployeeType ? (isLeaveConfigured ? `${leaveBalValue}/${leaveEntValue}` : "12/12") : "NIL"} 
+                    progress={isEmployeeType ? (isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 100) : 0} 
+                    color="text-sky-600" 
+                />
                 <MetricCard icon={Zap} title="Performance" ratio={employee.performanceRating || "Good"} color="text-orange-600">
                     <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-2.5">Review: {employee.lastReviewDate ? format(employee.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
                 </MetricCard>
-                <MetricCard icon={FileCheck} title="Payroll" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : (employee.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600">
-                    <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-2.5">Next: {employee.employmentType === 'Intern' ? "Performance Based" : "Scheduled cycle"}</p>
-                </MetricCard>
+                <MetricCard icon={FileCheck} title="Payroll" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : (employee.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600" />
                 <MetricCard icon={FileBox} title="Vault" ratio={documents?.length || 0} color="text-emerald-600">
                     <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-2.5">
                         {documents?.[0] ? `Updated: ${format(documents[0].uploadedAt.toDate(), 'dd MMM yy')}` : "Empty"}
@@ -379,7 +382,6 @@ export default function ProfilePage() {
                                         <AvatarImage src={employee.avatar} className="object-cover" />
                                         <AvatarFallback className="font-black text-primary bg-white">{employee.firstName[0]}</AvatarFallback>
                                     </Avatar>
-                                    <p className="font-black text-sm uppercase tracking-widest">YOU</p>
                                     <p className="font-black text-base uppercase tracking-tighter mt-1">{employee.firstName} {employee.lastName}</p>
                                     <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mt-1">{employee.jobTitle}</p>
                                 </div>
@@ -459,8 +461,8 @@ export default function ProfilePage() {
                 <ActivityBarItem 
                     icon={FileText} 
                     title="Last Audit" 
-                    value={lastReport?.[0] ? `${lastReport[0].reportType}` : 'No Reports'} 
-                    status={lastReport?.[0] ? format(lastReport[0].date.toDate(), 'MMM dd') : 'Awaiting'}
+                    value={userReports?.[0] ? `${userReports[0].reportType}` : 'No Reports'} 
+                    status={userReports?.[0] ? format(userReports[0].date.toDate(), 'MMM dd') : 'Awaiting'}
                     color="bg-purple-500"
                 />
             </div>

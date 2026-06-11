@@ -138,9 +138,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   if (isUserLoading || !user) return <div className="p-10 text-center animate-pulse uppercase font-black text-sm">Loading Profile...</div>;
 
+  const isEmployeeType = user.employmentType === 'Employee';
   const leaveBalValue = user.leaveBalance;
-  const leaveEntValue = user.totalLeaveEntitlement || 24;
-  const isLeaveConfigured = leaveBalValue !== undefined;
+  const leaveEntValue = user.totalLeaveEntitlement || (isEmployeeType ? 12 : 0);
+  const isLeaveConfigured = leaveBalValue !== undefined && isEmployeeType;
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
@@ -189,17 +190,19 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 </div>
             </MetricCard>
 
-            <MetricCard icon={CalendarClock} title="Leave Balance" ratio={isLeaveConfigured ? `${leaveBalValue} / ${leaveEntValue}` : "NIL"} progress={isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 0} color="text-sky-600">
-                <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-4">{isLeaveConfigured ? "Days available for use" : "Awaiting config"}</p>
-            </MetricCard>
+            <MetricCard 
+                icon={CalendarClock} 
+                title="Leave Balance" 
+                ratio={isEmployeeType ? (isLeaveConfigured ? `${leaveBalValue} / ${leaveEntValue}` : "12 / 12") : "NIL"} 
+                progress={isEmployeeType ? (isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 100) : 0} 
+                color="text-sky-600" 
+            />
 
             <MetricCard icon={Zap} title="Performance" ratio={user.performanceRating || "Good"} color="text-orange-600">
                 <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-4">Review: {user.lastReviewDate ? format(user.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
             </MetricCard>
 
-            <MetricCard icon={FileCheck} title="Payroll Status" ratio={user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600">
-                <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-4">Next: {user.employmentType === 'Intern' ? "Performance Based" : "Scheduled"}</p>
-            </MetricCard>
+            <MetricCard icon={FileCheck} title="Payroll Status" ratio={user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600" />
 
             <MetricCard icon={FileBox} title="Documents" ratio={documents?.length || 0} color="text-emerald-600">
                 <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-4">
