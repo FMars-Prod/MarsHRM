@@ -254,7 +254,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                             {reportingHeads.map(head => (
                                                 <div key={head.id} className="flex items-center gap-4">
                                                     <Avatar className="size-12 rounded-none">
-                                                        <AvatarImage src={head.avatar} className="object-cover" />
+                                                        <AvatarImage src={head.avatar} className="object-cover rounded-none" />
                                                         <AvatarFallback className="font-bold rounded-none">{head.firstName[0]}</AvatarFallback>
                                                     </Avatar>
                                                     <div className="min-w-0 flex-1">
@@ -325,7 +325,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     <AvatarImage src={user.avatar} className="object-cover" />
                                     <AvatarFallback className="font-black text-primary bg-white">{user.firstName[0]}</AvatarFallback>
                                 </Avatar>
-                                <p className="font-black text-sm uppercase tracking-widest">TARGET UNIT</p>
                                 <p className="font-black text-base uppercase tracking-tighter mt-1">{user.firstName} {user.lastName}</p>
                                 <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mt-1">{user.jobTitle}</p>
                             </div>
