@@ -641,10 +641,16 @@ export default function LeavePage() {
                             <DropdownMenuItem onClick={() => setSelectedRequest(request)} className="font-bold text-xs uppercase tracking-tight"><Eye className="mr-2 h-3.5 w-3.5"/> View Details</DropdownMenuItem>
                           </SheetTrigger>
                            {userRole === 'Team Lead' && request.status === 'Pending' && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Approve</DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Approve</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight"><ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject</DropdownMenuItem>
+                              </>
                           )}
                           {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && request.status === 'Pending HR Approval' && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Finalize</DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Finalize</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight"><ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject</DropdownMenuItem>
+                              </>
                           )}
                           {isUserAdmin && (
                             <AlertDialog>
@@ -676,6 +682,30 @@ export default function LeavePage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Rejection Dialog */}
+        <Dialog open={!!requestToReject} onOpenChange={(o) => !o && setRequestToReject(null)}>
+            <DialogContent className="rounded-3xl sm:max-w-md border-none shadow-2xl">
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Deny Request</DialogTitle>
+                    <DialogDescription>Please provide a specific reason for rejecting {requestToReject?.employeeName}'s request.</DialogDescription>
+                </DialogHeader>
+                <div className="py-6 space-y-4">
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Rejection Justification</Label>
+                    <Textarea 
+                        value={rejectionReason} 
+                        onChange={e => setRejectionReason(e.target.value)} 
+                        placeholder="e.g., Staff shortage or required in-office for strategic briefing..." 
+                        className="rounded-2xl min-h-[120px] bg-muted/20 border-muted"
+                    />
+                </div>
+                <DialogFooter className="gap-2">
+                    <Button variant="outline" onClick={() => setRequestToReject(null)} className="rounded-full h-11 flex-1 font-bold uppercase text-[10px]">Go Back</Button>
+                    <Button onClick={handleRejectionSubmit} variant="destructive" className="rounded-full h-11 flex-1 font-bold uppercase text-[10px] shadow-lg shadow-red-600/20">Confirm Rejection</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         {selectedRequest && (
           <SheetContent className="rounded-l-3xl border-none shadow-2xl">
               <SheetHeader className="pb-6 border-b">
@@ -700,6 +730,13 @@ export default function LeavePage() {
 
                     <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reason</p><p className="text-sm italic leading-relaxed">"{selectedRequest.reason}"</p></div>
                     
+                    {selectedRequest.rejectionReason && (
+                        <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
+                            <p className="text-[10px] font-black uppercase text-red-700 mb-1">Rejection Reason</p>
+                            <p className="text-sm font-medium italic text-red-900">"{selectedRequest.rejectionReason}"</p>
+                        </div>
+                    )}
+
                     <Separator className="opacity-50" />
                     
                     <div className="space-y-4">
