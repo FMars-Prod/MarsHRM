@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -340,7 +339,7 @@ export default function UsersPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Office Assignment</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent className="rounded-none">{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</Select></FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent className="rounded-none">{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Work Schedule</Label><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormItem>)} />
                                 </div>
@@ -348,11 +347,11 @@ export default function UsersPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="employmentType" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Classification</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></Select></FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="role" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Account Tier</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></Select></FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></FormItem>
                                     )} />
                                 </div>
 
@@ -361,7 +360,7 @@ export default function UsersPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormField control={form.control} name="performanceRating" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Performance Rating</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></Select></FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="leaveBalance" render={({ field }) => (
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>

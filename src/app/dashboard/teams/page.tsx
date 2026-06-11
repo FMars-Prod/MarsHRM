@@ -213,7 +213,7 @@ export default function TeamsPage() {
                                                             <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
                                                             <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Confirm Dissolution</AlertDialogAction>
                                                         </AlertDialogFooter>
-                                                    </AlertDialog>
+                                                    </AlertDialogContent>
                                                 </AlertDialog>
                                             </>
                                         )}
