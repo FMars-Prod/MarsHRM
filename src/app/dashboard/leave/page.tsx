@@ -147,7 +147,7 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
         <div className="flex-1">
           <h4 className={cn("font-semibold", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
           <p className="text-sm text-muted-foreground">
-            {leadSkipped && "Skipped (No Team Lead)."}
+            {leadSkipped && "Skipped (No Team Lead or Executive Override)."}
             {!leadSkipped && isApprovedByLead && (request.approvedByTeamLeadId ? `Approved by ${teamLeadName}.` : 'Pending.')}
             {isRejectedByLead && `Rejected.`}
             {isPendingLead && 'Pending approval.'}
@@ -178,7 +178,7 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
             {isApprovedByHR && `Approved by ${hrName}.`}
             {isRejectedByHR && `Rejected.`}
             {isPendingHR && 'Pending HR approval.'}
-            {isPendingLead && 'Waiting for Team Lead.'}
+            {isPendingLead && 'Waiting for Team Lead (or Executive Decision).'}
           </p>
         </div>
       </div>
@@ -646,9 +646,9 @@ export default function LeavePage() {
                                 <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight"><ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject</DropdownMenuItem>
                               </>
                           )}
-                          {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && request.status === 'Pending HR Approval' && (
+                          {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && (request.status === 'Pending' || request.status === 'Pending HR Approval') && (
                               <>
-                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Finalize</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> {request.status === 'Pending' ? 'Direct Approve' : 'Finalize'}</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight"><ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject</DropdownMenuItem>
                               </>
                           )}
