@@ -25,7 +25,7 @@ export function ActionItemsWidget() {
     const [complianceIssues, setComplianceIssues] = React.useState<ActionItem[]>([]);
 
     const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
-    const { data: currentUserData } = useDoc(currentUserDocRef);
+    const { data: currentUserData } = useDoc(userDocRef);
     const userRole = (currentUserData as any)?.role;
     const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
@@ -50,7 +50,7 @@ export function ActionItemsWidget() {
     const { data: allPolicies, isLoading: policiesLoading } = useCollection<any>(policiesQuery);
 
     const acknowledgmentsQuery = useMemoFirebase(() => currentUser ? collection(firestore, `users/${currentUser.uid}/policy_acknowledgments`) : null, [currentUser, firestore]);
-    const { data: acknowledgedPolicies, isLoading: acksLoading } = useCollection<{id: string}>(acknowledgmentsQuery);
+    const { data: acknowledgedPolicies, isLoading: acksLoading } = useCollection<{id: string}>(acknowledgedPoliciesQuery);
 
     const unacknowledgedPolicies = React.useMemo(() => {
         if (!allPolicies || !acknowledgedPolicies) return [];
@@ -86,7 +86,7 @@ export function ActionItemsWidget() {
                             type: 'compliance',
                             title: `Compliance: ${name}`,
                             description: `No Logout on ${format(yesterday, 'MMM d')}`,
-                            href: `/dashboard/analytics?userId=${data.employeeId}`
+                            href: `/dashboard/users/${data.employeeId}`
                         });
                     }
                 });
