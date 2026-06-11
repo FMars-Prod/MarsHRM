@@ -50,7 +50,7 @@ export function ActionItemsWidget() {
     const { data: allPolicies, isLoading: policiesLoading } = useCollection<any>(policiesQuery);
 
     const acknowledgmentsQuery = useMemoFirebase(() => currentUser ? collection(firestore, `users/${currentUser.uid}/policy_acknowledgments`) : null, [currentUser, firestore]);
-    const { data: acknowledgedPolicies, isLoading: acksLoading } = useCollection<{id: string}>(acknowledgedPoliciesQuery);
+    const { data: acknowledgedPolicies, isLoading: acksLoading } = useCollection<{id: string}>(acknowledgmentsQuery);
 
     const unacknowledgedPolicies = React.useMemo(() => {
         if (!allPolicies || !acknowledgedPolicies) return [];
