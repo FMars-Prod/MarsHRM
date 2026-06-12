@@ -8,7 +8,7 @@ import { doc, collection, query } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { format, differenceInMonths, differenceInDays, addMonths } from 'date-fns';
-import { MapPin, ShieldCheck, CalendarDays, Clock } from 'lucide-react';
+import { MapPin, ShieldCheck, CalendarDays, Clock, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function ProfileBentoCard() {
@@ -62,38 +62,43 @@ export function ProfileBentoCard() {
     return (
         <Card className="border-none shadow-2xl rounded-none bg-white overflow-hidden font-jakarta ring-1 ring-border/50 group transition-all duration-500 hover:shadow-primary/5">
             <CardContent className="p-0">
-                <div className="flex flex-col md:flex-row items-stretch">
-                    {/* Primary Identity Section - Linear Layout */}
-                    <div className="flex-1 p-6 lg:p-10 flex flex-col sm:flex-row items-start gap-6 lg:gap-10 border-b md:border-b-0 md:border-r border-dashed border-border/50">
+                <div className="flex flex-col md:flex-row items-stretch min-h-[220px]">
+                    {/* Primary Identity Section */}
+                    <div className="flex-1 p-8 lg:p-10 flex flex-col sm:flex-row items-center sm:items-start gap-8 border-b md:border-b-0 md:border-r border-dashed border-border/50">
                         <div className="relative shrink-0">
-                            <Avatar className="h-44 w-32 rounded-none ring-4 ring-white shadow-2xl transition-transform duration-500 group-hover:scale-105">
+                            <Avatar className="size-32 sm:size-40 rounded-none ring-4 ring-white shadow-2xl transition-transform duration-500 group-hover:scale-105">
                                 {employee.avatar ? (
                                     isUrl ? <AvatarImage src={employee.avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 text-4xl lg:text-5xl font-black">{employee.avatar}</div>
                                 ) : <AvatarFallback className="text-3xl lg:text-4xl font-black bg-primary/10 text-primary rounded-none">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>}
                             </Avatar>
                             <Badge className="absolute -bottom-2 -right-2 h-6 px-3 bg-green-500 text-white border-2 border-white shadow-lg rounded-none font-black text-[8px] uppercase tracking-widest flex items-center gap-1">
-                                Active
+                                <div className="size-1 rounded-full bg-white animate-pulse" /> Active
                             </Badge>
                         </div>
 
-                        <div className="flex-1 text-left space-y-4 pt-1 min-w-0">
-                            <div className="space-y-1">
-                                <h2 className="text-3xl lg:text-5xl font-black tracking-tighter truncate leading-none text-foreground">
+                        <div className="flex-1 text-center sm:text-left space-y-6 pt-1 min-w-0 flex flex-col justify-center h-full">
+                            <div className="space-y-1.5">
+                                <h2 className="text-3xl lg:text-4xl font-black tracking-tighter truncate leading-none text-foreground">
                                     {employee.firstName} {employee.lastName}
                                 </h2>
-                                <p className="text-base lg:text-xl font-bold text-muted-foreground/80">{employee.jobTitle}</p>
+                                <p className="text-base lg:text-lg font-bold text-muted-foreground/80 uppercase tracking-wide">{employee.jobTitle}</p>
                             </div>
-                            <div className="flex items-center gap-2.5 text-[10px] lg:text-xs font-black text-primary/60 uppercase tracking-[0.2em]">
-                                <MapPin className="size-3.5" /> {branchName} • {employee.department}
+                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-y-2 gap-x-4">
+                                <Badge variant="outline" className="text-[10px] font-black text-primary/70 uppercase tracking-widest bg-primary/5 border-primary/20 rounded-none px-3 py-1 flex gap-2 items-center">
+                                    <MapPin className="size-3" /> {branchName}
+                                </Badge>
+                                <Badge variant="outline" className="text-[10px] font-black text-muted-foreground/70 uppercase tracking-widest bg-muted/20 border-none rounded-none px-3 py-1 flex gap-2 items-center">
+                                    <Building2 className="size-3" /> {employee.department}
+                                </Badge>
                             </div>
                         </div>
                     </div>
 
                     {/* Meta Stats Section */}
-                    <div className="w-full md:w-[220px] p-6 lg:p-10 bg-muted/5 flex flex-row md:flex-col justify-around md:justify-center gap-6">
-                        <StatusInfo icon={ShieldCheck} label="Tier" value={roleName === 'CEO/Admin' ? 'CEO' : roleName} color="text-indigo-600" />
-                        <StatusInfo icon={CalendarDays} label="Joined" value={joinDate} color="text-emerald-600" />
-                        <StatusInfo icon={Clock} label="Exp" value={experience} color="text-primary" />
+                    <div className="w-full md:w-[200px] p-8 lg:p-10 bg-muted/5 flex flex-row md:flex-col justify-around md:justify-center gap-8 lg:gap-10">
+                        <StatusInfo icon={ShieldCheck} label="Account Tier" value={roleName === 'CEO/Admin' ? 'CEO' : roleName} color="text-indigo-600" />
+                        <StatusInfo icon={CalendarDays} label="Joining Date" value={joinDate} color="text-emerald-600" />
+                        <StatusInfo icon={Clock} label="Operational Tenure" value={experience} color="text-primary" />
                     </div>
                 </div>
             </CardContent>
@@ -108,7 +113,7 @@ function StatusInfo({ icon: Icon, label, value, color }: any) {
                 <Icon className="size-3" />
                 <span className="text-[9px] font-black uppercase tracking-[0.2em]">{label}</span>
             </div>
-            <span className={cn("text-lg lg:text-2xl font-black tracking-tighter leading-none whitespace-nowrap", color)}>{value}</span>
+            <span className={cn("text-lg lg:text-xl font-black tracking-tighter leading-none whitespace-nowrap", color)}>{value}</span>
         </div>
     );
 }
