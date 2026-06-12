@@ -252,14 +252,14 @@ export default function ProfilePage() {
                     progress={isEmployeeType ? (isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 100) : 0} 
                     color="text-sky-600" 
                 />
-                <MetricCard icon={Zap} title="Performance" ratio={employee.performanceRating || "Good"} color="text-orange-600">
+                <MetricCard icon={Zap} title="Performance" ratio={employee.performanceRating || "Good"} color="text-primary">
                     <div className="flex items-center justify-between mt-2.5">
                         <p className="text-[10px] font-black uppercase text-muted-foreground/60">Review: {employee.lastReviewDate ? format(employee.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
                         {isAdmin && (
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 hover:bg-orange-50 rounded-none">
-                                        <Edit className="size-3 text-orange-600" />
+                                    <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 hover:bg-primary/5 rounded-none">
+                                        <Edit className="size-3 text-primary" />
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="rounded-none sm:max-w-sm border-none shadow-2xl">
@@ -278,6 +278,7 @@ export default function ProfilePage() {
                                                 <SelectItem value="Excellent">Excellent</SelectItem>
                                                 <SelectItem value="Good">Good</SelectItem>
                                                 <SelectItem value="Improving">Improving</SelectItem>
+                                                <SelectItem value="In Review">In Review</SelectItem>
                                                 <SelectItem value="Poor">Poor</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -316,7 +317,7 @@ export default function ProfilePage() {
                         </Card>
                         <div className="lg:col-span-4 space-y-2">
                             <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Identity Details</h3>
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Bio Data</h3>
                                 <div className="space-y-3">
                                     <InfoRow label="Birth" value={employee.dob ? format(new Date(employee.dob), 'dd MMM yyyy') : 'N/A'} />
                                     <InfoRow label="Gender" value={employee.gender || 'N/A'} />
@@ -327,6 +328,20 @@ export default function ProfilePage() {
                                         {employee.languages?.map((lang: string) => (
                                             <Badge key={lang} variant="secondary" className="text-[9px] font-bold px-2.5 h-5 uppercase rounded-none">{lang}</Badge>
                                         )) || <span className="text-[10px] opacity-30">No languages registered</span>}
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Mission Assets</h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Assigned Units</span>
+                                        <Badge className="bg-primary/10 text-primary rounded-none font-black text-[10px]">{assignedAssets?.length || 0}</Badge>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Vault Items</span>
+                                        <Badge className="bg-emerald-500/10 text-emerald-600 rounded-none font-black text-[10px]">{documents?.length || 0}</Badge>
                                     </div>
                                 </div>
                             </Card>

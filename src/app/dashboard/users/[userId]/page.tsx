@@ -224,14 +224,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 color="text-sky-600" 
             />
 
-            <MetricCard icon={Zap} title="Performance" ratio={user.performanceRating || "Good"} color="text-orange-600">
+            <MetricCard icon={Zap} title="Performance" ratio={user.performanceRating || "Good"} color="text-primary">
                 <div className="flex items-center justify-between mt-4">
                     <p className="text-[10px] font-black uppercase text-muted-foreground/60">Review: {user.lastReviewDate ? format(user.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
                     {isAdmin && (
                         <Dialog>
                             <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 hover:bg-orange-50 rounded-none">
-                                    <Edit className="size-3 text-orange-600" />
+                                <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 hover:bg-primary/5 rounded-none">
+                                    <Edit className="size-3 text-primary" />
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="rounded-none sm:max-w-sm border-none shadow-2xl">
@@ -244,6 +244,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                             <SelectItem value="Excellent">Excellent</SelectItem>
                                             <SelectItem value="Good">Good</SelectItem>
                                             <SelectItem value="Improving">Improving</SelectItem>
+                                            <SelectItem value="In Review">In Review</SelectItem>
                                             <SelectItem value="Poor">Poor</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -283,7 +284,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     </Card>
                     <div className="lg:col-span-4 space-y-3">
                         <Card className="border-none shadow-sm rounded-none bg-white p-6 space-y-6">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Identity Details</h3>
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Bio Data</h3>
                             <div className="space-y-4">
                                 <InfoRow label="Birth" value={user.dob ? format(new Date(user.dob), 'dd MMM yyyy') : 'N/A'} />
                                 <InfoRow label="Gender" value={user.gender || 'N/A'} />
@@ -294,6 +295,20 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     {user.languages?.map((lang: string) => (
                                         <Badge key={lang} variant="secondary" className="text-[9px] font-bold px-3 py-1 uppercase rounded-none">{lang}</Badge>
                                     )) || <span className="text-[10px] opacity-30">No languages</span>}
+                                </div>
+                            </div>
+                        </Card>
+
+                        <Card className="border-none shadow-sm rounded-none bg-white p-6 space-y-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Mission Assets</h3>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Assigned Units</span>
+                                    <Badge className="bg-primary/10 text-primary rounded-none font-black text-[10px]">{assignedAssets?.length || 0}</Badge>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Vault Items</span>
+                                    <Badge className="bg-emerald-500/10 text-emerald-600 rounded-none font-black text-[10px]">{documents?.length || 0}</Badge>
                                 </div>
                             </div>
                         </Card>
@@ -413,7 +428,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </TabsContent>
             <TabsContent value="documents">
                 <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {documents?.map(doc => (
+                    {documents?.map((doc: any) => (
                         <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-5 rounded-none bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
                             <div className="flex items-center gap-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-none"><FileBox className="size-5" /></div><span className="font-black text-xs uppercase truncate">{doc.title}</span></div>
                         </Link>
@@ -422,7 +437,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </TabsContent>
             <TabsContent value="assets">
                 <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {assignedAssets?.map(asset => (
+                    {assignedAssets?.map((asset: any) => (
                         <div key={asset.id} className="p-5 rounded-none ring-1 ring-border/50 bg-muted/5 space-y-3">
                             <div className="aspect-square bg-white rounded-none flex items-center justify-center border border-dashed p-2">
                                 {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-none" /> : <Laptop className="size-8 opacity-10" />}
