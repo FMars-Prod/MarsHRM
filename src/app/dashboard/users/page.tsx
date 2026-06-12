@@ -11,10 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check, LocateFixed, Users, Search, X, Loader2, UserCheck, Activity } from "lucide-react";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, useStorage, deleteDocumentNonBlocking, useDoc } from "@/firebase";
-import { doc, collection, query, writeBatch, serverTimestamp, deleteDoc, where, getDocs, Timestamp, orderBy } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Check, X, LocateFixed, Building2, RotateCcw, Home, Search, Loader2 } from "lucide-react";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase";
+import { doc, collection, query, writeBatch, serverTimestamp, getDocs, where, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { z } from "zod";
@@ -27,8 +26,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -134,12 +132,9 @@ export default function UsersPage() {
                 (updateData as any).payrollDate = serverTimestamp();
             }
 
-            if (values.employmentType === 'Employee') {
-                updateData.totalLeaveEntitlement = 12;
-            } else {
-                updateData.totalLeaveEntitlement = 0;
-                updateData.leaveBalance = 0;
-            }
+            const isEmployeeType = values.employmentType === 'Employee';
+            updateData.totalLeaveEntitlement = isEmployeeType ? 12 : 0;
+            if (!isEmployeeType) updateData.leaveBalance = 0;
 
             batch.update(userRef, updateData);
             
@@ -156,8 +151,9 @@ export default function UsersPage() {
             const { password, ...userData } = values;
             
             const batch = writeBatch(firestore);
-            const totalLeave = values.employmentType === 'Employee' ? 12 : 0;
-            const leaveBal = values.employmentType === 'Employee' ? values.leaveBalance : 0;
+            const isEmployeeType = values.employmentType === 'Employee';
+            const totalLeave = isEmployeeType ? 12 : 0;
+            const leaveBal = isEmployeeType ? values.leaveBalance : 0;
 
             batch.set(userRef, { 
                 id: newUserId, 
@@ -265,7 +261,7 @@ export default function UsersPage() {
   return (
     <TooltipProvider delayDuration={0}>
     <div className="space-y-8 animate-fade-in-up">
-      <PageHeader title="Staff Registry" description="Global directory of active team members with multi-column tactical analysis.">
+      <PageHeader title="Staff Registry" description="Global directory of team members with industrial table alignment.">
         <div className="flex gap-2">
             <Dialog open={isDialogOpen} onOpenChange={(open) => { if(!open) { setEditingUser(null); setManagerSearchQuery(""); } setIsDialogOpen(open); }}>
                 <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button></DialogTrigger>
@@ -486,16 +482,16 @@ export default function UsersPage() {
 
               return (
                 <TableRow key={u.id} className={cn("border-border/50 group hover:bg-primary/5 transition-colors", selectedUserIds.includes(u.id) && "bg-primary/5")}>
-                    <TableCell className="py-6 px-6">
+                    <TableCell className="py-6 px-6 align-middle">
                         <Checkbox checked={selectedUserIds.includes(u.id)} onCheckedChange={(c) => toggleSelectUser(u.id, !!c)} className="rounded-none" />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-6 align-middle">
                         <Avatar className="h-10 w-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
                             <AvatarImage src={u.avatar} className="object-cover" />
                             <AvatarFallback className="rounded-none font-black text-xs bg-muted">{u.firstName?.[0]}{u.lastName?.[0]}</AvatarFallback>
                         </Avatar>
                     </TableCell>
-                    <TableCell className="py-6">
+                    <TableCell className="py-6 align-middle">
                         <div className="flex flex-col">
                             <Link href={`/dashboard/users/${u.id}`} className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors flex items-center gap-2 leading-none">
                                 {u.firstName} {u.lastName} 
@@ -504,27 +500,27 @@ export default function UsersPage() {
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{u.jobTitle}</span>
                         </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-6 align-middle">
                         {isRemote ? (
-                            <Badge className="bg-sky-100 text-sky-700 text-[8px] font-black uppercase border-none px-2 h-5 rounded-none flex gap-1 items-center w-fit">
-                                <Home className="size-2.5"/> REMOTE SECTOR
+                            <Badge className="bg-sky-100 text-sky-700 text-[8px] font-black uppercase border-none px-2 h-6 rounded-none flex gap-1.5 items-center w-fit shadow-sm">
+                                <Home className="size-3"/> REMOTE SECTOR
                             </Badge>
                         ) : (
-                            <div className="flex items-center gap-2 text-xs font-bold uppercase text-foreground/70">
-                                <Building2 className="size-3.5 opacity-40" />
+                            <div className="flex items-center gap-2.5 text-xs font-bold uppercase text-foreground/70">
+                                <Building2 className="size-4 opacity-40" />
                                 {userBranch?.name || "UNASSIGNED"}
                             </div>
                         )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-6 align-middle">
                         <span className="text-[10px] font-black uppercase text-muted-foreground tracking-tight">{u.shiftType}</span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-6 align-middle">
                         <Badge variant="outline" className="rounded-none font-black text-[9px] uppercase tracking-widest px-2.5 h-6 bg-muted/20 border-none">
                             {u.role}
                         </Badge>
                     </TableCell>
-                    <TableCell className="text-right px-8">
+                    <TableCell className="py-6 align-middle text-right px-8">
                     <div className="flex justify-end items-center gap-2">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

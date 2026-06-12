@@ -92,10 +92,10 @@ const SEARCHABLE_LINKS = [
     { label: "Monitor", href: "/dashboard/monitor", roles: ['HR Manager', 'CEO/Admin'] },
     { label: "Assets", href: "/dashboard/assets", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     { label: "Payslips", href: "/dashboard/payslips", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Announcements", href: "/dashboard/announcements", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Events", href: "/dashboard/events", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+    { label: "Announcements", href: "/dashboard/announcements", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
+    { label: "Events", href: "/dashboard/events", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
     { label: "Holidays", href: "/dashboard/holidays", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "Support Desk", href: "/dashboard/issues", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+    { label: "Support Desk", href: "/dashboard/issues", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
     { label: "Profile Settings", href: "/dashboard/profile", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     { label: "System Settings", href: "/dashboard/settings", roles: ['HR Manager', 'CEO/Admin'] },
 ];

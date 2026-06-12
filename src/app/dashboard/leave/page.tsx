@@ -649,8 +649,7 @@ export default function LeavePage() {
                                     <Check className="mr-2 h-3.5 w-3.5"/> {request.status === 'Pending' ? 'Direct Approve' : 'Finalize'}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight">
-                                    <ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject
-                                </DropdownMenuItem>
+                                    <ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject</DropdownMenuItem>
                               </>
                           )}
                           {isExecutiveTier && (
