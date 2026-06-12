@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -65,7 +66,7 @@ export function ProfileBentoCard() {
                     {/* Primary Identity Section - Linear Layout */}
                     <div className="flex-1 p-6 lg:p-10 flex flex-col sm:flex-row items-start gap-6 lg:gap-10 border-b md:border-b-0 md:border-r border-dashed border-border/50">
                         <div className="relative shrink-0">
-                            <Avatar className="h-24 w-24 lg:h-32 lg:w-32 rounded-none ring-4 ring-white shadow-2xl transition-transform duration-500 group-hover:scale-105">
+                            <Avatar className="h-44 w-32 rounded-none ring-4 ring-white shadow-2xl transition-transform duration-500 group-hover:scale-105">
                                 {employee.avatar ? (
                                     isUrl ? <AvatarImage src={employee.avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 text-4xl lg:text-5xl font-black">{employee.avatar}</div>
                                 ) : <AvatarFallback className="text-3xl lg:text-4xl font-black bg-primary/10 text-primary rounded-none">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>}

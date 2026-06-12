@@ -205,16 +205,16 @@ export default function ProfilePage() {
     return (
         <div className="max-w-6xl mx-auto animate-fade-in-up pb-4 space-y-3 font-jakarta">
             {/* Main Identity Hub */}
-            <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden p-4">
-                <div className="flex flex-col md:flex-row items-center gap-6">
+            <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden p-0">
+                <div className="flex flex-col md:flex-row items-stretch">
                     <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarDialogOpen(true)}>
-                        <Avatar className="h-32 w-32 rounded-none border-2 border-white shadow-md ring-1 ring-border">
+                        <Avatar className="h-[176px] w-32 rounded-none border-r border-border ring-0">
                             <AvatarImage src={employee.avatar} className="object-cover" />
                             <AvatarFallback className="text-4xl font-black bg-muted rounded-none">{employee.firstName?.[0]}</AvatarFallback>
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-none opacity-0 group-hover:opacity-100 transition-opacity"><Camera className="size-8 text-white" /></div>
                         </Avatar>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 p-6">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
                                 <h2 className="text-2xl font-black tracking-tighter leading-none">{employee.firstName} {employee.lastName}</h2>
@@ -443,7 +443,7 @@ export default function ProfilePage() {
                             {/* Current User Section */}
                             <div className="relative flex flex-col items-center w-full">
                                 <div className="p-6 bg-primary text-white shadow-xl rounded-none w-64 text-center ring-4 ring-primary/10">
-                                    <Avatar className="size-16 rounded-none mx-auto mb-4 border-2 border-white/20 shadow-md">
+                                    <Avatar className="h-[176px] w-32 rounded-none mx-auto mb-4 border-2 border-white/20 shadow-md">
                                         <AvatarImage src={employee.avatar} className="object-cover" />
                                         <AvatarFallback className="font-black text-primary bg-white">{employee.firstName[0]}</AvatarFallback>
                                     </Avatar>

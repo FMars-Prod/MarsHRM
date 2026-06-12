@@ -171,36 +171,34 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
-        <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden p-6">
-            <div className="flex flex-col gap-6">
-                <div className="flex items-start gap-6">
-                    <Avatar className="h-32 w-32 rounded-none border-4 border-white shadow-md ring-1 ring-border shrink-0 bg-muted">
-                        <AvatarImage src={user.avatar} className="object-cover" />
-                        <AvatarFallback className="text-4xl font-black rounded-none">{user.firstName?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-5">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div className="space-y-1">
-                                <h2 className="text-2xl font-black tracking-tighter leading-none">{user.firstName} {user.lastName}</h2>
-                                <p className="text-base font-bold text-muted-foreground uppercase tracking-widest">{user.jobTitle}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-none h-10 px-5 font-black uppercase text-[10px] tracking-widest">Export PDF</Button>}
-                                <Button asChild size="sm" className="rounded-none h-10 px-5 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"><Link href="/dashboard/users"><Users className="size-4 mr-2" /> Staff List</Link></Button>
-                            </div>
+        <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden p-0">
+            <div className="flex flex-col md:flex-row items-stretch">
+                <Avatar className="h-[176px] w-32 rounded-none border-r border-border shrink-0 bg-muted">
+                    <AvatarImage src={user.avatar} className="object-cover" />
+                    <AvatarFallback className="text-4xl font-black rounded-none">{user.firstName?.[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 p-6 space-y-5">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-1">
+                            <h2 className="text-2xl font-black tracking-tighter leading-none">{user.firstName} {user.lastName}</h2>
+                            <p className="text-base font-bold text-muted-foreground uppercase tracking-widest">{user.jobTitle}</p>
                         </div>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 py-5 border-y border-dashed border-border/50">
-                            <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
-                            <DetailItem icon={CalendarDays} label="Joining Date" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                            <DetailItem icon={Mail} label="Email Address" value={user.email} />
-                            <DetailItem icon={Phone} label="Phone Number" value={user.phoneNumber || "N/A"} />
+                        <div className="flex gap-2">
+                            {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-none h-10 px-5 font-black uppercase text-[10px] tracking-widest">Export PDF</Button>}
+                            <Button asChild size="sm" className="rounded-none h-10 px-5 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"><Link href="/dashboard/users"><Users className="size-4 mr-2" /> Staff List</Link></Button>
                         </div>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-                            <DetailItem icon={Users} label="Team" value={user.teamId ? "Assigned" : "Unassigned"} />
-                            <DetailItem icon={MapPin} label="Work Location" value={branchName} />
-                            <DetailItem icon={Briefcase} label="Employment Type" value={user.employmentType || "Employee"} />
-                            <DetailItem icon={Clock} label="System Level" value={user.role} />
-                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 py-5 border-y border-dashed border-border/50">
+                        <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
+                        <DetailItem icon={CalendarDays} label="Joining Date" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
+                        <DetailItem icon={Mail} label="Email Address" value={user.email} />
+                        <DetailItem icon={Phone} label="Phone Number" value={user.phoneNumber || "N/A"} />
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+                        <DetailItem icon={Users} label="Team" value={user.teamId ? "Assigned" : "Unassigned"} />
+                        <DetailItem icon={MapPin} label="Work Location" value={branchName} />
+                        <DetailItem icon={Briefcase} label="Employment Type" value={user.employmentType || "Employee"} />
+                        <DetailItem icon={Clock} label="System Level" value={user.role} />
                     </div>
                 </div>
             </div>
@@ -409,7 +407,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         {/* Target User Section */}
                         <div className="relative flex flex-col items-center w-full">
                             <div className="p-6 bg-primary text-white shadow-xl rounded-none w-64 text-center ring-4 ring-primary/10">
-                                <Avatar className="size-16 rounded-none mx-auto mb-4 border-2 border-white/20 shadow-md">
+                                <Avatar className="h-[176px] w-32 rounded-none mx-auto mb-4 border-2 border-white/20 shadow-md">
                                     <AvatarImage src={user.avatar} className="object-cover" />
                                     <AvatarFallback className="font-black text-primary bg-white">{user.firstName[0]}</AvatarFallback>
                                 </Avatar>
