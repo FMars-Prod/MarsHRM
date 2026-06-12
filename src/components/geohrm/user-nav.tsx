@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -123,7 +122,7 @@ export function UserNav({ user }: { user: User | null }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsLogoutDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 p-4 hover:bg-red-50 text-destructive">
               <LogOut className="size-4" />
-              <span>Sign Out Protocol</span>
+              <span>Log Out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -132,16 +131,16 @@ export function UserNav({ user }: { user: User | null }) {
             <AlertDialogContent className="rounded-none border-none shadow-2xl">
                 <AlertDialogHeader>
                     <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
-                        <ShieldAlert className="size-5" /> Terminate Session?
+                        <ShieldAlert className="size-5" /> Log Out?
                     </AlertDialogTitle>
                     <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                        Ensure all mission data and daily reports are synchronized before deactivating your terminal.
+                        Are you sure you want to log out? Please ensure your daily reports are submitted.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="mt-8 gap-3">
-                    <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Stay Active</AlertDialogCancel>
+                    <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleLogout} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
-                        Confirm Sign Out
+                        Log Out
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

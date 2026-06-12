@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -245,7 +244,7 @@ export default function UsersPage() {
       const todayId = format(new Date(), 'yyyy-MM-dd');
       const attRef = doc(firestore, `users/${userId}/attendances`, todayId);
       deleteDocumentNonBlocking(attRef);
-      toast({ title: "Day Reset", description: "Tactical attendance log for today has been purged." });
+      toast({ title: "Day Reset", description: "Attendance for today has been cleared." });
       setUserToReset(null);
   };
 
@@ -539,13 +538,13 @@ export default function UsersPage() {
                                         </DropdownMenuItem>
                                         
                                         <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToReset(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-amber-50 text-amber-600">
-                                            <RotateCcw className="size-4" /> Reset The Day
+                                            <RotateCcw className="size-4" /> Reset Today's Attendance
                                         </DropdownMenuItem>
 
                                         <DropdownMenuSeparator />
                                         
                                         <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToDelete(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-red-50 text-destructive">
-                                            <Trash2 className="size-4" /> Delete Identity
+                                            <Trash2 className="size-4" /> Delete User
                                         </DropdownMenuItem>
                                     </>
                                 )}
@@ -560,21 +559,20 @@ export default function UsersPage() {
         </Table>
       </div>
 
-      {/* Confirmation Dialogs */}
       <AlertDialog open={!!userToReset} onOpenChange={o => !o && setUserToReset(null)}>
           <AlertDialogContent className="rounded-none border-none shadow-2xl">
               <AlertDialogHeader>
                   <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-amber-600 flex items-center gap-2">
-                      <RotateCcw className="size-5" /> Reset Attendance?
+                      <RotateCcw className="size-5" /> Reset Today's Attendance?
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                      This will permanently purge the attendance record for <span className="font-bold text-foreground">{userToReset?.firstName} {userToReset?.lastName}</span> for today. This action cannot be reversed.
+                      Are you sure you want to reset the attendance for <span className="font-bold text-foreground">{userToReset?.firstName} {userToReset?.lastName}</span> for today?
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="mt-8 gap-3">
-                  <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Abort</AlertDialogCancel>
+                  <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={() => handleResetDay(userToReset.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-600/20">
-                      Confirm Reset
+                      Reset
                   </AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
@@ -584,17 +582,17 @@ export default function UsersPage() {
           <AlertDialogContent className="rounded-none border-none shadow-2xl">
               <AlertDialogHeader>
                   <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
-                      <Trash2 className="size-5" /> Purge Personnel Record?
+                      <Trash2 className="size-5" /> Delete User?
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                      This will remove <span className="font-bold text-foreground">{userToDelete?.firstName}</span> from the registry. All associated shift logs, reports, and tactical signals will be permanently wiped.
+                      Are you sure you want to delete <span className="font-bold text-foreground">{userToDelete?.firstName}</span>? This will permanently remove all their data.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="mt-8 gap-3">
                   <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
                   <AlertDialogAction disabled={isPurging} onClick={() => handleDeleteUser(userToDelete.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">
                       {isPurging ? <Loader2 className="size-4 animate-spin mr-2"/> : null}
-                      Confirm Deep Purge
+                      Delete
                   </AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>

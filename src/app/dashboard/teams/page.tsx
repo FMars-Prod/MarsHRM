@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -131,7 +130,7 @@ export default function TeamsPage() {
 
         batch.delete(teamRef);
         await batch.commit();
-        toast({ title: "Team Dissolved", description: "All members have been unassigned." });
+        toast({ title: "Team Deleted", description: "The team has been removed and members unassigned." });
     }
 
     const isUrl = (str?: string) => str && str.startsWith('http');
@@ -207,12 +206,12 @@ export default function TeamsPage() {
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent className="rounded-none border-none shadow-2xl">
                                                         <AlertDialogHeader>
-                                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Dissolve tactical unit?</AlertDialogTitle>
-                                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed">This action will unassign all members from "{team.name}" immediately. This cannot be undone.</AlertDialogDescription>
+                                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Delete Team?</AlertDialogTitle>
+                                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed">Are you sure you want to delete this team? All members will be removed from the team.</AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter className="mt-8 gap-3">
                                                             <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Confirm Dissolution</AlertDialogAction>
+                                                            <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Delete</AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>

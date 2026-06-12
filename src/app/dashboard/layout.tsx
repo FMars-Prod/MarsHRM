@@ -1,4 +1,3 @@
-
 'use client';
 import {
   SidebarProvider,
@@ -127,8 +126,6 @@ export default function DashboardLayout({
   const userRole = (userData as any)?.role || 'Member';
   const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
-  // --- Real-time Data Handshakes for Notifications ---
-
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
     let q = query(collection(firestore, "leave_requests"));
@@ -182,8 +179,6 @@ export default function DashboardLayout({
   }, [userTickets]);
 
   const totalNotifications = (leaveRequests?.length || 0) + unreadAnnouncements + todaysEventsCount + (locationRequests?.length || 0) + ticketUpdateCount + (attRequests?.length || 0);
-
-  // --- Logic Controllers ---
 
   const filteredSearchLinks = useMemo(() => {
     return SEARCHABLE_LINKS.filter(link => 
@@ -446,16 +441,16 @@ export default function DashboardLayout({
                 <AlertDialogContent className="rounded-none border-none shadow-2xl">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
-                            <ShieldAlert className="size-5" /> Terminate Session?
+                            <ShieldAlert className="size-5" /> Log Out?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                            Ensure all mission data and daily reports are synchronized before deactivating your terminal.
+                            Are you sure you want to log out? Please ensure your daily reports are submitted.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-8 gap-3">
-                        <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Stay Active</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleLogout} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
-                            Confirm Sign Out
+                            Log Out
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
