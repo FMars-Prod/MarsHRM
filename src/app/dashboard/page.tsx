@@ -12,10 +12,9 @@ import { ProfileBentoCard } from "@/components/geohrm/profile-bento-card";
 import { MissionHeatmapWidget } from "@/components/geohrm/mission-heatmap-widget";
 import { TodoWidget } from "@/components/geohrm/todo-widget";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ShieldAlert, MessageSquareWarning, Sparkles } from "lucide-react";
+import { ShieldAlert, MessageSquareWarning } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import { format } from "date-fns";
 
 export default function DashboardPage() {
   const { user: currentUser } = useUser();
@@ -90,11 +89,8 @@ export default function DashboardPage() {
       <DashboardReminder />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-          <div className="lg:col-span-8 animate-fade-in-up">
+          <div className="lg:col-span-12 animate-fade-in-up">
               <ProfileBentoCard />
-          </div>
-          <div className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-              <MissionHeatmapWidget />
           </div>
       </div>
 
@@ -104,8 +100,14 @@ export default function DashboardPage() {
           </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-12 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+              <MissionHeatmapWidget />
+          </div>
+      </div>
+
       {isAdminOrHR && (
-        <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+        <div className="animate-fade-in-up" style={{ animationDelay: '350ms' }}>
           <DailyMonitorWidget />
         </div>
       )}

@@ -6,7 +6,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay, differenceInSeconds } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Activity, LayoutGrid } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -60,7 +60,7 @@ export function MissionHeatmapWidget() {
                         <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
                             <Activity className="size-4 text-primary" /> Mission Heatmap
                         </CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Attendance consistency grid</CardDescription>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Attendance consistency grid for {format(monthStart, 'MMMM yyyy')}</CardDescription>
                     </div>
                     <div className="text-right">
                         <p className="text-2xl font-black text-primary leading-none">{avgHours}</p>
@@ -69,11 +69,7 @@ export function MissionHeatmapWidget() {
                 </div>
             </CardHeader>
             <CardContent className="p-8 pt-4">
-                <div className="grid grid-cols-7 gap-2">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                        <div key={i} className="text-[9px] font-black text-muted-foreground/30 text-center mb-1">{d}</div>
-                    ))}
-                    
+                <div className="grid grid-cols-7 sm:grid-cols-14 md:grid-cols-21 lg:grid-cols-[repeat(31,minmax(0,1fr))] gap-2">
                     <TooltipProvider delayDuration={0}>
                         {days.map((day, i) => {
                             const record = attendanceData?.find(r => r.checkInTime && isSameDay(r.checkInTime.toDate(), day));
@@ -108,7 +104,7 @@ export function MissionHeatmapWidget() {
                         {[0, 2, 5, 8, 10].map(h => <div key={h} className={cn("size-2.5 rounded-none shadow-sm", getIntensity(h))} />)}
                         <span className="text-[8px] font-bold text-muted-foreground uppercase ml-1">More</span>
                     </div>
-                    <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none bg-muted/20 border-none px-3">Monthly Audit</Badge>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none bg-muted/20 border-none px-3">Monthly Operational Audit</Badge>
                 </div>
             </CardContent>
         </Card>
