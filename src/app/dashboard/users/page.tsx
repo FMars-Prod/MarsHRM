@@ -21,6 +21,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,7 +51,7 @@ const userSchema = z.object({
   homeLongitude: z.coerce.number().optional(),
   homeRadius: z.coerce.number().optional().default(0.5),
   performanceRating: z.string().optional(),
-  leaveBalance: z.coerce.number().default(12),
+  leaveBalance: z.coerce.number().default(0),
   payrollAmount: z.coerce.number().optional(),
   reportingHeadIds: z.array(z.string()).default([]),
 });
@@ -87,7 +88,7 @@ export default function UsersPage() {
       branchId: undefined, shiftType: "General Shift",
       employmentType: "Intern", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
       homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5,
-      performanceRating: "Average", leaveBalance: 12, payrollAmount: 0, reportingHeadIds: []
+      performanceRating: "Average", leaveBalance: 0, payrollAmount: 0, reportingHeadIds: []
     },
   });
 
@@ -125,6 +126,14 @@ export default function UsersPage() {
                 (updateData as any).payrollDate = serverTimestamp();
             }
 
+            // Apply tiered leave logic
+            if (values.employmentType === 'Employee') {
+                updateData.totalLeaveEntitlement = 12;
+            } else {
+                updateData.totalLeaveEntitlement = 0;
+                updateData.leaveBalance = 0;
+            }
+
             batch.update(userRef, updateData);
             
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
@@ -140,13 +149,19 @@ export default function UsersPage() {
             const { password, ...userData } = values;
             
             const batch = writeBatch(firestore);
+            
+            // Leave protocols
+            const totalLeave = values.employmentType === 'Employee' ? 12 : 0;
+            const leaveBal = values.employmentType === 'Employee' ? values.leaveBalance : 0;
+
             batch.set(userRef, { 
                 id: newUserId, 
                 employeeId: newUserId, 
                 hireDate: new Date().toISOString(), 
                 ...userData, 
+                leaveBalance: leaveBal,
+                totalLeaveEntitlement: totalLeave,
                 canUpdateSignature: true,
-                totalLeaveEntitlement: values.employmentType === 'Employee' ? 12 : 0,
                 lastReviewDate: serverTimestamp()
             });
             
@@ -169,14 +184,13 @@ export default function UsersPage() {
     try {
         const batch = writeBatch(firestore);
 
-        // 1. Core User Doc & System Roles
+        // Core Identifiers
         batch.delete(doc(firestore, 'users', userId));
         batch.delete(doc(firestore, 'system_roles_admin', userId));
         batch.delete(doc(firestore, 'system_roles_hr', userId));
         batch.delete(doc(firestore, 'system_roles_teamlead', userId));
 
-        // 2. Clear from Other Collections (Queries Required)
-        const purgeMappings = [
+        const purgePaths = [
             { path: 'leave_requests', field: 'employeeId' },
             { path: 'issue_reports', field: 'employeeId' },
             { path: 'location_change_requests', field: 'employeeId' },
@@ -187,13 +201,12 @@ export default function UsersPage() {
             { path: 'folders', field: 'ownerId' },
         ];
 
-        for (const mapping of purgeMappings) {
+        for (const mapping of purgePaths) {
             const q = query(collection(firestore, mapping.path), where(mapping.field, '==', userId));
             const snap = await getDocs(q);
             snap.docs.forEach(d => batch.delete(d.ref));
         }
 
-        // 3. User Sub-Collections (attendances, reports, etc.)
         const subCollections = ['attendances', 'reports', 'todos', 'readAnnouncements', 'policy_acknowledgments'];
         for (const sub of subCollections) {
             const q = collection(firestore, `users/${userId}/${sub}`);
@@ -201,7 +214,6 @@ export default function UsersPage() {
             snap.docs.forEach(d => batch.delete(d.ref));
         }
 
-        // 4. Team Structure De-escalation
         const teamsQuery = query(collection(firestore, 'teams'), where('memberIds', 'array-contains', userId));
         const teamsSnap = await getDocs(teamsQuery);
         teamsSnap.docs.forEach(tDoc => {
@@ -212,7 +224,6 @@ export default function UsersPage() {
             batch.update(tDoc.ref, teamUpdate);
         });
 
-        // 5. Matrix Reporting Recalibration
         const subordinatesQuery = query(collection(firestore, 'users'), where('reportingHeadIds', 'array-contains', userId));
         const subSnap = await getDocs(subordinatesQuery);
         subSnap.docs.forEach(sDoc => {
@@ -222,10 +233,9 @@ export default function UsersPage() {
         });
 
         await batch.commit();
-        toast({ title: "Purge Protocol Finalized", description: "Identity and associated tactical signals wiped." });
-        setSelectedUserIds(prev => prev.filter(id => id !== userId));
+        toast({ title: "Identity Wiped" });
     } catch (err: any) {
-        toast({ variant: 'destructive', title: "Purge Interrupted", description: err.message });
+        toast({ variant: 'destructive', title: "Purge Failed", description: err.message });
     } finally {
         setIsPurging(false);
     }

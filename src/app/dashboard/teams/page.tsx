@@ -301,7 +301,7 @@ export default function TeamsPage() {
                                             <Label htmlFor={`m-${member.id}`} className={cn("font-bold text-xs uppercase cursor-pointer flex-1", member.teamId && member.teamId !== editingTeam?.id && "text-muted-foreground opacity-50")}>
                                                 {member.firstName} {member.lastName}
                                             </Label>
-                                            {member.teamId && member.teamId !== editingTeam?.id ? (
+                                            {member.teamId && member.teamId !== editingUser?.id ? (
                                                 <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-muted/50 rounded-none h-4">Assigned</Badge>
                                             ) : (
                                                 <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-green-50 text-green-600 rounded-none h-4">Ready</Badge>
