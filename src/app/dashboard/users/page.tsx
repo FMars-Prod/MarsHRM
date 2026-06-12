@@ -79,7 +79,7 @@ export default function UsersPage() {
 
   const userDocRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
-  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
+  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'Team Lead';
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -94,6 +94,13 @@ export default function UsersPage() {
 
   const isWfhAllowedValue = form.watch("isWfhAllowed");
   const selectedHeadIds = form.watch("reportingHeadIds");
+
+  // Sync Branch vs WFH exclusivity
+  React.useEffect(() => {
+      if (isWfhAllowedValue) {
+          form.setValue("branchId", undefined);
+      }
+  }, [isWfhAllowedValue, form]);
 
   const handleGetCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -126,7 +133,7 @@ export default function UsersPage() {
                 (updateData as any).payrollDate = serverTimestamp();
             }
 
-            // Apply tiered leave logic
+            // Apply tiered leave logic: 1 day per month for Employees, NIL for others
             if (values.employmentType === 'Employee') {
                 updateData.totalLeaveEntitlement = 12;
             } else {
@@ -150,7 +157,7 @@ export default function UsersPage() {
             
             const batch = writeBatch(firestore);
             
-            // Leave protocols
+            // Tiered Leave Protocols
             const totalLeave = values.employmentType === 'Employee' ? 12 : 0;
             const leaveBal = values.employmentType === 'Employee' ? values.leaveBalance : 0;
 
@@ -253,7 +260,7 @@ export default function UsersPage() {
   return (
     <TooltipProvider delayDuration={0}>
     <div className="space-y-8 animate-fade-in-up">
-      <PageHeader title="Staff Registry" description="Global directory of active team members.">
+      <PageHeader title="Staff Registry" description="Global directory of active team members with multi-column tactical analysis.">
         <div className="flex gap-2">
             <Dialog open={isDialogOpen} onOpenChange={(open) => { if(!open) { setEditingUser(null); setManagerSearchQuery(""); } setIsDialogOpen(open); }}>
                 <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button></DialogTrigger>
@@ -347,8 +354,15 @@ export default function UsersPage() {
                                 
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Office Assignment</Label>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent className="rounded-none">{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></FormItem>
+                                        <FormItem>
+                                            <Label className={cn("text-[10px] font-black uppercase text-primary tracking-widest", isWfhAllowedValue && "opacity-20")}>Office Assignment</Label>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled={isWfhAllowedValue}>
+                                                <FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder={isWfhAllowedValue ? "REMOTE OPS" : "Select Branch"} /></SelectTrigger></FormControl>
+                                                <SelectContent className="rounded-none">
+                                                    {branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </FormItem>
                                     )} />
                                     <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Work Schedule</Label><FormControl><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />
                                 </div>
@@ -385,7 +399,7 @@ export default function UsersPage() {
                                     <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
                                         <div className="space-y-0.5">
                                             <Label className="text-sm font-black uppercase tracking-tight">Enable WFH Mode</Label>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Authorize residential logging</p>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Authorize residential logging (Excludes branch assignment)</p>
                                         </div>
                                         <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} className="rounded-none" />)} />
                                     </div>
@@ -448,98 +462,116 @@ export default function UsersPage() {
               <TableHead className="w-[60px] py-6 px-6">
                   <Checkbox checked={selectedUserIds.length === (users?.length || 0) && (users?.length || 0) > 0} onCheckedChange={toggleSelectAll} className="rounded-none" />
               </TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Identity</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Staff Member</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Command Matrix</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Operational Sector</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Shift Profile</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">System Tier</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-8">Control</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Synchronizing Registry...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Synchronizing Registry...</TableCell></TableRow>
             ) : users?.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No tactical units registered.</TableCell></TableRow>
-            ) : users?.map(u => (
-              <TableRow key={u.id} className={cn("border-border/50 group hover:bg-primary/5 transition-colors", selectedUserIds.includes(u.id) && "bg-primary/5")}>
-                <TableCell className="py-6 px-6">
-                    <Checkbox checked={selectedUserIds.includes(u.id)} onCheckedChange={(c) => toggleSelectUser(u.id, !!c)} className="rounded-none" />
-                </TableCell>
-                <TableCell className="py-6">
-                    <div className="flex flex-col">
-                        <Link href={`/dashboard/users/${u.id}`} className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors flex items-center gap-2 leading-none">
-                            {u.firstName} {u.lastName} 
-                            {u.isDemoAccount && <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase border-none px-2 h-4 rounded-none">DEMO</Badge>}
-                        </Link>
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{u.jobTitle}</span>
-                    </div>
-                </TableCell>
-                <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                        {u.reportingHeadIds?.length ? (
-                            u.reportingHeadIds.map((headId: string) => {
-                                const head = users.find(h => h.id === headId);
-                                return head ? (
-                                    <Badge key={headId} variant="outline" className="text-[9px] font-black uppercase bg-primary/5 border-primary/10 text-primary px-2.5 h-6 rounded-none">
-                                        {head.firstName}
-                                    </Badge>
-                                ) : null;
-                            })
-                        ) : (
-                            <span className="text-[10px] font-black uppercase opacity-20 tracking-tighter">Direct to Admin</span>
-                        )}
-                    </div>
-                </TableCell>
-                <TableCell className="text-right px-8">
-                  <div className="flex justify-end items-center gap-2">
-                    {isAdmin && (
-                        <>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-primary hover:bg-primary/5 transition-all" onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }}>
-                                        <Edit className="size-4.5" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Edit Profile</TooltipContent>
-                            </Tooltip>
+                <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No tactical units registered.</TableCell></TableRow>
+            ) : users?.map(u => {
+              const userBranch = branches?.find((b: any) => b.id === u.branchId);
+              const isRemote = u.isWfhAllowed;
 
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-destructive hover:bg-red-50 transition-all">
-                                        <Trash2 className="size-4.5" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-none border-none shadow-2xl">
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Personnel Record?</AlertDialogTitle>
-                                        <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                                            This will remove <span className="font-bold text-foreground">{u.firstName}</span>'s entry from the tactical registry. All associated shift logs, reports, and tactical signals will be permanently wiped.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter className="mt-8 gap-3">
-                                        <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
-                                        <AlertDialogAction disabled={isPurging} onClick={() => handleDeleteUser(u.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">
-                                            {isPurging ? <Loader2 className="size-4 animate-spin mr-2"/> : null}
-                                            Confirm Deep Purge
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </>
-                    )}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-none h-9 w-9 hover:bg-muted/50"><MoreHorizontal className="size-4.5" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-52">
-                            <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2">Operations</DropdownMenuLabel>
-                            <DropdownMenuItem asChild className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
-                                <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-4 text-primary" /> Personnel Audit</Link>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+              return (
+                <TableRow key={u.id} className={cn("border-border/50 group hover:bg-primary/5 transition-colors", selectedUserIds.includes(u.id) && "bg-primary/5")}>
+                    <TableCell className="py-6 px-6">
+                        <Checkbox checked={selectedUserIds.includes(u.id)} onCheckedChange={(c) => toggleSelectUser(u.id, !!c)} className="rounded-none" />
+                    </TableCell>
+                    <TableCell>
+                        <Avatar className="h-10 w-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
+                            <AvatarImage src={u.avatar} className="object-cover" />
+                            <AvatarFallback className="rounded-none font-black text-xs bg-muted">{u.firstName?.[0]}{u.lastName?.[0]}</AvatarFallback>
+                        </Avatar>
+                    </TableCell>
+                    <TableCell className="py-6">
+                        <div className="flex flex-col">
+                            <Link href={`/dashboard/users/${u.id}`} className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors flex items-center gap-2 leading-none">
+                                {u.firstName} {u.lastName} 
+                                {u.isDemoAccount && <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase border-none px-2 h-4 rounded-none">DEMO</Badge>}
+                            </Link>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{u.jobTitle}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        {isRemote ? (
+                            <Badge className="bg-sky-100 text-sky-700 text-[8px] font-black uppercase border-none px-2 h-5 rounded-none flex gap-1 items-center w-fit">
+                                <Home className="size-2.5"/> REMOTE SECTOR
+                            </Badge>
+                        ) : (
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase text-foreground/70">
+                                <Building2 className="size-3.5 opacity-40" />
+                                {userBranch?.name || "UNASSIGNED"}
+                            </div>
+                        )}
+                    </TableCell>
+                    <TableCell>
+                        <span className="text-[10px] font-black uppercase text-muted-foreground tracking-tight">{u.shiftType}</span>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant="outline" className="rounded-none font-black text-[9px] uppercase tracking-widest px-2.5 h-6 bg-muted/20 border-none">
+                            {u.role}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-right px-8">
+                    <div className="flex justify-end items-center gap-2">
+                        {isAdmin && (
+                            <>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-primary hover:bg-primary/5 transition-all" onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }}>
+                                            <Edit className="size-4.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Edit Profile</TooltipContent>
+                                </Tooltip>
+
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-destructive hover:bg-red-50 transition-all">
+                                            <Trash2 className="size-4.5" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="rounded-none border-none shadow-2xl">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Personnel Record?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+                                                This will remove <span className="font-bold text-foreground">{u.firstName}</span>'s entry from the tactical registry. All associated shift logs, reports, and tactical signals will be permanently wiped.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter className="mt-8 gap-3">
+                                            <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
+                                            <AlertDialogAction disabled={isPurging} onClick={() => handleDeleteUser(u.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">
+                                                {isPurging ? <Loader2 className="size-4 animate-spin mr-2"/> : null}
+                                                Confirm Deep Purge
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </>
+                        )}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="rounded-none h-9 w-9 hover:bg-muted/50"><MoreHorizontal className="size-4.5" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-52">
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2">Operations</DropdownMenuLabel>
+                                <DropdownMenuItem asChild className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
+                                    <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-4 text-primary" /> Personnel Audit</Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                    </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
