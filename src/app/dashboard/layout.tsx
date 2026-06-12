@@ -113,7 +113,6 @@ export default function DashboardLayout({
   
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
@@ -291,50 +290,37 @@ export default function DashboardLayout({
             <SidebarTrigger className="rounded-none hover:bg-muted" />
             <Separator orientation="vertical" className="h-6" />
             
-            <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-                <DialogTrigger asChild>
-                    <div className="relative w-full max-sm hidden sm:block max-w-sm group cursor-pointer">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        <div className="h-10 w-full pl-10 pr-4 flex items-center bg-muted/20 border-none ring-1 ring-border/50 rounded-none text-muted-foreground text-sm font-bold uppercase tracking-tight">
-                            Command Search...
-                        </div>
+            <div className="relative w-full max-w-sm hidden sm:block group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Input 
+                    placeholder="Search mission module..." 
+                    className="h-10 w-full pl-10 pr-4 bg-muted/20 border-none ring-1 ring-border/50 rounded-none text-sm font-bold uppercase tracking-tight" 
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                    <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-border/50 shadow-2xl overflow-hidden animate-fade-in-up">
+                        <ScrollArea className="max-h-[300px]">
+                            <div className="p-2 space-y-1">
+                                {filteredSearchLinks.map(link => (
+                                    <Link 
+                                        href={link.href} 
+                                        key={link.href} 
+                                        onClick={() => setSearchQuery("")}
+                                        className="flex items-center justify-between p-3 hover:bg-primary/5 group transition-all border-l-4 border-transparent hover:border-primary"
+                                    >
+                                        <span className="font-bold text-xs uppercase tracking-widest">{link.label}</span>
+                                        <ChevronRight className="size-3.5 opacity-0 group-hover:opacity-40" />
+                                    </Link>
+                                ))}
+                                {filteredSearchLinks.length === 0 && (
+                                    <p className="text-center py-6 text-[10px] font-black uppercase text-muted-foreground opacity-40">Zero Results Found</p>
+                                )}
+                            </div>
+                        </ScrollArea>
                     </div>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-lg p-0 rounded-none overflow-hidden border-none shadow-2xl">
-                    <DialogHeader className="sr-only">
-                        <DialogTitle>Menu Search</DialogTitle>
-                        <DialogDescription>Search for dashboard modules and navigation links.</DialogDescription>
-                    </DialogHeader>
-                    <div className="flex items-center border-b px-4 h-14">
-                        <Search className="mr-3 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                            placeholder="Find mission module..." 
-                            className="h-full border-none ring-0 focus-visible:ring-0 font-black uppercase text-sm" 
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            autoFocus
-                        />
-                    </div>
-                    <ScrollArea className="max-h-[300px]">
-                        <div className="p-4 space-y-1">
-                            {filteredSearchLinks.map(link => (
-                                <Link 
-                                    href={link.href} 
-                                    key={link.href} 
-                                    onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }}
-                                    className="flex items-center justify-between p-3 hover:bg-primary/5 group transition-all border-l-4 border-transparent hover:border-primary"
-                                >
-                                    <span className="font-bold text-xs uppercase tracking-widest">{link.label}</span>
-                                    <ChevronRight className="size-3.5 opacity-0 group-hover:opacity-40" />
-                                </Link>
-                            ))}
-                            {filteredSearchLinks.length === 0 && (
-                                <p className="text-center py-8 text-[10px] font-black uppercase text-muted-foreground opacity-40">Zero Results Found</p>
-                            )}
-                        </div>
-                    </ScrollArea>
-                </DialogContent>
-            </Dialog>
+                )}
+            </div>
           </div>
 
           <div className="flex items-center gap-6">
