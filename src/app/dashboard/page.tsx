@@ -55,10 +55,10 @@ export default function DashboardPage() {
   }, [userTickets]);
 
   return (
-    <div className="space-y-4 max-w-full mx-auto pb-10 font-jakarta">
+    <div className="space-y-6 max-w-full mx-auto pb-10 font-jakarta">
       {/* Greeting Header */}
-      <div className="flex flex-col gap-0.5 mb-2 animate-fade-in-up">
-          <h1 className="text-xl font-black tracking-tighter leading-none">
+      <div className="flex flex-col gap-0.5 mb-6 animate-fade-in-up">
+          <h1 className="text-4xl lg:text-6xl font-black tracking-tighter leading-none text-primary uppercase">
               {greeting}, {currentUserData?.firstName || 'Strategist'}
           </h1>
       </div>
