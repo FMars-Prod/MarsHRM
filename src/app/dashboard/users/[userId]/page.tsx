@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit } from 'lucide-react';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -279,7 +279,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         <div className="space-y-4">
                             {userReports.length > 0 ? userReports.map(r => (
                                 <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd')} desc={`Finalized for ${r.employeeDepartment}.`} color="bg-primary/10 text-primary" />
-                            )) : <p className="text-[10px] font-black uppercase text-center opacity-30 py-12">No recent activity</p>}
+                            )) : (
+                                <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
+                                    <div className="p-4 bg-muted/20 rounded-full"><SearchSlash className="size-10 text-primary/40" /></div>
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-widest">Nothing Found</p>
+                                        <p className="text-[10px] font-bold uppercase mt-1">No recent activity detected in history.</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </Card>
                     <div className="lg:col-span-4 space-y-3">
@@ -346,18 +354,28 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             </TabsContent>
             <TabsContent value="attendance">
                 <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden">
-                    <Table>
-                        <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[10px] font-black px-6 py-5 uppercase tracking-widest">Date</TableHead><TableHead className="text-[10px] font-black uppercase tracking-widest">Login</TableHead><TableHead className="text-right px-6 text-[10px] font-black uppercase tracking-widest">Location</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {attendanceData?.map((rec, i) => (
-                                <TableRow key={i} className="border-border/50">
-                                    <TableCell className="py-4 px-6 font-black text-[11px] uppercase">{format(rec.checkInTime?.toDate() || new Date(), 'dd MMM yyyy')}</TableCell>
-                                    <TableCell className="font-mono text-sm font-bold text-primary">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</TableCell>
-                                    <TableCell className="text-right px-6">{rec.locationCheckInLatitude && <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="p-2 rounded-none bg-primary/5 text-primary inline-block"><MapPin className="size-4" /></Link>}</TableCell>
-                                </TableRow>
-                            )) || <TableRow><TableCell colSpan={3} className="h-40 text-center text-[11px] font-black uppercase opacity-30">No records</TableCell></TableRow>}
-                        </TableBody>
-                    </Table>
+                    {attendanceData && attendanceData.length > 0 ? (
+                        <Table>
+                            <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[10px] font-black px-6 py-5 uppercase tracking-widest">Date</TableHead><TableHead className="text-[10px] font-black uppercase tracking-widest">Login</TableHead><TableHead className="text-right px-6 text-[10px] font-black uppercase tracking-widest">Location</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {attendanceData.map((rec, i) => (
+                                    <TableRow key={i} className="border-border/50">
+                                        <TableCell className="py-4 px-6 font-black text-[11px] uppercase">{format(rec.checkInTime?.toDate() || new Date(), 'dd MMM yyyy')}</TableCell>
+                                        <TableCell className="font-mono text-sm font-bold text-primary">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</TableCell>
+                                        <TableCell className="text-right px-6">{rec.locationCheckInLatitude && <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="p-2 rounded-none bg-primary/5 text-primary inline-block"><MapPin className="size-4" /></Link>}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
+                            <div className="p-4 bg-muted/20 rounded-full"><Clock className="size-10 text-primary/40" /></div>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-widest">Nothing Found</p>
+                                <p className="text-[10px] font-bold uppercase mt-1">No attendance records detected in history.</p>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </TabsContent>
             <TabsContent value="hierarchy">
@@ -427,25 +445,49 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 </Card>
             </TabsContent>
             <TabsContent value="documents">
-                <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {documents?.map((doc: any) => (
-                        <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-5 rounded-none bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
-                            <div className="flex items-center gap-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-none"><FileBox className="size-5" /></div><span className="font-black text-xs uppercase truncate">{doc.title}</span></div>
-                        </Link>
-                    )) || <div className="col-span-full py-12 text-center text-[11px] font-black uppercase opacity-30">No documents in vault</div>}
-                </div></Card>
+                <Card className="border-none shadow-sm rounded-none bg-white p-6">
+                    {documents && documents.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {documents.map((doc: any) => (
+                                <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-5 rounded-none bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
+                                    <div className="flex items-center gap-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-none"><FileBox className="size-5" /></div><span className="font-black text-xs uppercase truncate">{doc.title}</span></div>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
+                            <div className="p-4 bg-muted/20 rounded-full"><FileBox className="size-10 text-primary/40" /></div>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-widest">Nothing Found</p>
+                                <p className="text-[10px] font-bold uppercase mt-1">No documents detected in this user's vault.</p>
+                            </div>
+                        </div>
+                    )}
+                </Card>
             </TabsContent>
             <TabsContent value="assets">
-                <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {assignedAssets?.map((asset: any) => (
-                        <div key={asset.id} className="p-5 rounded-none ring-1 ring-border/50 bg-muted/5 space-y-3">
-                            <div className="aspect-square bg-white rounded-none flex items-center justify-center border border-dashed p-2">
-                                {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-none" /> : <Laptop className="size-8 opacity-10" />}
-                            </div>
-                            <div><p className="font-black text-xs uppercase tracking-tighter truncate">{asset.name}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">{asset.category}</p></div>
+                <Card className="border-none shadow-sm rounded-none bg-white p-6">
+                    {assignedAssets && assignedAssets.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            {assignedAssets.map((asset: any) => (
+                                <div key={asset.id} className="p-5 rounded-none ring-1 ring-border/50 bg-muted/5 space-y-3">
+                                    <div className="aspect-square bg-white rounded-none flex items-center justify-center border border-dashed p-2">
+                                        {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-none" /> : <Laptop className="size-8 opacity-10" />}
+                                    </div>
+                                    <div><p className="font-black text-xs uppercase tracking-tighter truncate">{asset.name}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">{asset.category}</p></div>
+                                </div>
+                            ))}
                         </div>
-                    )) || <div className="col-span-full py-12 text-center text-[11px] font-black uppercase opacity-30">No assets assigned</div>}
-                </div></Card>
+                    ) : (
+                        <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
+                            <div className="p-4 bg-muted/20 rounded-full"><Laptop className="size-10 text-primary/40" /></div>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-widest">Nothing Found</p>
+                                <p className="text-[10px] font-bold uppercase mt-1">No assigned assets detected for this member.</p>
+                            </div>
+                        </div>
+                    )}
+                </Card>
             </TabsContent>
         </Tabs>
     </div>

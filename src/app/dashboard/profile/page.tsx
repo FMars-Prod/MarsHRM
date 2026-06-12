@@ -16,7 +16,7 @@ import {
     Mail, Briefcase, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
     FileCheck, FileBox, Users, Laptop, MapPin, CalendarClock,
-    MessageSquareWarning, RotateCcw, Network, Check, X
+    MessageSquareWarning, RotateCcw, Network, Check, X, SearchSlash
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -312,7 +312,15 @@ export default function ProfilePage() {
                             <div className="space-y-3">
                                 {userReports.length > 0 ? userReports.slice(0, 3).map(r => (
                                     <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd')} desc={`Finalized.`} color="bg-primary/10 text-primary" />
-                                )) : <p className="text-[10px] font-black uppercase text-center opacity-30 py-8">No recent handshakes detected</p>}
+                                )) : (
+                                    <div className="py-12 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
+                                        <div className="p-4 bg-muted/20 rounded-full"><SearchSlash className="size-10 text-primary/40" /></div>
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-widest">Nothing Found</p>
+                                            <p className="text-[10px] font-bold uppercase mt-1">No tactical reports detected in history.</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </Card>
                         <div className="lg:col-span-4 space-y-2">
@@ -380,17 +388,27 @@ export default function ProfilePage() {
                 <TabsContent value="attendance">
                     <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden max-h-[400px]">
                         <ScrollArea className="h-full">
-                            <Table>
-                                <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[10px] font-black px-6 py-3 uppercase tracking-widest">Date</TableHead><TableHead className="text-[10px] font-black py-3 uppercase tracking-widest text-right pr-6">Status</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {attendanceData?.slice(0, 10).map((rec: any, i: number) => (
-                                        <TableRow key={i} className="border-border/50">
-                                            <TableCell className="text-[11px] font-black px-6 py-3 uppercase">{format(rec.checkInTime.toDate(), 'dd MMM yy')}</TableCell>
-                                            <TableCell className="text-right pr-6"><Badge variant="outline" className="text-[9px] font-black uppercase border-none bg-green-50 text-green-600 rounded-none">{rec.status}</Badge></TableCell>
-                                        </TableRow>
-                                    )) || <TableRow><TableCell colSpan={2} className="h-24 text-center text-[10px] font-black uppercase opacity-30">No records</TableCell></TableRow>}
-                                </TableBody>
-                            </Table>
+                            {attendanceData && attendanceData.length > 0 ? (
+                                <Table>
+                                    <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[10px] font-black px-6 py-3 uppercase tracking-widest">Date</TableHead><TableHead className="text-[10px] font-black py-3 uppercase tracking-widest text-right pr-6">Status</TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                        {attendanceData.slice(0, 10).map((rec: any, i: number) => (
+                                            <TableRow key={i} className="border-border/50">
+                                                <TableCell className="text-[11px] font-black px-6 py-3 uppercase">{format(rec.checkInTime.toDate(), 'dd MMM yy')}</TableCell>
+                                                <TableCell className="text-right pr-6"><Badge variant="outline" className="text-[9px] font-black uppercase border-none bg-green-50 text-green-600 rounded-none">{rec.status}</Badge></TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
+                                    <div className="p-4 bg-muted/20 rounded-full"><Clock className="size-10 text-primary/40" /></div>
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-widest">Nothing Found</p>
+                                        <p className="text-[10px] font-bold uppercase mt-1">No attendance records detected in history.</p>
+                                    </div>
+                                </div>
+                            )}
                         </ScrollArea>
                     </Card>
                 </TabsContent>
@@ -461,25 +479,49 @@ export default function ProfilePage() {
                     </Card>
                 </TabsContent>
                 <TabsContent value="documents">
-                    <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {documents?.map((doc: any) => (
-                            <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-5 rounded-none bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
-                                <div className="flex items-center gap-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-none"><FileBox className="size-5" /></div><span className="font-black text-xs uppercase truncate">{doc.title}</span></div>
-                            </Link>
-                        )) || <div className="col-span-full py-12 text-center text-[11px] font-black uppercase opacity-30">No documents in vault</div>}
-                    </div></Card>
+                    <Card className="border-none shadow-sm rounded-none bg-white p-6">
+                        {documents && documents.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {documents.map((doc: any) => (
+                                    <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-5 rounded-none bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group">
+                                        <div className="flex items-center gap-4"><div className="p-3 bg-blue-50 text-blue-600 rounded-none"><FileBox className="size-5" /></div><span className="font-black text-xs uppercase truncate">{doc.title}</span></div>
+                                    </Link>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
+                                <div className="p-4 bg-muted/20 rounded-full"><FileBox className="size-10 text-primary/40" /></div>
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-widest">Nothing Found</p>
+                                    <p className="text-[10px] font-bold uppercase mt-1">No documents detected in your vault.</p>
+                                </div>
+                            </div>
+                        )}
+                    </Card>
                 </TabsContent>
                 <TabsContent value="assets">
-                    <Card className="border-none shadow-sm rounded-none bg-white p-6"><div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                        {assignedAssets?.map((asset: any) => (
-                            <div key={asset.id} className="p-5 rounded-none ring-1 ring-border/50 bg-muted/5 space-y-3">
-                                <div className="aspect-square bg-white rounded-none flex items-center justify-center border border-dashed p-2">
-                                    {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-none" /> : <Laptop className="size-8 opacity-10" />}
-                                </div>
-                                <div><p className="font-black text-xs uppercase tracking-tighter truncate">{asset.name}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">{asset.category}</p></div>
+                    <Card className="border-none shadow-sm rounded-none bg-white p-6">
+                        {assignedAssets && assignedAssets.length > 0 ? (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                {assignedAssets.map((asset: any) => (
+                                    <div key={asset.id} className="p-5 rounded-none ring-1 ring-border/50 bg-muted/5 space-y-3">
+                                        <div className="aspect-square bg-white rounded-none flex items-center justify-center border border-dashed p-2">
+                                            {asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} className="object-cover w-full h-full rounded-none" /> : <Laptop className="size-8 opacity-10" />}
+                                        </div>
+                                        <div><p className="font-black text-xs uppercase tracking-tighter truncate">{asset.name}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">{asset.category}</p></div>
+                                    </div>
+                                ))}
                             </div>
-                        )) || <div className="col-span-full py-12 text-center text-[11px] font-black uppercase opacity-30">No assets assigned</div>}
-                    </div></Card>
+                        ) : (
+                            <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
+                                <div className="p-4 bg-muted/20 rounded-full"><Laptop className="size-10 text-primary/40" /></div>
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-widest">Nothing Found</p>
+                                    <p className="text-[10px] font-bold uppercase mt-1">No assigned mission assets detected.</p>
+                                </div>
+                            </div>
+                        )}
+                    </Card>
                 </TabsContent>
             </Tabs>
 
