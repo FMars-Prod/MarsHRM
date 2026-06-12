@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check, LocateFixed, Users, Search, X, Loader2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Camera, CheckCircle2, Clock, Link as LinkIcon, Save, RotateCcw, MapPin, RefreshCcw, Building2, Trash, Home, ChevronDown, Check, LocateFixed, Users, Search, X, Loader2, UserCheck, Activity } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, useStorage, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { doc, collection, query, writeBatch, serverTimestamp, deleteDoc, where, getDocs, Timestamp, orderBy } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -62,7 +62,6 @@ export default function UsersPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const auth = useAuth();
-  const storage = useStorage();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -70,6 +69,9 @@ export default function UsersPage() {
   const [managerSearchQuery, setManagerSearchQuery] = React.useState("");
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
   const [isPurging, setIsPurging] = React.useState(false);
+
+  const [userToReset, setUserToReset] = React.useState<any | null>(null);
+  const [userToDelete, setUserToDelete] = React.useState<any | null>(null);
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users"), orderBy("firstName", "asc")), [firestore]);
   const { data: users, isLoading } = useCollection<any>(usersQuery);
@@ -95,7 +97,6 @@ export default function UsersPage() {
   const isWfhAllowedValue = form.watch("isWfhAllowed");
   const selectedHeadIds = form.watch("reportingHeadIds");
 
-  // Sync Branch vs WFH exclusivity
   React.useEffect(() => {
       if (isWfhAllowedValue) {
           form.setValue("branchId", undefined);
@@ -133,7 +134,6 @@ export default function UsersPage() {
                 (updateData as any).payrollDate = serverTimestamp();
             }
 
-            // Apply tiered leave logic: 1 day per month for Employees, NIL for others
             if (values.employmentType === 'Employee') {
                 updateData.totalLeaveEntitlement = 12;
             } else {
@@ -156,8 +156,6 @@ export default function UsersPage() {
             const { password, ...userData } = values;
             
             const batch = writeBatch(firestore);
-            
-            // Tiered Leave Protocols
             const totalLeave = values.employmentType === 'Employee' ? 12 : 0;
             const leaveBal = values.employmentType === 'Employee' ? values.leaveBalance : 0;
 
@@ -190,8 +188,6 @@ export default function UsersPage() {
     setIsPurging(true);
     try {
         const batch = writeBatch(firestore);
-
-        // Core Identifiers
         batch.delete(doc(firestore, 'users', userId));
         batch.delete(doc(firestore, 'system_roles_admin', userId));
         batch.delete(doc(firestore, 'system_roles_hr', userId));
@@ -245,7 +241,16 @@ export default function UsersPage() {
         toast({ variant: 'destructive', title: "Purge Failed", description: err.message });
     } finally {
         setIsPurging(false);
+        setUserToDelete(null);
     }
+  };
+
+  const handleResetDay = (userId: string) => {
+      const todayId = format(new Date(), 'yyyy-MM-dd');
+      const attRef = doc(firestore, `users/${userId}/attendances`, todayId);
+      deleteDocumentNonBlocking(attRef);
+      toast({ title: "Day Reset", description: "Tactical attendance log for today has been purged." });
+      setUserToReset(null);
   };
 
   const toggleSelectAll = (checked: boolean) => {
@@ -273,10 +278,10 @@ export default function UsersPage() {
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-4 pb-8">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">First Name</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
-                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Last Name</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">First Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Last Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 </div>
-                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Email Directive</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Email Directive</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Command Matrix Assignment</Label>
@@ -348,14 +353,14 @@ export default function UsersPage() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Job Title</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
-                                    <FormField control={form.control} name="department" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Department</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Job Title</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="department" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Department</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
                                         <FormItem>
-                                            <Label className={cn("text-[10px] font-black uppercase text-primary tracking-widest", isWfhAllowedValue && "opacity-20")}>Office Assignment</Label>
+                                            <FormLabel className={cn("text-[10px] font-black uppercase text-primary tracking-widest", isWfhAllowedValue && "opacity-20")}>Office Assignment</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value} disabled={isWfhAllowedValue}>
                                                 <FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder={isWfhAllowedValue ? "REMOTE OPS" : "Select Branch"} /></SelectTrigger></FormControl>
                                                 <SelectContent className="rounded-none">
@@ -364,16 +369,16 @@ export default function UsersPage() {
                                             </Select>
                                         </FormItem>
                                     )} />
-                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Work Schedule</Label><FormControl><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Work Schedule</FormLabel><FormControl><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="employmentType" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Classification</Label>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Classification</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="role" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Account Tier</Label>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Account Tier</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                 </div>
@@ -382,14 +387,14 @@ export default function UsersPage() {
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormField control={form.control} name="performanceRating" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Performance Rating</Label>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Performance Rating</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Average">Average</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="leaveBalance" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Balance</Label><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Balance</FormLabel><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
                                     )} />
                                     <FormField control={form.control} name="payrollAmount" render={({ field }) => (
-                                        <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Last Payroll Amount</Label><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Last Payroll Amount</FormLabel><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
                                     )} />
                                 </div>
 
@@ -423,20 +428,20 @@ export default function UsersPage() {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <FormField control={form.control} name="homeLatitude" render={({ field }) => (
                                                     <FormItem>
-                                                        <Label className="text-[9px] uppercase font-black opacity-40">Latitude</Label>
+                                                        <FormLabel className="text-[9px] uppercase font-black opacity-40">Latitude</FormLabel>
                                                         <FormControl><Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-none h-11 font-mono text-sm font-bold" /></FormControl>
                                                     </FormItem>
                                                 )} />
                                                 <FormField control={form.control} name="homeLongitude" render={({ field }) => (
                                                     <FormItem>
-                                                        <Label className="text-[9px] uppercase font-black opacity-40">Longitude</Label>
+                                                        <FormLabel className="text-[9px] uppercase font-black opacity-40">Longitude</FormLabel>
                                                         <FormControl><Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-none h-11 font-mono text-sm font-bold" /></FormControl>
                                                     </FormItem>
                                                 )} />
                                             </div>
                                             <FormField control={form.control} name="homeRadius" render={({ field }) => (
                                                 <FormItem>
-                                                    <Label className="text-[9px] uppercase font-black opacity-40">Geofence Radius (KM)</Label>
+                                                    <FormLabel className="text-[9px] uppercase font-black opacity-40">Geofence Radius (KM)</FormLabel>
                                                     <FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ""} className="rounded-none h-11 font-bold" /></FormControl>
                                                     <p className="text-[9px] text-muted-foreground italic mt-2 font-bold">Standard precision: 0.5 KM</p>
                                                 </FormItem>
@@ -445,7 +450,7 @@ export default function UsersPage() {
                                     )}
                                 </div>
                                 
-                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Temporary Cipher</Label><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
+                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Temporary Cipher</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
                                 <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Finalize Dispatch Protocol</Button>
                             </form>
                         </Form>
@@ -521,50 +526,33 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell className="text-right px-8">
                     <div className="flex justify-end items-center gap-2">
-                        {isAdmin && (
-                            <>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-primary hover:bg-primary/5 transition-all" onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }}>
-                                            <Edit className="size-4.5" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Edit Profile</TooltipContent>
-                                </Tooltip>
-
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-destructive hover:bg-red-50 transition-all">
-                                            <Trash2 className="size-4.5" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="rounded-none border-none shadow-2xl">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Personnel Record?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                                                This will remove <span className="font-bold text-foreground">{u.firstName}</span>'s entry from the tactical registry. All associated shift logs, reports, and tactical signals will be permanently wiped.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter className="mt-8 gap-3">
-                                            <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
-                                            <AlertDialogAction disabled={isPurging} onClick={() => handleDeleteUser(u.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">
-                                                {isPurging ? <Loader2 className="size-4 animate-spin mr-2"/> : null}
-                                                Confirm Deep Purge
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </>
-                        )}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="rounded-none h-9 w-9 hover:bg-muted/50"><MoreHorizontal className="size-4.5" /></Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-52">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2">Operations</DropdownMenuLabel>
+                            <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-56">
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2">Mission Control</DropdownMenuLabel>
                                 <DropdownMenuItem asChild className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
-                                    <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-4 text-primary" /> Personnel Audit</Link>
+                                    <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-4 text-primary" /> View Profile</Link>
                                 </DropdownMenuItem>
+                                
+                                {isAdmin && (
+                                    <>
+                                        <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
+                                            <Edit className="size-4 text-primary" /> Edit Profile
+                                        </DropdownMenuItem>
+                                        
+                                        <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToReset(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-amber-50 text-amber-600">
+                                            <RotateCcw className="size-4" /> Reset The Day
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuSeparator />
+                                        
+                                        <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToDelete(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-red-50 text-destructive">
+                                            <Trash2 className="size-4" /> Delete Identity
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -575,6 +563,46 @@ export default function UsersPage() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Confirmation Dialogs */}
+      <AlertDialog open={!!userToReset} onOpenChange={o => !o && setUserToReset(null)}>
+          <AlertDialogContent className="rounded-none border-none shadow-2xl">
+              <AlertDialogHeader>
+                  <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-amber-600 flex items-center gap-2">
+                      <RotateCcw className="size-5" /> Reset Attendance?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+                      This will permanently purge the attendance record for <span className="font-bold text-foreground">{userToReset?.firstName} {userToReset?.lastName}</span> for today. This action cannot be reversed.
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-8 gap-3">
+                  <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Abort</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleResetDay(userToReset.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-600/20">
+                      Confirm Reset
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!userToDelete} onOpenChange={o => !o && setUserToDelete(null)}>
+          <AlertDialogContent className="rounded-none border-none shadow-2xl">
+              <AlertDialogHeader>
+                  <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
+                      <Trash2 className="size-5" /> Purge Personnel Record?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+                      This will remove <span className="font-bold text-foreground">{userToDelete?.firstName}</span> from the registry. All associated shift logs, reports, and tactical signals will be permanently wiped.
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-8 gap-3">
+                  <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
+                  <AlertDialogAction disabled={isPurging} onClick={() => handleDeleteUser(userToDelete.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">
+                      {isPurging ? <Loader2 className="size-4 animate-spin mr-2"/> : null}
+                      Confirm Deep Purge
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
     </div>
     </TooltipProvider>
   );

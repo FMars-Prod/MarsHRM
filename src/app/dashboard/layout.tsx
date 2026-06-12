@@ -11,13 +11,13 @@ import {
 } from '@/components/ui/sidebar';
 import { MainNav } from '@/components/geohrm/main-nav';
 import { UserNav } from '@/components/geohrm/user-nav';
-import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin } from 'lucide-react';
+import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
-import { format, isToday } from 'date-fns';
+import { doc, collection, query, where, Timestamp, getDocs } from 'firebase/firestore';
+import { format, isToday, startOfDay, endOfDay } from 'date-fns';
 import Image from 'next/image';
 import { AutomatedReportSender } from '@/components/geohrm/automated-report-sender';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -64,7 +75,6 @@ type AttendanceApprovalRequest = {
   employeeName: string;
 }
 
-// Global Nav Links for Search
 const SEARCHABLE_LINKS = [
     { label: "Dashboard", href: "/dashboard", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     { label: "Analytics", href: "/dashboard/analytics", roles: ['HR Manager', 'CEO/Admin'] },
@@ -106,6 +116,7 @@ export default function DashboardLayout({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -186,8 +197,37 @@ export default function DashboardLayout({
   }, [user, isUserLoading, router]);
 
   const handleLogout = async () => {
+    if (!user) return;
     setIsLoggingOut(true);
+    setIsLogoutDialogOpen(false);
+
     try {
+        const uRole = (userData as any)?.role || 'Member';
+        const isPriv = uRole === 'HR Manager' || uRole === 'CEO/Admin';
+
+        if (!isPriv) {
+            const todayS = startOfDay(new Date());
+            const todayE = endOfDay(new Date());
+            
+            const q = query(
+                collection(firestore, `users/${user.uid}/reports`),
+                where('date', '>=', todayS),
+                where('date', '<=', todayE)
+            );
+
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                toast({
+                    variant: 'destructive',
+                    title: "Report Required",
+                    description: "Protocol violation: Please submit your daily tactical report before logging out."
+                });
+                router.push('/dashboard/reports');
+                setIsLoggingOut(false);
+                return;
+            }
+        }
+
         await auth.signOut();
         router.push('/login');
     } catch (err: any) {
@@ -251,13 +291,11 @@ export default function DashboardLayout({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col min-h-screen">
-        {/* Command Navbar Overhaul */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white/90 backdrop-blur-md px-6 shadow-sm">
           <div className="flex items-center gap-4 flex-1">
             <SidebarTrigger className="rounded-none hover:bg-muted" />
             <Separator orientation="vertical" className="h-6" />
             
-            {/* Global Menu Search */}
             <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
                 <DialogTrigger asChild>
                     <div className="relative w-full max-w-sm group cursor-pointer">
@@ -320,7 +358,6 @@ export default function DashboardLayout({
 
              <Separator orientation="vertical" className="h-6" />
 
-             {/* Notification Command Center */}
              <Dialog>
                 <DialogTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-none relative h-10 w-10">
@@ -384,7 +421,6 @@ export default function DashboardLayout({
                 </DialogContent>
              </Dialog>
 
-             {/* Executive Identity Section */}
              <div className="flex items-center gap-4 group cursor-pointer" onClick={() => router.push('/dashboard/profile')}>
                 <div className="hidden sm:flex flex-col items-end text-right">
                     <span className="font-black text-sm uppercase tracking-tight leading-none text-foreground group-hover:text-primary transition-colors">
@@ -401,9 +437,29 @@ export default function DashboardLayout({
                 </Avatar>
              </div>
 
-             <Button variant="ghost" size="icon" onClick={handleLogout} className="rounded-none text-muted-foreground hover:text-red-600 transition-colors" disabled={isLoggingOut}>
-                {isLoggingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
-             </Button>
+             <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+                <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-none text-muted-foreground hover:text-red-600 transition-colors" disabled={isLoggingOut}>
+                        {isLoggingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="rounded-none border-none shadow-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
+                            <ShieldAlert className="size-5" /> Terminate Session?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+                            Ensure all mission data and daily reports are synchronized before deactivating your terminal.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-8 gap-3">
+                        <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Stay Active</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleLogout} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                            Confirm Sign Out
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+             </AlertDialog>
           </div>
           <AutomatedReportSender />
         </header>

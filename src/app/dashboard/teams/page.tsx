@@ -175,7 +175,7 @@ export default function TeamsPage() {
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-primary hover:bg-primary/5 transition-all" onClick={() => setSelectedTeamForSheet(team)}>
-                                                    <Users className="size-4.5" />
+                                                    <Users className="size-4" />
                                                 </Button>
                                             </TooltipTrigger>
                                             <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Review Fleet</TooltipContent>
@@ -193,7 +193,7 @@ export default function TeamsPage() {
                                                             setSelectedMemberIds(team.memberIds.filter(id => id !== team.teamLeadId)); 
                                                             setIsDialogOpen(true); 
                                                         }}>
-                                                            <Edit className="size-4.5" />
+                                                            <Edit className="size-4" />
                                                         </Button>
                                                     </TooltipTrigger>
                                                     <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Reconfigure Unit</TooltipContent>
@@ -202,7 +202,7 @@ export default function TeamsPage() {
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
                                                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none text-destructive hover:bg-red-50 transition-all">
-                                                            <Trash2 className="size-4.5" />
+                                                            <Trash2 className="size-4" />
                                                         </Button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent className="rounded-none border-none shadow-2xl">
@@ -227,12 +227,12 @@ export default function TeamsPage() {
             </div>
 
             <Sheet open={!!selectedTeamForSheet} onOpenChange={o => !o && setSelectedTeamForSheet(null)}>
-                <SheetContent className="rounded-none border-none shadow-2xl w-full sm:max-w-md p-0 overflow-hidden">
-                    <SheetHeader className="p-6 border-b bg-white">
+                <SheetContent className="rounded-none border-none shadow-2xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col">
+                    <SheetHeader className="p-6 border-b bg-white shrink-0">
                       <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">{selectedTeamForSheet?.name} Fleet</SheetTitle>
                     </SheetHeader>
                     <ScrollArea className="flex-1">
-                        <div className="p-6 space-y-3">
+                        <div className="p-6 space-y-3 pb-20">
                             {selectedTeamForSheet?.memberIds.map(memberId => {
                                 const member = users?.find(u => u.id === memberId);
                                 if (!member) return null;
@@ -243,7 +243,7 @@ export default function TeamsPage() {
                                                 isUrl(member.avatar) ? (
                                                     <AvatarImage src={member.avatar} className="object-cover rounded-none" />
                                                 ) : (
-                                                    <span className="text-2xl font-black">{member.avatar}</span>
+                                                    <div className="h-full w-full flex items-center justify-center bg-primary/10 font-black">{member.avatar}</div>
                                                 )
                                             ) : <AvatarFallback className="rounded-none font-black">{member.firstName?.[0]}</AvatarFallback>}
                                         </Avatar>
@@ -301,7 +301,7 @@ export default function TeamsPage() {
                                             <Label htmlFor={`m-${member.id}`} className={cn("font-bold text-xs uppercase cursor-pointer flex-1", member.teamId && member.teamId !== editingTeam?.id && "text-muted-foreground opacity-50")}>
                                                 {member.firstName} {member.lastName}
                                             </Label>
-                                            {member.teamId && member.teamId !== editingUser?.id ? (
+                                            {member.teamId && member.teamId !== editingTeam?.id ? (
                                                 <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-muted/50 rounded-none h-4">Assigned</Badge>
                                             ) : (
                                                 <Badge variant="outline" className="text-[8px] font-black uppercase border-none bg-green-50 text-green-600 rounded-none h-4">Ready</Badge>

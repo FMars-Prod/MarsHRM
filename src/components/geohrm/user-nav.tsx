@@ -11,8 +11,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useAuth, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut, Loader2, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
 import { doc, collection, query, where, getDocs } from "firebase/firestore";
@@ -27,6 +38,7 @@ export function UserNav({ user }: { user: User | null }) {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = React.useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
@@ -37,12 +49,12 @@ export function UserNav({ user }: { user: User | null }) {
   const handleLogout = async () => {
     if (!user) return;
     setIsLoggingOut(true);
+    setIsLogoutDialogOpen(false);
 
     try {
         const userRole = (employee as any)?.role || 'Member';
         const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
-        // Check if report for today exists (only for members/leads)
         if (!isPrivileged) {
             const todayStart = startOfDay(new Date());
             const todayEnd = endOfDay(new Date());
@@ -80,39 +92,60 @@ export function UserNav({ user }: { user: User | null }) {
   const isUrl = employeeAvatar && employeeAvatar.startsWith('http');
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full" disabled={isLoggingOut}>
-          <Avatar className={cn("h-10 w-10", employeeAvatar && !isUrl && "bg-transparent")}>
-            {employeeAvatar ? (
-                isUrl ? (
-                    <AvatarImage src={employeeAvatar} className="object-cover" />
+    <>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full" disabled={isLoggingOut}>
+              <Avatar className={cn("h-10 w-10", employeeAvatar && !isUrl && "bg-transparent")}>
+                {employeeAvatar ? (
+                    isUrl ? (
+                        <AvatarImage src={employeeAvatar} className="object-cover" />
+                    ) : (
+                        <span className="text-2xl">{employeeAvatar}</span>
+                    )
                 ) : (
-                    <span className="text-2xl">{employeeAvatar}</span>
-                )
-            ) : (
-            <AvatarFallback>
-                {employee ? `${(employee as any).firstName?.[0] || ''}${(employee as any).lastName?.[0] || ''}` : user?.email?.charAt(0)?.toUpperCase() || 'U'}
-            </AvatarFallback>
-            )}
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{employeeName}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user?.email}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
-          {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-          <span>{isLoggingOut ? "Verifying Protocols..." : "Logout"}</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+                <AvatarFallback>
+                    {employee ? `${(employee as any).firstName?.[0] || ''}${(employee as any).lastName?.[0] || ''}` : user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                </AvatarFallback>
+                )}
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56 rounded-none border-none shadow-2xl" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal p-4">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-black uppercase tracking-tight leading-none">{employeeName}</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">
+                  {user?.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsLogoutDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 p-4 hover:bg-red-50 text-destructive">
+              <LogOut className="size-4" />
+              <span>Sign Out Protocol</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+            <AlertDialogContent className="rounded-none border-none shadow-2xl">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
+                        <ShieldAlert className="size-5" /> Terminate Session?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+                        Ensure all mission data and daily reports are synchronized before deactivating your terminal.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="mt-8 gap-3">
+                    <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Stay Active</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLogout} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                        Confirm Sign Out
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </>
   );
 }
