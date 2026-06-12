@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -146,7 +147,7 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
         <div className="flex-1">
           <h4 className={cn("font-semibold", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
           <p className="text-sm text-muted-foreground">
-            {leadSkipped && "Skipped (No Team Lead or Executive Override)."}
+            {leadSkipped && "Skipped (Executive Override)."}
             {!leadSkipped && isApprovedByLead && (request.approvedByTeamLeadId ? `Approved by ${teamLeadName}.` : 'Pending.')}
             {isRejectedByLead && `Rejected.`}
             {isPendingLead && 'Pending approval.'}
@@ -177,7 +178,7 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
             {isApprovedByHR && `Approved by ${hrName}.`}
             {isRejectedByHR && `Rejected.`}
             {isPendingHR && 'Pending HR approval.'}
-            {isPendingLead && 'Waiting for Team Lead (or Executive Decision).'}
+            {isPendingLead && 'Waiting for primary authentication.'}
           </p>
         </div>
       </div>
@@ -205,7 +206,7 @@ export default function LeavePage() {
   );
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
-  const isUserAdmin = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+  const isExecutiveTier = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
   const [category, setCategory] = React.useState<RequestCategory>("Leave");
   const [leaveType, setLeaveType] = React.useState<string>("");
@@ -333,16 +334,13 @@ export default function LeavePage() {
   };
 
   const handleRejectionSubmit = () => {
-    if (!requestToReject) {
-        toast({ variant: 'destructive', title: 'Target Identification Lost' });
-        return;
-    }
+    if (!requestToReject) return;
     if (!user) return;
 
     let newStatus: LeaveStatus;
     let approvalField: string;
 
-    if (userRole === 'Team Lead') {
+    if (userRole === 'Team Lead' && requestToReject.status === 'Pending') {
         newStatus = 'Rejected by Team Lead';
         approvalField = 'approvedByTeamLeadId';
     } else {
@@ -438,7 +436,7 @@ export default function LeavePage() {
         className="animate-fade-in-up"
       >
         <div className="flex gap-2">
-          {isUserAdmin && selectedIds.length > 0 && (
+          {isExecutiveTier && selectedIds.length > 0 && (
               <AlertDialog>
                   <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" className="gap-2 rounded-full">
@@ -458,7 +456,7 @@ export default function LeavePage() {
                   </AlertDialogContent>
               </AlertDialog>
           )}
-          {isUserAdmin && (
+          {isExecutiveTier && (
             <Button 
               variant={showMissed ? "secondary" : "outline"} 
               size="sm"
@@ -566,7 +564,7 @@ export default function LeavePage() {
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent border-none">
-                {isUserAdmin && (
+                {isExecutiveTier && (
                   <TableHead className="w-[50px] py-4">
                     <Checkbox 
                       checked={selectedIds.length === displayLeaveRequests.length && displayLeaveRequests.length > 0}
@@ -583,12 +581,12 @@ export default function LeavePage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Loading requests...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isExecutiveTier ? 6 : 5} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Loading requests...</TableCell></TableRow>
               ) : displayLeaveRequests.length === 0 ? (
-                  <TableRow><TableCell colSpan={isUserAdmin ? 6 : 5} className="h-32 text-center text-muted-foreground italic font-medium">{showMissed ? "No archived records found." : "No active requests in queue."}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isExecutiveTier ? 6 : 5} className="h-32 text-center text-muted-foreground italic font-medium">{showMissed ? "No archived records found." : "No active requests in queue."}</TableCell></TableRow>
               ) : displayLeaveRequests.map((request) => (
                   <TableRow key={request.id} className="border-border/50 group">
-                    {isUserAdmin && (
+                    {isExecutiveTier && (
                       <TableCell className="py-4">
                         <Checkbox 
                           checked={selectedIds.includes(request.id)}
@@ -645,13 +643,17 @@ export default function LeavePage() {
                                 <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight"><ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject</DropdownMenuItem>
                               </>
                           )}
-                          {(userRole === 'HR Manager' || userRole === 'CEO/Admin') && (request.status === 'Pending' || request.status === 'Pending HR Approval') && (
+                          {isExecutiveTier && (request.status === 'Pending' || request.status === 'Pending HR Approval') && (
                               <>
-                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> {request.status === 'Pending' ? 'Direct Approve' : 'Finalize'}</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight"><ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight">
+                                    <Check className="mr-2 h-3.5 w-3.5"/> {request.status === 'Pending' ? 'Direct Approve' : 'Finalize'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight">
+                                    <ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject
+                                </DropdownMenuItem>
                               </>
                           )}
-                          {isUserAdmin && (
+                          {isExecutiveTier && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive font-bold text-xs uppercase tracking-tight">
@@ -682,7 +684,6 @@ export default function LeavePage() {
           </Table>
         </div>
 
-        {/* Rejection Dialog */}
         <Dialog open={!!requestToReject} onOpenChange={(o) => !o && setRequestToReject(null)}>
             <DialogContent className="rounded-3xl sm:max-w-md border-none shadow-2xl">
                 <DialogHeader>

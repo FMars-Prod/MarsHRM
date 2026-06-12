@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -19,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "react-hook-form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -255,15 +256,14 @@ export default function UsersPage() {
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-4 pb-8">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">First Name</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
-                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Last Name</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
+                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">First Name</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Last Name</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 </div>
-                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Email Directive</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
+                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Email Directive</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Command Matrix Assignment</Label>
                                     
-                                    {/* Selected Heads View */}
                                     <div className="flex flex-wrap gap-2 min-h-[48px] p-3 bg-muted/10 border-2 border-dashed border-border/50">
                                         {selectedHeadIds.length === 0 ? (
                                             <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier Command (Unassigned)</span>
@@ -283,7 +283,6 @@ export default function UsersPage() {
                                         )}
                                     </div>
 
-                                    {/* Direct Roster Selection */}
                                     <div className="border border-border">
                                         <div className="p-4 border-b bg-muted/20 flex items-center gap-4">
                                             <Search className="size-4 text-muted-foreground/50" />
@@ -332,8 +331,8 @@ export default function UsersPage() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Job Title</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
-                                    <FormField control={form.control} name="department" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Department</Label><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormItem>)} />
+                                    <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Job Title</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="department" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Department</Label><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-4">
@@ -341,7 +340,7 @@ export default function UsersPage() {
                                         <FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Office Assignment</Label>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Branch" /></SelectTrigger></FormControl><SelectContent className="rounded-none">{branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></FormItem>
                                     )} />
-                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Work Schedule</Label><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormItem>)} />
+                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Work Schedule</Label><FormControl><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -401,20 +400,20 @@ export default function UsersPage() {
                                                 <FormField control={form.control} name="homeLatitude" render={({ field }) => (
                                                     <FormItem>
                                                         <Label className="text-[9px] uppercase font-black opacity-40">Latitude</Label>
-                                                        <Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-none h-11 font-mono text-sm font-bold" />
+                                                        <FormControl><Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-none h-11 font-mono text-sm font-bold" /></FormControl>
                                                     </FormItem>
                                                 )} />
                                                 <FormField control={form.control} name="homeLongitude" render={({ field }) => (
                                                     <FormItem>
                                                         <Label className="text-[9px] uppercase font-black opacity-40">Longitude</Label>
-                                                        <Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-none h-11 font-mono text-sm font-bold" />
+                                                        <FormControl><Input type="number" step="any" {...field} value={field.value ?? ""} className="rounded-none h-11 font-mono text-sm font-bold" /></FormControl>
                                                     </FormItem>
                                                 )} />
                                             </div>
                                             <FormField control={form.control} name="homeRadius" render={({ field }) => (
                                                 <FormItem>
                                                     <Label className="text-[9px] uppercase font-black opacity-40">Geofence Radius (KM)</Label>
-                                                    <Input type="number" step="0.1" {...field} value={field.value ?? ""} className="rounded-none h-11 font-bold" />
+                                                    <FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ""} className="rounded-none h-11 font-bold" /></FormControl>
                                                     <p className="text-[9px] text-muted-foreground italic mt-2 font-bold">Standard precision: 0.5 KM</p>
                                                 </FormItem>
                                             )} />
@@ -422,7 +421,7 @@ export default function UsersPage() {
                                     )}
                                 </div>
                                 
-                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Temporary Cipher</Label><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormItem>)} />}
+                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Temporary Cipher</Label><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
                                 <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Finalize Dispatch Protocol</Button>
                             </form>
                         </Form>
