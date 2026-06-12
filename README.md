@@ -16,15 +16,29 @@ To enable automated emails, you must set the following environment variable in y
 - `RESEND_API_KEY`: Your API key from Resend.com.
 
 ### 3. Firestore Indexes (Required)
-The application uses `collectionGroup` queries for organization-wide monitoring. You **must** manually enable the Collection Group scope for the `checkInTime` field:
-1. Go to **Firestore Database** > **Indexes**.
-2. You can use the **Single Field** tab or **Composite** tab.
-3. If using **Composite** (as seen in your screenshot):
-   - Collection ID: `attendances`
-   - Field: `checkInTime`
-   - Sort: `Descending`
-   - Query Scope: **Collection group**
-4. Click **Create**.
+The application uses `collectionGroup` and composite queries for organization-wide monitoring. You **must** manually create the following indexes in the Firebase Console:
+
+#### 3.1 Attendance Collection Group
+- Collection ID: `attendances`
+- Field: `checkInTime` (Descending)
+- Query Scope: **Collection group**
+
+#### 3.2 Reports Collection Group
+- Collection ID: `reports`
+- Field: `date` (Descending)
+- Query Scope: **Collection group**
+
+#### 3.3 Remote Approvals Composite Index
+- Collection ID: `attendanceApprovalRequests`
+- Fields: 
+  - `status` (Ascending)
+  - `requestTimestamp` (Descending)
+- Query Scope: **Collection**
+
+#### 3.4 Issue Reports Collection Group
+- Collection ID: `issue_reports`
+- Field: `submissionDate` (Descending)
+- Query Scope: **Collection group**
 
 ### 4. Service Account Details
 **Service account name**: MarsHRM Server Tasks

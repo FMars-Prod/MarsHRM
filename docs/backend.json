@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Employee": {
@@ -112,6 +111,34 @@
         "definition": {
           "entityName": "AssetRequest",
           "description": "Global log of asset allocation requests."
+        }
+      },
+      {
+        "path": "/attendanceApprovalRequests/{requestId}",
+        "definition": {
+          "entityName": "object",
+          "description": "Requests for out-of-range attendance approval."
+        }
+      },
+      {
+        "path": "/announcements/{announcementId}",
+        "definition": {
+          "entityName": "object",
+          "description": "Company-wide announcements."
+        }
+      },
+      {
+        "path": "/events/{eventId}",
+        "definition": {
+          "entityName": "object",
+          "description": "Birthdays, anniversaries, and company milestones."
+        }
+      },
+      {
+        "path": "/issue_reports/{ticketId}",
+        "definition": {
+          "entityName": "object",
+          "description": "Technical support and facility tickets."
         }
       }
     ]
