@@ -55,7 +55,7 @@ export default function DashboardPage() {
   }, [userTickets]);
 
   return (
-    <div className="space-y-4 max-w-[1200px] mx-auto pb-10 font-jakarta">
+    <div className="space-y-4 max-w-full mx-auto pb-10 font-jakarta">
       {/* Greeting Header */}
       <div className="flex flex-col gap-0.5 mb-2 animate-fade-in-up">
           <h1 className="text-xl font-black tracking-tighter leading-none">
@@ -88,22 +88,16 @@ export default function DashboardPage() {
 
       <DashboardReminder />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-          <div className="lg:col-span-12 animate-fade-in-up">
-              <ProfileBentoCard />
-          </div>
+      <div className="w-full animate-fade-in-up">
+          <ProfileBentoCard />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-12 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-              <AttendanceWidget />
-          </div>
+      <div className="w-full animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+          <AttendanceWidget />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-12 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-              <MissionHeatmapWidget />
-          </div>
+      <div className="w-full animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <MissionHeatmapWidget />
       </div>
 
       {isAdminOrHR && (

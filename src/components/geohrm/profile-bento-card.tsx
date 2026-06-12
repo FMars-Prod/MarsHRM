@@ -2,13 +2,15 @@
 
 import * as React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { format, differenceInMonths, differenceInDays, addMonths } from 'date-fns';
 import { ShieldCheck, CalendarDays, Clock, MapPin, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCollection } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
 
 export function ProfileBentoCard() {
     const { user } = useUser();
@@ -48,7 +50,7 @@ export function ProfileBentoCard() {
 
     if (isLoading || !employee) {
         return (
-            <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden ring-1 ring-border/50 h-[180px]">
+            <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden ring-1 ring-border/50 h-[160px]">
                 <div className="w-full h-full bg-muted/20 animate-pulse" />
             </Card>
         );
@@ -61,11 +63,11 @@ export function ProfileBentoCard() {
     return (
         <Card className="border-none shadow-2xl rounded-none bg-white overflow-hidden font-jakarta ring-1 ring-border/50 group transition-all duration-500 hover:shadow-primary/5">
             <CardContent className="p-0">
-                <div className="flex flex-col md:flex-row items-center min-h-[160px]">
+                <div className="flex flex-col lg:flex-row items-center min-h-[160px]">
                     {/* Primary Identity Section - Horizontal Strip */}
-                    <div className="flex-1 p-6 lg:p-8 flex flex-row items-center gap-8 md:border-r border-dashed border-border/50 h-full">
+                    <div className="flex-1 p-6 lg:p-8 flex flex-row items-center gap-8 lg:border-r border-dashed border-border/50 h-full">
                         <div className="relative shrink-0">
-                            <Avatar className="size-24 lg:size-28 rounded-none ring-4 ring-white shadow-xl transition-transform duration-500 group-hover:scale-105">
+                            <Avatar className="h-32 w-32 rounded-none ring-4 ring-white shadow-xl transition-transform duration-500 group-hover:scale-105">
                                 {employee.avatar ? (
                                     isUrl ? <AvatarImage src={employee.avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 text-3xl font-black">{employee.avatar}</div>
                                 ) : <AvatarFallback className="text-2xl font-black bg-primary/10 text-primary rounded-none">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>}
@@ -94,7 +96,7 @@ export function ProfileBentoCard() {
                     </div>
 
                     {/* Meta Stats Section - Distributed Linear Layout */}
-                    <div className="w-full md:w-auto p-6 lg:p-8 bg-muted/5 flex flex-row items-center justify-around md:gap-12 lg:gap-16 h-full">
+                    <div className="w-full lg:w-auto p-6 lg:p-10 bg-muted/5 flex flex-row items-center justify-around lg:gap-16 h-full">
                         <StatusInfo icon={ShieldCheck} label="Account Tier" value={roleName === 'CEO/Admin' ? 'CEO' : roleName} color="text-indigo-600" />
                         <StatusInfo icon={CalendarDays} label="Joining Date" value={joinDate} color="text-emerald-600" />
                         <StatusInfo icon={Clock} label="Operational Tenure" value={experience} color="text-primary" />
@@ -107,12 +109,12 @@ export function ProfileBentoCard() {
 
 function StatusInfo({ icon: Icon, label, value, color }: any) {
     return (
-        <div className="flex flex-col items-center md:items-start group/item">
+        <div className="flex flex-col items-center lg:items-start group/item">
             <div className="flex items-center gap-1.5 mb-1 opacity-40 group-hover/item:opacity-100 transition-opacity">
                 <Icon className="size-3" />
                 <span className="text-[8px] font-black uppercase tracking-[0.2em]">{label}</span>
             </div>
-            <span className={cn("text-base lg:text-lg font-black tracking-tighter leading-none whitespace-nowrap", color)}>{value}</span>
+            <span className={cn("text-base lg:text-xl font-black tracking-tighter leading-none whitespace-nowrap", color)}>{value}</span>
         </div>
     );
 }
