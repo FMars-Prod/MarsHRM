@@ -298,7 +298,7 @@ export default function DashboardLayout({
             
             <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
                 <DialogTrigger asChild>
-                    <div className="relative w-full max-w-sm group cursor-pointer">
+                    <div className="relative w-full max-sm hidden sm:block max-w-sm group cursor-pointer">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         <div className="h-10 w-full pl-10 pr-4 flex items-center bg-muted/20 border-none ring-1 ring-border/50 rounded-none text-muted-foreground text-sm font-bold uppercase tracking-tight">
                             Command Search...

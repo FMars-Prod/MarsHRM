@@ -126,8 +126,8 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
           <div className="h-16 w-0.5 bg-primary/20"></div>
         </div>
         <div>
-          <h4 className="font-semibold">Submitted</h4>
-          <p className="text-sm text-muted-foreground">Submitted on {request.createdAt ? format(request.createdAt.toDate(), "PP") : '...'}.</p>
+          <h4 className="font-semibold text-sm uppercase font-black">Submitted</h4>
+          <p className="text-xs text-muted-foreground">Submitted on {request.createdAt ? format(request.createdAt.toDate(), "PP") : '...'}.</p>
         </div>
       </div>
       
@@ -145,8 +145,8 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
           <div className={cn("h-16 w-0.5", (isApprovedByLead || isRejectedByLead) ? 'bg-primary/20' : 'bg-gray-200')}></div>
         </div>
         <div className="flex-1">
-          <h4 className={cn("font-semibold", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
-          <p className="text-sm text-muted-foreground">
+          <h4 className={cn("font-semibold text-sm uppercase font-black", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
+          <p className="text-xs text-muted-foreground">
             {leadSkipped && "Skipped (Executive Override)."}
             {!leadSkipped && isApprovedByLead && (request.approvedByTeamLeadId ? `Approved by ${teamLeadName}.` : 'Pending.')}
             {isRejectedByLead && `Rejected.`}
@@ -170,11 +170,11 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
           </div>
         </div>
         <div className="flex-1">
-          <h4 className={cn("font-semibold", 
+          <h4 className={cn("font-semibold text-sm uppercase font-black", 
               isRejectedByHR && "text-red-500",
               !isApprovedByLead && !isRejectedByLead && "text-muted-foreground"
           )}>HR Approval</h4>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {isApprovedByHR && `Approved by ${hrName}.`}
             {isRejectedByHR && `Rejected.`}
             {isPendingHR && 'Pending HR approval.'}

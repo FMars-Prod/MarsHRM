@@ -357,7 +357,7 @@ export default function UsersPage() {
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className={cn("text-[10px] font-black uppercase text-primary tracking-widest", isWfhAllowedValue && "opacity-20")}>Office Assignment</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled={isWfhAllowedValue}>
+                                            <Select onValueChange={field.onChange} value={field.value || ""} disabled={isWfhAllowedValue}>
                                                 <FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder={isWfhAllowedValue ? "REMOTE OPS" : "Select Branch"} /></SelectTrigger></FormControl>
                                                 <SelectContent className="rounded-none">
                                                     {branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
