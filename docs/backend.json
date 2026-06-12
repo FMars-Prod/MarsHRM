@@ -22,7 +22,7 @@
         "homeLatitude": { "type": "number" },
         "homeLongitude": { "type": "number" },
         "homeRadius": { "type": "number" },
-        "performanceRating": { "type": "string", "enum": ["Excellent", "Good", "Average", "Poor"] },
+        "performanceRating": { "type": "string", "enum": ["Excellent", "Good", "Improving", "Poor"] },
         "lastReviewDate": { "type": "string", "format": "date-time" },
         "leaveBalance": { "type": "number" },
         "totalLeaveEntitlement": { "type": "number" },

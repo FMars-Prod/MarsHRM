@@ -18,7 +18,7 @@ import {
     FileCheck, FileBox, Users, Laptop, MapPin, CalendarClock,
     MessageSquareWarning, RotateCcw, Network, Check, X
 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
@@ -200,6 +200,7 @@ export default function ProfilePage() {
     const leaveBalValue = employee.leaveBalance;
     const leaveEntValue = employee.totalLeaveEntitlement || (isEmployeeType ? 12 : 0);
     const isLeaveConfigured = leaveBalValue !== undefined && isEmployeeType;
+    const isAdmin = employee.role === 'HR Manager' || employee.role === 'CEO/Admin';
 
     return (
         <div className="max-w-6xl mx-auto animate-fade-in-up pb-4 space-y-3 font-jakarta">
@@ -252,7 +253,39 @@ export default function ProfilePage() {
                     color="text-sky-600" 
                 />
                 <MetricCard icon={Zap} title="Performance" ratio={employee.performanceRating || "Good"} color="text-orange-600">
-                    <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-2.5">Review: {employee.lastReviewDate ? format(employee.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
+                    <div className="flex items-center justify-between mt-2.5">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground/60">Review: {employee.lastReviewDate ? format(employee.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
+                        {isAdmin && (
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 hover:bg-orange-50 rounded-none">
+                                        <Edit className="size-3 text-orange-600" />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="rounded-none sm:max-w-sm border-none shadow-2xl">
+                                    <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Performance Tier</DialogTitle></DialogHeader>
+                                    <div className="py-6 space-y-4">
+                                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Assign Rating</Label>
+                                        <Select 
+                                            onValueChange={(v) => {
+                                                if (userDocRef) updateDocumentNonBlocking(userDocRef, { performanceRating: v, lastReviewDate: serverTimestamp() });
+                                                toast({ title: "Performance Updated" });
+                                            }} 
+                                            defaultValue={employee.performanceRating || "Good"}
+                                        >
+                                            <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
+                                            <SelectContent className="rounded-none">
+                                                <SelectItem value="Excellent">Excellent</SelectItem>
+                                                <SelectItem value="Good">Good</SelectItem>
+                                                <SelectItem value="Improving">Improving</SelectItem>
+                                                <SelectItem value="Poor">Poor</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                        )}
+                    </div>
                 </MetricCard>
                 <MetricCard icon={FileCheck} title="Payroll" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : (employee.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600" />
                 <MetricCard icon={FileBox} title="Vault" ratio={documents?.length || 0} color="text-emerald-600">

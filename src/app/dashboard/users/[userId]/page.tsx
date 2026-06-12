@@ -4,13 +4,13 @@
 import * as React from 'react';
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useMemoFirebase, useCollection, useDoc, useUser } from '@/firebase';
-import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase, useCollection, useDoc, useUser, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs, serverTimestamp } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network } from 'lucide-react';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,23 @@ import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogDescription, 
+    DialogFooter, 
+    DialogHeader, 
+    DialogTitle,
+    DialogTrigger 
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 type AttendanceRecord = {
   id: string;
@@ -115,6 +132,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     return { present, late, absent, remaining, totalWorkingDays, percentage: Math.min(100, Math.round((attended / totalWorkingDays) * 100)) };
   }, [attendanceData, monthStart, monthEnd]);
 
+  const handleUpdatePerformance = (newRating: string) => {
+    if (!userId || !userDocRef) return;
+    updateDocumentNonBlocking(userDocRef, {
+        performanceRating: newRating,
+        lastReviewDate: serverTimestamp()
+    });
+    toast({ title: "Performance Updated", description: `Tier recalibrated to ${newRating}.` });
+  };
+
   React.useEffect(() => {
       const fetchReports = async () => {
           if (!userId) return;
@@ -199,7 +225,33 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             />
 
             <MetricCard icon={Zap} title="Performance" ratio={user.performanceRating || "Good"} color="text-orange-600">
-                <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-4">Review: {user.lastReviewDate ? format(user.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
+                <div className="flex items-center justify-between mt-4">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground/60">Review: {user.lastReviewDate ? format(user.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
+                    {isAdmin && (
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 hover:bg-orange-50 rounded-none">
+                                    <Edit className="size-3 text-orange-600" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="rounded-none sm:max-w-sm border-none shadow-2xl">
+                                <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Performance Tier</DialogTitle></DialogHeader>
+                                <div className="py-6 space-y-4">
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Assign Rating</Label>
+                                    <Select onValueChange={handleUpdatePerformance} defaultValue={user.performanceRating || "Good"}>
+                                        <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
+                                        <SelectContent className="rounded-none">
+                                            <SelectItem value="Excellent">Excellent</SelectItem>
+                                            <SelectItem value="Good">Good</SelectItem>
+                                            <SelectItem value="Improving">Improving</SelectItem>
+                                            <SelectItem value="Poor">Poor</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                </div>
             </MetricCard>
 
             <MetricCard icon={FileCheck} title="Payroll Status" ratio={user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600" />
