@@ -23,14 +23,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose
-} from "@/components/ui/dialog";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -116,6 +112,7 @@ export default function DashboardLayout({
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -326,21 +323,21 @@ export default function DashboardLayout({
 
           <div className="flex items-center gap-2">
              <div className="flex items-center gap-1">
-                {/* Notifications */}
-                <Dialog>
-                   <DialogTrigger asChild>
+                {/* Notifications Popover */}
+                <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+                   <PopoverTrigger asChild>
                        <Button variant="ghost" size="icon" className="rounded-none relative h-10 w-10">
                            <Bell className="size-5" />
                            {totalNotifications > 0 && (
                                <span className="absolute top-2.5 right-2.5 size-2 bg-red-500 rounded-full ring-2 ring-white" />
                            )}
                        </Button>
-                   </DialogTrigger>
-                   <DialogContent className="sm:max-w-md p-0 rounded-none border-none shadow-2xl">
-                       <DialogHeader className="p-6 border-b">
-                           <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Notifications</DialogTitle>
-                           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Your recent updates</DialogDescription>
-                       </DialogHeader>
+                   </PopoverTrigger>
+                   <PopoverContent className="w-80 p-0 rounded-none border-none shadow-2xl" align="end" sideOffset={12}>
+                       <div className="p-6 border-b bg-white">
+                           <h4 className="text-lg font-black uppercase tracking-tighter text-primary">Notifications</h4>
+                           <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Your recent updates</p>
+                       </div>
                        <ScrollArea className="max-h-[400px]">
                            <div className="p-4 space-y-2">
                                {totalNotifications === 0 ? (
@@ -351,52 +348,53 @@ export default function DashboardLayout({
                                ) : (
                                    <>
                                        {leaveRequests?.map((req, i) => (
-                                           <DialogClose asChild key={i}>
-                                               <Link href="/dashboard/leave" className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group">
-                                                   <div className="size-8 bg-sky-500 text-white flex items-center justify-center rounded-none"><Command className="size-4"/></div>
-                                                   <div className="flex-1 min-w-0">
-                                                       <p className="text-[10px] font-black uppercase">Leave Request</p>
-                                                       <p className="text-xs font-bold truncate">{req.employeeName} submitted a request</p>
-                                                   </div>
-                                               </Link>
-                                           </DialogClose>
+                                           <Link 
+                                              href="/dashboard/leave" 
+                                              key={i}
+                                              onClick={() => setIsNotificationsOpen(false)}
+                                              className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group"
+                                           >
+                                               <div className="size-8 bg-sky-500 text-white flex items-center justify-center rounded-none"><Command className="size-4"/></div>
+                                               <div className="flex-1 min-w-0">
+                                                   <p className="text-[10px] font-black uppercase">Leave Request</p>
+                                                   <p className="text-xs font-bold truncate">{req.employeeName} submitted a request</p>
+                                               </div>
+                                           </Link>
                                        ))}
                                        {attRequests?.map((req, i) => (
-                                           <DialogClose asChild key={i}>
-                                               <Link href="/dashboard/attendance-requests" className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group">
-                                                   <div className="size-8 bg-amber-500 text-white flex items-center justify-center rounded-none"><MapPin className="size-4"/></div>
-                                                   <div className="flex-1 min-w-0">
-                                                       <p className="text-[10px] font-black uppercase">Remote Clock-in</p>
-                                                       <p className="text-xs font-bold truncate">{req.employeeName} is out of range</p>
-                                                   </div>
-                                               </Link>
-                                           </DialogClose>
+                                           <Link 
+                                              href="/dashboard/attendance-requests" 
+                                              key={i}
+                                              onClick={() => setIsNotificationsOpen(false)}
+                                              className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group"
+                                           >
+                                               <div className="size-8 bg-amber-500 text-white flex items-center justify-center rounded-none"><MapPin className="size-4"/></div>
+                                               <div className="flex-1 min-w-0">
+                                                   <p className="text-[10px] font-black uppercase">Remote Clock-in</p>
+                                                   <p className="text-xs font-bold truncate">{req.employeeName} is out of range</p>
+                                               </div>
+                                           </Link>
                                        ))}
                                        {allAnnouncements?.slice(0, 3).map((ann, i) => (
-                                           <DialogClose asChild key={ann.id}>
-                                               <Link href="/dashboard/announcements" className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group">
-                                                   <div className="size-8 bg-primary text-white flex items-center justify-center rounded-none"><Sparkles className="size-4"/></div>
-                                                   <div className="flex-1 min-w-0">
-                                                       <p className="text-[10px] font-black uppercase">Announcement</p>
-                                                       <p className="text-xs font-bold truncate">{ann.title}</p>
-                                                   </div>
-                                               </Link>
-                                           </DialogClose>
+                                           <Link 
+                                              href="/dashboard/announcements" 
+                                              key={ann.id}
+                                              onClick={() => setIsNotificationsOpen(false)}
+                                              className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group"
+                                           >
+                                               <div className="size-8 bg-primary text-white flex items-center justify-center rounded-none"><Sparkles className="size-4"/></div>
+                                               <div className="flex-1 min-w-0">
+                                                   <p className="text-[10px] font-black uppercase">Announcement</p>
+                                                   <p className="text-xs font-bold truncate">{ann.title}</p>
+                                               </div>
+                                           </Link>
                                        ))}
                                    </>
                                )}
                            </div>
                        </ScrollArea>
-                       <Separator />
-                       <div className="p-4 bg-muted/10 text-center">
-                           <DialogClose asChild>
-                               <Button variant="link" className="text-[10px] font-black uppercase tracking-widest h-auto py-0">
-                                   View All
-                               </Button>
-                           </DialogClose>
-                       </div>
-                   </DialogContent>
-                </Dialog>
+                   </PopoverContent>
+                </Popover>
 
                 {/* Todo */}
                 <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
