@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Check, X, LocateFixed, Building2, RotateCcw, Home, Search, Loader2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Check, X, LocateFixed, Building2, RotateCcw, Home, Search, Loader2, MapPin } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { doc, collection, query, writeBatch, serverTimestamp, getDocs, where, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
