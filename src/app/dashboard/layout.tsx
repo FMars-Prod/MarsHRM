@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sidebar';
 import { MainNav } from '@/components/geohrm/main-nav';
 import { UserNav } from '@/components/geohrm/user-nav';
-import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert } from 'lucide-react';
+import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert, ListTodo } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
@@ -29,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -323,84 +324,103 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-             <div className="hidden lg:flex items-center gap-4">
-                <Button asChild variant="ghost" size="sm" className="rounded-none font-black uppercase text-[10px] tracking-widest gap-2">
-                    <Link href="https://fortumars.com/os.html" target="_blank">
-                        <LayoutGrid className="size-3.5" /> My Apps
+          <div className="flex items-center gap-2">
+             <div className="flex items-center gap-1">
+                {/* Notifications */}
+                <Dialog>
+                   <DialogTrigger asChild>
+                       <Button variant="ghost" size="icon" className="rounded-none relative h-10 w-10">
+                           <Bell className="size-5" />
+                           {totalNotifications > 0 && (
+                               <span className="absolute top-2.5 right-2.5 size-2 bg-red-500 rounded-full ring-2 ring-white" />
+                           )}
+                       </Button>
+                   </DialogTrigger>
+                   <DialogContent className="sm:max-w-md p-0 rounded-none border-none shadow-2xl">
+                       <DialogHeader className="p-6 border-b">
+                           <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Notifications</DialogTitle>
+                           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Your recent updates</DialogDescription>
+                       </DialogHeader>
+                       <ScrollArea className="max-h-[400px]">
+                           <div className="p-4 space-y-2">
+                               {totalNotifications === 0 ? (
+                                   <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
+                                       <ShieldCheck className="size-10 mb-2" />
+                                       <p className="font-black uppercase text-[10px] tracking-widest">Everything is clear</p>
+                                   </div>
+                               ) : (
+                                   <>
+                                       {leaveRequests?.map((req, i) => (
+                                           <DialogClose asChild key={i}>
+                                               <Link href="/dashboard/leave" className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group">
+                                                   <div className="size-8 bg-sky-500 text-white flex items-center justify-center rounded-none"><Command className="size-4"/></div>
+                                                   <div className="flex-1 min-w-0">
+                                                       <p className="text-[10px] font-black uppercase">Leave Request</p>
+                                                       <p className="text-xs font-bold truncate">{req.employeeName} submitted a request</p>
+                                                   </div>
+                                               </Link>
+                                           </DialogClose>
+                                       ))}
+                                       {attRequests?.map((req, i) => (
+                                           <DialogClose asChild key={i}>
+                                               <Link href="/dashboard/attendance-requests" className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group">
+                                                   <div className="size-8 bg-amber-500 text-white flex items-center justify-center rounded-none"><MapPin className="size-4"/></div>
+                                                   <div className="flex-1 min-w-0">
+                                                       <p className="text-[10px] font-black uppercase">Remote Clock-in</p>
+                                                       <p className="text-xs font-bold truncate">{req.employeeName} is out of range</p>
+                                                   </div>
+                                               </Link>
+                                           </DialogClose>
+                                       ))}
+                                       {allAnnouncements?.slice(0, 3).map((ann, i) => (
+                                           <DialogClose asChild key={ann.id}>
+                                               <Link href="/dashboard/announcements" className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group">
+                                                   <div className="size-8 bg-primary text-white flex items-center justify-center rounded-none"><Sparkles className="size-4"/></div>
+                                                   <div className="flex-1 min-w-0">
+                                                       <p className="text-[10px] font-black uppercase">Announcement</p>
+                                                       <p className="text-xs font-bold truncate">{ann.title}</p>
+                                                   </div>
+                                               </Link>
+                                           </DialogClose>
+                                       ))}
+                                   </>
+                               )}
+                           </div>
+                       </ScrollArea>
+                       <Separator />
+                       <div className="p-4 bg-muted/10 text-center">
+                           <DialogClose asChild>
+                               <Button variant="link" className="text-[10px] font-black uppercase tracking-widest h-auto py-0">
+                                   View All
+                               </Button>
+                           </DialogClose>
+                       </div>
+                   </DialogContent>
+                </Dialog>
+
+                {/* Todo */}
+                <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
+                    <Link href="/dashboard/todo">
+                        <ListTodo className="size-5" />
                     </Link>
                 </Button>
-                <Button asChild variant="ghost" size="sm" className="rounded-none font-black uppercase text-[10px] tracking-widest gap-2">
+
+                {/* My Apps */}
+                <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
+                    <Link href="https://fortumars.com/os.html" target="_blank">
+                        <LayoutGrid className="size-5" />
+                    </Link>
+                </Button>
+
+                {/* Help */}
+                <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
                     <Link href="/tutorial">
-                        <HelpCircle className="size-3.5" /> Help
+                        <HelpCircle className="size-5" />
                     </Link>
                 </Button>
              </div>
 
-             <Separator orientation="vertical" className="h-6" />
-
-             <Dialog>
-                <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-none relative h-10 w-10">
-                        <Bell className="size-5" />
-                        {totalNotifications > 0 && (
-                            <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full ring-2 ring-white" />
-                        )}
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md p-0 rounded-none border-none shadow-2xl">
-                    <DialogHeader className="p-6 border-b">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Tactical Alerts</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pending system signals</DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="max-h-[400px]">
-                        <div className="p-4 space-y-4">
-                            {totalNotifications === 0 ? (
-                                <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
-                                    <ShieldCheck className="size-10 mb-2" />
-                                    <p className="font-black uppercase text-[10px] tracking-widest">Protocol Clear</p>
-                                </div>
-                            ) : (
-                                <>
-                                    {leaveRequests?.map((req, i) => (
-                                        <Link href="/dashboard/leave" key={i} className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group">
-                                            <div className="size-8 bg-sky-500 text-white flex items-center justify-center rounded-none"><Command className="size-4"/></div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[10px] font-black uppercase">Leave Approval</p>
-                                                <p className="text-xs font-bold truncate">{req.employeeName} submitted a request</p>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                    {attRequests?.map((req, i) => (
-                                        <Link href="/dashboard/attendance-requests" key={i} className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group">
-                                            <div className="size-8 bg-amber-500 text-white flex items-center justify-center rounded-none"><MapPin className="size-4"/></div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[10px] font-black uppercase">Remote Approval</p>
-                                                <p className="text-xs font-bold truncate">{req.employeeName} out of range</p>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                    {allAnnouncements?.slice(0, 3).map((ann, i) => (
-                                        <Link href="/dashboard/announcements" key={ann.id} className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group">
-                                            <div className="size-8 bg-primary text-white flex items-center justify-center rounded-none"><Sparkles className="size-4"/></div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[10px] font-black uppercase">Announcement</p>
-                                                <p className="text-xs font-bold truncate">{ann.title}</p>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </>
-                            )}
-                        </div>
-                    </ScrollArea>
-                    <Separator />
-                    <div className="p-4 bg-muted/10 text-center">
-                        <Button asChild variant="link" className="text-[10px] font-black uppercase tracking-widest h-auto py-0">
-                            <Link href="/dashboard">Access Command Hub</Link>
-                        </Button>
-                    </div>
-                </DialogContent>
-             </Dialog>
+             <Separator orientation="vertical" className="h-6 mx-2" />
 
              <div className="flex items-center gap-4 group cursor-pointer" onClick={() => router.push('/dashboard/profile')}>
                 <div className="hidden sm:flex flex-col items-end text-right">
