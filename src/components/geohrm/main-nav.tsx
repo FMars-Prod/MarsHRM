@@ -35,6 +35,7 @@ import {
   MapPinned,
   UserCheck,
   Building2,
+  ListTodo,
 } from "lucide-react";
 import React from "react";
 
@@ -46,6 +47,7 @@ const groups = [
       { href: "https://studio--studio-6104224101-c3e7e.us-central1.hosted.app/", label: "Admin RWT", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/todo", label: "To Do", icon: ListTodo, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
   },
   {
