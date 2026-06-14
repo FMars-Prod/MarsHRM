@@ -83,13 +83,16 @@ export default function AttendanceRequestsPage() {
                 isOutOfRange: false
             };
 
+            // Use the original request timestamp to record the attendance time
+            const userInitiatedTime = request.requestTimestamp;
+
             if (request.type === 'Clock Out') {
-                attendanceUpdate.checkOutTime = serverTimestamp();
+                attendanceUpdate.checkOutTime = userInitiatedTime;
                 attendanceUpdate.locationCheckOutLatitude = request.requestedLatitude;
                 attendanceUpdate.locationCheckOutLongitude = request.requestedLongitude;
             } else {
                 // Check In
-                attendanceUpdate.checkInTime = serverTimestamp();
+                attendanceUpdate.checkInTime = userInitiatedTime;
                 attendanceUpdate.status = request.intendedStatus || 'present';
                 attendanceUpdate.locationCheckInLatitude = request.requestedLatitude;
                 attendanceUpdate.locationCheckInLongitude = request.requestedLongitude;
