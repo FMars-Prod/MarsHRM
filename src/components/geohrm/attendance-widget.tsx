@@ -77,7 +77,7 @@ export function AttendanceWidget() {
   }, [branchData, globalLocationData, userData]);
 
   const [isOutOfRangeDialogOpen, setIsOutOfRangeDialogOpen] = useState(false);
-  const [outOfRangeReason, setOutOfRangeReason] = setOutOfRangeReason("");
+  const [outOfRangeReason, setOutOfRangeReason] = useState("");
   const [outOfRangeType, setOutOfRangeType] = useState<'Check In' | 'Clock Out'>('Check In');
   const [lastCapturedLoc, setLastCapturedLoc] = useState<Location | null>(null);
 
