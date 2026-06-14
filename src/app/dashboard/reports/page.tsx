@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, ShieldCheck, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks } from "lucide-react";
+import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -144,7 +144,8 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
         } catch (error: any) {
             toast({ variant: "destructive", title: "Storage Error", description: error.message });
         } finally {
-            setUploading(false);
+            setIsUploadingBest(false);
+            setIsUploadingWorst(false);
         }
     };
     
@@ -234,7 +235,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><ShieldCheck className="size-4" /> 3️⃣ Key Engagements</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><CheckCircle2 className="size-4" /> 3️⃣ Key Engagements</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField control={control} name="quotationsReleased" render={({ field }) => (
@@ -507,6 +508,13 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
                 <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Revenue Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
                     <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed Revenue</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
+                </div>
+            </div>
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><CheckCircle2 className="size-4" /> 3️⃣ Key Engagements</div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50"><p className="text-[9px] font-black uppercase text-muted-foreground">Quotations Released</p><p className="text-xl font-black">{report.quotationsReleased || 0}</p></div>
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50"><p className="text-[9px] font-black uppercase text-muted-foreground">Meetings Secured</p><p className="text-xl font-black">{report.meetingsSecured || 0}</p></div>
                 </div>
             </div>
             <div className="p-4 bg-primary/5 rounded-2xl space-y-4">
@@ -1010,4 +1018,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-

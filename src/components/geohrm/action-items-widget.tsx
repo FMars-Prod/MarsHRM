@@ -1,8 +1,9 @@
+
 'use client';
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, CalendarOff, ShieldCheck, MessageSquareWarning, ArrowRight, ShieldAlert, MapPin } from 'lucide-react';
+import { List, CalendarOff, CheckCircle2, MessageSquareWarning, ArrowRight, ShieldAlert, MapPin } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, getDocs, collectionGroup } from 'firebase/firestore';
 import { subDays, endOfDay, format, startOfDay } from 'date-fns';
@@ -25,7 +26,7 @@ export function ActionItemsWidget() {
     const [complianceIssues, setComplianceIssues] = React.useState<ActionItem[]>([]);
 
     const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
-    const { data: currentUserData } = useDoc(currentUserDocRef);
+    const { data: currentUserData } = useDoc(userDocRef);
     const userRole = (currentUserData as any)?.role;
     const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
@@ -107,7 +108,7 @@ export function ActionItemsWidget() {
 
     const iconMap = {
         leave: <CalendarOff className="size-4" />,
-        policy: <ShieldCheck className="size-4" />,
+        policy: <CheckCircle2 className="size-4" />,
         issue: <MessageSquareWarning className="size-4" />,
         compliance: <ShieldAlert className="size-4" />,
         range_approval: <MapPin className="size-4" />
@@ -152,7 +153,7 @@ export function ActionItemsWidget() {
                     </ScrollArea>
                 ) : (
                     <div className="flex flex-col items-center justify-center text-center py-12 opacity-30">
-                        <ShieldCheck className="size-10 mb-2" />
+                        <CheckCircle2 className="size-10 mb-2" />
                         <p className="font-black uppercase text-[10px] tracking-widest">No pending items</p>
                     </div>
                 )}
