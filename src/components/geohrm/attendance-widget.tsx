@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -221,43 +222,97 @@ export function AttendanceWidget() {
   };
 
   const handleLunchOut = () => {
-    updateDocumentNonBlocking(getTodaysAttendanceRef!, {
-      lunchOutTime: serverTimestamp(),
-      lunchInTime: null
-    });
-    toast({ title: "Lunch Break Active" });
+    setIsVerifyingLocation(true);
+    setCurrentSignal("Checking...");
+    navigator.geolocation.getCurrentPosition(p => {
+        const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
+        setIsVerifyingLocation(false);
+        setCurrentSignal("");
+        updateDocumentNonBlocking(getTodaysAttendanceRef!, {
+          lunchOutTime: serverTimestamp(),
+          lunchInTime: null,
+          locationLunchOutLatitude: userLoc.latitude,
+          locationLunchOutLongitude: userLoc.longitude
+        });
+        toast({ title: "Lunch Break Active" });
+    }, () => {
+        setIsVerifyingLocation(false);
+        setCurrentSignal("");
+        toast({ variant: "destructive", title: "Location signal failed" });
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleLunchIn = () => {
-    const breakStart = todaysAttendance?.lunchOutTime?.toDate();
-    const breakEnd = new Date();
-    const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
-    
-    updateDocumentNonBlocking(getTodaysAttendanceRef!, {
-      lunchInTime: serverTimestamp(),
-      totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
-    });
-    toast({ title: "Back from Lunch" });
+    setIsVerifyingLocation(true);
+    setCurrentSignal("Checking...");
+    navigator.geolocation.getCurrentPosition(p => {
+        const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
+        setIsVerifyingLocation(false);
+        setCurrentSignal("");
+        
+        const breakStart = todaysAttendance?.lunchOutTime?.toDate();
+        const breakEnd = new Date();
+        const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
+        
+        updateDocumentNonBlocking(getTodaysAttendanceRef!, {
+          lunchInTime: serverTimestamp(),
+          locationLunchInLatitude: userLoc.latitude,
+          locationLunchInLongitude: userLoc.longitude,
+          totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
+        });
+        toast({ title: "Back from Lunch" });
+    }, () => {
+        setIsVerifyingLocation(false);
+        setCurrentSignal("");
+        toast({ variant: "destructive", title: "Location signal failed" });
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleShortBreakOut = () => {
-    updateDocumentNonBlocking(getTodaysAttendanceRef!, {
-        breakOutTime: serverTimestamp(),
-        breakInTime: null
-    });
-    toast({ title: "Short Break Started" });
+    setIsVerifyingLocation(true);
+    setCurrentSignal("Checking...");
+    navigator.geolocation.getCurrentPosition(p => {
+        const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
+        setIsVerifyingLocation(false);
+        setCurrentSignal("");
+        updateDocumentNonBlocking(getTodaysAttendanceRef!, {
+            breakOutTime: serverTimestamp(),
+            breakInTime: null,
+            locationBreakOutLatitude: userLoc.latitude,
+            locationBreakOutLongitude: userLoc.longitude
+        });
+        toast({ title: "Short Break Started" });
+    }, () => {
+        setIsVerifyingLocation(false);
+        setCurrentSignal("");
+        toast({ variant: "destructive", title: "Location signal failed" });
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleShortBreakIn = () => {
-    const breakStart = todaysAttendance?.breakOutTime?.toDate();
-    const breakEnd = new Date();
-    const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
-    
-    updateDocumentNonBlocking(getTodaysAttendanceRef!, {
-      breakInTime: serverTimestamp(),
-      totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
-    });
-    toast({ title: "Short Break Finished" });
+    setIsVerifyingLocation(true);
+    setCurrentSignal("Checking...");
+    navigator.geolocation.getCurrentPosition(p => {
+        const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
+        setIsVerifyingLocation(false);
+        setCurrentSignal("");
+        
+        const breakStart = todaysAttendance?.breakOutTime?.toDate();
+        const breakEnd = new Date();
+        const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
+        
+        updateDocumentNonBlocking(getTodaysAttendanceRef!, {
+          breakInTime: serverTimestamp(),
+          locationBreakInLatitude: userLoc.latitude,
+          locationBreakInLongitude: userLoc.longitude,
+          totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
+        });
+        toast({ title: "Short Break Finished" });
+    }, () => {
+        setIsVerifyingLocation(false);
+        setCurrentSignal("");
+        toast({ variant: "destructive", title: "Location signal failed" });
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleSubmitOutOfRangeRequest = () => {
@@ -318,24 +373,28 @@ export function AttendanceWidget() {
                     label="Clock In" 
                     time={todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'p') : '--:--'} 
                     isActive={!!todaysAttendance?.checkInTime}
+                    coords={{ lat: todaysAttendance?.locationCheckInLatitude, lng: todaysAttendance?.locationCheckInLongitude }}
                 />
                 <StatusStep 
                     icon={Utensils} 
                     label="Lunch Start" 
                     time={todaysAttendance?.lunchOutTime ? format(todaysAttendance.lunchOutTime.toDate(), 'p') : '--:--'} 
                     isActive={!!todaysAttendance?.lunchOutTime}
+                    coords={{ lat: todaysAttendance?.locationLunchOutLatitude, lng: todaysAttendance?.locationLunchOutLongitude }}
                 />
                 <StatusStep 
                     icon={LogIn} 
                     label="Lunch End" 
                     time={todaysAttendance?.lunchInTime ? format(todaysAttendance.lunchInTime.toDate(), 'p') : '--:--'} 
                     isActive={!!todaysAttendance?.lunchInTime}
+                    coords={{ lat: todaysAttendance?.locationLunchInLatitude, lng: todaysAttendance?.locationLunchInLongitude }}
                 />
                 <StatusStep 
                     icon={LogOut} 
                     label="Clock Out" 
                     time={todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'} 
                     isActive={!!todaysAttendance?.checkOutTime}
+                    coords={{ lat: todaysAttendance?.locationCheckOutLatitude, lng: todaysAttendance?.locationCheckOutLongitude }}
                 />
             </div>
 
@@ -433,7 +492,7 @@ export function AttendanceWidget() {
   );
 }
 
-function StatusStep({ icon: Icon, label, time, isActive }: { icon: any, label: string, time: string, isActive: boolean }) {
+function StatusStep({ icon: Icon, label, time, isActive, coords }: { icon: any, label: string, time: string, isActive: boolean, coords?: {lat?: number, lng?: number} }) {
     return (
         <Card className={cn(
             "border-none shadow-sm rounded-none transition-all duration-500 overflow-hidden",
@@ -449,6 +508,11 @@ function StatusStep({ icon: Icon, label, time, isActive }: { icon: any, label: s
                 <div>
                     <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
                     <p className="text-sm sm:text-xl font-black tabular-nums">{time}</p>
+                    {isActive && coords?.lat && coords?.lng && (
+                        <p className="text-[7px] font-mono font-bold text-primary mt-1">
+                            {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+                        </p>
+                    )}
                 </div>
             </CardContent>
         </Card>
