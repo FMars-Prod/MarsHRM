@@ -3,14 +3,13 @@
 import * as React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, collection, query } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { format, differenceInMonths, differenceInDays, addMonths } from 'date-fns';
 import { ShieldCheck, CalendarDays, Clock, MapPin, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCollection } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
 
 export function ProfileBentoCard() {
     const { user } = useUser();
@@ -63,14 +62,14 @@ export function ProfileBentoCard() {
     return (
         <Card className="border-none shadow-2xl rounded-none bg-white overflow-hidden font-jakarta ring-1 ring-border/50 group transition-all duration-500 hover:shadow-primary/5">
             <CardContent className="p-0">
-                <div className="flex flex-col lg:flex-row items-center min-h-[160px]">
-                    {/* Primary Identity Section - Horizontal Strip */}
-                    <div className="flex-1 p-6 lg:p-8 flex flex-row items-center gap-8 lg:border-r border-dashed border-border/50 h-full">
+                <div className="flex flex-col lg:flex-row items-stretch min-h-[160px]">
+                    {/* Primary Identity Section */}
+                    <div className="flex-1 p-6 lg:p-8 flex flex-row items-center gap-4 sm:gap-8 lg:border-r border-dashed border-border/50 h-full">
                         <div className="relative shrink-0">
-                            <Avatar className="h-32 w-32 rounded-none ring-4 ring-white shadow-xl transition-transform duration-500 group-hover:scale-105">
+                            <Avatar className="h-24 w-24 sm:h-32 sm:w-32 rounded-none ring-4 ring-white shadow-xl transition-transform duration-500 group-hover:scale-105">
                                 {employee.avatar ? (
-                                    isUrl ? <AvatarImage src={employee.avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 text-3xl font-black">{employee.avatar}</div>
-                                ) : <AvatarFallback className="text-2xl font-black bg-primary/10 text-primary rounded-none">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>}
+                                    isUrl ? <AvatarImage src={employee.avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 text-xl sm:text-3xl font-black">{employee.avatar}</div>
+                                ) : <AvatarFallback className="text-xl sm:text-2xl font-black bg-primary/10 text-primary rounded-none">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>}
                             </Avatar>
                             <Badge className="absolute -bottom-1 -right-1 h-5 px-2 bg-green-500 text-white border-2 border-white shadow-lg rounded-none font-black text-[7px] uppercase tracking-widest flex items-center gap-1">
                                 <div className="size-1 rounded-full bg-white animate-pulse" /> Active
@@ -79,27 +78,27 @@ export function ProfileBentoCard() {
 
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                             <div className="space-y-1">
-                                <h2 className="text-2xl lg:text-3xl font-black tracking-tighter truncate leading-none text-foreground">
+                                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tighter truncate leading-none text-foreground uppercase">
                                     {employee.firstName} {employee.lastName}
                                 </h2>
-                                <p className="text-sm font-bold text-muted-foreground/80 uppercase tracking-wide">{employee.jobTitle}</p>
+                                <p className="text-[10px] sm:text-sm font-bold text-muted-foreground/80 uppercase tracking-wide truncate">{employee.jobTitle}</p>
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-4 mt-3">
-                                <Badge variant="outline" className="text-[9px] font-black text-primary/70 uppercase tracking-widest bg-primary/5 border-primary/20 rounded-none px-2.5 py-0.5 flex gap-1.5 items-center">
-                                    <MapPin className="size-2.5" /> {branchName}
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3">
+                                <Badge variant="outline" className="text-[8px] sm:text-[9px] font-black text-primary/70 uppercase tracking-widest bg-primary/5 border-primary/20 rounded-none px-2.5 py-0.5 flex gap-1.5 items-center">
+                                    <MapPin className="size-2 sm:size-2.5" /> {branchName}
                                 </Badge>
-                                <Badge variant="outline" className="text-[9px] font-black text-muted-foreground/70 uppercase tracking-widest bg-muted/20 border-none rounded-none px-2.5 py-0.5 flex gap-1.5 items-center">
-                                    <Building2 className="size-2.5" /> {employee.department}
+                                <Badge variant="outline" className="text-[8px] sm:text-[9px] font-black text-muted-foreground/70 uppercase tracking-widest bg-muted/20 border-none rounded-none px-2.5 py-0.5 flex gap-1.5 items-center">
+                                    <Building2 className="size-2 sm:size-2.5" /> {employee.department}
                                 </Badge>
                             </div>
                         </div>
                     </div>
 
-                    {/* Meta Stats Section - Distributed Linear Layout */}
-                    <div className="w-full lg:w-auto p-6 lg:p-10 bg-muted/5 flex flex-row items-center justify-around lg:gap-16 h-full">
-                        <StatusInfo icon={ShieldCheck} label="Account Tier" value={roleName === 'CEO/Admin' ? 'CEO' : roleName} color="text-indigo-600" />
-                        <StatusInfo icon={CalendarDays} label="Joining Date" value={joinDate} color="text-emerald-600" />
-                        <StatusInfo icon={Clock} label="Operational Tenure" value={experience} color="text-primary" />
+                    {/* Meta Stats Section */}
+                    <div className="w-full lg:w-auto p-4 sm:p-6 lg:p-10 bg-muted/5 flex flex-row items-center justify-around lg:gap-16 h-full border-t lg:border-t-0 border-dashed border-border/50">
+                        <StatusInfo icon={ShieldCheck} label="Account" value={roleName === 'CEO/Admin' ? 'CEO' : roleName} color="text-indigo-600" />
+                        <StatusInfo icon={CalendarDays} label="Joining" value={joinDate} color="text-emerald-600" />
+                        <StatusInfo icon={Clock} label="Tenure" value={experience} color="text-primary" />
                     </div>
                 </div>
             </CardContent>
@@ -111,10 +110,10 @@ function StatusInfo({ icon: Icon, label, value, color }: any) {
     return (
         <div className="flex flex-col items-center lg:items-start group/item">
             <div className="flex items-center gap-1.5 mb-1 opacity-40 group-hover/item:opacity-100 transition-opacity">
-                <Icon className="size-3" />
-                <span className="text-[8px] font-black uppercase tracking-[0.2em]">{label}</span>
+                <Icon className="size-2.5 sm:size-3" />
+                <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em]">{label}</span>
             </div>
-            <span className={cn("text-base lg:text-xl font-black tracking-tighter leading-none whitespace-nowrap", color)}>{value}</span>
+            <span className={cn("text-xs sm:text-base lg:text-xl font-black tracking-tighter leading-none whitespace-nowrap uppercase", color)}>{value}</span>
         </div>
     );
 }

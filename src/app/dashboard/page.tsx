@@ -58,7 +58,7 @@ export default function DashboardPage() {
     <div className="space-y-6 max-w-full mx-auto pb-10 font-jakarta">
       {/* Greeting Header */}
       <div className="flex flex-col gap-0.5 mb-6 animate-fade-in-up">
-          <h1 className="text-4xl lg:text-6xl font-black tracking-tighter leading-none text-primary uppercase">
+          <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black tracking-tighter leading-none text-primary uppercase">
               {greeting}, {currentUserData?.firstName || 'Strategist'}
           </h1>
       </div>
@@ -106,7 +106,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
         <div className="lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <ActionItemsWidget />
         </div>

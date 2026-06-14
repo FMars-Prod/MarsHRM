@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -78,6 +77,8 @@ export default function AttendanceRequestsPage() {
             const attendanceRef = doc(firestore, `users/${request.employeeId}/attendances`, attDateId);
             
             const attendanceUpdate: any = {
+                id: attDateId,
+                employeeId: request.employeeId,
                 isOutOfRange: false
             };
 
@@ -87,8 +88,6 @@ export default function AttendanceRequestsPage() {
                 attendanceUpdate.locationCheckOutLongitude = request.requestedLongitude;
             } else {
                 // Check In
-                attendanceUpdate.id = attDateId;
-                attendanceUpdate.employeeId = request.employeeId;
                 attendanceUpdate.checkInTime = serverTimestamp();
                 attendanceUpdate.status = request.intendedStatus || 'present';
                 attendanceUpdate.locationCheckInLatitude = request.requestedLatitude;
@@ -101,7 +100,7 @@ export default function AttendanceRequestsPage() {
 
         toast({ 
             title: `Request ${status}`, 
-            description: `${request.employeeName}'s out-of-range request has been ${status.toLowerCase()}.` 
+            description: `${request.employeeName}'s request has been ${status.toLowerCase()}.` 
         });
         
         if (status === 'Rejected') {
@@ -114,7 +113,7 @@ export default function AttendanceRequestsPage() {
         selectedIds.forEach(id => {
             deleteDocumentNonBlocking(doc(firestore, 'attendanceApprovalRequests', id));
         });
-        toast({ title: "Records Purged", description: `${selectedIds.length} requests have been removed.` });
+        toast({ title: "Records Deleted", description: `${selectedIds.length} requests removed.` });
         setSelectedIds([]);
     };
 
@@ -132,25 +131,25 @@ export default function AttendanceRequestsPage() {
 
     return (
         <div className="animate-fade-in-up space-y-6">
-            <PageHeader title="Range Approval Desk" description="Verify and approve remote clock-in/out requests with high-precision GPS monitoring.">
+            <PageHeader title="Range Approval Desk" description="Verify and approve remote clock-in/out requests.">
                 <div className="flex gap-2 items-center">
                     {selectedIds.length > 0 && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm" className="rounded-none px-4 h-9 font-bold uppercase text-[10px] gap-2 shadow-lg shadow-red-600/20">
-                                    <Trash2 className="size-3.5" /> Purge ({selectedIds.length})
+                                    <Trash2 className="size-3.5" /> Delete ({selectedIds.length})
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent className="rounded-none border-none shadow-2xl">
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Mission Logs?</AlertDialogTitle>
+                                    <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Delete Logs?</AlertDialogTitle>
                                     <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                                        This will permanently remove {selectedIds.length} selected requests from the tactical registry. This action cannot be reversed.
+                                        This will permanently remove {selectedIds.length} selected requests. This action cannot be undone.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter className="gap-2">
                                     <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleBulkDelete} className="rounded-none font-bold uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700">Confirm Purge</AlertDialogAction>
+                                    <AlertDialogAction onClick={handleBulkDelete} className="rounded-none font-bold uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
@@ -179,7 +178,7 @@ export default function AttendanceRequestsPage() {
             <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
-                        <Table>
+                        <Table className="min-w-[800px]">
                             <TableHeader className="bg-muted/30">
                                 <TableRow className="hover:bg-transparent border-none">
                                     <TableHead className="w-[50px] py-4 px-6">
@@ -194,12 +193,12 @@ export default function AttendanceRequestsPage() {
                                     <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Requested At</TableHead>
                                     <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Justification</TableHead>
                                     <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Location</TableHead>
-                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4 text-right px-6">Final Decision</TableHead>
+                                    <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4 text-right px-6">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground animate-pulse font-medium uppercase text-xs">Scanning dispatch log...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground animate-pulse font-medium uppercase text-xs">Scanning registry...</TableCell></TableRow>
                                 ) : requests && requests.length > 0 ? (
                                     requests.map(req => (
                                         <TableRow key={req.id} className={cn("border-border/50 transition-colors group hover:bg-primary/5", selectedIds.includes(req.id) && "bg-primary/5")}>
@@ -234,7 +233,7 @@ export default function AttendanceRequestsPage() {
                                                 <Button asChild variant="outline" size="sm" className="h-9 rounded-none font-bold text-[10px] uppercase tracking-wider bg-white shadow-sm border-primary/20 text-primary hover:bg-primary/5">
                                                     <Link href={`https://www.google.com/maps/search/?api=1&query=${req.requestedLatitude},${req.requestedLongitude}`} target="_blank">
                                                         <MapPin className="h-3 w-3 mr-2 text-primary" />
-                                                        Verify On Map
+                                                        Verify
                                                         <ExternalLink className="ml-2 h-2.5 w-2.5 opacity-50" />
                                                     </Link>
                                                 </Button>
@@ -262,23 +261,23 @@ export default function AttendanceRequestsPage() {
                                                             </AlertDialogTrigger>
                                                             <AlertDialogContent className="rounded-none border-none shadow-2xl">
                                                                 <AlertDialogHeader>
-                                                                    <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Deny Remote Access</AlertDialogTitle>
+                                                                    <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Reject Request</AlertDialogTitle>
                                                                     <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                                                                        Please provide a professional reason for denying {req.employeeName}'s out-of-range request.
+                                                                        Provide a reason for rejecting {req.employeeName}'s request.
                                                                     </AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <div className="py-6">
-                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary mb-2 block">Rejection Note</Label>
+                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary mb-2 block">Reason</Label>
                                                                     <Textarea
                                                                         value={rejectionReason}
                                                                         onChange={(e) => setRejectionReason(e.target.value)}
-                                                                        placeholder="e.g., Required in-office for scheduled team workshop."
+                                                                        placeholder="e.g., In-office attendance required today."
                                                                         className="rounded-none min-h-[120px] border-muted bg-muted/20"
                                                                     />
                                                                 </div>
                                                                 <AlertDialogFooter className="gap-2">
                                                                     <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6" onClick={() => setRejectionReason("")}>Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction className="rounded-none font-bold uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700" onClick={() => handleAction(req, 'Rejected')}>Confirm Rejection</AlertDialogAction>
+                                                                    <AlertDialogAction className="rounded-none font-bold uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700" onClick={() => handleAction(req, 'Rejected')}>Confirm</AlertDialogAction>
                                                                 </AlertDialogFooter>
                                                             </AlertDialogContent>
                                                         </AlertDialog>
@@ -296,7 +295,7 @@ export default function AttendanceRequestsPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground italic font-medium uppercase text-[10px] tracking-widest opacity-30">No {filter.toLowerCase()} requests in this sector.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground italic font-medium uppercase text-[10px] tracking-widest opacity-30">No {filter.toLowerCase()} requests found.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
