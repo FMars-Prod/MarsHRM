@@ -568,8 +568,8 @@ export default function TodoPage() {
                             <div className="space-y-1">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Command Source</Label>
                                 <div className="flex items-center gap-2">
-                                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-black text-primary border border-primary/20">{selectedTodo?.assignedByName[0]}</div>
-                                    <p className="text-sm font-bold text-foreground/80">{selectedTodo?.assignedByName}</p>
+                                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-black text-primary border border-primary/20">{selectedTodo?.assignedByName?.[0] || 'F'}</div>
+                                    <p className="text-sm font-bold text-foreground/80">{selectedTodo?.assignedByName || 'Fleet System'}</p>
                                 </div>
                             </div>
                             {selectedTodo?.completedAt && (
@@ -663,7 +663,7 @@ function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDel
                                 {isAssignedByOther ? (
                                     <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/50 text-[9px] font-black uppercase border border-current/10">
                                         <User className="size-3" />
-                                        {todo.assignedByName.split(' ')[0]}
+                                        {todo.assignedByName?.split(' ')?.[0] || 'Fleet'}
                                     </div>
                                 ) : (
                                     <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Self Assigned Task</div>
