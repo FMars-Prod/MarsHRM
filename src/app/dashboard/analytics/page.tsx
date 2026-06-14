@@ -31,6 +31,8 @@ type Attendance = {
     checkOutTime?: Timestamp; 
     lunchOutTime?: Timestamp; 
     lunchInTime?: Timestamp;
+    breakOutTime?: Timestamp;
+    breakInTime?: Timestamp;
     locationCheckInLatitude?: number;
     locationCheckInLongitude?: number;
     locationCheckOutLatitude?: number;
@@ -66,6 +68,12 @@ const isWithinLeave = (day: Date, leave: LeaveRequest) => {
     const start = startOfDay(leave.startDate.toDate());
     const end = startOfDay(leave.endDate.toDate());
     return (d >= start && d <= end);
+};
+
+const formatSecondsToHours = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${h}h ${m}m`;
 };
 
 const MapPinLink = ({ lat, lng, time }: { lat?: number, lng?: number, time?: string }) => {
@@ -376,8 +384,8 @@ export default function AnalyticsPage() {
     pdfDoc.text("Strategic Metrics Summary:", 14, 75);
     
     const summaryData = [
-        ["Total Work Hours", `${userStats.workHours} h`],
-        ["Total Break Time", `${userStats.breakHours} h`],
+        ["Total Work Hours (Net)", `${userStats.workHours} h`],
+        ["Total Break Volume", `${userStats.breakHours} h`],
         ["Leaves Taken", `${userStats.leaves}`],
         ["Non-Compliance Days", `${userStats.nonCompliance}`],
         ["Holidays", `${userStats.holidays}`],
@@ -400,16 +408,15 @@ export default function AnalyticsPage() {
         const dateStr = format(row.date, 'MMM d, yyyy');
         const status = row.status.label;
         const checkIn = row.att?.checkInTime ? format(row.att.checkInTime.toDate(), 'p') : '-';
-        const lunchOut = row.att?.lunchOutTime ? format(row.att.lunchOutTime.toDate(), 'p') : '-';
-        const lunchIn = row.att?.lunchInTime ? format(row.att.lunchInTime.toDate(), 'p') : '-';
+        const breakTotal = row.att?.totalBreakDuration ? formatSecondsToHours(row.att.totalBreakDuration) : '-';
         const checkOut = row.att?.checkOutTime ? format(row.att.checkOutTime.toDate(), 'p') : '-';
         
-        return [dateStr, status, checkIn, lunchOut, lunchIn, checkOut];
+        return [dateStr, status, checkIn, breakTotal, checkOut];
     });
 
     autoTable(pdfDoc, {
         startY: logStartY + 5,
-        head: [['Date', 'Status', 'Log In', 'L-Out', 'L-In', 'Log Out']],
+        head: [['Date', 'Status', 'Log In', 'Total Break', 'Log Out']],
         body: logBody,
         theme: 'grid',
         headStyles: { fillColor: [39, 55, 70] },
@@ -499,7 +506,7 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <StatCard label="Leaves" value={userStats.leaves} icon={CalendarOff} color="text-blue-600" />
                 <StatCard label="Work Hours" value={userStats.workHours} icon={Clock} color="text-green-600" />
-                <StatCard label="Break Time" value={userStats.breakHours} icon={Coffee} color="text-yellow-600" />
+                <StatCard label="Break Volume" value={userStats.breakHours} icon={Coffee} color="text-yellow-600" />
                 <StatCard label="Holidays" value={userStats.holidays} icon={Briefcase} color="text-slate-600" />
                 <StatCard label="Sundays" value={userStats.sundays} icon={CalendarIcon} color="text-muted-foreground" />
                 <StatCard label="Non-Compliance" value={userStats.nonCompliance} icon={AlertTriangle} color="text-orange-600" />
@@ -566,14 +573,13 @@ export default function AnalyticsPage() {
                                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Date & Employee</TableHead>
                                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Status</TableHead>
                                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Log In</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">L-Out</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">L-In</TableHead>
+                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Total Break</TableHead>
                                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Log Out</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={6} className="h-32 text-center animate-pulse font-medium text-muted-foreground">Syncing data log...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="h-32 text-center animate-pulse font-medium text-muted-foreground">Syncing data log...</TableCell></TableRow>
                             ) : gridData.length > 0 ? (
                                 gridData.map((row, i) => (
                                     <TableRow key={i} className="border-border/50">
@@ -603,18 +609,12 @@ export default function AnalyticsPage() {
                                             />
                                         </TableCell>
                                         <TableCell className="py-4">
-                                            <MapPinLink 
-                                                lat={row.att?.locationLunchOutLatitude} 
-                                                lng={row.att?.locationLunchOutLongitude} 
-                                                time={row.att?.lunchOutTime ? format(row.att.lunchOutTime.toDate(), 'p') : undefined} 
-                                            />
-                                        </TableCell>
-                                        <TableCell className="py-4">
-                                            <MapPinLink 
-                                                lat={row.att?.locationLunchInLatitude} 
-                                                lng={row.att?.locationLunchInLongitude} 
-                                                time={row.att?.lunchInTime ? format(row.att.lunchInTime.toDate(), 'p') : undefined} 
-                                            />
+                                            <div className="flex items-center gap-1.5">
+                                                <Coffee className="size-3 text-amber-500 opacity-50" />
+                                                <span className="font-mono text-[10px] font-bold">
+                                                    {row.att?.totalBreakDuration ? formatSecondsToHours(row.att.totalBreakDuration) : '—'}
+                                                </span>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="py-4">
                                             <MapPinLink 
@@ -626,7 +626,7 @@ export default function AnalyticsPage() {
                                     </TableRow>
                                 ))
                             ) : (
-                                <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground">No tactical data found for this period.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No tactical data found for this period.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>

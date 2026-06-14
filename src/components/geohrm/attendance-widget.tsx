@@ -9,7 +9,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { LogOut, LogIn, Loader2, Utensils, AlertTriangle, ShieldCheck, MapPin, LocateFixed, Signal } from "lucide-react";
+import { LogOut, LogIn, Loader2, Utensils, AlertTriangle, ShieldCheck, MapPin, LocateFixed, Signal, Coffee, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -149,6 +149,11 @@ export function AttendanceWidget() {
     }
     return 0;
   }, [now, status, lastClockInTime, totalBreakTime, currentBreakStartTime, hasClockedOutToday, todaysAttendance]);
+
+  const currentBreakTimer = useMemo(() => {
+      if (!currentBreakStartTime) return 0;
+      return (now - currentBreakStartTime.getTime()) / 1000;
+  }, [now, currentBreakStartTime]);
 
   const handleClockIn = () => {
     setIsVerifyingLocation(true);
@@ -344,12 +349,26 @@ export function AttendanceWidget() {
   return (
     <>
         <div className="w-full flex flex-col items-center gap-6 py-6 sm:py-10 animate-fade-in-up font-jakarta max-w-5xl mx-auto">
-            {status !== 'out' && (
-                <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 shadow-sm animate-pulse">
-                    <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Active Duty</span>
-                </div>
-            )}
+            <div className="flex flex-wrap justify-center gap-3">
+                {status !== 'out' && (
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 shadow-sm animate-pulse">
+                        <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Active Duty</span>
+                    </div>
+                )}
+                {(status === 'lunch' || status === 'short_break') && (
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 rounded-full border border-amber-100 shadow-sm">
+                        <Coffee className="size-3 text-amber-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">On Break: {formatTime(currentBreakTimer)}</span>
+                    </div>
+                )}
+                {totalBreakTime > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 rounded-full border border-blue-100 shadow-sm">
+                        <Timer className="size-3 text-blue-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-700">Total Break: {formatTime(totalBreakTime)}</span>
+                    </div>
+                )}
+            </div>
 
             <div className="flex flex-col items-center gap-2 px-4 text-center">
                 <h1 className="text-[64px] sm:text-[100px] lg:text-[140px] font-black leading-none tracking-tighter text-primary drop-shadow-sm font-mono">
