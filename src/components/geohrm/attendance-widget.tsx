@@ -151,7 +151,7 @@ export function AttendanceWidget() {
 
   const handleClockIn = () => {
     setIsVerifyingLocation(true);
-    setCurrentSignal("Calibrating...");
+    setCurrentSignal("Checking...");
     
     navigator.geolocation.getCurrentPosition((p) => {
         const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
@@ -160,7 +160,6 @@ export function AttendanceWidget() {
         
         const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
         
-        // ADDED: Tactical buffer of 15 meters to account for GPS drift
         const buffer = 0.015; 
         
         setIsVerifyingLocation(false);
@@ -176,7 +175,7 @@ export function AttendanceWidget() {
                 locationCheckInLongitude: userLoc.longitude, 
                 isOutOfRange: false 
             }, { merge: true });
-            toast({ title: "Shift Active", description: `Sector: ${activeGeofence.name}` });
+            toast({ title: "Shift Active", description: `Location: ${activeGeofence.name}` });
         } else {
             setOutOfRangeType('Check In');
             setIsOutOfRangeDialogOpen(true);
@@ -184,13 +183,13 @@ export function AttendanceWidget() {
     }, () => { 
         setIsVerifyingLocation(false); 
         setCurrentSignal("");
-        toast({ variant: "destructive", title: "Satellite Signal Lost", description: "Please enable high-accuracy location services." }); 
+        toast({ variant: "destructive", title: "Location signal lost", description: "Please enable high-accuracy location services." }); 
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleClockOut = () => {
       setIsVerifyingLocation(true);
-      setCurrentSignal("Acquiring...");
+      setCurrentSignal("Checking...");
       
       navigator.geolocation.getCurrentPosition(p => {
           const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
@@ -199,7 +198,6 @@ export function AttendanceWidget() {
           
           const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
           
-          // ADDED: Tactical buffer of 15 meters to account for GPS drift
           const buffer = 0.015;
 
           setIsVerifyingLocation(false);
@@ -218,7 +216,7 @@ export function AttendanceWidget() {
       }, () => { 
           setIsVerifyingLocation(false); 
           setCurrentSignal("");
-          toast({ variant: "destructive", title: "Satellite Signal Lost" }); 
+          toast({ variant: "destructive", title: "Location signal lost" }); 
       }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
@@ -286,12 +284,11 @@ export function AttendanceWidget() {
       setOutOfRangeReason("");
   };
 
-  if (isUserDocLoading) return <div className="h-64 flex items-center justify-center text-[10px] font-black uppercase opacity-20 tracking-[0.2em]">Synchronizing...</div>;
+  if (isUserDocLoading) return <div className="h-64 flex items-center justify-center text-[10px] font-black uppercase opacity-20 tracking-[0.2em]">Loading...</div>;
 
   return (
     <>
         <div className="w-full flex flex-col items-center gap-6 py-6 sm:py-10 animate-fade-in-up font-jakarta max-w-5xl mx-auto">
-            {/* Status Badge */}
             {status !== 'out' && (
                 <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 shadow-sm animate-pulse">
                     <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
@@ -299,24 +296,22 @@ export function AttendanceWidget() {
                 </div>
             )}
 
-            {/* Main Timer Display */}
             <div className="flex flex-col items-center gap-2 px-4 text-center">
                 <h1 className="text-[64px] sm:text-[100px] lg:text-[140px] font-black leading-none tracking-tighter text-primary drop-shadow-sm font-mono">
                     {formatTime(workTimer)}
                 </h1>
                 <div className="flex flex-col items-center gap-2">
                     <Badge variant="outline" className="rounded-full px-6 h-8 bg-white/50 border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest">
-                    Sector: {activeGeofence.name}
+                    Location: {activeGeofence.name}
                     </Badge>
                     {isVerifyingLocation && currentSignal && (
                         <div className="flex items-center gap-2 text-[9px] font-black uppercase text-primary animate-pulse">
-                            <Signal className="size-3" /> Signal: {currentSignal}
+                            <Signal className="size-3" /> Location: {currentSignal}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Status Grid */}
             <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-8 px-2">
                 <StatusStep 
                     icon={LogIn} 
@@ -344,11 +339,10 @@ export function AttendanceWidget() {
                 />
             </div>
 
-            {/* Action Buttons */}
             <div className="w-full max-w-4xl pt-8 sm:pt-12 flex flex-wrap items-center justify-center gap-3 sm:gap-4 px-4">
                 {isVerifyingLocation ? (
                     <Button disabled className="h-14 sm:h-16 rounded-none px-8 sm:px-12 bg-muted text-muted-foreground font-black uppercase text-xs tracking-widest flex items-center gap-3">
-                        <Loader2 className="size-5 animate-spin" /> Verifying Satellite Data...
+                        <Loader2 className="size-5 animate-spin" /> Checking Location...
                     </Button>
                 ) : status === 'out' && !hasClockedOutToday ? (
                     <Button onClick={handleClockIn} className="h-14 sm:h-16 rounded-none px-8 sm:px-12 text-sm sm:text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
@@ -391,27 +385,27 @@ export function AttendanceWidget() {
                     <div className="size-12 rounded-none bg-orange-100 text-orange-600 flex items-center justify-center mb-4">
                         <AlertTriangle className="size-6" />
                     </div>
-                    <DialogTitle className="text-xl font-black uppercase tracking-tighter">Remote Signal</DialogTitle>
+                    <DialogTitle className="text-xl font-black uppercase tracking-tighter">Out of Range</DialogTitle>
                     <DialogDescription className="text-xs font-medium leading-relaxed">
-                        You are outside the authorized <span className="font-bold text-primary">{activeGeofence.name}</span> radius. 
+                        You are outside the authorized <span className="font-bold text-primary">{activeGeofence.name}</span> area. 
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="py-4 space-y-4">
                     <div className="bg-muted/30 p-4 rounded-none border border-dashed border-border space-y-2">
-                        <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">Signal Metrics</p>
+                        <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">Location Details</p>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-0.5">
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Captured Lat</p>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Your Lat</p>
                                 <p className="text-xs font-mono font-bold">{lastCapturedLoc?.latitude.toFixed(6)}</p>
                             </div>
                             <div className="space-y-0.5">
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Captured Lng</p>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Your Lng</p>
                                 <p className="text-xs font-mono font-bold">{lastCapturedLoc?.longitude.toFixed(6)}</p>
                             </div>
                         </div>
                         <div className="pt-2 border-t border-border/50">
-                            <p className="text-[8px] font-bold text-primary uppercase">Target: {activeGeofence.name}</p>
+                            <p className="text-[8px] font-bold text-primary uppercase">Work Location: {activeGeofence.name}</p>
                             <p className="text-[10px] font-mono font-black text-primary/70">{activeGeofence.lat.toFixed(6)}, {activeGeofence.lng.toFixed(6)}</p>
                         </div>
                     </div>
@@ -422,7 +416,7 @@ export function AttendanceWidget() {
                         <Textarea 
                             value={outOfRangeReason} 
                             onChange={e => setOutOfRangeReason(e.target.value)} 
-                            placeholder="e.g., Working from remote client site or residential location pending approval..." 
+                            placeholder="e.g., Working from client site or home location pending approval..." 
                             className="rounded-none min-h-[100px] bg-muted/20 border-muted text-sm"
                         />
                     </div>
@@ -430,7 +424,7 @@ export function AttendanceWidget() {
 
                 <DialogFooter>
                     <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim()} className="w-full rounded-none h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
-                        Submit Request for Approval
+                        Ask for Approval
                     </Button>
                 </DialogFooter>
             </DialogContent>
