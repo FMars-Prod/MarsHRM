@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -16,7 +15,8 @@ import {
     Mail, Briefcase, Download, 
     Clock, Activity, UserCheck, Zap, ChevronRight,
     FileCheck, FileBox, Users, Laptop, MapPin, CalendarClock,
-    MessageSquareWarning, RotateCcw, Network, Check, X, SearchSlash, Building2
+    MessageSquareWarning, RotateCcw, Network, Check, X, SearchSlash, Building2,
+    ExternalLink
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -298,7 +298,7 @@ export default function ProfilePage() {
                     </div>
                 </MetricCard>
                 <MetricCard icon={FileCheck} title="Payroll Hub" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : (employee.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600" />
-                <MetricCard icon={FileBox} title="Document Vault" ratio={documents?.length || 0} color="text-emerald-600">
+                <MetricCard icon={FileBox} title="Digital Vault" ratio={documents?.length || 0} color="text-emerald-600">
                     <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-4">
                         {documents?.[0] ? `Modified: ${format(documents[0].uploadedAt.toDate(), 'dd MMM yy')}` : "Sector Clear"}
                     </p>
@@ -367,7 +367,7 @@ export default function ProfilePage() {
                                                             <p className="font-black text-sm truncate group-hover:text-primary transition-colors">{head.firstName} {head.lastName}</p>
                                                             <p className="text-[10px] font-bold uppercase text-primary truncate tracking-tight">{head.jobTitle}</p>
                                                         </div>
-                                                        <ShieldCheck className="size-5 text-primary opacity-40 group-hover:opacity-100 transition-opacity" />
+                                                        <CheckCircle2 className="size-5 text-primary opacity-40 group-hover:opacity-100 transition-opacity" />
                                                     </Link>
                                                 )) : (
                                                     <p className="text-sm font-bold text-muted-foreground uppercase opacity-40 italic">Direct reporting to Admin</p>
@@ -419,7 +419,7 @@ export default function ProfilePage() {
                                         <div key={head.id} className="flex flex-col items-center">
                                              <Link href={`/dashboard/users/${head.id}`} className="p-6 bg-muted/20 border-2 border-dashed border-border/50 rounded-none w-56 text-center group hover:border-primary/40 transition-all cursor-pointer shadow-sm">
                                                 <Avatar className="size-16 rounded-none mx-auto mb-4 shadow-md border border-white">
-                                                    <AvatarImage src={head.avatar} className="object-cover" />
+                                                    <AvatarImage src={head.avatar} className="object-cover rounded-none" />
                                                     <AvatarFallback className="font-black text-lg">{head.firstName[0]}</AvatarFallback>
                                                 </Avatar>
                                                 <p className="font-black text-sm uppercase tracking-tight truncate">{head.firstName} {head.lastName}</p>
@@ -654,8 +654,8 @@ function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any
     return (
         <Card className="border-none shadow-xl rounded-none bg-white p-6 space-y-5 ring-1 ring-border/50 group hover:shadow-primary/5 transition-all">
             <div className="flex justify-between items-start">
-                <div className={cn("p-3 rounded-none shadow-md", color, "bg-muted/10")}><Icon className="size-5" /></div>
-                <Badge variant="outline" className="text-[9px] font-black uppercase bg-muted/20 border-none px-2.5 h-5 rounded-none tracking-widest">Active</Badge>
+                <div className={cn("p-4 rounded-none shadow-md", color, "bg-muted/10")}><Icon className="size-5" /></div>
+                <Badge variant="outline" className="text-[9px] font-black uppercase bg-muted/20 border-none rounded-none px-3 h-6 tracking-widest">Active</Badge>
             </div>
             <div>
                 <div className="flex items-center justify-between mb-2.5"><p className="text-[11px] font-black uppercase text-muted-foreground/70 tracking-widest">{title}</p><span className={cn("text-lg font-black tracking-tighter", color)}>{ratio}</span></div>
