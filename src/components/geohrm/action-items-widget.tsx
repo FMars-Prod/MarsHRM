@@ -26,7 +26,7 @@ export function ActionItemsWidget() {
     const [complianceIssues, setComplianceIssues] = React.useState<ActionItem[]>([]);
 
     const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
-    const { data: currentUserData } = useDoc(userDocRef);
+    const { data: currentUserData } = useDoc(currentUserDocRef);
     const userRole = (currentUserData as any)?.role;
     const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
 
