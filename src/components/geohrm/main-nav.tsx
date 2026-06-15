@@ -41,25 +41,25 @@ import React from "react";
 
 const groups = [
   {
-    label: "STRATEGIC HUB",
+    label: "MAIN MENU",
     links: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "totalNotificationsCount" },
-      { href: "https://studio--studio-6104224101-c3e7e.us-central1.hosted.app/", label: "Admin RWT", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
+      { href: "https://studio--studio-6104224101-c3e7e.us-central1.hosted.app/", label: "Admin Panel", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2, roles: ['HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/reports", label: "Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/todo", label: "To Do", icon: ListTodo, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/reports", label: "Daily Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/todo", label: "Tasks", icon: ListTodo, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
   },
   {
-    label: "WORKFORCE",
+    label: "TEAM HUB",
     links: [
-      { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/attendance-requests", label: "Range Approvals", icon: UserCheck, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingAttRequestsCount" },
-      { href: "/dashboard/location-requests", label: "WFH Precision", icon: MapPinned, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
-      { href: "/dashboard/leave", label: "Leave", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
+      { href: "/dashboard/attendance", label: "My Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/attendance-requests", label: "Out of Range", icon: UserCheck, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingAttRequestsCount" },
+      { href: "/dashboard/location-requests", label: "WFH Location", icon: MapPinned, roles: ['HR Manager', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
+      { href: "/dashboard/leave", label: "Leave Requests", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
       { href: "/dashboard/documents", label: "Documents", icon: FileBox, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/branches", label: "Branches", icon: Building2, roles: ['HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/branches", label: "Offices", icon: Building2, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/users", label: "Manage Users", icon: Building, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/org-structure", label: "Org. Structure", icon: Network, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
@@ -68,13 +68,13 @@ const groups = [
     label: "OPERATIONS",
     links: [
       { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ['HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/monitor", label: "Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/monitor", label: "Live Monitor", icon: Activity, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/assets", label: "Assets", icon: Laptop, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/payslips", label: "Payslips", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
   },
   {
-    label: "COMMUNICATION",
+    label: "SOCIAL",
     links: [
       { href: "/dashboard/announcements", label: "Announcements", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
       { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
@@ -83,11 +83,11 @@ const groups = [
     ]
   },
   {
-    label: "SYSTEM",
+    label: "SETTINGS",
     links: [
-      { href: "/dashboard/report-templates", label: "Report Templates", icon: LayoutTemplate, roles: ['HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/report-templates", label: "Report Settings", icon: LayoutTemplate, roles: ['HR Manager', 'CEO/Admin'] },
       { href: "/dashboard/settings", label: "System Settings", icon: Settings, roles: ['HR Manager', 'CEO/Admin'] },
-      { href: "/dashboard/profile", label: "Profile", icon: User, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+      { href: "/dashboard/profile", label: "My Profile", icon: User, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     ]
   }
 ];
@@ -133,7 +133,7 @@ export function MainNav({
 
         return (
           <SidebarGroup key={group.label} className="py-2">
-            <SidebarGroupLabel className="text-[9px] font-black uppercase tracking-[0.15em] text-white/40 px-2 py-4 h-auto">
+            <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-widest text-white/50 px-2 py-4 h-auto">
               {group.label}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -150,7 +150,7 @@ export function MainNav({
                           target={link.href.startsWith('http') ? "_blank" : undefined}
                         >
                           <link.icon className="size-4" />
-                          <span className="font-bold">{link.label}</span>
+                          <span className="font-semibold">{link.label}</span>
                         </Link>
                       </SidebarMenuButton>
                       {link.badgeKey && badgeCount > 0 && (

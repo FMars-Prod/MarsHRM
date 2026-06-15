@@ -1,3 +1,4 @@
+
 'use client';
 import {
   SidebarProvider,
@@ -76,12 +77,12 @@ const SEARCHABLE_LINKS = [
     { label: "Analytics", href: "/dashboard/analytics", roles: ['HR Manager', 'CEO/Admin'] },
     { label: "Reports", href: "/dashboard/reports", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     { label: "Attendance", href: "/dashboard/attendance", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Range Approvals", href: "/dashboard/attendance-requests", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "WFH Precision", href: "/dashboard/location-requests", roles: ['HR Manager', 'CEO/Admin'] },
+    { label: "Out of Range", href: "/dashboard/attendance-requests", roles: ['HR Manager', 'CEO/Admin'] },
+    { label: "WFH Location", href: "/dashboard/location-requests", roles: ['HR Manager', 'CEO/Admin'] },
     { label: "Leave Requests", href: "/dashboard/leave", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     { label: "Documents", href: "/dashboard/documents", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     { label: "Teams", href: "/dashboard/teams", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Branches", href: "/dashboard/branches", roles: ['HR Manager', 'CEO/Admin'] },
+    { label: "Offices", href: "/dashboard/branches", roles: ['HR Manager', 'CEO/Admin'] },
     { label: "Manage Users", href: "/dashboard/users", roles: ['HR Manager', 'CEO/Admin'] },
     { label: "Org. Structure", href: "/dashboard/org-structure", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     { label: "Compliance", href: "/dashboard/compliance", roles: ['HR Manager', 'CEO/Admin'] },
@@ -92,7 +93,7 @@ const SEARCHABLE_LINKS = [
     { label: "Events", href: "/dashboard/events", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
     { label: "Holidays", href: "/dashboard/holidays", roles: ['HR Manager', 'CEO/Admin'] },
     { label: "Support Desk", href: "/dashboard/issues", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
-    { label: "Profile Settings", href: "/dashboard/profile", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
+    { label: "Profile", href: "/dashboard/profile", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
     { label: "System Settings", href: "/dashboard/settings", roles: ['HR Manager', 'CEO/Admin'] },
 ];
 
@@ -212,7 +213,7 @@ export default function DashboardLayout({
                 toast({
                     variant: 'destructive',
                     title: "Report Required",
-                    description: "Protocol violation: Please submit your daily tactical report before logging out."
+                    description: "Please submit your daily work report before logging out."
                 });
                 router.push('/dashboard/reports');
                 setIsLoggingOut(false);
@@ -291,8 +292,8 @@ export default function DashboardLayout({
             <div className="relative w-full max-w-sm hidden sm:block group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input 
-                    placeholder="Search mission module..." 
-                    className="h-10 w-full pl-10 pr-4 bg-muted/20 border-none ring-1 ring-border/50 rounded-none text-sm font-bold uppercase tracking-tight" 
+                    placeholder="Search menu..." 
+                    className="h-10 w-full pl-10 pr-4 bg-muted/20 border-none ring-1 ring-border/50 rounded-none text-sm font-semibold uppercase tracking-tight" 
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                 />
@@ -312,7 +313,7 @@ export default function DashboardLayout({
                                     </Link>
                                 ))}
                                 {filteredSearchLinks.length === 0 && (
-                                    <p className="text-center py-6 text-[10px] font-black uppercase text-muted-foreground opacity-40">Zero Results Found</p>
+                                    <p className="text-center py-6 text-[10px] font-bold uppercase text-muted-foreground opacity-40">No results</p>
                                 )}
                             </div>
                         </ScrollArea>
@@ -336,14 +337,14 @@ export default function DashboardLayout({
                    <PopoverContent className="w-80 p-0 rounded-none border-none shadow-2xl" align="end" sideOffset={12}>
                        <div className="p-6 border-b bg-white">
                            <h4 className="text-lg font-black uppercase tracking-tighter text-primary">Notifications</h4>
-                           <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Your recent updates</p>
+                           <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Latest Updates</p>
                        </div>
                        <ScrollArea className="max-h-[400px]">
                            <div className="p-4 space-y-2">
                                {totalNotifications === 0 ? (
                                    <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
                                        <ShieldCheck className="size-10 mb-2" />
-                                       <p className="font-black uppercase text-[10px] tracking-widest">Everything is clear</p>
+                                       <p className="font-bold uppercase text-[10px] tracking-widest">No notifications</p>
                                    </div>
                                ) : (
                                    <>
@@ -356,8 +357,8 @@ export default function DashboardLayout({
                                            >
                                                <div className="size-8 bg-sky-500 text-white flex items-center justify-center rounded-none"><Command className="size-4"/></div>
                                                <div className="flex-1 min-w-0">
-                                                   <p className="text-[10px] font-black uppercase">Leave Request</p>
-                                                   <p className="text-xs font-bold truncate">{req.employeeName} submitted a request</p>
+                                                   <p className="text-[10px] font-bold uppercase">Leave Request</p>
+                                                   <p className="text-xs font-semibold truncate">{req.employeeName} submitted a request</p>
                                                </div>
                                            </Link>
                                        ))}
@@ -370,8 +371,8 @@ export default function DashboardLayout({
                                            >
                                                <div className="size-8 bg-amber-500 text-white flex items-center justify-center rounded-none"><MapPin className="size-4"/></div>
                                                <div className="flex-1 min-w-0">
-                                                   <p className="text-[10px] font-black uppercase">Remote Clock-in</p>
-                                                   <p className="text-xs font-bold truncate">{req.employeeName} is out of range</p>
+                                                   <p className="text-[10px] font-bold uppercase">Out of Range</p>
+                                                   <p className="text-xs font-semibold truncate">{req.employeeName} is requesting check-in</p>
                                                </div>
                                            </Link>
                                        ))}
@@ -384,8 +385,8 @@ export default function DashboardLayout({
                                            >
                                                <div className="size-8 bg-primary text-white flex items-center justify-center rounded-none"><Sparkles className="size-4"/></div>
                                                <div className="flex-1 min-w-0">
-                                                   <p className="text-[10px] font-black uppercase">Announcement</p>
-                                                   <p className="text-xs font-bold truncate">{ann.title}</p>
+                                                   <p className="text-[10px] font-bold uppercase">Announcement</p>
+                                                   <p className="text-xs font-semibold truncate">{ann.title}</p>
                                                </div>
                                            </Link>
                                        ))}
@@ -448,12 +449,12 @@ export default function DashboardLayout({
                             <ShieldAlert className="size-5" /> Log Out?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                            Are you sure you want to log out? Please ensure your daily reports are submitted.
+                            Are you sure you want to log out? Please ensure your work reports are submitted.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-8 gap-3">
-                        <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleLogout} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                        <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleLogout} className="rounded-none font-bold uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
                             Log Out
                         </AlertDialogAction>
                     </AlertDialogFooter>
