@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -5,7 +6,7 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ThumbsUp, ThumbsDown, Clock, CheckCircle2, XCircle, ExternalLink, Trash2 } from "lucide-react";
+import { MapPin, ThumbsUp, ThumbsDown, Clock, CheckCircle2, XCircle, ExternalLink, Trash2, Loader2 } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, doc, serverTimestamp, orderBy } from "firebase/firestore";
 import type { WithId } from "@/firebase/firestore/use-collection";
@@ -42,6 +43,7 @@ export default function AttendanceRequestsPage() {
     const [filter, setFilter] = React.useState<'Pending' | 'Processed'>('Pending');
     const [rejectionReason, setRejectionReason] = React.useState("");
     const [requestToReject, setRequestToReject] = React.useState<WithId<AttendanceApprovalRequest> | null>(null);
+    const [processingIds, setProcessingIds] = React.useState<string[]>([]);
     
     // Selection state
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
@@ -57,8 +59,9 @@ export default function AttendanceRequestsPage() {
     const { data: requests, isLoading } = useCollection<AttendanceApprovalRequest>(requestsQuery);
 
     const handleAction = (request: WithId<AttendanceApprovalRequest>, status: 'Approved' | 'Rejected') => {
-        if (!currentUser) return;
+        if (!currentUser || processingIds.includes(request.id)) return;
         
+        setProcessingIds(prev => [...prev, request.id]);
         const requestRef = doc(firestore, 'attendanceApprovalRequests', request.id);
         const payload: any = {
             status,
@@ -111,6 +114,8 @@ export default function AttendanceRequestsPage() {
             setRequestToReject(null);
             setRejectionReason("");
         }
+
+        // Processing state is handled by Firestore real-time updates removing the item from the list
     };
 
     const handleBulkDelete = () => {
@@ -161,7 +166,7 @@ export default function AttendanceRequestsPage() {
                     <div className="flex bg-muted/50 p-1 rounded-none border">
                         <Button 
                             variant={filter === 'Pending' ? 'default' : 'ghost'} 
-                            size="sm"
+                            size="sm" 
                             className="rounded-none px-6 font-bold uppercase text-[10px]"
                             onClick={() => { setFilter('Pending'); setSelectedIds([]); }}
                         >
@@ -249,8 +254,10 @@ export default function AttendanceRequestsPage() {
                                                             size="sm" 
                                                             className="bg-green-600 hover:bg-green-700 h-9 rounded-none font-black uppercase text-[10px] tracking-widest px-4 shadow-lg shadow-green-600/20" 
                                                             onClick={() => handleAction(req, 'Approved')}
+                                                            disabled={processingIds.includes(req.id)}
                                                         >
-                                                            <ThumbsUp className="mr-2 h-3.5 w-3.5"/> Approve
+                                                            {processingIds.includes(req.id) ? <Loader2 className="animate-spin size-3.5 mr-2"/> : <ThumbsUp className="mr-2 h-3.5 w-3.5"/>}
+                                                            Approve
                                                         </Button>
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild>
@@ -259,6 +266,7 @@ export default function AttendanceRequestsPage() {
                                                                     variant="destructive" 
                                                                     className="h-9 rounded-none font-black uppercase text-[10px] tracking-widest px-4 shadow-lg shadow-red-600/20" 
                                                                     onClick={() => setRequestToReject(req)}
+                                                                    disabled={processingIds.includes(req.id)}
                                                                 >
                                                                     <ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject
                                                                 </Button>

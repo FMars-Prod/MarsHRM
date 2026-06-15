@@ -20,8 +20,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc } from "@/firebase";
-import { doc, serverTimestamp, collection, Timestamp } from "firebase/firestore";
+import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc, useCollection } from "@/firebase";
+import { doc, serverTimestamp, collection, Timestamp, query, where } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { Textarea } from "../ui/textarea";
@@ -53,6 +53,7 @@ export function AttendanceWidget() {
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
   const [isVerifyingLocation, setIsVerifyingLocation] = useState(false);
   const [currentSignal, setCurrentSignal] = useState<string>("");
+  const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -89,6 +90,17 @@ export function AttendanceWidget() {
   }, [user, firestore]);
   
   const {data: todaysAttendance} = useDoc<any>(getTodaysAttendanceRef);
+
+  // Monitor pending requests to prevent duplicates
+  const pendingRequestsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, 'attendanceApprovalRequests'),
+      where('employeeId', '==', user.uid),
+      where('status', '==', 'Pending')
+    );
+  }, [user, firestore]);
+  const { data: userPendingRequests } = useCollection<any>(pendingRequestsQuery);
 
   useEffect(() => {
     if (todaysAttendance) {
@@ -321,9 +333,19 @@ export function AttendanceWidget() {
   };
 
   const handleSubmitOutOfRangeRequest = () => {
-      if (!outOfRangeReason.trim() || !user || !userData || !lastCapturedLoc) return;
+      if (!outOfRangeReason.trim() || !user || !userData || !lastCapturedLoc || isSubmittingApproval) return;
 
       const todayId = format(new Date(), 'yyyy-MM-dd');
+
+      // Check if a pending request of the same type already exists for today
+      const alreadyPending = userPendingRequests?.some(r => r.dateId === todayId && r.type === outOfRangeType);
+      if (alreadyPending) {
+          toast({ variant: 'destructive', title: "Request Pending", description: `You already have a pending ${outOfRangeType} approval for today.` });
+          setIsOutOfRangeDialogOpen(false);
+          return;
+      }
+
+      setIsSubmittingApproval(true);
       const payload = {
           employeeId: user.uid,
           employeeName: `${userData.firstName} ${userData.lastName}`,
@@ -338,10 +360,15 @@ export function AttendanceWidget() {
           requestTimestamp: serverTimestamp()
       };
 
-      addDocumentNonBlocking(collection(firestore, 'attendanceApprovalRequests'), payload);
-      toast({ title: "Request Sent", description: "Management has been notified." });
-      setIsOutOfRangeDialogOpen(false);
-      setOutOfRangeReason("");
+      addDocumentNonBlocking(collection(firestore, 'attendanceApprovalRequests'), payload)
+        .then(() => {
+            toast({ title: "Request Sent", description: "Management has been notified." });
+            setIsOutOfRangeDialogOpen(false);
+            setOutOfRangeReason("");
+        })
+        .finally(() => {
+            setIsSubmittingApproval(false);
+        });
   };
 
   if (isUserDocLoading) return <div className="h-64 flex items-center justify-center text-[10px] font-black uppercase opacity-20 tracking-[0.2em]">Loading...</div>;
@@ -501,8 +528,9 @@ export function AttendanceWidget() {
                 </div>
 
                 <DialogFooter>
-                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim()} className="w-full rounded-none h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
-                        Ask for Approval
+                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim() || isSubmittingApproval} className="w-full rounded-none h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
+                        {isSubmittingApproval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {isSubmittingApproval ? "Processing..." : "Ask for Approval"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
