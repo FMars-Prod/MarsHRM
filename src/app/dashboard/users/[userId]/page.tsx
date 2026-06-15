@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -107,9 +106,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const { data: attendanceData } = useCollection<AttendanceRecord>(attendanceQuery);
 
   const branchName = React.useMemo(() => {
-    if (!branches || !user?.branchId) return "Unassigned Sector";
+    if (!branches || !user?.branchId) return "No Office Assigned";
     const b = branches.find((b: any) => b.id === user.branchId);
-    return b ? b.name : "Unassigned Sector";
+    return b ? b.name : "No Office Assigned";
   }, [branches, user?.branchId]);
 
   const attendanceStats = React.useMemo(() => {
@@ -135,7 +134,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         performanceRating: newRating,
         lastReviewDate: serverTimestamp()
     });
-    toast({ title: "Performance Updated", description: `Tier recalibrated to ${newRating}.` });
+    toast({ title: "Performance Updated", description: `Rating set to ${newRating}.` });
   };
 
   React.useEffect(() => {
@@ -179,9 +178,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     </Avatar>
                     <div className="mt-8 flex flex-col items-center gap-3">
                         <Badge className="bg-green-500 text-white rounded-none font-black text-[10px] px-4 py-1 uppercase tracking-widest shadow-md">
-                           Operational Status: Active
+                           Status: Active
                         </Badge>
-                        <p className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">Verified Registry Profile</p>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">Verified Profile</p>
                     </div>
                 </div>
 
@@ -193,17 +192,17 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <p className="text-lg font-bold text-muted-foreground uppercase tracking-widest">{user.jobTitle}</p>
                         </div>
                         <div className="flex gap-3">
-                            {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest bg-white shadow-sm hover:shadow-md transition-all">Export Mission Audit</Button>}
-                            <Button asChild size="sm" className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"><Link href="/dashboard/users"><Users className="size-4 mr-2" /> Global Roster</Link></Button>
+                            {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest bg-white shadow-sm hover:shadow-md transition-all">Export Report</Button>}
+                            <Button asChild size="sm" className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"><Link href="/dashboard/users"><Users className="size-4 mr-2" /> Employee List</Link></Button>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12 pt-8 border-t border-dashed border-border/50">
-                        <DetailItem icon={ShieldCheck} label="Operational ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
-                        <DetailItem icon={CalendarDays} label="Commissioned" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
-                        <DetailItem icon={Mail} label="Comms Vector" value={user.email} />
-                        <DetailItem icon={Phone} label="Contact Signal" value={user.phoneNumber || "N/A"} />
-                        <DetailItem icon={MapPin} label="Work Sector" value={branchName} />
+                        <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
+                        <DetailItem icon={CalendarDays} label="Joined Date" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
+                        <DetailItem icon={Mail} label="Email Address" value={user.email} />
+                        <DetailItem icon={Phone} label="Phone Number" value={user.phoneNumber || "N/A"} />
+                        <DetailItem icon={MapPin} label="Work Location" value={branchName} />
                         <DetailItem icon={Building2} label="Department" value={user.department} />
                     </div>
                 </div>
@@ -212,7 +211,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
         {/* Tactical Performance Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-             <MetricCard icon={UserCheck} title="Attendance Hub" ratio={`${attendanceStats.present + attendanceStats.late} / ${attendanceStats.totalWorkingDays}`} progress={attendanceStats.percentage} color="text-green-600">
+             <MetricCard icon={UserCheck} title="Attendance" ratio={`${attendanceStats.present + attendanceStats.late} / ${attendanceStats.totalWorkingDays}`} progress={attendanceStats.percentage} color="text-green-600">
                 <div className="grid grid-cols-4 gap-1 mt-4">
                     <MetricStat label="Pres" val={attendanceStats.present} />
                     <MetricStat label="Late" val={attendanceStats.late} color="text-amber-500" />
@@ -223,15 +222,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
             <MetricCard 
                 icon={CalendarClock} 
-                title="Leave Entitlement" 
-                ratio={isEmployeeType ? (isLeaveConfigured ? `${leaveBalValue} / ${leaveEntValue}` : "12 / 12") : "NIL"} 
+                title="Leave Balance" 
+                ratio={isEmployeeType ? (isLeaveConfigured ? `${leaveBalValue} / ${leaveEntValue}` : "12 / 12") : "0 / 0"} 
                 progress={isEmployeeType ? (isLeaveConfigured ? (leaveBalValue/leaveEntValue)*100 : 100) : 0} 
                 color="text-sky-600" 
             />
 
-            <MetricCard icon={Zap} title="Performance Tier" ratio={user.performanceRating || "Good"} color="text-primary">
+            <MetricCard icon={Zap} title="Performance" ratio={user.performanceRating || "Good"} color="text-primary">
                 <div className="flex items-center justify-between mt-4">
-                    <p className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-tight">Sync: {user.lastReviewDate ? format(user.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending Audit'}</p>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-tight">Last Review: {user.lastReviewDate ? format(user.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
                     {isAdmin && (
                         <Dialog>
                             <DialogTrigger asChild>
@@ -240,9 +239,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="rounded-none sm:max-w-sm border-none shadow-2xl">
-                                <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Recalibrate Rating</DialogTitle></DialogHeader>
+                                <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Update Rating</DialogTitle></DialogHeader>
                                 <div className="py-6 space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Performance Tier</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Rating</Label>
                                     <Select onValueChange={handleUpdatePerformance} defaultValue={user.performanceRating || "Good"}>
                                         <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
                                         <SelectContent className="rounded-none">
@@ -260,11 +259,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 </div>
             </MetricCard>
 
-            <MetricCard icon={FileCheck} title="Ledger Status" ratio={user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600" />
+            <MetricCard icon={FileCheck} title="Payroll Status" ratio={user.payrollAmount ? `₹${user.payrollAmount.toLocaleString()}` : (user.employmentType === 'Intern' ? "Performance Based" : "Audited")} color="text-purple-600" />
 
-            <MetricCard icon={FileBox} title="Digital Vault" ratio={documents?.length || 0} color="text-emerald-600">
+            <MetricCard icon={FileBox} title="Documents" ratio={documents?.length || 0} color="text-emerald-600">
                 <p className="text-[10px] font-black uppercase text-muted-foreground/60 mt-4">
-                    {documents?.[0] ? `Latest: ${format(documents[0].uploadedAt.toDate(), 'dd MMM yy')}` : "Sector Clear"}
+                    {documents?.[0] ? `Latest: ${format(documents[0].uploadedAt.toDate(), 'dd MMM yy')}` : "No documents"}
                 </p>
             </MetricCard>
         </div>
@@ -281,7 +280,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <TabsContent value="activity" className="mt-0">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                     <Card className="lg:col-span-8 border-none shadow-sm rounded-none bg-white p-8 space-y-8">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Mission Intelligence Feed</h3>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Activity History</h3>
                         <div className="space-y-6">
                             {userReports.length > 0 ? userReports.map(r => (
                                 <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd, yyyy')} desc={`Finalized for ${r.employeeDepartment}.`} color="bg-primary/10 text-primary" />
@@ -290,7 +289,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     <div className="p-5 bg-muted/20 rounded-full"><SearchSlash className="size-12 text-primary/40" /></div>
                                     <div>
                                         <p className="text-sm font-black uppercase tracking-widest">Nothing Found</p>
-                                        <p className="text-[11px] font-bold uppercase mt-1">No tactical reports detected in history.</p>
+                                        <p className="text-[11px] font-bold uppercase mt-1">No reports found.</p>
                                     </div>
                                 </div>
                             )}
@@ -298,41 +297,41 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     </Card>
                     <div className="lg:col-span-4 space-y-3">
                         <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Personnel Bio-Data</h3>
+                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Personal Information</h3>
                             <div className="space-y-4">
-                                <InfoRow label="Birth Directive" value={user.dob ? format(new Date(user.dob), 'dd MMM yyyy') : 'N/A'} />
-                                <InfoRow label="Gender Profile" value={user.gender || 'N/A'} />
-                                <InfoRow label="Nationality Vector" value={user.nationality || 'N/A'} />
-                                <InfoRow label="Marital Protocol" value={user.maritalStatus || 'N/A'} />
-                                <InfoRow label="Blood Type" value={user.bloodGroup || 'N/A'} />
+                                <InfoRow label="Date of Birth" value={user.dob ? format(new Date(user.dob), 'dd MMM yyyy') : 'N/A'} />
+                                <InfoRow label="Gender" value={user.gender || 'N/A'} />
+                                <InfoRow label="Nationality" value={user.nationality || 'N/A'} />
+                                <InfoRow label="Marital Status" value={user.maritalStatus || 'N/A'} />
+                                <InfoRow label="Blood Group" value={user.bloodGroup || 'N/A'} />
                                 <div className="pt-4 flex flex-wrap gap-2">
                                     {user.languages?.map((lang: string) => (
                                         <Badge key={lang} variant="secondary" className="text-[10px] font-bold px-3 py-1 uppercase rounded-none">{lang}</Badge>
-                                    )) || <span className="text-[10px] opacity-30">No communications registered</span>}
+                                    )) || <span className="text-[10px] opacity-30">No languages registered</span>}
                                 </div>
                             </div>
                         </Card>
 
                         <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Fleet Assets</h3>
+                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Assigned Assets</h3>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Mission Units</span>
+                                    <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Assigned Items</span>
                                     <Badge className="bg-primary/10 text-primary rounded-none font-black text-[10px]">{assignedAssets?.length || 0}</Badge>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Vault Content</span>
+                                    <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Documents</span>
                                     <Badge className="bg-emerald-500/10 text-emerald-600 rounded-none font-black text-[10px]">{documents?.length || 0}</Badge>
                                 </div>
                             </div>
                         </Card>
                         
                         <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Command Hierarchy</h3>
+                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Hierarchy</h3>
                             <div className="space-y-6">
-                                <InfoRow label="Operational Matrix" value={user.teamId ? "Tactical Division" : "Individual Fleet"} />
+                                <InfoRow label="Reporting Type" value={user.teamId ? "Team Member" : "Individual"} />
                                 <div className="p-5 bg-muted/20 rounded-none border border-dashed border-border/50">
-                                    <p className="text-[10px] font-black uppercase text-muted-foreground/60 mb-5">Command Vector</p>
+                                    <p className="text-[10px] font-black uppercase text-muted-foreground/60 mb-5">Reporting To</p>
                                     {reportingHeads.length > 0 ? (
                                         <div className="space-y-4">
                                             {reportingHeads.map(head => (
@@ -362,7 +361,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden min-h-[400px]">
                     {attendanceData && attendanceData.length > 0 ? (
                         <Table>
-                            <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[11px] font-black px-8 py-5 uppercase tracking-widest">Shift Date</TableHead><TableHead className="text-[11px] font-black uppercase tracking-widest py-5">Login Matrix</TableHead><TableHead className="text-right px-8 text-[11px] font-black uppercase tracking-widest py-5">Geolocation</TableHead></TableRow></TableHeader>
+                            <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[11px] font-black px-8 py-5 uppercase tracking-widest">Date</TableHead><TableHead className="text-[11px] font-black uppercase tracking-widest py-5">Clock In</TableHead><TableHead className="text-right px-8 text-[11px] font-black uppercase tracking-widest py-5">Location</TableHead></TableRow></TableHeader>
                             <TableBody>
                                 {attendanceData.map((rec, i) => (
                                     <TableRow key={i} className="border-border/50 hover:bg-primary/5 transition-colors">
@@ -377,7 +376,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         <div className="py-24 flex flex-col items-center justify-center opacity-30 text-center space-y-5">
                             <div className="p-5 bg-muted/20 rounded-full"><Clock className="size-12 text-primary/40" /></div>
                             <div>
-                                <p className="text-sm font-black uppercase tracking-widest">Sector Clear</p>
+                                <p className="text-sm font-black uppercase tracking-widest">No Records</p>
                                 <p className="text-[11px] font-bold uppercase mt-1">No attendance signals detected.</p>
                             </div>
                         </div>
@@ -389,13 +388,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     <div className="flex flex-col items-center space-y-16 py-10 min-w-fit">
                         {/* Managers Section (Upward) */}
                         <div className="flex flex-col items-center space-y-6 w-full">
-                            <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Strategic Command Line</h4>
+                            <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/30">Managers</h4>
                             <div className="flex flex-wrap justify-center gap-12 w-full">
                                 {reportingHeads.length > 0 ? reportingHeads.map((head: any) => (
                                     <div key={head.id} className="flex flex-col items-center">
                                          <Link href={`/dashboard/users/${head.id}`} className="p-6 bg-muted/20 border-2 border-dashed border-border/50 rounded-none w-56 text-center group hover:border-primary/40 transition-all cursor-pointer shadow-sm">
                                             <Avatar className="size-16 rounded-none mx-auto mb-4 shadow-md border border-white">
-                                                <AvatarImage src={head.avatar} className="object-cover" />
+                                                <AvatarImage src={head.avatar} className="object-cover rounded-none" />
                                                 <AvatarFallback className="font-black text-lg">{head.firstName[0]}</AvatarFallback>
                                             </Avatar>
                                             <p className="font-black text-sm uppercase tracking-tight truncate">{head.firstName} {head.lastName}</p>
@@ -405,7 +404,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     </div>
                                 )) : (
                                     <div className="flex flex-col items-center">
-                                        <Badge variant="outline" className="rounded-none font-black text-[10px] uppercase tracking-widest bg-primary/5 text-primary border-primary/20 h-10 px-6">Top Tier Command</Badge>
+                                        <Badge variant="outline" className="rounded-none font-black text-[10px] uppercase tracking-widest bg-primary/5 text-primary border-primary/20 h-10 px-6">Direct Admin Report</Badge>
                                         <div className="w-px h-10 bg-border" />
                                     </div>
                                 )}
@@ -429,7 +428,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         {directReports.length > 0 && (
                             <div className="flex flex-col items-center space-y-6 w-full">
                                 <div className="h-px bg-border w-1/2 max-w-[500px]" />
-                                <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 mt-6">Division Distribution</h4>
+                                <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 mt-6">Direct Reports</h4>
                                 <div className="flex flex-wrap justify-center gap-12 w-full pt-6">
                                     {directReports.map((report: any) => (
                                         <div key={report.id} className="flex flex-col items-center">
@@ -472,7 +471,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <div className="p-5 bg-muted/20 rounded-full"><FileBox className="size-12 text-primary/40" /></div>
                             <div>
                                 <p className="text-sm font-black uppercase tracking-widest">Nothing Found</p>
-                                <p className="text-[11px] font-bold uppercase mt-1">No tactical documents detected.</p>
+                                <p className="text-[11px] font-bold uppercase mt-1">No documents detected.</p>
                             </div>
                         </div>
                     )}
@@ -496,7 +495,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <div className="p-5 bg-muted/20 rounded-full"><Laptop className="size-12 text-primary/40" /></div>
                             <div>
                                 <p className="text-sm font-black uppercase tracking-widest">Nothing Found</p>
-                                <p className="text-[11px] font-bold uppercase mt-1">No assigned mission assets detected.</p>
+                                <p className="text-[11px] font-bold uppercase mt-1">No assigned assets detected.</p>
                             </div>
                         </div>
                     )}
@@ -557,9 +556,9 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
 
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <div className="flex items-center justify-between py-4 border-b border-dashed border-border/50 last:border-none group">
-            <span className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">{label}</span>
-            <span className="text-base font-black text-foreground/80 uppercase text-right pl-6 truncate">{value}</span>
+        <div className="flex items-center justify-between py-4 border-b border-dashed border-border/50 last:border-none group gap-4">
+            <span className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-[0.2em] shrink-0">{label}</span>
+            <span className="text-base font-black text-foreground/80 uppercase text-right leading-tight">{value}</span>
         </div>
     );
 }

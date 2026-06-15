@@ -237,7 +237,7 @@ export default function ProfilePage() {
                             <DetailItem icon={CalendarDays} label="Joined Date" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
                             <DetailItem icon={Mail} label="Email Address" value={employee.email} />
                             <DetailItem icon={Phone} label="Phone Number" value={employee.phoneNumber || 'N/A'} />
-                            <DetailItem icon={MapPin} label="Office Branch" value={branchName} />
+                            <DetailItem icon={MapPin} label="Office Location" value={branchName} />
                             <DetailItem icon={Building2} label="Department" value={employee.department} />
                         </div>
                     </div>
@@ -334,9 +334,9 @@ export default function ProfilePage() {
                         </Card>
                         <div className="lg:col-span-4 space-y-4">
                             <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Bio Data</h3>
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Personal Information</h3>
                                 <div className="space-y-4">
-                                    <InfoRow label="DOB" value={employee.dob ? format(new Date(employee.dob), 'dd MMM yyyy') : 'N/A'} />
+                                    <InfoRow label="Date of Birth" value={employee.dob ? format(new Date(employee.dob), 'dd MMM yyyy') : 'N/A'} />
                                     <InfoRow label="Gender" value={employee.gender || 'N/A'} />
                                     <InfoRow label="Nationality" value={employee.nationality || 'N/A'} />
                                     <InfoRow label="Marital Status" value={employee.maritalStatus || 'N/A'} />
@@ -350,9 +350,9 @@ export default function ProfilePage() {
                             </Card>
 
                             <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Hierarchy</h3>
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Reporting Hierarchy</h3>
                                 <div className="space-y-6">
-                                     <InfoRow label="Reporting Type" value={employee.reportingHeadIds?.length ? "Matrix" : "Direct"} />
+                                     <InfoRow label="Reporting Type" value={employee.reportingHeadIds?.length ? "Team Member" : "Individual"} />
                                      <div className="p-5 bg-muted/20 rounded-none border border-dashed border-border/50">
                                         <p className="text-[10px] font-bold uppercase text-muted-foreground/60 mb-5">Reporting To</p>
                                         <ScrollArea className={cn(reportingHeads.length > 3 ? "h-48" : "h-auto")}>
@@ -385,7 +385,7 @@ export default function ProfilePage() {
                         <ScrollArea className="h-full">
                             {attendanceData && attendanceData.length > 0 ? (
                                 <Table>
-                                    <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[11px] font-bold px-8 py-5 uppercase tracking-widest">Date</TableHead><TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest">Time In</TableHead><TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest text-right pr-8">Status</TableHead></TableRow></TableHeader>
+                                    <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[11px] font-bold px-8 py-5 uppercase tracking-widest">Date</TableHead><TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest">Clock In</TableHead><TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest text-right pr-8">Status</TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {attendanceData.slice(0, 15).map((rec: any, i: number) => (
                                             <TableRow key={i} className="border-border/50 hover:bg-primary/5 transition-colors">
@@ -400,8 +400,8 @@ export default function ProfilePage() {
                                 <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-5">
                                     <div className="p-5 bg-muted/20 rounded-full"><Clock className="size-12 text-primary/40" /></div>
                                     <div>
-                                        <p className="text-sm font-bold uppercase tracking-widest">No Logs</p>
-                                        <p className="text-[11px] font-bold uppercase mt-1">No attendance records found.</p>
+                                        <p className="text-sm font-bold uppercase tracking-widest">No Records</p>
+                                        <p className="text-[11px] font-bold uppercase mt-1">No attendance logs detected.</p>
                                     </div>
                                 </div>
                             )}
@@ -413,7 +413,7 @@ export default function ProfilePage() {
                         <div className="flex flex-col items-center space-y-16 py-10 min-w-fit">
                             {/* Managers Section (Upward) */}
                             <div className="flex flex-col items-center space-y-6 w-full">
-                                <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/30">Management Line</h4>
+                                <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/30">Managers</h4>
                                 <div className="flex flex-wrap justify-center gap-12 w-full">
                                     {reportingHeads.length > 0 ? reportingHeads.map((head: any) => (
                                         <div key={head.id} className="flex flex-col items-center">
@@ -495,8 +495,8 @@ export default function ProfilePage() {
                             <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-5">
                                 <div className="p-5 bg-muted/20 rounded-full"><FileBox className="size-12 text-primary/40" /></div>
                                 <div>
-                                    <p className="text-sm font-bold uppercase tracking-widest">No Files</p>
-                                    <p className="text-[11px] font-bold uppercase mt-1">No shared documents found.</p>
+                                    <p className="text-sm font-bold uppercase tracking-widest">No Documents</p>
+                                    <p className="text-[11px] font-bold uppercase mt-1">No saved documents found.</p>
                                 </div>
                             </div>
                         )}
@@ -531,8 +531,8 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <ActivityBarItem 
                     icon={Clock} 
-                    title="Last Login" 
-                    value={lastAtt?.[0]?.checkInTime ? format(lastAtt[0].checkInTime.toDate(), 'dd MMM, p') : 'No History'} 
+                    title="Last Clock In" 
+                    value={lastAtt?.[0]?.checkInTime ? format(lastAtt[0].checkInTime.toDate(), 'dd MMM, p') : 'No Records'} 
                     status={lastAtt?.[0]?.status === 'present' ? 'Verified' : 'Pending'}
                     color="bg-green-500"
                 />
@@ -545,8 +545,8 @@ export default function ProfilePage() {
                 />
                 <ActivityBarItem 
                     icon={MessageSquareWarning} 
-                    title="Support Desk" 
-                    value={lastTicket?.[0] ? `${lastTicket[0].category.split(' ')[0]}` : '0 Tickets'} 
+                    title="Tickets" 
+                    value={lastTicket?.[0] ? `${lastTicket[0].category.split(' ')[0]}` : '0 Open'} 
                     status={lastTicket?.[0]?.status || 'Resolved'}
                     color="bg-amber-500"
                 />
@@ -561,7 +561,7 @@ export default function ProfilePage() {
 
             <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
                 <DialogContent className="rounded-none p-10 sm:max-w-xl border-none shadow-2xl">
-                    <DialogHeader className="text-left"><DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Edit Information</DialogTitle></DialogHeader>
+                    <DialogHeader className="text-left"><DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Edit Profile</DialogTitle></DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-10 px-10">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-6 pb-10">
@@ -603,14 +603,14 @@ export default function ProfilePage() {
                                     )} />
                                 </div>
                                 <FormField control={form.control} name="languages" render={({ field }) => (
-                                    <FormItem><Label className="text-[10px] uppercase font-bold text-primary tracking-widest">Languages Spoken</Label><FormControl><Input {...field} placeholder="e.g. English, Tamil" className="h-12 rounded-none font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50" /></FormControl></FormItem>
+                                    <FormItem><Label className="text-[10px] uppercase font-bold text-primary tracking-widest">Languages</Label><FormControl><Input {...field} placeholder="e.g. English, Tamil" className="h-12 rounded-none font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50" /></FormControl></FormItem>
                                 )} />
                                 <Separator className="my-4 opacity-50" />
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[10px] uppercase font-bold text-primary tracking-widest">New Password</Label><FormControl><Input type="password" {...field} className="h-12 rounded-none font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50" /></FormControl></FormItem>)} />
                                     <FormField control={form.control} name="confirmPassword" render={({ field }) => (<FormItem><Label className="text-[10px] uppercase font-bold text-primary tracking-widest">Confirm Password</Label><FormControl><Input type="password" {...field} className="h-12 rounded-none font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50" /></FormControl></FormItem>)} />
                                 </div>
-                                <Button type="submit" className="w-full h-14 rounded-none font-black uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-primary/20 mt-4" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin size-4 mr-2"/> : <UserCheck className="size-4 mr-2"/>} Update Profile</Button>
+                                <Button type="submit" className="w-full h-14 rounded-none font-black uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-primary/20 mt-4" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin size-4 mr-2"/> : <UserCheck className="size-4 mr-2"/>} Save Changes</Button>
                             </form>
                         </Form>
                     </ScrollArea>
@@ -688,9 +688,9 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
 
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
-        <div className="flex items-center justify-between py-3 border-b border-dashed border-border/50 last:border-none group">
-            <span className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest">{label}</span>
-            <span className="text-sm font-bold text-foreground/80 uppercase text-right pl-4 truncate">{value}</span>
+        <div className="flex items-center justify-between py-3 border-b border-dashed border-border/50 last:border-none group gap-4">
+            <span className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest shrink-0">{label}</span>
+            <span className="text-sm font-bold text-foreground/80 uppercase text-right leading-tight">{value}</span>
         </div>
     );
 }
