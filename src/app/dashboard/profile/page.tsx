@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -645,7 +644,7 @@ function DetailItem({ icon: Icon, label, value }: any) {
             <div className="p-3 rounded-none bg-primary/5 text-primary/60 shrink-0 shadow-sm border border-primary/10"><Icon className="size-5" /></div>
             <div className="min-w-0 pt-0.5">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-none mb-2">{label}</p>
-                <p className="text-[13px] font-bold truncate text-foreground/90 uppercase tracking-tight">{value}</p>
+                <p className="text-[13px] font-bold text-foreground/90 uppercase tracking-tight break-all">{value}</p>
             </div>
         </div>
     );

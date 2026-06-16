@@ -87,7 +87,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
-  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
+  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
 
   React.useEffect(() => {
     if (!isUserLoading && currentUser && currentUserData) {
@@ -512,7 +512,7 @@ function DetailItem({ icon: Icon, label, value }: any) {
             <div className="p-3 rounded-none bg-primary/5 text-primary/60 shrink-0 shadow-sm border border-primary/10"><Icon className="size-6" /></div>
             <div className="min-w-0 pt-0.5">
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-2 leading-none">{label}</p>
-                <p className="text-sm font-black truncate text-foreground/90 uppercase tracking-tight">{value}</p>
+                <p className="text-sm font-black text-foreground/90 uppercase tracking-tight break-all">{value}</p>
             </div>
         </div>
     );
