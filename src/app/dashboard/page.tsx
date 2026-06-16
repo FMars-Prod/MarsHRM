@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -33,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // --- MOCK DATA FOR EXECUTIVE DASHBOARD ---
 const kpiData = [
