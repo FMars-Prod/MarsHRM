@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Target, ShieldCheck, ChevronRight } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, limit, doc, serverTimestamp, or } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, doc, serverTimestamp, or, and } from 'firebase/firestore';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -31,10 +31,13 @@ export function TodoWidget() {
     const todosQuery = useMemoFirebase(() => {
         if (!user) return null;
         // Show tasks assigned to me or by me that are not yet completed
+        // Fixed: When using 'or' with other filters, they must be wrapped in 'and'
         return query(
             collection(firestore, 'todos'), 
-            or(where('assignedTo', '==', user.uid), where('assignedBy', '==', user.uid)),
-            where('completed', '==', false), 
+            and(
+                or(where('assignedTo', '==', user.uid), where('assignedBy', '==', user.uid)),
+                where('completed', '==', false)
+            ),
             orderBy('createdAt', 'desc'), 
             limit(5)
         );
