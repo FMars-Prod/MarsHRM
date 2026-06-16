@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/sidebar';
 import { MainNav } from '@/components/geohrm/main-nav';
 import { UserNav } from '@/components/geohrm/user-nav';
-import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert, ListTodo } from 'lucide-react';
+import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert, ListTodo, CheckCircle2 } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
@@ -73,28 +73,28 @@ type AttendanceApprovalRequest = {
 }
 
 const SEARCHABLE_LINKS = [
-    { label: "Dashboard", href: "/dashboard", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Analytics", href: "/dashboard/analytics", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "Reports", href: "/dashboard/reports", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Attendance", href: "/dashboard/attendance", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Out of Range", href: "/dashboard/attendance-requests", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "WFH Location", href: "/dashboard/location-requests", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "Leave Requests", href: "/dashboard/leave", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Documents", href: "/dashboard/documents", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Teams", href: "/dashboard/teams", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Offices", href: "/dashboard/branches", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "Manage Users", href: "/dashboard/users", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "Org. Structure", href: "/dashboard/org-structure", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Compliance", href: "/dashboard/compliance", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "Monitor", href: "/dashboard/monitor", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "Assets", href: "/dashboard/assets", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Payslips", href: "/dashboard/payslips", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "Announcements", href: "/dashboard/announcements", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
-    { label: "Events", href: "/dashboard/events", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
-    { label: "Holidays", href: "/dashboard/holidays", roles: ['HR Manager', 'CEO/Admin'] },
-    { label: "Support Desk", href: "/dashboard/issues", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
-    { label: "Profile", href: "/dashboard/profile", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/Admin'] },
-    { label: "System Settings", href: "/dashboard/settings", roles: ['HR Manager', 'CEO/Admin'] },
+    { label: "Dashboard", href: "/dashboard", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Analytics", href: "/dashboard/analytics", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Reports", href: "/dashboard/reports", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Attendance", href: "/dashboard/attendance", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Out of Range", href: "/dashboard/attendance-requests", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "WFH Location", href: "/dashboard/location-requests", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Leave Requests", href: "/dashboard/leave", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Documents", href: "/dashboard/documents", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Teams", href: "/dashboard/teams", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Offices", href: "/dashboard/branches", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Manage Users", href: "/dashboard/users", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Org. Structure", href: "/dashboard/org-structure", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Compliance", href: "/dashboard/compliance", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Monitor", href: "/dashboard/monitor", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Assets", href: "/dashboard/assets", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Payslips", href: "/dashboard/payslips", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Announcements", href: "/dashboard/announcements", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
+    { label: "Events", href: "/dashboard/events", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
+    { label: "Holidays", href: "/dashboard/holidays", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Support Desk", href: "/dashboard/issues", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
+    { label: "Profile", href: "/dashboard/profile", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "System Settings", href: "/dashboard/settings", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
 ];
 
 export default function DashboardLayout({
@@ -122,14 +122,14 @@ export default function DashboardLayout({
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
   
   const userRole = (userData as any)?.role || 'Member';
-  const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+  const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
     let q = query(collection(firestore, "leave_requests"));
     if (userRole === 'Team Lead') q = query(q, where("status", "==", "Pending"));
     else if (userRole === 'HR Manager') q = query(q, where("status", "in", ["Pending HR Approval"]));
-    else if (userRole === 'CEO/Admin') q = query(q, where("status", "in", ["Pending", "Pending HR Approval"]));
+    else if (userRole === 'CEO/Admin' || userRole === 'CEO/MD') q = query(q, where("status", "in", ["Pending", "Pending HR Approval"]));
     else return null;
     return q;
   }, [firestore, user, userRole]);
@@ -196,7 +196,7 @@ export default function DashboardLayout({
 
     try {
         const uRole = (userData as any)?.role || 'Member';
-        const isPriv = uRole === 'HR Manager' || uRole === 'CEO/Admin';
+        const isPriv = uRole === 'HR Manager' || uRole === 'CEO/Admin' || uRole === 'CEO/MD';
 
         if (!isPriv) {
             const todayS = startOfDay(new Date());
@@ -258,7 +258,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar className="z-40">
         <SidebarHeader className="border-b border-sidebar-border/50">
           <div className="flex items-center gap-3 p-3">
             <div className="bg-primary text-white p-2 rounded-none shadow-lg">
@@ -283,8 +283,8 @@ export default function DashboardLayout({
           <UserNav user={user} />
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="flex flex-col min-h-screen">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white/90 backdrop-blur-md px-6 shadow-sm">
+      <SidebarInset className="flex flex-col min-h-screen z-0">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white/90 backdrop-blur-md px-6 shadow-sm pointer-events-auto">
           <div className="flex items-center gap-4 flex-1">
             <SidebarTrigger className="rounded-none hover:bg-muted" />
             <Separator orientation="vertical" className="h-6" />
@@ -343,7 +343,7 @@ export default function DashboardLayout({
                            <div className="p-4 space-y-2">
                                {totalNotifications === 0 ? (
                                    <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
-                                       <ShieldCheck className="size-10 mb-2" />
+                                       <CheckCircle2 className="size-10 mb-2" />
                                        <p className="font-bold uppercase text-[10px] tracking-widest">No notifications</p>
                                    </div>
                                ) : (
@@ -464,10 +464,10 @@ export default function DashboardLayout({
           <AutomatedReportSender />
         </header>
 
-        <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-8 overflow-x-hidden pointer-events-auto">
           {children}
         </main>
-        <footer className="border-t py-4 px-6 bg-white/50 backdrop-blur-sm">
+        <footer className="border-t py-4 px-6 bg-white/50 backdrop-blur-sm pointer-events-auto">
             <div className="flex items-center justify-between gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
                 <p>© {new Date().getFullYear()} MarsHRM</p>
                 <p>By FortuMars</p>

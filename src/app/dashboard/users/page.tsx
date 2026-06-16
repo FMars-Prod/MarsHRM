@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -10,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, ShieldCheck, Check, X, LocateFixed, Building2, RotateCcw, Home, Search, Loader2, MapPin } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, CheckCircle2, Check, X, LocateFixed, Building2, RotateCcw, Home, Search, Loader2, MapPin } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { doc, collection, query, writeBatch, serverTimestamp, getDocs, where, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -40,7 +41,7 @@ const userSchema = z.object({
   branchId: z.string().optional(),
   shiftType: z.string().min(1, "Required"),
   employmentType: z.enum(['Intern', 'Employee']),
-  role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/Admin']),
+  role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin']),
   password: z.string().optional(),
   isWfhAllowed: z.boolean().default(false),
   isDemoAccount: z.boolean().default(false),
@@ -78,7 +79,7 @@ export default function UsersPage() {
 
   const userDocRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
-  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'Team Lead';
+  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD' || currentUserData?.role === 'Team Lead';
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -138,6 +139,7 @@ export default function UsersPage() {
             batch.update(userRef, updateData);
             
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
+            if (values.role === 'CEO/MD') batch.set(doc(firestore, 'system_roles_admin', editingUser.id), { employeeId: editingUser.id });
             if (values.role === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', editingUser.id), { employeeId: editingUser.id });
             if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', editingUser.id), { employeeId: editingUser.id });
 
@@ -166,6 +168,7 @@ export default function UsersPage() {
             });
             
             if (values.role === 'CEO/Admin') batch.set(doc(firestore, 'system_roles_admin', newUserId), { employeeId: newUserId });
+            else if (values.role === 'CEO/MD') batch.set(doc(firestore, 'system_roles_admin', newUserId), { employeeId: newUserId });
             else if (values.role === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', newUserId), { employeeId: newUserId });
             else if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', newUserId), { employeeId: newUserId });
             
@@ -276,10 +279,10 @@ export default function UsersPage() {
                                     <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">First Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                     <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Last Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 </div>
-                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Email Directive</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Email Address</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 
                                 <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Command Matrix Assignment</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting To</Label>
                                     
                                     <div className="flex flex-wrap gap-2 min-h-[48px] p-3 bg-muted/10 border-2 border-dashed border-border/50">
                                         {selectedHeadIds.length === 0 ? (
@@ -364,17 +367,17 @@ export default function UsersPage() {
                                             </Select>
                                         </FormItem>
                                     )} />
-                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Work Schedule</FormLabel><FormControl><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Profile</FormLabel><FormControl><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="employmentType" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Classification</FormLabel>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Employment Type</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="role" render={({ field }) => (
                                         <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Account Tier</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/MD">CEO/MD</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                 </div>
 
@@ -389,7 +392,7 @@ export default function UsersPage() {
                                         <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Balance</FormLabel><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
                                     )} />
                                     <FormField control={form.control} name="payrollAmount" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Last Payroll Amount</FormLabel><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Payroll Amount</FormLabel><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
                                     )} />
                                 </div>
 
@@ -398,8 +401,8 @@ export default function UsersPage() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
                                         <div className="space-y-0.5">
-                                            <Label className="text-sm font-black uppercase tracking-tight">Enable WFH Mode</Label>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Authorize residential logging (Excludes branch assignment)</p>
+                                            <Label className="text-sm font-black uppercase tracking-tight">Allow WFH Mode</Label>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Authorize remote logging</p>
                                         </div>
                                         <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} className="rounded-none" />)} />
                                     </div>
@@ -408,7 +411,7 @@ export default function UsersPage() {
                                         <div className="p-6 bg-primary/5 rounded-none border-2 border-primary/10 space-y-6 animate-fade-in-up">
                                             <div className="flex items-center justify-between">
                                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                                    <MapPin className="size-3" /> Home Base Coordinates
+                                                    <MapPin className="size-3" /> Home Coordinates
                                                 </Label>
                                                 <Button 
                                                     type="button" 
@@ -436,17 +439,16 @@ export default function UsersPage() {
                                             </div>
                                             <FormField control={form.control} name="homeRadius" render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-[9px] uppercase font-black opacity-40">Geofence Radius (KM)</FormLabel>
+                                                    <FormLabel className="text-[9px] uppercase font-black opacity-40">Radius (KM)</FormLabel>
                                                     <FormControl><Input type="number" step="0.1" {...field} value={field.value ?? ""} className="rounded-none h-11 font-bold" /></FormControl>
-                                                    <p className="text-[9px] text-muted-foreground italic mt-2 font-bold">Standard precision: 0.5 KM</p>
                                                 </FormItem>
                                             )} />
                                         </div>
                                     )}
                                 </div>
                                 
-                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Temporary Cipher</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
-                                <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Finalize Dispatch Protocol</Button>
+                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
+                                <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Register Staff Member</Button>
                             </form>
                         </Form>
                     </ScrollArea>
@@ -464,7 +466,7 @@ export default function UsersPage() {
               </TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Identity</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Staff Member</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Operational Sector</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Sector</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Shift Profile</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">System Tier</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-8">Control</TableHead>
@@ -474,7 +476,7 @@ export default function UsersPage() {
             {isLoading ? (
                 <TableRow><TableCell colSpan={7} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Synchronizing Registry...</TableCell></TableRow>
             ) : users?.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No tactical units registered.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No units registered.</TableCell></TableRow>
             ) : users?.map(u => {
               const userBranch = branches?.find((b: any) => b.id === u.branchId);
               const isRemote = u.isWfhAllowed;
