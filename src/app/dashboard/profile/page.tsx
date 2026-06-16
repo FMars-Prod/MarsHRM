@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -228,7 +229,7 @@ export default function ProfilePage() {
                             </div>
                             <div className="flex gap-3">
                                 <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-none h-11 px-6 font-bold uppercase text-[10px] tracking-widest bg-white shadow-sm hover:shadow-md transition-all">Edit Info</Button>
-                                <Button asChild size="sm" className="rounded-none h-11 px-6 font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"><Link href="https://fortumars.com/os.html" target="_blank">Access MarsOS</Link></Button>
+                                <Button asChild size="sm" className="rounded-none h-11 px-6 font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"><Link href="https://fortumars.com/os.html" target="_blank">Access OS</Link></Button>
                             </div>
                         </div>
 
@@ -297,7 +298,7 @@ export default function ProfilePage() {
                         )}
                     </div>
                 </MetricCard>
-                <MetricCard icon={FileCheck} title="Payroll Hub" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : "Audited"} color="text-purple-600" />
+                <MetricCard icon={FileCheck} title="Payroll Status" ratio={employee.payrollAmount ? `₹${employee.payrollAmount.toLocaleString()}` : "Audited"} color="text-purple-600" />
                 <MetricCard icon={FileBox} title="Documents" ratio={documents?.length || 0} color="text-emerald-600">
                     <p className="text-[10px] font-bold uppercase text-muted-foreground/60 mt-4">
                         {documents?.[0] ? `Updated: ${format(documents[0].uploadedAt.toDate(), 'dd MMM yy')}` : "No Files"}

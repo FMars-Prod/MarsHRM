@@ -16,7 +16,7 @@ import { useUser, useFirestore, useMemoFirebase, useCollection, useAuth } from '
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { doc, collection, query, where, Timestamp, getDocs } from 'firebase/firestore';
+import { doc, collection, query, where, Timestamp, getDocs, or } from 'firebase/firestore';
 import { format, isToday, startOfDay, endOfDay, isBefore, addDays } from 'date-fns';
 import Image from 'next/image';
 import { AutomatedReportSender } from '@/components/geohrm/automated-report-sender';
@@ -76,6 +76,7 @@ type Todo = {
     task: string;
     completed: boolean;
     dueDate?: Timestamp;
+    assignedTo: string;
 }
 
 const SEARCHABLE_LINKS = [
@@ -182,7 +183,12 @@ export default function DashboardLayout({
     return userTickets.filter(t => t.lastUpdatedDate && (t.lastUpdatedDate.toDate ? t.lastUpdatedDate.toDate() : new Date(t.lastUpdatedDate)) > twentyFourHoursAgo).length;
   }, [userTickets]);
 
-  const todosQuery = useMemoFirebase(() => user ? query(collection(firestore, `users/${user.uid}/todos`), where("completed", "==", false)) : null, [firestore, user]);
+  const todosQuery = useMemoFirebase(() => {
+      if (!user) return null;
+      // Notifications only for tasks assigned TO me that are not completed
+      return query(collection(firestore, "todos"), where("assignedTo", "==", user.uid), where("completed", "==", false));
+  }, [firestore, user]);
+  
   const { data: activeTodos } = useCollection<Todo>(todosQuery);
   const taskReminders = useMemo(() => {
     if (!activeTodos) return [];

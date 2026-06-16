@@ -1,10 +1,11 @@
+
 'use client';
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Target, ShieldCheck, ChevronRight } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, limit, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, doc, serverTimestamp, or } from 'firebase/firestore';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,8 @@ type Todo = {
     priority: 'low' | 'medium' | 'high';
     dueDate?: any;
     colorId?: string;
+    assignedTo: string;
+    assignedBy: string;
 };
 
 export function TodoWidget() {
@@ -27,14 +30,21 @@ export function TodoWidget() {
 
     const todosQuery = useMemoFirebase(() => {
         if (!user) return null;
-        return query(collection(firestore, `users/${user.uid}/todos`), where('completed', '==', false), orderBy('createdAt', 'desc'), limit(5));
+        // Show tasks assigned to me or by me that are not yet completed
+        return query(
+            collection(firestore, 'todos'), 
+            or(where('assignedTo', '==', user.uid), where('assignedBy', '==', user.uid)),
+            where('completed', '==', false), 
+            orderBy('createdAt', 'desc'), 
+            limit(5)
+        );
     }, [user, firestore]);
 
     const { data: todos, isLoading } = useCollection<Todo>(todosQuery);
 
     const handleToggle = (todo: Todo) => {
         if (!user) return;
-        updateDocumentNonBlocking(doc(firestore, `users/${user.uid}/todos`, todo.id), { completed: true, completedAt: serverTimestamp() });
+        updateDocumentNonBlocking(doc(firestore, 'todos', todo.id), { completed: true, completedAt: serverTimestamp() });
     };
 
     return (

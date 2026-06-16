@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, doc, where, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, serverTimestamp, doc, where, Timestamp, or } from 'firebase/firestore';
 import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar as CalendarIcon, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle, Palette, LayoutGrid, ChevronRight, ChevronLeft, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -82,14 +82,19 @@ export default function TodoPage() {
 
     const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
     const { data: currentUserData } = useDoc<any>(userDocRef);
-    const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
+    const canAssign = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD' || currentUserData?.role === 'Team Lead';
 
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('firstName', 'asc')), [firestore]);
     const { data: allUsers } = useCollection<UserData>(usersQuery);
 
     const todosQuery = useMemoFirebase(() => {
         if (!user) return null;
-        return query(collection(firestore, `users/${user.uid}/todos`), orderBy('createdAt', 'desc'));
+        // Query tasks assigned to me OR assigned by me
+        return query(
+            collection(firestore, 'todos'), 
+            or(where('assignedTo', '==', user.uid), where('assignedBy', '==', user.uid)),
+            orderBy('createdAt', 'desc')
+        );
     }, [user, firestore]);
 
     const { data: todos, isLoading } = useCollection<Todo>(todosQuery);
@@ -100,7 +105,10 @@ export default function TodoPage() {
 
         const targetUserId = assignedTo === 'self' ? user.uid : assignedTo;
         const targetUser = allUsers?.find(u => u.id === targetUserId);
-        const targetUserName = targetUser ? `${targetUser.firstName} ${targetUser.lastName}` : 'Team Member';
+        const targetUserName = targetUser 
+            ? `${targetUser.firstName} ${targetUser.lastName}` 
+            : (assignedTo === 'self' ? `${currentUserData.firstName} ${currentUserData.lastName}` : 'Team Member');
+        
         const assignerName = `${currentUserData.firstName} ${currentUserData.lastName}`;
         
         let dueTimestamp = null;
@@ -123,7 +131,7 @@ export default function TodoPage() {
             dueDate: dueTimestamp,
         };
 
-        addDocumentNonBlocking(collection(firestore, `users/${targetUserId}/todos`), todoPayload);
+        addDocumentNonBlocking(collection(firestore, 'todos'), todoPayload);
 
         setNewTask('');
         setNewDesc('');
@@ -136,7 +144,7 @@ export default function TodoPage() {
 
     const toggleComplete = (todo: Todo) => {
         if (!user) return;
-        updateDocumentNonBlocking(doc(firestore, `users/${user.uid}/todos`, todo.id), {
+        updateDocumentNonBlocking(doc(firestore, 'todos', todo.id), {
             completed: !todo.completed,
             completedAt: !todo.completed ? serverTimestamp() : null
         });
@@ -145,7 +153,7 @@ export default function TodoPage() {
     const deleteTasks = (ids: string[]) => {
         if (!user) return;
         ids.forEach(id => {
-            deleteDocumentNonBlocking(doc(firestore, `users/${user.uid}/todos`, id));
+            deleteDocumentNonBlocking(doc(firestore, 'todos', id));
         });
         setSelectedIds([]);
         toast({ title: "Tasks Removed", description: `${ids.length} items cleared from list.` });
@@ -259,7 +267,7 @@ export default function TodoPage() {
                     </div>
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
-                            <Button className="rounded-full h-11 px-6 shadow-lg shadow-primary/20">
+                            <Button className="rounded-full h-11 px-6 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest">
                                 <Plus className="size-4 mr-2" /> New Task
                             </Button>
                         </DialogTrigger>
@@ -318,7 +326,7 @@ export default function TodoPage() {
                                                     <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="self">Myself</SelectItem>
-                                                        {isAdmin && allUsers?.filter(u => u.id !== user?.uid).map(u => (
+                                                        {canAssign && allUsers?.filter(u => u.id !== user?.uid).map(u => (
                                                             <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -503,14 +511,14 @@ export default function TodoPage() {
                         <Separator className="opacity-50" />
 
                         <div className="flex flex-col gap-4">
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="space-y-1 flex-1">
                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">From</Label>
-                                    <p className="text-sm font-bold">{selectedTodo?.assignedByName}</p>
+                                    <p className="text-sm font-bold truncate">{selectedTodo?.assignedByName}</p>
                                 </div>
-                                <div className="space-y-1 text-right">
+                                <div className="space-y-1 flex-1 text-right">
                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">To</Label>
-                                    <p className="text-sm font-bold">{selectedTodo?.assignedToName}</p>
+                                    <p className="text-sm font-bold truncate">{selectedTodo?.assignedToName}</p>
                                 </div>
                             </div>
                             {selectedTodo?.completedAt && (
@@ -578,6 +586,11 @@ function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDel
                                 To: {todo.assignedToName}
                             </Badge>
                         )}
+                        {todo.assignedByName && todo.assignedBy !== currentUserId && (
+                            <Badge variant="outline" className="text-[8px] font-black uppercase border-current/20 rounded-none bg-white/20">
+                                From: {todo.assignedByName}
+                            </Badge>
+                        )}
                     </div>
                 </div>
 
@@ -604,7 +617,7 @@ function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDel
                                 </div>
                             )}
                             <div className="flex items-center justify-between">
-                                <div className="text-[9px] font-bold uppercase opacity-60">
+                                <div className="text-[9px] font-bold uppercase opacity-60 truncate max-w-[120px]">
                                     By: {todo.assignedByName}
                                 </div>
                                 <Eye className="size-3.5 opacity-0 group-hover:opacity-40 transition-opacity" />
