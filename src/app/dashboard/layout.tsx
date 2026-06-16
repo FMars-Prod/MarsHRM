@@ -11,13 +11,13 @@ import {
 } from '@/components/ui/sidebar';
 import { MainNav } from '@/components/geohrm/main-nav';
 import { UserNav } from '@/components/geohrm/user-nav';
-import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert, ListTodo, CheckCircle2 } from 'lucide-react';
+import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert, ListTodo, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, where, Timestamp, getDocs } from 'firebase/firestore';
-import { format, isToday, startOfDay, endOfDay } from 'date-fns';
+import { format, isToday, startOfDay, endOfDay, isBefore, addDays } from 'date-fns';
 import Image from 'next/image';
 import { AutomatedReportSender } from '@/components/geohrm/automated-report-sender';
 import { Input } from '@/components/ui/input';
@@ -70,6 +70,12 @@ type SupportTicket = {
 type AttendanceApprovalRequest = {
   status: string;
   employeeName: string;
+}
+type Todo = {
+    id: string;
+    task: string;
+    completed: boolean;
+    dueDate?: Timestamp;
 }
 
 const SEARCHABLE_LINKS = [
@@ -176,7 +182,16 @@ export default function DashboardLayout({
     return userTickets.filter(t => t.lastUpdatedDate && (t.lastUpdatedDate.toDate ? t.lastUpdatedDate.toDate() : new Date(t.lastUpdatedDate)) > twentyFourHoursAgo).length;
   }, [userTickets]);
 
-  const totalNotifications = (leaveRequests?.length || 0) + unreadAnnouncements + todaysEventsCount + (locationRequests?.length || 0) + ticketUpdateCount + (attRequests?.length || 0);
+  const todosQuery = useMemoFirebase(() => user ? query(collection(firestore, `users/${user.uid}/todos`), where("completed", "==", false)) : null, [firestore, user]);
+  const { data: activeTodos } = useCollection<Todo>(todosQuery);
+  const taskReminders = useMemo(() => {
+    if (!activeTodos) return [];
+    const now = new Date();
+    const alertThreshold = addDays(now, 1);
+    return activeTodos.filter(t => t.dueDate && isBefore(t.dueDate.toDate(), alertThreshold));
+  }, [activeTodos]);
+
+  const totalNotifications = (leaveRequests?.length || 0) + unreadAnnouncements + todaysEventsCount + (locationRequests?.length || 0) + ticketUpdateCount + (attRequests?.length || 0) + taskReminders.length;
 
   const filteredSearchLinks = useMemo(() => {
     return SEARCHABLE_LINKS.filter(link => 
@@ -324,7 +339,6 @@ export default function DashboardLayout({
 
           <div className="flex items-center gap-2">
              <div className="flex items-center gap-1">
-                {/* Notifications Popover */}
                 <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
                    <PopoverTrigger asChild>
                        <Button variant="ghost" size="icon" className="rounded-none relative h-10 w-10">
@@ -337,17 +351,31 @@ export default function DashboardLayout({
                    <PopoverContent className="w-80 p-0 rounded-none border-none shadow-2xl" align="end" sideOffset={12}>
                        <div className="p-6 border-b bg-white">
                            <h4 className="text-lg font-black uppercase tracking-tighter text-primary">Notifications</h4>
-                           <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Latest Updates</p>
+                           <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Action Required</p>
                        </div>
                        <ScrollArea className="max-h-[400px]">
                            <div className="p-4 space-y-2">
                                {totalNotifications === 0 ? (
                                    <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
                                        <CheckCircle2 className="size-10 mb-2" />
-                                       <p className="font-bold uppercase text-[10px] tracking-widest">No notifications</p>
+                                       <p className="font-bold uppercase text-[10px] tracking-widest">System Clear</p>
                                    </div>
                                ) : (
                                    <>
+                                       {taskReminders.map(todo => (
+                                           <Link 
+                                              href="/dashboard/todo" 
+                                              key={todo.id}
+                                              onClick={() => setIsNotificationsOpen(false)}
+                                              className="flex items-center gap-3 p-3 bg-red-50 hover:bg-red-100 transition-all border border-red-100"
+                                           >
+                                               <div className="size-8 bg-red-500 text-white flex items-center justify-center rounded-none"><Clock className="size-4"/></div>
+                                               <div className="flex-1 min-w-0">
+                                                   <p className="text-[10px] font-bold uppercase text-red-700">Task Reminder</p>
+                                                   <p className="text-xs font-black truncate">{todo.task}</p>
+                                               </div>
+                                           </Link>
+                                       ))}
                                        {leaveRequests?.map((req, i) => (
                                            <Link 
                                               href="/dashboard/leave" 
@@ -362,34 +390,6 @@ export default function DashboardLayout({
                                                </div>
                                            </Link>
                                        ))}
-                                       {attRequests?.map((req, i) => (
-                                           <Link 
-                                              href="/dashboard/attendance-requests" 
-                                              key={i}
-                                              onClick={() => setIsNotificationsOpen(false)}
-                                              className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group"
-                                           >
-                                               <div className="size-8 bg-amber-500 text-white flex items-center justify-center rounded-none"><MapPin className="size-4"/></div>
-                                               <div className="flex-1 min-w-0">
-                                                   <p className="text-[10px] font-bold uppercase">Out of Range</p>
-                                                   <p className="text-xs font-semibold truncate">{req.employeeName} is requesting check-in</p>
-                                               </div>
-                                           </Link>
-                                       ))}
-                                       {allAnnouncements?.slice(0, 3).map((ann, i) => (
-                                           <Link 
-                                              href="/dashboard/announcements" 
-                                              key={ann.id}
-                                              onClick={() => setIsNotificationsOpen(false)}
-                                              className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group"
-                                           >
-                                               <div className="size-8 bg-primary text-white flex items-center justify-center rounded-none"><Sparkles className="size-4"/></div>
-                                               <div className="flex-1 min-w-0">
-                                                   <p className="text-[10px] font-bold uppercase">Announcement</p>
-                                                   <p className="text-xs font-semibold truncate">{ann.title}</p>
-                                               </div>
-                                           </Link>
-                                       ))}
                                    </>
                                )}
                            </div>
@@ -397,21 +397,18 @@ export default function DashboardLayout({
                    </PopoverContent>
                 </Popover>
 
-                {/* Todo */}
                 <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
                     <Link href="/dashboard/todo">
                         <ListTodo className="size-5" />
                     </Link>
                 </Button>
 
-                {/* My Apps */}
                 <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
                     <Link href="https://fortumars.com/os.html" target="_blank">
                         <LayoutGrid className="size-5" />
                     </Link>
                 </Button>
 
-                {/* Help */}
                 <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
                     <Link href="/tutorial">
                         <HelpCircle className="size-5" />
