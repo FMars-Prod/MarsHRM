@@ -36,7 +36,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// --- MOCK DATA FOR ENTERPRISE CEO DASHBOARD ---
+// --- DATA DEFINITIONS ---
 const kpiData = [
   { name: 'Total Revenue', value: '₹18.45L', trend: '+22.4%', up: true, icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50', sparkline: [30, 45, 35, 50, 48, 65, 55] },
   { name: 'Net Profit', value: '₹4.32L', trend: '+18.7%', up: true, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', sparkline: [20, 30, 25, 40, 38, 45, 42] },
@@ -76,14 +76,6 @@ const salesFunnel = [
   { name: 'Won', value: 7, color: 'bg-emerald-500' },
 ];
 
-const topClients = [
-  { name: 'ABC Corporation', value: 3.25, max: 4 },
-  { name: 'TechNova Solutions', value: 2.75, max: 4 },
-  { name: 'Global Retail Ltd.', value: 2.10, max: 4 },
-  { name: 'EduSmart Technologies', value: 1.85, max: 4 },
-  { name: 'Future Labs', value: 1.60, max: 4 },
-];
-
 const alerts = [
   { title: 'Project Delay', desc: '2 projects delayed', time: '20m ago', icon: Clock, color: 'text-rose-600', bg: 'bg-rose-50' },
   { title: 'Revenue Below Target', desc: 'Weekly target: ₹20L', time: '1h ago', icon: Target, color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -97,6 +89,14 @@ const recentActivities = [
   { time: '1h ago', text: 'Payment of ₹2,45,000 received from ABC Corp by Finance Team', icon: DollarSign, color: 'text-green-600' },
   { time: '2h ago', text: 'New employee Sarah Johnson joined Digital Marketing Team', icon: Users, color: 'text-blue-600' },
   { time: '3h ago', text: 'Facebook Ads campaign "Summer Offer" launched by Marketing Team', icon: Zap, color: 'text-amber-600' },
+];
+
+const topClients = [
+  { name: 'ABC Corporation', value: 3.25, max: 4 },
+  { name: 'TechNova Solutions', value: 2.75, max: 4 },
+  { name: 'Global Retail Ltd.', value: 2.10, max: 4 },
+  { name: 'EduSmart Technologies', value: 1.85, max: 4 },
+  { name: 'Future Labs', value: 1.60, max: 4 },
 ];
 
 export default function DashboardPage() {
@@ -136,65 +136,65 @@ export default function DashboardPage() {
     );
   }
 
-  // --- ENTERPRISE EXECUTIVE DASHBOARD ---
+  // --- ENTERPRISE EXECUTIVE DASHBOARD (SCROLLABLE & ALIGNED) ---
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col gap-4 overflow-hidden font-jakarta bg-[#F8FAFC]">
+    <div className="min-h-screen space-y-8 pb-20 font-jakarta bg-[#F8FAFC]">
       {/* Header Section */}
-      <div className="flex items-center justify-between shrink-0 px-1">
-        <div className="space-y-0.5">
-          <h1 className="text-2xl font-black tracking-tighter text-slate-900 leading-none">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-1 animate-fade-in-up">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none">
             Good Morning, Antony Joseph 👋
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Founder & CEO, Cognithorz</p>
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Founder & CEO, Cognithorz</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-white rounded-xl ring-1 ring-slate-200 p-1 shadow-sm h-10">
-            <Button variant="ghost" size="sm" className="h-8 rounded-lg px-4 text-[10px] font-black uppercase text-slate-500">2 Jun – 8 Jun 2025</Button>
-            <div className="w-px h-4 bg-slate-200 mx-1" />
-            <Button variant="ghost" size="sm" className="h-8 rounded-lg px-4 text-[10px] font-black uppercase bg-slate-50 text-slate-900 shadow-inner">This Week</Button>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center bg-white rounded-2xl ring-1 ring-slate-200 p-1 shadow-sm h-12">
+            <Button variant="ghost" size="sm" className="h-10 rounded-xl px-6 text-[11px] font-black uppercase text-slate-500">2 Jun – 8 Jun 2025</Button>
+            <div className="w-px h-6 bg-slate-200 mx-1" />
+            <Button variant="ghost" size="sm" className="h-10 rounded-xl px-6 text-[11px] font-black uppercase bg-slate-50 text-slate-900 shadow-inner">This Week</Button>
           </div>
-          <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 relative bg-white border-slate-200">
-            <Bell className="size-5 text-slate-600" />
-            <span className="absolute top-2.5 right-2.5 size-2 bg-rose-500 rounded-full ring-2 ring-white" />
+          <Button variant="outline" size="icon" className="rounded-2xl h-12 w-12 relative bg-white border-slate-200 hover:border-primary transition-colors">
+            <Bell className="size-6 text-slate-600" />
+            <span className="absolute top-3 right-3 size-2.5 bg-rose-500 rounded-full ring-2 ring-white" />
           </Button>
-          <div className="flex items-center gap-3 ml-2 pl-3 border-l border-slate-200">
+          <div className="flex items-center gap-4 ml-2 pl-6 border-l border-slate-200">
              <div className="text-right hidden sm:block">
-               <p className="text-xs font-black uppercase tracking-tight text-slate-900 leading-none">Antony Joseph</p>
-               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Founder & CEO</p>
+               <p className="text-sm font-black uppercase tracking-tight text-slate-900 leading-none">Antony Joseph</p>
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Founder & CEO</p>
              </div>
              <div className="relative">
-                <Avatar className="h-10 w-10 ring-2 ring-white shadow-md">
+                <Avatar className="h-12 w-12 ring-4 ring-white shadow-xl">
                     <AvatarImage src="https://picsum.photos/seed/executive/100/100" className="object-cover" />
-                    <AvatarFallback className="font-black text-xs">AJ</AvatarFallback>
+                    <AvatarFallback className="font-black text-sm">AJ</AvatarFallback>
                 </Avatar>
-                <div className="absolute bottom-0 right-0 size-3 bg-emerald-500 rounded-full border-2 border-white" />
+                <div className="absolute bottom-0 right-0 size-3.5 bg-emerald-500 rounded-full border-2 border-white" />
              </div>
           </div>
         </div>
       </div>
 
       {/* Row 1: KPI Matrix */}
-      <div className="grid grid-cols-5 gap-4 shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         {kpiData.map((kpi, i) => (
-          <Card key={i} className="border-none shadow-sm rounded-2xl bg-white group hover:shadow-md transition-all duration-300">
-            <CardContent className="p-4 flex flex-col gap-3">
+          <Card key={i} className="border-none shadow-sm rounded-2xl bg-white group hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
+            <CardContent className="p-6 flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <div className={cn("p-2 rounded-xl", kpi.bg, kpi.color)}>
-                  <kpi.icon className="size-4" />
+                <div className={cn("p-3 rounded-2xl shadow-sm", kpi.bg, kpi.color)}>
+                  <kpi.icon className="size-5" />
                 </div>
-                <div className={cn("flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full", kpi.up ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
-                  {kpi.up ? <ArrowUpRight className="size-2.5" /> : <ArrowDownRight className="size-2.5" />}
+                <div className={cn("flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full", kpi.up ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
+                  {kpi.up ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
                   {kpi.trend}
                 </div>
               </div>
-              <div className="space-y-0.5">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{kpi.name}</p>
-                <div className="flex items-baseline gap-1.5">
-                    <h3 className="text-xl font-black text-slate-900 tracking-tighter">{kpi.value}</h3>
-                    <span className="text-[8px] font-bold text-slate-400 uppercase">vs last week</span>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{kpi.name}</p>
+                <div className="flex items-baseline gap-2">
+                    <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{kpi.value}</h3>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">vs LW</span>
                 </div>
               </div>
-              <div className="h-6 w-full opacity-60 group-hover:opacity-100 transition-opacity">
+              <div className="h-10 w-full opacity-60 group-hover:opacity-100 transition-opacity">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={kpi.sparkline.map((v, idx) => ({ v, idx }))}>
                     <Area type="monotone" dataKey="v" stroke={kpi.up ? '#22C55E' : '#EF4444'} fill={kpi.up ? '#22C55E15' : '#EF444415'} strokeWidth={2} />
@@ -207,152 +207,153 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 2: Visual Intelligence */}
-      <div className="grid grid-cols-4 gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
         {/* Revenue Trend */}
-        <Card className="col-span-2 border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
-          <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between shrink-0">
-            <div className="space-y-0.5">
-              <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800">Revenue Trend (This Week)</CardTitle>
-              <CardDescription className="text-[9px] font-bold uppercase opacity-40">Financial velocity audit</CardDescription>
+        <Card className="lg:col-span-2 border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+          <CardHeader className="p-8 pb-0 flex flex-row items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue Trend (This Week)</CardTitle>
+              <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-tight">Financial velocity audit</CardDescription>
             </div>
-            <div className="flex gap-4">
-               <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-primary" /><span className="text-[9px] font-black uppercase">Current</span></div>
-               <div className="flex items-center gap-1.5"><div className="size-2 rounded-full bg-slate-200" /><span className="text-[9px] font-black uppercase text-slate-400">Previous</span></div>
+            <div className="flex gap-6">
+               <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-primary" /><span className="text-[10px] font-black uppercase text-slate-600">Current</span></div>
+               <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-slate-200" /><span className="text-[10px] font-black uppercase text-slate-400">Previous</span></div>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 p-4 pb-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6D28D9" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#6D28D9" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#F1F5F9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} className="text-[9px] font-black uppercase fill-slate-400" tickMargin={10} />
-                <YAxis axisLine={false} tickLine={false} className="text-[9px] font-black fill-slate-400" tickFormatter={(v) => `₹${v}L`} />
-                <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: '900' }}
-                    labelStyle={{ marginBottom: '4px', textTransform: 'uppercase' }}
-                />
-                <Area type="monotone" dataKey="revenue" stroke="#6D28D9" strokeWidth={3} fill="url(#colorRev)" dot={{ r: 4, fill: '#6D28D9', strokeWidth: 2, stroke: '#FFF' }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="lastWeek" stroke="#E2E8F0" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-          <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <div className="flex gap-6">
-                    <div><p className="text-[8px] font-bold text-slate-400 uppercase">This Week</p><p className="text-xs font-black">₹18.45L</p></div>
-                    <div><p className="text-[8px] font-bold text-slate-400 uppercase">Last Week</p><p className="text-xs font-black">₹15.08L</p></div>
+          <CardContent className="p-8">
+            <div className="h-[320px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6D28D9" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#6D28D9" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#F1F5F9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} className="text-[10px] font-black uppercase fill-slate-400" tickMargin={15} />
+                  <YAxis axisLine={false} tickLine={false} className="text-[10px] font-black fill-slate-400" tickFormatter={(v) => `₹${v}L`} />
+                  <Tooltip 
+                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '11px', fontWeight: '900' }}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#6D28D9" strokeWidth={4} fill="url(#colorRev)" dot={{ r: 5, fill: '#6D28D9', strokeWidth: 3, stroke: '#FFF' }} activeDot={{ r: 8, strokeWidth: 0 }} />
+                  <Line type="monotone" dataKey="lastWeek" stroke="#E2E8F0" strokeWidth={3} strokeDasharray="6 6" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-8 p-6 bg-slate-50 rounded-2xl flex items-center justify-between">
+                <div className="flex gap-10">
+                    <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">This Week</p><p className="text-lg font-black text-slate-900">₹18.45L</p></div>
+                    <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Last Week</p><p className="text-lg font-black text-slate-900">₹15.08L</p></div>
                 </div>
-                <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[9px] uppercase px-3 h-6">+22.4% Growth</Badge>
-          </div>
+                <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[10px] uppercase px-4 h-8">+22.4% Growth</Badge>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Revenue by BU */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
-          <CardHeader className="p-4 pb-0 shrink-0">
-            <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800">Revenue by Business Unit</CardTitle>
+        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col">
+          <CardHeader className="p-8 pb-0">
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue by BU</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 p-4 flex flex-col items-center justify-center">
-            <div className="relative size-32 sm:size-40">
+          <CardContent className="p-8 flex flex-col items-center justify-center gap-8">
+            <div className="relative size-48">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Pie data={businessUnits} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={4} dataKey="value" stroke="none">
+                        <Pie data={businessUnits} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={6} dataKey="value" stroke="none">
                         {businessUnits.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                         </Pie>
                         <Tooltip />
                     </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-sm font-black tracking-tighter">₹18.45L</span>
-                    <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
+                    <span className="text-xl font-black tracking-tighter">₹18.45L</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Aggregate</span>
                 </div>
             </div>
-            <div className="w-full mt-2 space-y-1.5">
+            <div className="w-full space-y-3">
               {businessUnits.map((unit, i) => (
-                <div key={i} className="flex items-center justify-between text-[9px] font-black uppercase">
-                  <div className="flex items-center gap-2"><div className="size-1.5 rounded-full" style={{ backgroundColor: unit.color }} /> <span className="text-slate-600">{unit.name}</span></div>
-                  <span className="text-slate-900">₹{unit.value.toFixed(2)}L ({unit.percentage}%)</span>
+                <div key={i} className="flex items-center justify-between text-[10px] font-black uppercase">
+                  <div className="flex items-center gap-3"><div className="size-2 rounded-full" style={{ backgroundColor: unit.color }} /> <span className="text-slate-600">{unit.name}</span></div>
+                  <span className="text-slate-900">₹{unit.value.toFixed(2)}L <span className="text-slate-400 ml-1">({unit.percentage}%)</span></span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Project Health / Alerts (Combined for high density) */}
-        <div className="flex flex-col gap-4">
-            <Card className="flex-1 border-none shadow-sm rounded-2xl bg-white p-4 flex flex-col justify-center">
-                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800 mb-3">Project Health</CardTitle>
-                <div className="flex items-center gap-4">
-                    <div className="relative size-20 shrink-0">
+        {/* Project Health & Alerts */}
+        <div className="flex flex-col gap-6">
+            <Card className="flex-1 border-none shadow-sm rounded-2xl bg-white p-6 flex flex-col justify-center">
+                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800 mb-6">Mission Health</CardTitle>
+                <div className="flex items-center gap-6">
+                    <div className="relative size-24 shrink-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
-                                <Pie data={projectHealth} cx="50%" cy="50%" innerRadius={25} outerRadius={35} dataKey="value" stroke="none">
+                                <Pie data={projectHealth} cx="50%" cy="50%" innerRadius={30} outerRadius={45} dataKey="value" stroke="none">
                                     {projectHealth.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                                 </Pie>
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-xs font-black">24</span>
+                            <span className="text-sm font-black">24</span>
                         </div>
                     </div>
-                    <div className="flex-1 space-y-1">
+                    <div className="flex-1 space-y-1.5">
                         {projectHealth.map((h, i) => (
-                            <div key={i} className="flex items-center justify-between text-[8px] font-black uppercase">
+                            <div key={i} className="flex items-center justify-between text-[9px] font-black uppercase">
                                 <span className="text-slate-400">{h.name}</span>
-                                <span className="text-slate-900">{h.value} ({h.percentage}%)</span>
+                                <span className="text-slate-900">{h.value}</span>
                             </div>
                         ))}
                     </div>
                 </div>
-                <Button variant="link" className="h-6 p-0 text-[8px] font-black uppercase text-primary mt-2 self-end">View All Projects <ChevronRight className="size-2 ml-1"/></Button>
+                <Button variant="link" className="h-8 p-0 text-[10px] font-black uppercase text-primary mt-4 self-end group">View Projects <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button>
             </Card>
 
             <Card className="flex-[1.5] border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
-                <div className="p-3 border-b border-slate-50 flex items-center justify-between shrink-0">
-                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-800">Alerts & Priorities</CardTitle>
-                    <Badge className="bg-rose-500 text-white border-none text-[8px] font-black h-4 px-1.5">{alerts.length}</Badge>
+                <div className="p-4 border-b border-slate-50 flex items-center justify-between">
+                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-800">Critical Signals</CardTitle>
+                    <Badge className="bg-rose-500 text-white border-none text-[10px] font-black h-5 px-2.5 shadow-lg shadow-rose-500/20">{alerts.length}</Badge>
                 </div>
-                <ScrollArea className="flex-1">
-                    <div className="p-2 space-y-1">
+                <ScrollArea className="flex-1 max-h-[160px]">
+                    <div className="p-3 space-y-2">
                         {alerts.map((alert, i) => (
-                            <div key={i} className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-3 group hover:bg-white hover:border-slate-200 transition-all cursor-pointer">
-                                <div className={cn("p-1.5 rounded-lg shrink-0", alert.bg, alert.color)}><alert.icon className="size-3"/></div>
+                            <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-slate-200 hover:shadow-md transition-all cursor-pointer">
+                                <div className={cn("p-2 rounded-xl shrink-0 shadow-sm", alert.bg, alert.color)}><alert.icon className="size-4"/></div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[9px] font-black uppercase text-slate-800 truncate">{alert.title}</p>
-                                    <p className="text-[8px] font-bold text-slate-400 uppercase truncate">{alert.desc}</p>
+                                    <p className="text-[10px] font-black uppercase text-slate-800 truncate">{alert.title}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase truncate mt-0.5">{alert.desc}</p>
                                 </div>
-                                <span className="text-[7px] font-black text-slate-300 uppercase shrink-0 mt-0.5">{alert.time}</span>
+                                <span className="text-[8px] font-black text-slate-300 uppercase shrink-0 mt-1">{alert.time}</span>
                             </div>
                         ))}
                     </div>
                 </ScrollArea>
-                <div className="p-2 pt-0 shrink-0">
-                    <Button variant="ghost" className="w-full h-7 text-[8px] font-black uppercase text-slate-400 hover:text-primary">View All Alerts</Button>
+                <div className="p-3 pt-0">
+                    <Button variant="ghost" className="w-full h-9 text-[10px] font-black uppercase text-slate-400 hover:text-primary transition-colors">Audit All Signals</Button>
                 </div>
             </Card>
         </div>
       </div>
 
       {/* Row 3: Tactical Progress */}
-      <div className="grid grid-cols-12 gap-4 shrink-0 h-48">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
         {/* Sales Funnel */}
-        <Card className="col-span-3 border-none shadow-sm rounded-2xl bg-white p-4 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800">Sales Funnel</CardTitle>
-            <div className="text-right"><p className="text-[8px] font-bold text-slate-400 uppercase">Conversion</p><p className="text-xs font-black text-primary">12.28%</p></div>
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-8 flex flex-col">
+          <div className="flex items-center justify-between mb-8">
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Sales Funnel</CardTitle>
+            <div className="text-right"><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Conversion</p><p className="text-lg font-black text-primary">12.28%</p></div>
           </div>
-          <div className="flex-1 flex flex-col gap-1.5 justify-center">
+          <div className="flex-1 flex flex-col gap-3 justify-center">
              {salesFunnel.map((f, i) => (
-               <div key={i} className="flex items-center gap-3">
-                 <div className="w-24 text-[8px] font-black uppercase text-slate-400 truncate">{f.name}</div>
+               <div key={i} className="flex items-center gap-4">
+                 <div className="w-32 text-[10px] font-black uppercase text-slate-400 truncate">{f.name}</div>
                  <div 
-                   className={cn("h-5 rounded-lg border-r-4 border-black/10 transition-all duration-1000 flex items-center px-2", f.color)} 
-                   style={{ width: `${(f.value / salesFunnel[0].value) * 100}%`, opacity: 1 - (i * 0.12) }}
+                   className={cn("h-7 rounded-xl border-r-4 border-black/10 transition-all duration-1000 flex items-center px-4 shadow-sm", f.color)} 
+                   style={{ width: `${(f.value / salesFunnel[0].value) * 100}%`, opacity: 1 - (i * 0.1) }}
                  >
-                    <span className="text-[9px] font-black text-white">{f.value}</span>
+                    <span className="text-xs font-black text-white">{f.value}</span>
                  </div>
                </div>
              ))}
@@ -360,117 +361,117 @@ export default function DashboardPage() {
         </Card>
 
         {/* Marketing Performance */}
-        <Card className="col-span-3 border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
-            <CardHeader className="p-4 pb-2 shrink-0">
-                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800">Marketing Performance</CardTitle>
+        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+            <CardHeader className="p-8 pb-4">
+                <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Marketing ROI</CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 p-4 pt-0 grid grid-cols-2 gap-3">
+            <CardContent className="p-8 pt-0 grid grid-cols-2 gap-4">
                 {[
                     { l: 'Visitors', v: '8,245', t: '+18.6%', up: true },
                     { l: 'Leads', v: '142', t: '+31.5%', up: true },
                     { l: 'Ad Spend', v: '₹92,000', t: '+4.2%', up: false },
-                    { l: 'Cost/Lead', v: '₹64.79', t: '+5.3%', up: false },
+                    { l: 'CPL', v: '₹64.79', t: '+5.3%', up: false },
                     { l: 'ROI', v: '4.35x', t: '+16.8%', up: true },
-                    { l: 'Top Camp.', v: 'G-Ads', t: '68 Leads', up: true }
+                    { l: 'Efficiency', v: '94%', t: 'Verified', up: true }
                 ].map((s, i) => (
-                    <div key={i} className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
-                        <p className="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">{s.l}</p>
+                    <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-center shadow-sm">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">{s.l}</p>
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-slate-800 tracking-tight">{s.v}</span>
-                            <span className={cn("text-[7px] font-black", s.up ? "text-emerald-600" : "text-rose-600")}>{s.t}</span>
+                            <span className="text-sm font-black text-slate-800 tracking-tight">{s.v}</span>
+                            <span className={cn("text-[9px] font-black", s.up ? "text-emerald-600" : "text-rose-600")}>{s.t}</span>
                         </div>
                     </div>
                 ))}
             </CardContent>
-            <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 shrink-0">
-                <Button variant="link" className="h-4 p-0 text-[8px] font-black uppercase text-primary w-full justify-center">View Marketing Dashboard</Button>
+            <div className="px-8 py-4 bg-slate-50 border-t border-slate-100">
+                <Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full justify-center group">Marketing Intelligence Hub <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button>
             </div>
         </Card>
 
         {/* Team Overview */}
-        <Card className="col-span-3 border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
-            <CardHeader className="p-4 pb-2 shrink-0">
-                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800">Team Overview</CardTitle>
+        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+            <CardHeader className="p-8 pb-4">
+                <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Fleet Deployment</CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 p-4 pt-0 space-y-4">
-                <div className="flex justify-between items-center bg-primary/5 p-3 rounded-2xl">
-                    <div><p className="text-[8px] font-bold text-slate-400 uppercase">Total Staff</p><div className="flex items-center gap-2"><p className="text-xl font-black text-primary">84</p><Badge className="bg-emerald-100 text-emerald-600 border-none text-[7px] font-black">+2</Badge></div></div>
-                    <div className="text-right"><p className="text-[8px] font-bold text-slate-400 uppercase">Present Now</p><p className="text-xl font-black text-slate-800">71 <span className="text-[10px] text-slate-400">(84%)</span></p></div>
+            <CardContent className="p-8 pt-0 space-y-6">
+                <div className="flex justify-between items-center bg-primary/5 p-6 rounded-3xl ring-1 ring-primary/10">
+                    <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Staff</p><div className="flex items-center gap-3 mt-1"><p className="text-4xl font-black text-primary tracking-tighter">84</p><Badge className="bg-emerald-100 text-emerald-600 border-none text-[10px] font-black shadow-sm">+2</Badge></div></div>
+                    <div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Attendance</p><p className="text-2xl font-black text-slate-800 mt-1">71 <span className="text-sm text-slate-400 font-bold ml-1">(84%)</span></p></div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                     {[
-                        { l: 'Attrition', v: '1.2%', s: 'bg-rose-500' },
-                        { l: 'New Joins', v: '2', s: 'bg-emerald-500' },
-                        { l: 'Open Pos.', v: '6', s: 'bg-sky-500' }
+                        { l: 'Attrition', v: '1.2%', c: 'text-rose-600' },
+                        { l: 'New Joins', v: '2', c: 'text-emerald-600' },
+                        { l: 'Openings', v: '6', c: 'text-sky-600' }
                     ].map((m, i) => (
-                        <div key={i} className="text-center p-2 rounded-xl border border-slate-100">
-                            <p className="text-[7px] font-black text-slate-400 uppercase mb-1">{m.l}</p>
-                            <p className="text-xs font-black text-slate-900">{m.v}</p>
+                        <div key={i} className="text-center p-4 rounded-2xl border border-slate-100 shadow-sm">
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">{m.l}</p>
+                            <p className={cn("text-sm font-black", m.c)}>{m.v}</p>
                         </div>
                     ))}
                 </div>
             </CardContent>
-            <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 shrink-0">
-                <Button variant="link" className="h-4 p-0 text-[8px] font-black uppercase text-primary w-full justify-center">View People Analytics</Button>
+            <div className="px-8 py-4 bg-slate-50 border-t border-slate-100">
+                <Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full justify-center group">People Analytics Portal <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button>
             </div>
         </Card>
 
         {/* Weekly Goals */}
-        <Card className="col-span-3 border-none shadow-sm rounded-2xl bg-white p-4 flex flex-col gap-4">
-          <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800 shrink-0">Weekly Goals Progress</CardTitle>
-          <div className="flex-1 flex flex-col gap-3 justify-center">
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-8 flex flex-col gap-6">
+          <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Mission Benchmarks</CardTitle>
+          <div className="flex-1 flex flex-col gap-6 justify-center">
             {[
-              { l: 'Revenue Target', v: 92, val: '₹18.45L / ₹20L', c: 'bg-primary' },
+              { l: 'Revenue', v: 92, val: '₹18.45L / ₹20L', c: 'bg-primary' },
               { l: 'New Clients', v: 60, val: '3 / 5', c: 'bg-emerald-500' },
-              { l: 'Project Delivery', v: 75, val: '75% / 90%', c: 'bg-sky-500' },
-              { l: 'Leads Target', v: 95, val: '142 / 150', c: 'bg-amber-500' }
+              { l: 'Delivery', v: 75, val: '75% / 90%', c: 'bg-sky-500' },
+              { l: 'Lead Target', v: 95, val: '142 / 150', c: 'bg-amber-500' }
             ].map((g, i) => (
-              <div key={i} className="space-y-1">
-                <div className="flex justify-between text-[8px] font-black uppercase text-slate-400"><span>{g.l}</span><span className="text-slate-900">{g.val}</span></div>
-                <div className="flex items-center gap-2">
-                    <Progress value={g.v} className="h-1.5 rounded-full bg-slate-100 flex-1" indicatorClassName={g.c} />
-                    <span className="text-[8px] font-black text-slate-900 w-6">{g.v}%</span>
+              <div key={i} className="space-y-2">
+                <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>{g.l}</span><span className="text-slate-900">{g.val}</span></div>
+                <div className="flex items-center gap-4">
+                    <Progress value={g.v} className="h-2 rounded-full bg-slate-100 flex-1" indicatorClassName={g.c} />
+                    <span className="text-[10px] font-black text-slate-900 w-8">{g.v}%</span>
                 </div>
               </div>
             ))}
           </div>
-          <Button variant="outline" size="sm" className="h-7 w-full rounded-xl text-[8px] font-black uppercase border-slate-200">View All Goals</Button>
+          <Button variant="outline" className="h-12 w-full rounded-2xl text-[10px] font-black uppercase border-slate-200 shadow-sm tracking-widest">Audit All Targets</Button>
         </Card>
       </div>
 
       {/* Row 4: Financial & Tactical */}
-      <div className="grid grid-cols-4 gap-4 shrink-0 h-40">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
         {/* Financial Snapshot */}
         <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
-            <div className="p-3 border-b border-slate-50 shrink-0"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-800">Financial Snapshot</CardTitle></div>
-            <CardContent className="flex-1 p-3 grid grid-cols-2 gap-2">
+            <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Financial Ledger</CardTitle></div>
+            <CardContent className="p-6 grid grid-cols-2 gap-4">
                 {[
                     { l: 'Revenue', v: '₹18.45L', t: '+22.4%', c: 'text-emerald-600' },
                     { l: 'Expenses', v: '₹12.13L', t: '+7.8%', c: 'text-rose-600' },
                     { l: 'Net Profit', v: '₹4.32L', t: '+18.7%', c: 'text-emerald-600' },
-                    { l: 'Profit Margin', v: '23.4%', t: '+2.1pp', c: 'text-emerald-600' }
+                    { l: 'Margin', v: '23.4%', t: '+2.1pp', c: 'text-emerald-600' }
                 ].map((s, i) => (
-                    <div key={i} className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                        <p className="text-[7px] font-black text-slate-400 uppercase mb-1">{s.l}</p>
-                        <div className="flex items-center justify-between"><span className="text-[10px] font-black text-slate-900">{s.v}</span><span className={cn("text-[7px] font-black", s.c)}>{s.t}</span></div>
+                    <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">{s.l}</p>
+                        <div className="flex flex-col"><span className="text-sm font-black text-slate-900 tracking-tight">{s.v}</span><span className={cn("text-[9px] font-black mt-1", s.c)}>{s.t}</span></div>
                     </div>
                 ))}
             </CardContent>
-            <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100"><Button variant="link" className="h-4 p-0 text-[8px] font-black uppercase text-primary w-full">View Finance Hub</Button></div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100"><Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full group">Finance Intelligence Portal <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button></div>
         </Card>
 
         {/* Top Clients */}
         <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
-            <div className="p-3 border-b border-slate-50 shrink-0"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-800">Top Clients by Revenue</CardTitle></div>
-            <ScrollArea className="flex-1">
-                <div className="p-3 space-y-2.5">
+            <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Principal Contributors</CardTitle></div>
+            <ScrollArea className="h-[280px]">
+                <div className="p-6 space-y-6">
                     {topClients.map((client, i) => (
-                        <div key={i} className="space-y-1">
-                            <div className="flex justify-between text-[8px] font-black uppercase">
-                                <span className="text-slate-600 truncate max-w-[120px]">{client.name}</span>
+                        <div key={i} className="space-y-2.5">
+                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                                <span className="text-slate-600 truncate max-w-[150px]">{client.name}</span>
                                 <span className="text-slate-900">₹{client.value.toFixed(2)}L</span>
                             </div>
-                            <Progress value={(client.value / client.max) * 100} className="h-1 rounded-full bg-slate-100" indicatorClassName="bg-primary" />
+                            <Progress value={(client.value / client.max) * 100} className="h-2 rounded-full bg-slate-100" indicatorClassName="bg-primary" />
                         </div>
                     ))}
                 </div>
@@ -479,52 +480,51 @@ export default function DashboardPage() {
 
         {/* Recent Activities */}
         <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
-            <div className="p-3 border-b border-slate-50 shrink-0"><CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-800">Recent Activities</CardTitle></div>
-            <ScrollArea className="flex-1">
-                <div className="p-3 space-y-4">
+            <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Operational Log</CardTitle></div>
+            <ScrollArea className="h-[280px]">
+                <div className="p-6 space-y-8">
                     {recentActivities.map((act, i) => (
-                        <div key={i} className="flex gap-3 items-start relative">
-                            {i < recentActivities.length - 1 && <div className="absolute left-1.5 top-4 bottom-[-16px] w-[1px] bg-slate-100" />}
-                            <div className={cn("size-3 rounded-full flex items-center justify-center shrink-0 z-10 bg-white ring-1 ring-slate-200")}>
-                                <act.icon className={cn("size-2", act.color)} />
+                        <div key={i} className="flex gap-4 items-start relative">
+                            {i < recentActivities.length - 1 && <div className="absolute left-2.5 top-6 bottom-[-32px] w-[2px] bg-slate-100" />}
+                            <div className={cn("size-5 rounded-full flex items-center justify-center shrink-0 z-10 bg-white ring-4 ring-slate-50 shadow-sm")}>
+                                <act.icon className={cn("size-3", act.color)} />
                             </div>
                             <div className="min-w-0 flex-1">
-                                <p className="text-[9px] font-bold text-slate-700 leading-tight line-clamp-2">{act.text}</p>
-                                <p className="text-[7px] font-black text-slate-400 uppercase mt-1">{act.time}</p>
+                                <p className="text-[11px] font-black text-slate-700 leading-tight line-clamp-2 uppercase tracking-tight">{act.text}</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">{act.time}</p>
                             </div>
                         </div>
                     ))}
                 </div>
             </ScrollArea>
-            <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100"><Button variant="link" className="h-4 p-0 text-[8px] font-black uppercase text-primary w-full">View All Activities</Button></div>
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-4">
            {[
-             { l: 'Create Project', i: Plus, c: 'bg-purple-500' },
-             { l: 'Add New Lead', i: MousePointer2, c: 'bg-blue-500' },
-             { l: 'Add Employee', i: UserPlus, c: 'bg-emerald-500' },
-             { l: 'Generate Report', i: FileText, c: 'bg-orange-500' },
-             { l: 'View Analytics', i: BarChart3, c: 'bg-sky-500' },
-             { l: 'System Settings', i: Settings, c: 'bg-slate-700' }
+             { l: 'New Project', i: Plus, c: 'bg-purple-600' },
+             { l: 'Acquire Lead', i: MousePointer2, c: 'bg-blue-600' },
+             { l: 'Add Staff', i: UserPlus, c: 'bg-emerald-600' },
+             { l: 'Audit Report', i: FileText, c: 'bg-orange-600' },
+             { l: 'Deep Dive', i: BarChart3, c: 'bg-sky-600' },
+             { l: 'Terminal', i: Settings, c: 'bg-slate-800' }
            ].map((btn, i) => (
-             <Button key={i} variant="outline" className="h-full rounded-2xl border-none ring-1 ring-slate-200 bg-white hover:bg-slate-50 flex flex-col gap-1.5 p-2 shadow-sm group">
-               <div className={cn("p-1.5 rounded-lg text-white group-hover:scale-110 transition-transform", btn.c)}><btn.i className="size-3.5" /></div>
-               <span className="text-[8px] font-black uppercase tracking-tight text-slate-600 leading-none">{btn.l}</span>
+             <Button key={i} variant="outline" className="h-full rounded-2xl border-none ring-1 ring-slate-200 bg-white hover:bg-slate-50 flex flex-col gap-3 p-4 shadow-sm group active:scale-95 transition-all">
+               <div className={cn("p-2.5 rounded-xl text-white group-hover:scale-110 transition-transform shadow-md", btn.c)}><btn.i className="size-5" /></div>
+               <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 leading-none">{btn.l}</span>
              </Button>
            ))}
         </div>
       </div>
 
       {/* Industrial Footer */}
-      <div className="shrink-0 flex items-center justify-between px-2 pt-2 border-t border-slate-200 text-slate-400 opacity-50">
-        <p className="text-[8px] font-black uppercase">© 2025 Cognithorz. All rights reserved.</p>
-        <div className="flex items-center gap-2">
-            <Building2 className="size-3" />
-            <p className="text-[8px] font-black uppercase">MarsHRM Intelligence Terminal</p>
+      <div className="pt-12 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 px-1 opacity-40">
+        <p className="text-[10px] font-black uppercase tracking-widest">© 2025 Cognithorz. Tactical Intelligence Suite.</p>
+        <div className="flex items-center gap-3">
+            <Building2 className="size-4" />
+            <p className="text-[10px] font-black uppercase tracking-widest">MarsHRM by Cognithorz</p>
         </div>
-        <p className="text-[8px] font-black uppercase tracking-widest">Authorized Executive Access Only</p>
+        <p className="text-[10px] font-black uppercase tracking-widest">Authorized Executive Access Tier 1</p>
       </div>
     </div>
   );
