@@ -32,6 +32,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // --- MOCK DATA FOR EXECUTIVE DASHBOARD ---
 const kpiData = [
@@ -132,14 +133,14 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between shrink-0">
         <div className="space-y-1">
           <h1 className="text-2xl font-black tracking-tighter text-slate-900 flex items-center gap-2">
-            Good Morning, Antony Joseph 👋
+            Good Morning, {(currentUserData as any)?.firstName || 'CEO'} 👋
           </h1>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Founder & CEO, Cognithorz</p>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Leadership Terminal</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex bg-white rounded-xl ring-1 ring-slate-200 p-1 shadow-sm">
             <Button variant="ghost" size="sm" className="h-8 rounded-lg px-4 text-[10px] font-black uppercase">This Week</Button>
-            <Button variant="ghost" size="sm" className="h-8 rounded-lg px-4 text-[10px] font-black uppercase bg-slate-50 text-slate-900 shadow-inner">2 Jun - 8 Jun 2025</Button>
+            <Button variant="ghost" size="sm" className="h-8 rounded-lg px-4 text-[10px] font-black uppercase bg-slate-50 text-slate-900 shadow-inner">{format(new Date(), 'PP')}</Button>
           </div>
           <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 relative">
             <Bell className="size-5 text-slate-600" />
@@ -147,12 +148,13 @@ export default function DashboardPage() {
           </Button>
           <div className="flex items-center gap-3 ml-2 pl-3 border-l border-slate-200">
              <div className="text-right">
-               <p className="text-xs font-black uppercase tracking-tight text-slate-900">Antony Joseph</p>
-               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Founder & CEO</p>
+               <p className="text-xs font-black uppercase tracking-tight text-slate-900">{(currentUserData as any)?.firstName} {(currentUserData as any)?.lastName}</p>
+               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{(currentUserData as any)?.role}</p>
              </div>
-             <div className="size-10 rounded-xl bg-primary/10 border-2 border-white shadow-md overflow-hidden">
-               <img src="https://picsum.photos/seed/ceo/100/100" className="object-cover w-full h-full" alt="CEO" />
-             </div>
+             <Avatar className="h-10 w-10 ring-2 ring-white shadow-md">
+                <AvatarImage src={(currentUserData as any)?.avatar} className="object-cover" />
+                <AvatarFallback className="font-black text-xs">{(currentUserData as any)?.firstName?.[0]}</AvatarFallback>
+             </Avatar>
           </div>
         </div>
       </div>
@@ -313,7 +315,7 @@ export default function DashboardPage() {
           <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-800 mb-4">Team Overview</CardTitle>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <div><p className="text-xl font-black text-slate-900">84</p><p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total Fleet</p></div>
+              <div><p className="text-xl font-black text-slate-900">84</p><p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total Staff</p></div>
               <div className="text-right"><p className="text-xl font-black text-emerald-600">71</p><p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Present</p></div>
             </div>
             <div className="space-y-1.5">
