@@ -19,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useDoc } from "@/firebase/firestore/use-doc";
 
 type AttendanceApprovalRequest = {
     employeeId: string;
@@ -35,26 +36,70 @@ type AttendanceApprovalRequest = {
     approvalNotes?: string;
 };
 
+type UserData = {
+  id: string;
+  role: string;
+  reportingHeadIds?: string[];
+};
+
+type Team = {
+  id: string;
+  memberIds: string[];
+}
+
 export default function AttendanceRequestsPage() {
     const firestore = useFirestore();
     const { user: currentUser } = useUser();
     const { toast } = useToast();
+
+    const userDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
+    const { data: userData } = useDoc<any>(userDocRef);
+    const userRole = userData?.role || 'Member';
+    const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
+    const { data: allUsers } = useCollection<UserData>(usersQuery);
+
+    const teamsQuery = useMemoFirebase(() => {
+        if (!currentUser || userRole !== 'Team Lead') return null;
+        return query(collection(firestore, 'teams'), where('teamLeadId', '==', currentUser.uid));
+    }, [firestore, currentUser, userRole]);
+    const { data: teamsLed } = useCollection<Team>(teamsQuery);
+
+    const subordinateIds = React.useMemo(() => {
+        const ids = new Set<string>();
+        if (teamsLed) {
+            teamsLed.forEach(t => t.memberIds.forEach(id => ids.add(id)));
+        }
+        if (currentUser && allUsers) {
+            allUsers.forEach(u => {
+                if (u.reportingHeadIds?.includes(currentUser.uid)) ids.add(u.id);
+            });
+        }
+        return Array.from(ids);
+    }, [teamsLed, allUsers, currentUser]);
 
     const [filter, setFilter] = React.useState<'Pending' | 'Processed'>('Pending');
     const [rejectionReason, setRejectionReason] = React.useState("");
     const [requestToReject, setRequestToReject] = React.useState<WithId<AttendanceApprovalRequest> | null>(null);
     const [processingIds, setProcessingIds] = React.useState<string[]>([]);
     
-    // Selection state
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 
     const requestsQuery = useMemoFirebase(() => {
         const base = collection(firestore, "attendanceApprovalRequests");
-        if (filter === 'Pending') {
-            return query(base, where("status", "==", "Pending"), orderBy("requestTimestamp", "desc"));
+        let q = filter === 'Pending' 
+            ? query(base, where("status", "==", "Pending"), orderBy("requestTimestamp", "desc"))
+            : query(base, where("status", "!=", "Pending"), orderBy("requestTimestamp", "desc"));
+        
+        if (userRole === 'Team Lead' && !isPrivileged) {
+            if (subordinateIds.length > 0) {
+                return query(base, where("status", "==", filter === 'Pending' ? "Pending" : "Approved"), where("employeeId", "in", subordinateIds.slice(0, 30)));
+            }
+            return null;
         }
-        return query(base, where("status", "!=", "Pending"), orderBy("requestTimestamp", "desc"));
-    }, [firestore, filter]);
+        return q;
+    }, [firestore, filter, userRole, isPrivileged, subordinateIds]);
 
     const { data: requests, isLoading } = useCollection<AttendanceApprovalRequest>(requestsQuery);
 
@@ -75,7 +120,6 @@ export default function AttendanceRequestsPage() {
 
         updateDocumentNonBlocking(requestRef, payload);
 
-        // If approved, update or create the actual attendance record for that day
         if (status === 'Approved') {
             const attDateId = request.dateId || format(new Date(), 'yyyy-MM-dd');
             const attendanceRef = doc(firestore, `users/${request.employeeId}/attendances`, attDateId);
@@ -86,7 +130,6 @@ export default function AttendanceRequestsPage() {
                 isOutOfRange: false
             };
 
-            // Use the original request timestamp to record the attendance time
             const userInitiatedTime = request.requestTimestamp;
 
             if (request.type === 'Clock Out') {
@@ -94,7 +137,6 @@ export default function AttendanceRequestsPage() {
                 attendanceUpdate.locationCheckOutLatitude = request.requestedLatitude;
                 attendanceUpdate.locationCheckOutLongitude = request.requestedLongitude;
             } else {
-                // Check In
                 attendanceUpdate.checkInTime = userInitiatedTime;
                 attendanceUpdate.status = request.intendedStatus || 'present';
                 attendanceUpdate.locationCheckInLatitude = request.requestedLatitude;
@@ -114,8 +156,6 @@ export default function AttendanceRequestsPage() {
             setRequestToReject(null);
             setRejectionReason("");
         }
-
-        // Processing state is handled by Firestore real-time updates removing the item from the list
     };
 
     const handleBulkDelete = () => {
@@ -142,7 +182,7 @@ export default function AttendanceRequestsPage() {
         <div className="animate-fade-in-up space-y-6">
             <PageHeader title="Range Approval Desk" description="Verify and approve remote clock-in/out requests.">
                 <div className="flex gap-2 items-center">
-                    {selectedIds.length > 0 && (
+                    {selectedIds.length > 0 && isPrivileged && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm" className="rounded-none px-4 h-9 font-bold uppercase text-[10px] gap-2 shadow-lg shadow-red-600/20">

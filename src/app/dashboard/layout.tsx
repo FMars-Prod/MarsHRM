@@ -84,12 +84,17 @@ type Team = {
   memberIds: string[];
 }
 
+type UserData = {
+  id: string;
+  reportingHeadIds?: string[];
+};
+
 const SEARCHABLE_LINKS = [
     { label: "Dashboard", href: "/dashboard", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Analytics", href: "/dashboard/analytics", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Reports", href: "/dashboard/reports", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Attendance", href: "/dashboard/attendance", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-    { label: "Out of Range", href: "/dashboard/attendance-requests", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Out of Range", href: "/dashboard/attendance-requests", roles: ['Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "WFH Location", href: "/dashboard/location-requests", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Leave Requests", href: "/dashboard/leave", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Documents", href: "/dashboard/documents", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
@@ -136,24 +141,35 @@ export default function DashboardLayout({
   const userRole = (userData as any)?.role || 'Member';
   const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
+  const { data: allUsers } = useCollection<UserData>(usersQuery);
+
   const teamLeadQuery = useMemoFirebase(() => {
     if (!user || userRole !== 'Team Lead') return null;
     return query(collection(firestore, 'teams'), where('teamLeadId', '==', user.uid));
   }, [firestore, user, userRole]);
   const { data: teamsLed } = useCollection<Team>(teamLeadQuery);
 
-  const teamMemberIds = useMemo(() => {
-    if (!teamsLed) return [];
-    return Array.from(new Set(teamsLed.flatMap(t => t.memberIds)));
-  }, [teamsLed]);
+  const subordinateIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (teamsLed) {
+      teamsLed.forEach(t => t.memberIds.forEach(id => ids.add(id)));
+    }
+    if (user && allUsers) {
+      allUsers.forEach(u => {
+        if (u.reportingHeadIds?.includes(user.uid)) ids.add(u.id);
+      });
+    }
+    return Array.from(ids);
+  }, [teamsLed, allUsers, user]);
 
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
     let q = collection(firestore, "leave_requests");
     
     if (userRole === 'Team Lead') {
-      if (teamMemberIds.length > 0) {
-        return query(q, where("status", "==", "Pending"), where("employeeId", "in", teamMemberIds));
+      if (subordinateIds.length > 0) {
+        return query(q, where("status", "==", "Pending"), where("employeeId", "in", subordinateIds.slice(0, 30)));
       }
       return null;
     }
@@ -162,7 +178,7 @@ export default function DashboardLayout({
     if (userRole === 'CEO/Admin' || userRole === 'CEO/MD') return query(q, where("status", "in", ["Pending", "Pending HR Approval"]));
     
     return null;
-  }, [firestore, user, userRole, teamMemberIds]);
+  }, [firestore, user, userRole, subordinateIds]);
   const { data: leaveRequests } = useCollection<LeaveRequest>(leaveRequestsQuery);
 
   const locationRequestsQuery = useMemoFirebase(() => {
@@ -172,9 +188,22 @@ export default function DashboardLayout({
   const { data: locationRequests } = useCollection<LocationRequest>(locationRequestsQuery);
 
   const attRequestsQuery = useMemoFirebase(() => {
-    if (!isPrivileged || !user) return null;
-    return query(collection(firestore, "attendanceApprovalRequests"), where("status", "==", "Pending"));
-  }, [firestore, isPrivileged, user]);
+    if (!user || !userRole) return null;
+    let q = collection(firestore, "attendanceApprovalRequests");
+
+    if (userRole === 'Team Lead') {
+      if (subordinateIds.length > 0) {
+        return query(q, where("status", "==", "Pending"), where("employeeId", "in", subordinateIds.slice(0, 30)));
+      }
+      return null;
+    }
+
+    if (isPrivileged) {
+      return query(q, where("status", "==", "Pending"));
+    }
+
+    return null;
+  }, [firestore, isPrivileged, user, userRole, subordinateIds]);
   const { data: attRequests } = useCollection<AttendanceApprovalRequest>(attRequestsQuery);
 
   const allAnnouncementsQuery = useMemoFirebase(() => user ? collection(firestore, 'announcements') : null, [firestore, user]);

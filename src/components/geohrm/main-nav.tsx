@@ -54,7 +54,7 @@ const groups = [
     label: "TEAM HUB",
     links: [
       { href: "/dashboard/attendance", label: "My Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/attendance-requests", label: "Out of Range", icon: UserCheck, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "pendingAttRequestsCount" },
+      { href: "/dashboard/attendance-requests", label: "Out of Range", icon: UserCheck, roles: ['Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "pendingAttRequestsCount" },
       { href: "/dashboard/location-requests", label: "WFH Location", icon: MapPinned, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "pendingLocationRequestsCount" },
       { href: "/dashboard/leave", label: "Leave Requests", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
       { href: "/dashboard/documents", label: "Documents", icon: FileBox, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },

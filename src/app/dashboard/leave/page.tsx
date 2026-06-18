@@ -91,6 +91,8 @@ type UserData = {
     id: string;
     firstName: string;
     lastName: string;
+    reportingHeadIds?: string[];
+    teamId?: string | null;
 };
 
 type LeaveRequestWithId = WithId<LeaveRequest>;
@@ -257,6 +259,14 @@ export default function LeavePage() {
     return teamsLed.flatMap(team => team.memberIds);
   }, [userRole, teamsLed]);
 
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
+  const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
+
+  const reportingSubordinateIds = React.useMemo(() => {
+      if (!user || !users) return [];
+      return users.filter(u => u.reportingHeadIds?.includes(user.uid)).map(u => u.id);
+  }, [user, users]);
+
   const allTeamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
   const { data: allTeams } = useCollection<Team>(allTeamsQuery);
 
@@ -269,21 +279,20 @@ export default function LeavePage() {
       return query(baseQuery);
     }
 
-    // Team Leads see their own + their team's
+    // Team Leads see their own + their team's + people who report to them
     if (userRole === 'Team Lead') {
-      const ids = Array.from(new Set([user.uid, ...teamMemberIds]));
+      const ids = Array.from(new Set([user.uid, ...teamMemberIds, ...reportingSubordinateIds]));
       if (ids.length > 0) {
-        return query(baseQuery, where('employeeId', 'in', ids));
+        // limit to 30 for Firestore 'in' query
+        const limitedIds = ids.slice(0, 30);
+        return query(baseQuery, where('employeeId', 'in', limitedIds));
       }
     }
 
-    // Members (and fallback for empty team leads) see only their own
+    // Members see only their own
     return query(baseQuery, where('employeeId', '==', user.uid));
-  }, [firestore, user, userRole, teamMemberIds]);
+  }, [firestore, user, userRole, teamMemberIds, reportingSubordinateIds]);
   
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
-  const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
-
   const { data: leaveRequests, isLoading: requestsLoading } = useCollection<LeaveRequest>(leaveRequestsQuery);
   
   const displayLeaveRequests = React.useMemo(() => {
@@ -420,7 +429,7 @@ export default function LeavePage() {
     }
 
     const userTeam = allTeams?.find(t => t.id === (userData as any).teamId);
-    const hasTeamLead = !!userTeam?.teamLeadId;
+    const hasTeamLead = !!userTeam?.teamLeadId || reportingSubordinateIds.length > 0;
     const isUserTeamLead = userRole === 'Team Lead';
     const isManagement = userRole === 'HR Manager' || userRole === 'CEO/Admin';
 
