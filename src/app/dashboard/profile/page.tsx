@@ -50,11 +50,25 @@ const profileFormSchema = z.object({
     nationality: z.string().optional(),
     maritalStatus: z.string().optional(),
     bloodGroup: z.string().optional(),
-    languages: z.string().optional(),
+    languages: z.array(z.string()).default([]),
 }).refine(data => !data.password || data.password.length >= 6, { message: "Min 6 chars", path: ["password"] })
   .refine(data => data.password === data.confirmPassword, { message: "Mismatch", path: ["confirmPassword"] });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+const MARITAL_STATUS_OPTIONS = [
+    "Single",
+    "In a relationship",
+    "Engaged",
+    "Married",
+    "In a civil union",
+    "In a domestic partnership",
+    "It's complicated",
+    "In an open relationship",
+    "Separated",
+    "Divorced",
+    "Widowed"
+];
 
 export default function ProfilePage() {
     const { user } = useUser();
@@ -68,6 +82,7 @@ export default function ProfilePage() {
     const [isAvatarDialogOpen, setIsAvatarDialogOpen] = React.useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = React.useState(false);
     const [userReports, setUserReports] = React.useState<any[]>([]);
+    const [langInput, setLangInput] = React.useState('');
 
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
     const { data: employee, isLoading: isEmployeeLoading } = useDoc<any>(userDocRef);
@@ -147,7 +162,7 @@ export default function ProfilePage() {
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: { firstName: "", lastName: "", phoneNumber: "", password: "", confirmPassword: "", dob: "", gender: "", nationality: "", maritalStatus: "", bloodGroup: "", languages: "" },
+        defaultValues: { firstName: "", lastName: "", phoneNumber: "", password: "", confirmPassword: "", dob: "", gender: "", nationality: "", maritalStatus: "", bloodGroup: "", languages: [] },
     });
 
     React.useEffect(() => {
@@ -160,7 +175,7 @@ export default function ProfilePage() {
             nationality: employee.nationality || '',
             maritalStatus: employee.maritalStatus || '',
             bloodGroup: employee.bloodGroup || '',
-            languages: employee.languages?.join(', ') || '',
+            languages: Array.isArray(employee.languages) ? employee.languages : [],
             password: '', 
             confirmPassword: '' 
         });
@@ -180,12 +195,8 @@ export default function ProfilePage() {
         setIsSubmitting(true);
         if (!user || !auth.currentUser) return;
         try {
-            const { password, confirmPassword, languages, ...updateData } = data;
-            const finalUpdateData: any = {
-                ...updateData,
-                languages: languages ? languages.split(',').map(s => s.trim()).filter(Boolean) : []
-            };
-            if (userDocRef) updateDocumentNonBlocking(userDocRef, finalUpdateData);
+            const { password, confirmPassword, ...updateData } = data;
+            if (userDocRef) updateDocumentNonBlocking(userDocRef, updateData);
             await updateProfile(auth.currentUser, { displayName: `${data.firstName} ${data.lastName}` });
             if (data.password) await updatePassword(auth.currentUser, data.password);
             toast({ title: "Profile updated" });
@@ -193,6 +204,21 @@ export default function ProfilePage() {
         } catch (e: any) { toast({ variant: "destructive", title: "Update failed", description: e.message }); }
         finally { setIsSubmitting(false); }
     }
+
+    const addLanguage = (e: React.KeyboardEvent<HTMLInputElement>, currentLangs: string[]) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const val = langInput.trim().replace(',', '');
+            if (val && !currentLangs.includes(val)) {
+                form.setValue('languages', [...currentLangs, val]);
+            }
+            setLangInput('');
+        }
+    };
+
+    const removeLanguage = (lang: string, currentLangs: string[]) => {
+        form.setValue('languages', currentLangs.filter(l => l !== lang));
+    };
 
     if (isEmployeeLoading || !employee) return <div className="p-10 text-center animate-pulse uppercase font-black text-sm">Loading...</div>;
 
@@ -597,14 +623,53 @@ export default function ProfilePage() {
                                         <FormItem><Label className="text-[10px] uppercase font-bold text-primary tracking-widest">Marital Status</Label>
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl><SelectTrigger className="h-12 rounded-none font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
-                                                <SelectContent className="rounded-none"><SelectItem value="Single">Single</SelectItem><SelectItem value="Married">Married</SelectItem><SelectItem value="Divorced">Divorced</SelectItem><SelectItem value="Widowed">Widowed</SelectItem></SelectContent>
+                                                <SelectContent className="rounded-none">
+                                                    {MARITAL_STATUS_OPTIONS.map(status => (
+                                                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
                                             </Select>
                                         </FormItem>
                                     )} />
                                 </div>
-                                <FormField control={form.control} name="languages" render={({ field }) => (
-                                    <FormItem><Label className="text-[10px] uppercase font-bold text-primary tracking-widest">Languages</Label><FormControl><Input {...field} placeholder="e.g. English, Tamil" className="h-12 rounded-none font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50" /></FormControl></FormItem>
-                                )} />
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] uppercase font-bold text-primary tracking-widest">Languages</Label>
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {form.watch('languages').map((lang) => (
+                                            <Badge key={lang} variant="secondary" className="px-3 py-1 rounded-none font-bold text-[10px] uppercase gap-2">
+                                                {lang}
+                                                <X 
+                                                    className="size-3 cursor-pointer opacity-50 hover:opacity-100" 
+                                                    onClick={() => removeLanguage(lang, form.getValues('languages'))}
+                                                />
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Input 
+                                            value={langInput} 
+                                            onChange={e => setLangInput(e.target.value)}
+                                            onKeyDown={e => addLanguage(e, form.getValues('languages'))}
+                                            placeholder="Type language and press Enter..." 
+                                            className="h-12 rounded-none font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50" 
+                                        />
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            className="rounded-none h-12"
+                                            onClick={() => {
+                                                const val = langInput.trim();
+                                                if (val) {
+                                                    const current = form.getValues('languages');
+                                                    if (!current.includes(val)) form.setValue('languages', [...current, val]);
+                                                    setLangInput('');
+                                                }
+                                            }}
+                                        >
+                                            Add
+                                        </Button>
+                                    </div>
+                                </div>
                                 <Separator className="my-4 opacity-50" />
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="password" render={({ field }) => (<FormItem><Label className="text-[10px] uppercase font-bold text-primary tracking-widest">New Password</Label><FormControl><Input type="password" {...field} className="h-12 rounded-none font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50" /></FormControl></FormItem>)} />
