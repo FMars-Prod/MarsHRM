@@ -55,7 +55,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, collection, query, where, serverTimestamp } from "firebase/firestore";
+import { doc, collection, query, where, serverTimestamp, or } from "firebase/firestore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, startOfToday, getDaysInMonth, getYear, getMonth, getDate, isBefore } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -264,20 +264,21 @@ export default function LeavePage() {
     if (!user || !userRole) return null;
     const baseQuery = collection(firestore, 'leave_requests');
 
-    switch (userRole) {
-      case 'Member':
-        return query(baseQuery, where('employeeId', '==', user.uid));
-      case 'Team Lead':
-        if (teamMemberIds.length > 0) {
-          return query(baseQuery, where('employeeId', 'in', teamMemberIds));
-        }
-        return query(baseQuery, where('employeeId', '==', '-----'));
-      case 'HR Manager':
-      case 'CEO/Admin':
-        return query(baseQuery);
-      default:
-        return null;
+    // HR and Admins see everything
+    if (userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD') {
+      return query(baseQuery);
     }
+
+    // Team Leads see their own + their team's
+    if (userRole === 'Team Lead') {
+      const ids = Array.from(new Set([user.uid, ...teamMemberIds]));
+      if (ids.length > 0) {
+        return query(baseQuery, where('employeeId', 'in', ids));
+      }
+    }
+
+    // Members (and fallback for empty team leads) see only their own
+    return query(baseQuery, where('employeeId', '==', user.uid));
   }, [firestore, user, userRole, teamMemberIds]);
   
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
@@ -501,132 +502,130 @@ export default function LeavePage() {
               {showMissed ? "Active View" : "Past Requests"}
             </Button>
           )}
-          {userRole === 'Member' && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm" className="rounded-full shadow-lg">
-                  <PlusCircle className="mr-2 size-4" />
-                  New Request
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-0">
-                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">New Request</DialogTitle>
-                  <DialogDescription>Submit a request for leave, permission, or work from home.</DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="max-h-[60vh]">
-                    <div className="grid gap-6 p-6">
-                        <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Request Type</Label>
-                            <Select value={category} onValueChange={(val: RequestCategory) => setCategory(val)}>
-                                <SelectTrigger className="rounded-xl h-11">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Leave">Full Day Leave</SelectItem>
-                                    <SelectItem value="Hour Permission">Hour Permission</SelectItem>
-                                    <SelectItem value="WFH">Work From Home</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" className="rounded-full shadow-lg">
+                <PlusCircle className="mr-2 size-4" />
+                New Request
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden">
+              <DialogHeader className="p-6 pb-0">
+                <DialogTitle className="text-xl font-black uppercase tracking-tighter">New Request</DialogTitle>
+                <DialogDescription>Submit a request for leave, permission, or work from home.</DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[60vh]">
+                  <div className="grid gap-6 p-6">
+                      <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Request Type</Label>
+                          <Select value={category} onValueChange={(val: RequestCategory) => setCategory(val)}>
+                              <SelectTrigger className="rounded-xl h-11">
+                                  <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="Leave">Full Day Leave</SelectItem>
+                                  <SelectItem value="Hour Permission">Hour Permission</SelectItem>
+                                  <SelectItem value="WFH">Work From Home</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
 
-                        <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Category</Label>
-                            <Select onValueChange={setLeaveType} value={leaveType}>
-                                <SelectTrigger className="rounded-xl h-11">
-                                    <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Vacation">Vacation</SelectItem>
-                                    <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                                    <SelectItem value="Personal">Personal</SelectItem>
-                                    <SelectItem value="Work From Home">Work From Home</SelectItem>
-                                    <SelectItem value="Other">Other</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                      <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Category</Label>
+                          <Select onValueChange={setLeaveType} value={leaveType}>
+                              <SelectTrigger className="rounded-xl h-11">
+                                  <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="Vacation">Vacation</SelectItem>
+                                  <SelectItem value="Sick Leave">Sick Leave</SelectItem>
+                                  <SelectItem value="Personal">Personal</SelectItem>
+                                  <SelectItem value="Work From Home">Work From Home</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
 
-                        {category === 'WFH' && (
-                            <div className="p-4 bg-primary/5 rounded-2xl border-2 border-primary/10 space-y-4 animate-fade-in-up">
-                                <div className="flex items-center justify-between">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                        <Signal className="size-3" /> Location Data
-                                    </Label>
-                                    <Button 
-                                        type="button" 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-8 rounded-full text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5"
-                                        onClick={handleCaptureSignal}
-                                        disabled={isCapturingSignal}
-                                    >
-                                        {isCapturingSignal ? <Loader2 className="size-3 animate-spin mr-2"/> : <LocateFixed className="size-3 mr-2" />} 
-                                        Capture Location
-                                    </Button>
-                                </div>
-                                {wfhCoords && (
-                                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-primary/10">
-                                        <div>
-                                            <p className="text-[8px] font-bold text-muted-foreground uppercase">LAT</p>
-                                            <p className="text-xs font-mono font-bold text-primary">{wfhCoords.lat.toFixed(6)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[8px] font-bold text-muted-foreground uppercase">LNG</p>
-                                            <p className="text-xs font-mono font-bold text-primary">{wfhCoords.lng.toFixed(6)}</p>
-                                        </div>
-                                    </div>
-                                )}
-                                <p className="text-[9px] text-muted-foreground italic font-bold">Once approved, you can check in from this location during these dates.</p>
-                            </div>
-                        )}
-                        
-                        <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">{category === "Hour Permission" ? "Date" : "Start Date"}</Label>
-                            <div className="grid grid-cols-3 gap-2">
-                            <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                            <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                            <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
-                            </div>
-                        </div>
+                      {category === 'WFH' && (
+                          <div className="p-4 bg-primary/5 rounded-2xl border-2 border-primary/10 space-y-4 animate-fade-in-up">
+                              <div className="flex items-center justify-between">
+                                  <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                                      <Signal className="size-3" /> Location Data
+                                  </Label>
+                                  <Button 
+                                      type="button" 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-8 rounded-full text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5"
+                                      onClick={handleCaptureSignal}
+                                      disabled={isCapturingSignal}
+                                  >
+                                      {isCapturingSignal ? <Loader2 className="size-3 animate-spin mr-2"/> : <LocateFixed className="size-3 mr-2" />} 
+                                      Capture Location
+                                  </Button>
+                              </div>
+                              {wfhCoords && (
+                                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-primary/10">
+                                      <div>
+                                          <p className="text-[8px] font-bold text-muted-foreground uppercase">LAT</p>
+                                          <p className="text-xs font-mono font-bold text-primary">{wfhCoords.lat.toFixed(6)}</p>
+                                      </div>
+                                      <div>
+                                          <p className="text-[8px] font-bold text-muted-foreground uppercase">LNG</p>
+                                          <p className="text-xs font-mono font-bold text-primary">{wfhCoords.lng.toFixed(6)}</p>
+                                      </div>
+                                  </div>
+                              )}
+                              <p className="text-[9px] text-muted-foreground italic font-bold">Once approved, you can check in from this location during these dates.</p>
+                          </div>
+                      )}
+                      
+                      <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">{category === "Hour Permission" ? "Date" : "Start Date"}</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                          <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                          <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                          <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                          </div>
+                      </div>
 
-                        {category !== "Hour Permission" && (
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Date</Label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    <Select onValueChange={setEndYear} value={endYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                                    <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                                    <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
-                                </div>
-                            </div>
-                        )}
+                      {category !== "Hour Permission" && (
+                          <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Date</Label>
+                              <div className="grid grid-cols-3 gap-2">
+                                  <Select onValueChange={setEndYear} value={endYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                                  <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                                  <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                              </div>
+                          </div>
+                      )}
 
-                        {category === "Hour Permission" && (
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Start Time</Label>
-                                    <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="rounded-xl h-11" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Time</Label>
-                                    <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="rounded-xl h-11" />
-                                </div>
-                            </div>
-                        )}
+                      {category === "Hour Permission" && (
+                          <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                  <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Start Time</Label>
+                                  <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="rounded-xl h-11" />
+                              </div>
+                              <div className="space-y-2">
+                                  <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Time</Label>
+                                  <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="rounded-xl h-11" />
+                              </div>
+                          </div>
+                      )}
 
-                        <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason</Label>
-                            <div className="space-y-1">
-                                <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Please provide a reason for this request..." className="rounded-2xl min-h-[100px]" />
-                            </div>
-                        </div>
-                    </div>
-                </ScrollArea>
-                <DialogFooter className="p-6 pt-0">
-                  <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Submit Request</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+                      <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason</Label>
+                          <div className="space-y-1">
+                              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Please provide a reason for this request..." className="rounded-2xl min-h-[100px]" />
+                          </div>
+                      </div>
+                  </div>
+              </ScrollArea>
+              <DialogFooter className="p-6 pt-0">
+                <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Submit Request</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </PageHeader>
 

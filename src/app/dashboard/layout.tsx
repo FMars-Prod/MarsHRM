@@ -79,6 +79,11 @@ type Todo = {
     assignedTo: string;
 }
 
+type Team = {
+  id: string;
+  memberIds: string[];
+}
+
 const SEARCHABLE_LINKS = [
     { label: "Dashboard", href: "/dashboard", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Analytics", href: "/dashboard/analytics", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
@@ -131,15 +136,33 @@ export default function DashboardLayout({
   const userRole = (userData as any)?.role || 'Member';
   const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
+  const teamLeadQuery = useMemoFirebase(() => {
+    if (!user || userRole !== 'Team Lead') return null;
+    return query(collection(firestore, 'teams'), where('teamLeadId', '==', user.uid));
+  }, [firestore, user, userRole]);
+  const { data: teamsLed } = useCollection<Team>(teamLeadQuery);
+
+  const teamMemberIds = useMemo(() => {
+    if (!teamsLed) return [];
+    return Array.from(new Set(teamsLed.flatMap(t => t.memberIds)));
+  }, [teamsLed]);
+
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
-    let q = query(collection(firestore, "leave_requests"));
-    if (userRole === 'Team Lead') q = query(q, where("status", "==", "Pending"));
-    else if (userRole === 'HR Manager') q = query(q, where("status", "in", ["Pending HR Approval"]));
-    else if (userRole === 'CEO/Admin' || userRole === 'CEO/MD') q = query(q, where("status", "in", ["Pending", "Pending HR Approval"]));
-    else return null;
-    return q;
-  }, [firestore, user, userRole]);
+    let q = collection(firestore, "leave_requests");
+    
+    if (userRole === 'Team Lead') {
+      if (teamMemberIds.length > 0) {
+        return query(q, where("status", "==", "Pending"), where("employeeId", "in", teamMemberIds));
+      }
+      return null;
+    }
+    
+    if (userRole === 'HR Manager') return query(q, where("status", "==", "Pending HR Approval"));
+    if (userRole === 'CEO/Admin' || userRole === 'CEO/MD') return query(q, where("status", "in", ["Pending", "Pending HR Approval"]));
+    
+    return null;
+  }, [firestore, user, userRole, teamMemberIds]);
   const { data: leaveRequests } = useCollection<LeaveRequest>(leaveRequestsQuery);
 
   const locationRequestsQuery = useMemoFirebase(() => {
@@ -185,7 +208,6 @@ export default function DashboardLayout({
 
   const todosQuery = useMemoFirebase(() => {
       if (!user) return null;
-      // Notifications only for tasks assigned TO me that are not completed
       return query(collection(firestore, "todos"), where("assignedTo", "==", user.uid), where("completed", "==", false));
   }, [firestore, user]);
   
