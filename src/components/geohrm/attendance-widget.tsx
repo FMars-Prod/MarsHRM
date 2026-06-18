@@ -9,7 +9,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { LogOut, LogIn, Loader2, Utensils, AlertTriangle, ShieldCheck, MapPin, LocateFixed, Signal, Coffee, Timer } from "lucide-react";
+import { LogOut, LogIn, Loader2, Utensils, AlertTriangle, ShieldCheck, MapPin, LocateFixed, Signal, Coffee, Timer, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc, useCollection } from "@/firebase";
 import { doc, serverTimestamp, collection, Timestamp, query, where } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
@@ -68,16 +68,72 @@ export function AttendanceWidget() {
 
   const globalLocationDocRef = useMemoFirebase(() => doc(firestore, "settings", "location"), [firestore]);
   const { data: globalLocationData } = useDoc<any>(globalLocationDocRef);
+
+  // Fetch approved WFH requests for this user
+  const wfhRequestsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+        collection(firestore, 'leave_requests'),
+        where('employeeId', '==', user.uid),
+        where('category', '==', 'WFH'),
+        where('status', '==', 'Approved')
+    );
+  }, [user, firestore]);
+  const { data: wfhRequests } = useCollection<any>(wfhRequestsQuery);
+
+  // Determine if there is an active approved WFH request for today
+  const activeWfhToday = React.useMemo(() => {
+    if (!wfhRequests) return null;
+    const currentDay = new Date();
+    return wfhRequests.find(r => {
+        const start = r.startDate?.toDate?.() || new Date(r.startDate);
+        const end = r.endDate?.toDate?.() || new Date(r.endDate);
+        const s = startOfDay(start);
+        const e = endOfDay(end);
+        return currentDay >= s && currentDay <= e;
+    });
+  }, [wfhRequests]);
   
   const activeGeofence = React.useMemo(() => {
+    // Priority 1: Approved Dynamic WFH Request for Today
+    if (activeWfhToday && typeof activeWfhToday.latitude === 'number') {
+        return { 
+            name: "Approved WFH Sector", 
+            lat: Number(activeWfhToday.latitude), 
+            lng: Number(activeWfhToday.longitude), 
+            radius: 0.5, // Standard WFH radius
+            type: 'wfh'
+        };
+    }
+    // Priority 2: Permanent Home Base Authorization
     if (userData?.isWfhAllowed && typeof userData.homeLatitude === 'number') {
-        return { name: "Home Base", lat: Number(userData.homeLatitude), lng: Number(userData.homeLongitude), radius: Number(userData.homeRadius || 0.5) };
+        return { 
+            name: "Home Base", 
+            lat: Number(userData.homeLatitude), 
+            lng: Number(userData.homeLongitude), 
+            radius: Number(userData.homeRadius || 0.5),
+            type: 'wfh'
+        };
     }
+    // Priority 3: Assigned Branch Office
     if (userData?.branchId && branchData) {
-        return { name: branchData.name, lat: Number(branchData.latitude), lng: Number(branchData.longitude), radius: Number(branchData.radius || 0.5) };
+        return { 
+            name: branchData.name, 
+            lat: Number(branchData.latitude), 
+            lng: Number(branchData.longitude), 
+            radius: Number(branchData.radius || 0.5),
+            type: 'office'
+        };
     }
-    return { name: "HQ Sector", lat: Number(globalLocationData?.latitude || 13.0827), lng: Number(globalLocationData?.longitude || 80.2707), radius: Number(globalLocationData?.maxDistanceKm || 0.5) };
-  }, [branchData, globalLocationData, userData]);
+    // Priority 4: HQ Sector (Fallback)
+    return { 
+        name: "HQ Sector", 
+        lat: Number(globalLocationData?.latitude || 13.0827), 
+        lng: Number(globalLocationData?.longitude || 80.2707), 
+        radius: Number(globalLocationData?.maxDistanceKm || 0.5),
+        type: 'office'
+    };
+  }, [branchData, globalLocationData, userData, activeWfhToday]);
 
   const [isOutOfRangeDialogOpen, setIsOutOfRangeDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
@@ -191,7 +247,8 @@ export function AttendanceWidget() {
                 totalBreakDuration: 0, 
                 locationCheckInLatitude: userLoc.latitude, 
                 locationCheckInLongitude: userLoc.longitude, 
-                isOutOfRange: false 
+                isOutOfRange: false,
+                isAtHome: activeGeofence.type === 'wfh'
             }, { merge: true });
             toast({ title: "Shift Active", description: `Location: ${activeGeofence.name}` });
         } else {
@@ -383,6 +440,12 @@ export function AttendanceWidget() {
                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Active Duty</span>
                     </div>
                 )}
+                {activeWfhToday && (
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-sky-50 rounded-full border border-sky-100 shadow-sm">
+                        <Home className="size-3 text-sky-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-sky-700">Remote Sector Active</span>
+                    </div>
+                )}
                 {(status === 'lunch' || status === 'short_break') && (
                     <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 rounded-full border border-amber-100 shadow-sm">
                         <Coffee className="size-3 text-amber-600" />
@@ -407,7 +470,7 @@ export function AttendanceWidget() {
                     </Badge>
                     {isVerifyingLocation && currentSignal && (
                         <div className="flex items-center gap-2 text-[9px] font-black uppercase text-primary animate-pulse">
-                            <Signal className="size-3" /> Location: {currentSignal}
+                            <Signal className="size-3" /> Signal Audit: {currentSignal}
                         </div>
                     )}
                 </div>
@@ -565,3 +628,4 @@ function StatusStep({ icon: Icon, label, time, isActive, coords }: { icon: any, 
         </Card>
     );
 }
+
