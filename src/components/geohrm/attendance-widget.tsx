@@ -98,17 +98,17 @@ export function AttendanceWidget() {
     // Priority 1: Approved Dynamic WFH Request for Today
     if (activeWfhToday && typeof activeWfhToday.latitude === 'number') {
         return { 
-            name: "Approved WFH Sector", 
+            name: "WFH", 
             lat: Number(activeWfhToday.latitude), 
             lng: Number(activeWfhToday.longitude), 
-            radius: 0.5, // Standard WFH radius
+            radius: 0.5, 
             type: 'wfh'
         };
     }
-    // Priority 2: Permanent Home Base Authorization
+    // Priority 2: Permanent Home Authorization
     if (userData?.isWfhAllowed && typeof userData.homeLatitude === 'number') {
         return { 
-            name: "Home Base", 
+            name: "Home", 
             lat: Number(userData.homeLatitude), 
             lng: Number(userData.homeLongitude), 
             radius: Number(userData.homeRadius || 0.5),
@@ -125,9 +125,9 @@ export function AttendanceWidget() {
             type: 'office'
         };
     }
-    // Priority 4: HQ Sector (Fallback)
+    // Priority 4: Default Office (Fallback)
     return { 
-        name: "HQ Sector", 
+        name: "Office", 
         lat: Number(globalLocationData?.latitude || 13.0827), 
         lng: Number(globalLocationData?.longitude || 80.2707), 
         radius: Number(globalLocationData?.maxDistanceKm || 0.5),
@@ -147,7 +147,7 @@ export function AttendanceWidget() {
   
   const {data: todaysAttendance} = useDoc<any>(getTodaysAttendanceRef);
 
-  // Monitor pending requests to prevent duplicates
+  // Monitor pending requests
   const pendingRequestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -233,7 +233,6 @@ export function AttendanceWidget() {
         setCurrentSignal(`${userLoc.latitude.toFixed(4)}, ${userLoc.longitude.toFixed(4)}`);
         
         const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-        
         const buffer = 0.015; 
         
         setIsVerifyingLocation(false);
@@ -250,7 +249,7 @@ export function AttendanceWidget() {
                 isOutOfRange: false,
                 isAtHome: activeGeofence.type === 'wfh'
             }, { merge: true });
-            toast({ title: "Shift Active", description: `Location: ${activeGeofence.name}` });
+            toast({ title: "Clocked In", description: `Location: ${activeGeofence.name}` });
         } else {
             setOutOfRangeType('Check In');
             setIsOutOfRangeDialogOpen(true);
@@ -258,7 +257,7 @@ export function AttendanceWidget() {
     }, () => { 
         setIsVerifyingLocation(false); 
         setCurrentSignal("");
-        toast({ variant: "destructive", title: "Location signal lost", description: "Please enable high-accuracy location services." }); 
+        toast({ variant: "destructive", title: "Location Error", description: "Please enable location services." }); 
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
@@ -272,7 +271,6 @@ export function AttendanceWidget() {
           setCurrentSignal(`${userLoc.latitude.toFixed(4)}, ${userLoc.longitude.toFixed(4)}`);
           
           const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-          
           const buffer = 0.015;
 
           setIsVerifyingLocation(false);
@@ -282,7 +280,7 @@ export function AttendanceWidget() {
                   locationCheckOutLatitude: p.coords.latitude, 
                   locationCheckOutLongitude: p.coords.longitude 
               });
-              toast({ title: "Shift Finalized" });
+              toast({ title: "Clocked Out" });
               router.push('/dashboard/reports');
           } else {
               setOutOfRangeType('Clock Out');
@@ -291,117 +289,97 @@ export function AttendanceWidget() {
       }, () => { 
           setIsVerifyingLocation(false); 
           setCurrentSignal("");
-          toast({ variant: "destructive", title: "Location signal lost" }); 
+          toast({ variant: "destructive", title: "Location Error" }); 
       }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleLunchOut = () => {
     setIsVerifyingLocation(true);
-    setCurrentSignal("Checking...");
     navigator.geolocation.getCurrentPosition(p => {
         const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
         setIsVerifyingLocation(false);
-        setCurrentSignal("");
         updateDocumentNonBlocking(getTodaysAttendanceRef!, {
           lunchOutTime: serverTimestamp(),
           lunchInTime: null,
           locationLunchOutLatitude: userLoc.latitude,
           locationLunchOutLongitude: userLoc.longitude
         });
-        toast({ title: "Lunch Break Active" });
+        toast({ title: "Lunch Break Started" });
     }, () => {
         setIsVerifyingLocation(false);
-        setCurrentSignal("");
-        toast({ variant: "destructive", title: "Location signal failed" });
+        toast({ variant: "destructive", title: "Location Error" });
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleLunchIn = () => {
     setIsVerifyingLocation(true);
-    setCurrentSignal("Checking...");
     navigator.geolocation.getCurrentPosition(p => {
         const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
         setIsVerifyingLocation(false);
-        setCurrentSignal("");
-        
         const breakStart = todaysAttendance?.lunchOutTime?.toDate();
         const breakEnd = new Date();
         const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
-        
         updateDocumentNonBlocking(getTodaysAttendanceRef!, {
           lunchInTime: serverTimestamp(),
           locationLunchInLatitude: userLoc.latitude,
           locationLunchInLongitude: userLoc.longitude,
           totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
         });
-        toast({ title: "Back from Lunch" });
+        toast({ title: "Lunch Break Ended" });
     }, () => {
         setIsVerifyingLocation(false);
-        setCurrentSignal("");
-        toast({ variant: "destructive", title: "Location signal failed" });
+        toast({ variant: "destructive", title: "Location Error" });
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleShortBreakOut = () => {
     setIsVerifyingLocation(true);
-    setCurrentSignal("Checking...");
     navigator.geolocation.getCurrentPosition(p => {
         const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
         setIsVerifyingLocation(false);
-        setCurrentSignal("");
         updateDocumentNonBlocking(getTodaysAttendanceRef!, {
             breakOutTime: serverTimestamp(),
             breakInTime: null,
             locationBreakOutLatitude: userLoc.latitude,
             locationBreakOutLongitude: userLoc.longitude
         });
-        toast({ title: "Short Break Started" });
+        toast({ title: "Break Started" });
     }, () => {
         setIsVerifyingLocation(false);
-        setCurrentSignal("");
-        toast({ variant: "destructive", title: "Location signal failed" });
+        toast({ variant: "destructive", title: "Location Error" });
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleShortBreakIn = () => {
     setIsVerifyingLocation(true);
-    setCurrentSignal("Checking...");
     navigator.geolocation.getCurrentPosition(p => {
         const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
         setIsVerifyingLocation(false);
-        setCurrentSignal("");
-        
         const breakStart = todaysAttendance?.breakOutTime?.toDate();
         const breakEnd = new Date();
         const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
-        
         updateDocumentNonBlocking(getTodaysAttendanceRef!, {
           breakInTime: serverTimestamp(),
           locationBreakInLatitude: userLoc.latitude,
           locationBreakInLongitude: userLoc.longitude,
           totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
         });
-        toast({ title: "Short Break Finished" });
+        toast({ title: "Break Ended" });
     }, () => {
         setIsVerifyingLocation(false);
-        setCurrentSignal("");
-        toast({ variant: "destructive", title: "Location signal failed" });
+        toast({ variant: "destructive", title: "Location Error" });
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
   const handleSubmitOutOfRangeRequest = () => {
       if (!outOfRangeReason.trim() || !user || !userData || !lastCapturedLoc || isSubmittingApproval) return;
-
       const todayId = format(new Date(), 'yyyy-MM-dd');
-
-      // Check if a pending request of the same type already exists for today
       const alreadyPending = userPendingRequests?.some(r => r.dateId === todayId && r.type === outOfRangeType);
       if (alreadyPending) {
-          toast({ variant: 'destructive', title: "Request Pending", description: `You already have a pending ${outOfRangeType} approval for today.` });
+          toast({ variant: 'destructive', title: "Request Pending", description: `You already have a pending ${outOfRangeType} approval.` });
           setIsOutOfRangeDialogOpen(false);
           return;
       }
-
       setIsSubmittingApproval(true);
       const payload = {
           employeeId: user.uid,
@@ -416,16 +394,13 @@ export function AttendanceWidget() {
           type: outOfRangeType,
           requestTimestamp: serverTimestamp()
       };
-
       addDocumentNonBlocking(collection(firestore, 'attendanceApprovalRequests'), payload)
         .then(() => {
-            toast({ title: "Request Sent", description: "Management has been notified." });
+            toast({ title: "Request Sent", description: "Awaiting approval." });
             setIsOutOfRangeDialogOpen(false);
             setOutOfRangeReason("");
         })
-        .finally(() => {
-            setIsSubmittingApproval(false);
-        });
+        .finally(() => setIsSubmittingApproval(false));
   };
 
   if (isUserDocLoading) return <div className="h-64 flex items-center justify-center text-[10px] font-black uppercase opacity-20 tracking-[0.2em]">Loading...</div>;
@@ -437,19 +412,19 @@ export function AttendanceWidget() {
                 {status !== 'out' && (
                     <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 shadow-sm animate-pulse">
                         <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Active Duty</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Clocked In</span>
                     </div>
                 )}
                 {activeWfhToday && (
                     <div className="flex items-center gap-2 px-4 py-1.5 bg-sky-50 rounded-full border border-sky-100 shadow-sm">
                         <Home className="size-3 text-sky-600" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-sky-700">Remote Sector Active</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-sky-700">WFH Active</span>
                     </div>
                 )}
                 {(status === 'lunch' || status === 'short_break') && (
                     <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 rounded-full border border-amber-100 shadow-sm">
                         <Coffee className="size-3 text-amber-600" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">On Break: {formatTime(currentBreakTimer)}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Break: {formatTime(currentBreakTimer)}</span>
                     </div>
                 )}
                 {totalBreakTime > 0 && (
@@ -470,7 +445,7 @@ export function AttendanceWidget() {
                     </Badge>
                     {isVerifyingLocation && currentSignal && (
                         <div className="flex items-center gap-2 text-[9px] font-black uppercase text-primary animate-pulse">
-                            <Signal className="size-3" /> Signal Audit: {currentSignal}
+                            <Signal className="size-3" /> Location Check: {currentSignal}
                         </div>
                     )}
                 </div>
@@ -510,11 +485,11 @@ export function AttendanceWidget() {
             <div className="w-full max-w-4xl pt-8 sm:pt-12 flex flex-wrap items-center justify-center gap-3 sm:gap-4 px-4">
                 {isVerifyingLocation ? (
                     <Button disabled className="h-14 sm:h-16 rounded-none px-8 sm:px-12 bg-muted text-muted-foreground font-black uppercase text-xs tracking-widest flex items-center gap-3">
-                        <Loader2 className="size-5 animate-spin" /> Checking Location...
+                        <Loader2 className="size-5 animate-spin" /> Verifying...
                     </Button>
                 ) : status === 'out' && !hasClockedOutToday ? (
                     <Button onClick={handleClockIn} className="h-14 sm:h-16 rounded-none px-8 sm:px-12 text-sm sm:text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-                        <LogIn className="size-5 mr-3" /> Start Shift
+                        <LogIn className="size-5 mr-3" /> Clock In
                     </Button>
                 ) : status === 'in' ? (
                     <>
@@ -525,23 +500,23 @@ export function AttendanceWidget() {
                             Short Break
                         </Button>
                         <Button onClick={handleClockOut} className="h-14 sm:h-16 rounded-none px-8 sm:px-12 bg-rose-500 hover:bg-rose-600 text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-rose-500/20 transition-all hover:scale-[1.02]">
-                            Stop Shift
+                            Clock Out
                         </Button>
                     </>
                 ) : status === 'lunch' ? (
                     <Button onClick={handleLunchIn} className="h-14 sm:h-16 rounded-none px-10 sm:px-16 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
-                        End Lunch (Resume)
+                        End Lunch
                     </Button>
                 ) : status === 'short_break' ? (
                     <Button onClick={handleShortBreakIn} className="h-14 sm:h-16 rounded-none px-10 sm:px-16 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
-                        End Break (Resume)
+                        End Break
                     </Button>
                 ) : (
                     <div className="flex flex-col items-center gap-4 py-6">
                         <div className="p-4 bg-emerald-50 rounded-full border-2 border-dashed border-emerald-200">
                             <ShieldCheck className="size-10 text-emerald-500" />
                         </div>
-                        <p className="font-black uppercase tracking-[0.3em] text-emerald-700 text-sm">Shift Concluded</p>
+                        <p className="font-black uppercase tracking-[0.3em] text-emerald-700 text-sm">Duty Finished</p>
                     </div>
                 )}
             </div>
@@ -572,19 +547,14 @@ export function AttendanceWidget() {
                                 <p className="text-xs font-mono font-bold">{lastCapturedLoc?.longitude.toFixed(6)}</p>
                             </div>
                         </div>
-                        <div className="pt-2 border-t border-border/50">
-                            <p className="text-[8px] font-bold text-primary uppercase">Work Location: {activeGeofence.name}</p>
-                            <p className="text-[10px] font-mono font-black text-primary/70">{activeGeofence.lat.toFixed(6)}, {activeGeofence.lng.toFixed(6)}</p>
-                        </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Justification</Label>
-                        <p className="text-[9px] text-muted-foreground uppercase font-bold italic mb-2">Required for management authorization.</p>
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Reason</Label>
                         <Textarea 
                             value={outOfRangeReason} 
                             onChange={e => setOutOfRangeReason(e.target.value)} 
-                            placeholder="e.g., Working from client site or home location pending approval..." 
+                            placeholder="Please provide a reason for checking in from this location..." 
                             className="rounded-none min-h-[100px] bg-muted/20 border-muted text-sm"
                         />
                     </div>
@@ -628,4 +598,3 @@ function StatusStep({ icon: Icon, label, time, isActive, coords }: { icon: any, 
         </Card>
     );
 }
-

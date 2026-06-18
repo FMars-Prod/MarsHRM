@@ -308,7 +308,7 @@ export default function LeavePage() {
           (p) => {
               setWfhCoords({ lat: p.coords.latitude, lng: p.coords.longitude });
               setIsCapturingSignal(false);
-              toast({ title: "WFH Signal Captured", description: "GPS coordinates anchored to request." });
+              toast({ title: "Location Captured", description: "GPS coordinates anchored to request." });
           },
           () => {
               setIsCapturingSignal(false);
@@ -390,12 +390,12 @@ export default function LeavePage() {
     }
 
     if (!leaveType) {
-        toast({ variant: "destructive", title: "Select leave classification" });
+        toast({ variant: "destructive", title: "Select request type" });
         return;
     }
 
     if (category === 'WFH' && !wfhCoords) {
-        toast({ variant: 'destructive', title: "Location Required", description: "Please capture your WFH signal." });
+        toast({ variant: 'destructive', title: "Location Required", description: "Please capture your location." });
         return;
     }
 
@@ -466,7 +466,7 @@ export default function LeavePage() {
     <>
       <PageHeader
         title="Leave & WFH Requests"
-        description="Manage your professional absence and remote work authorizations."
+        description="Manage your absence and remote work requests."
         className="animate-fade-in-up"
       >
         <div className="flex gap-2">
@@ -498,7 +498,7 @@ export default function LeavePage() {
               className="gap-2 rounded-full"
             >
               {showMissed ? <History className="size-4" /> : <Clock className="size-4" />}
-              {showMissed ? "Archive View" : "Past Requests"}
+              {showMissed ? "Active View" : "Past Requests"}
             </Button>
           )}
           {userRole === 'Member' && (
@@ -506,13 +506,13 @@ export default function LeavePage() {
               <DialogTrigger asChild>
                 <Button size="sm" className="rounded-full shadow-lg">
                   <PlusCircle className="mr-2 size-4" />
-                  New Submission
+                  New Request
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden">
                 <DialogHeader className="p-6 pb-0">
-                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">Tactical Submission</DialogTitle>
-                  <DialogDescription>Submit a formal request for absence or remote sector operations.</DialogDescription>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">New Request</DialogTitle>
+                  <DialogDescription>Submit a request for leave, permission, or work from home.</DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh]">
                     <div className="grid gap-6 p-6">
@@ -525,22 +525,22 @@ export default function LeavePage() {
                                 <SelectContent>
                                     <SelectItem value="Leave">Full Day Leave</SelectItem>
                                     <SelectItem value="Hour Permission">Hour Permission</SelectItem>
-                                    <SelectItem value="WFH">Work From Home (Remote Sector)</SelectItem>
+                                    <SelectItem value="WFH">Work From Home</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Classification</Label>
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Category</Label>
                             <Select onValueChange={setLeaveType} value={leaveType}>
                                 <SelectTrigger className="rounded-xl h-11">
-                                    <SelectValue placeholder="Select type" />
+                                    <SelectValue placeholder="Select category" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="Vacation">Vacation</SelectItem>
                                     <SelectItem value="Sick Leave">Sick Leave</SelectItem>
                                     <SelectItem value="Personal">Personal</SelectItem>
-                                    <SelectItem value="Strategic Shift">Strategic Shift (WFH)</SelectItem>
+                                    <SelectItem value="Work From Home">Work From Home</SelectItem>
                                     <SelectItem value="Other">Other</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -550,7 +550,7 @@ export default function LeavePage() {
                             <div className="p-4 bg-primary/5 rounded-2xl border-2 border-primary/10 space-y-4 animate-fade-in-up">
                                 <div className="flex items-center justify-between">
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                        <Signal className="size-3" /> Remote Signal
+                                        <Signal className="size-3" /> Location Data
                                     </Label>
                                     <Button 
                                         type="button" 
@@ -561,7 +561,7 @@ export default function LeavePage() {
                                         disabled={isCapturingSignal}
                                     >
                                         {isCapturingSignal ? <Loader2 className="size-3 animate-spin mr-2"/> : <LocateFixed className="size-3 mr-2" />} 
-                                        Capture Mission Signal
+                                        Capture Location
                                     </Button>
                                 </div>
                                 {wfhCoords && (
@@ -576,12 +576,12 @@ export default function LeavePage() {
                                         </div>
                                     </div>
                                 )}
-                                <p className="text-[9px] text-muted-foreground italic font-bold">Approved location will be authorized for shift logging during this period.</p>
+                                <p className="text-[9px] text-muted-foreground italic font-bold">Once approved, you can check in from this location during these dates.</p>
                             </div>
                         )}
                         
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">{category === "Hour Permission" ? "Mission Date" : "Start Date"}</Label>
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">{category === "Hour Permission" ? "Date" : "Start Date"}</Label>
                             <div className="grid grid-cols-3 gap-2">
                             <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
                             <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
@@ -614,13 +614,15 @@ export default function LeavePage() {
                         )}
 
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason / Description</Label>
-                            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Please explain the strategic reason for this request..." className="rounded-2xl min-h-[100px]" />
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason</Label>
+                            <div className="space-y-1">
+                                <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Please provide a reason for this request..." className="rounded-2xl min-h-[100px]" />
+                            </div>
                         </div>
                     </div>
                 </ScrollArea>
                 <DialogFooter className="p-6 pt-0">
-                  <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Submission</Button>
+                  <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Submit Request</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -650,9 +652,9 @@ export default function LeavePage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow><TableCell colSpan={6} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Loading logs...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Loading...</TableCell></TableRow>
               ) : displayLeaveRequests.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic font-medium">{showMissed ? "No archived records found." : "No active requests in queue."}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic font-medium">{showMissed ? "No archived records found." : "No active requests."}</TableCell></TableRow>
               ) : displayLeaveRequests.map((request) => (
                   <TableRow key={request.id} className="border-border/50 group">
                     {isExecutiveTier && (
@@ -731,13 +733,13 @@ export default function LeavePage() {
                               </AlertDialogTrigger>
                               <AlertDialogContent className="rounded-3xl">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle className="font-black uppercase tracking-tighter">Purge Record</AlertDialogTitle>
-                                  <AlertDialogDescription>This will permanently remove this tactical submission from the ledger.</AlertDialogDescription>
+                                  <AlertDialogTitle className="font-black uppercase tracking-tighter">Delete Record</AlertDialogTitle>
+                                  <AlertDialogDescription>This will permanently remove this request from the system.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel className="rounded-full font-bold uppercase text-xs">Cancel</AlertDialogCancel>
                                   <AlertDialogAction onClick={() => handleDeleteRequest(request.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full font-bold uppercase text-xs">
-                                    Confirm Purge
+                                    Confirm
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -755,21 +757,21 @@ export default function LeavePage() {
         <Dialog open={!!requestToReject} onOpenChange={(o) => !o && setRequestToReject(null)}>
             <DialogContent className="rounded-3xl sm:max-w-md border-none shadow-2xl">
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Deny Authorization</DialogTitle>
-                    <DialogDescription>Provide an optional reason for rejecting {requestToReject?.employeeName}'s submission.</DialogDescription>
+                    <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Reject Request</DialogTitle>
+                    <DialogDescription>Provide a reason for rejecting {requestToReject?.employeeName}'s request.</DialogDescription>
                 </DialogHeader>
                 <div className="py-6 space-y-4">
-                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Rejection Justification (Optional)</Label>
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason</Label>
                     <Textarea 
                         value={rejectionReason} 
                         onChange={e => setRejectionReason(e.target.value)} 
-                        placeholder="e.g., Critical in-office briefing required or sector signal invalid..." 
+                        placeholder="Please explain why the request is being rejected..." 
                         className="rounded-2xl min-h-[120px] bg-muted/20 border-muted"
                     />
                 </div>
                 <DialogFooter className="gap-2">
-                    <Button variant="outline" onClick={() => setRequestToReject(null)} className="rounded-full h-11 flex-1 font-bold uppercase text-[10px]">Go Back</Button>
-                    <Button onClick={handleRejectionSubmit} variant="destructive" className="rounded-full h-11 flex-1 font-bold uppercase text-[10px] shadow-lg shadow-red-600/20">Confirm Rejection</Button>
+                    <Button variant="outline" onClick={() => setRequestToReject(null)} className="rounded-full h-11 flex-1 font-bold uppercase text-[10px]">Cancel</Button>
+                    <Button onClick={handleRejectionSubmit} variant="destructive" className="rounded-full h-11 flex-1 font-bold uppercase text-[10px] shadow-lg shadow-red-600/20">Confirm</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -777,32 +779,32 @@ export default function LeavePage() {
         {selectedRequest && (
           <SheetContent className="rounded-l-3xl border-none shadow-2xl flex flex-col sm:max-w-md p-0">
               <SheetHeader className="p-8 pb-6 border-b shrink-0">
-                  <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">Submission Intelligence</SheetTitle>
-                  <SheetDescription>ID: {selectedRequest.id.slice(0, 8)} • {selectedRequest.category} Submission</SheetDescription>
+                  <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">Request Details</SheetTitle>
+                  <SheetDescription>ID: {selectedRequest.id.slice(0, 8)} • {selectedRequest.category}</SheetDescription>
               </SheetHeader>
               <ScrollArea className="flex-1">
                 <div className="p-8 space-y-8 pb-20">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Type</p><Badge variant="secondary" className="rounded-lg">{selectedRequest.category}</Badge></div>
-                        {selectedRequest.leaveType && <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Class</p><p className="font-bold">{selectedRequest.leaveType}</p></div>}
+                        {selectedRequest.leaveType && <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Category</p><p className="font-bold">{selectedRequest.leaveType}</p></div>}
                     </div>
 
                     {selectedRequest.category === 'WFH' && selectedRequest.latitude && (
                         <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 space-y-3">
-                            <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><MapPin className="size-3"/> Requested Sector Coordinates</p>
+                            <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><MapPin className="size-3"/> Coordinates</p>
                             <div className="grid grid-cols-2 gap-4">
                                 <div><p className="text-[8px] font-bold text-muted-foreground uppercase">LAT</p><p className="text-xs font-mono font-bold">{selectedRequest.latitude}</p></div>
                                 <div><p className="text-[8px] font-bold text-muted-foreground uppercase">LNG</p><p className="text-xs font-mono font-bold">{selectedRequest.longitude}</p></div>
                             </div>
                             <Button variant="outline" size="sm" className="w-full h-9 rounded-xl text-[10px] font-bold uppercase gap-2 bg-white" asChild>
                                 <Link href={`https://www.google.com/maps/search/?api=1&query=${selectedRequest.latitude},${selectedRequest.longitude}`} target="_blank">
-                                    <ExternalLink className="size-3"/> Verify On Satellite
+                                    <ExternalLink className="size-3"/> View Map
                                 </Link>
                             </Button>
                         </div>
                     )}
                     
-                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Temporal Period</p>
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Period</p>
                         <p className="font-bold text-sm">
                             {selectedRequest.category === 'Hour Permission' ? format(selectedRequest.startDate.toDate(), 'PPPP') : `${formatDateLabel(selectedRequest.startDate)} — ${formatDateLabel(selectedRequest.endDate)}`}
                         </p>
@@ -811,11 +813,11 @@ export default function LeavePage() {
                         )}
                     </div>
 
-                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reason / Justification</p><p className="text-sm italic leading-relaxed whitespace-pre-wrap text-foreground/80">"{selectedRequest.reason}"</p></div>
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reason</p><p className="text-sm italic leading-relaxed whitespace-pre-wrap text-foreground/80">"{selectedRequest.reason}"</p></div>
                     
                     {selectedRequest.rejectionReason && (
                         <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
-                            <p className="text-[10px] font-black uppercase text-red-700 mb-1">Rejection Justification</p>
+                            <p className="text-[10px] font-black uppercase text-red-700 mb-1">Rejection Reason</p>
                             <p className="text-sm font-medium italic text-red-900">"{selectedRequest.rejectionReason}"</p>
                         </div>
                     )}
@@ -823,7 +825,7 @@ export default function LeavePage() {
                     <Separator className="opacity-50" />
                     
                     <div className="space-y-4">
-                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] text-primary">Hierarchy Authorization Status</h4>
+                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] text-primary">Approval Status</h4>
                         <LeaveStatusTracker request={selectedRequest} users={users} />
                     </div>
                 </div>
