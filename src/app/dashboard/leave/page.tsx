@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown, MoreHorizontal, Trash2, History, Timer, MapPin, Briefcase, LocateFixed, Signal, ExternalLink } from "lucide-react";
+import { PlusCircle, Calendar as CalendarIcon, Check, X, Eye, Clock, ThumbsUp, ThumbsDown, MoreHorizontal, Trash2, History, Timer, MapPin, Briefcase, LocateFixed, Signal, ExternalLink, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import * as React from "react";
@@ -650,9 +650,9 @@ export default function LeavePage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow><TableCell colSpan={isExecutiveTier ? 6 : 5} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Loading logs...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Loading logs...</TableCell></TableRow>
               ) : displayLeaveRequests.length === 0 ? (
-                  <TableRow><TableCell colSpan={isExecutiveTier ? 6 : 5} className="h-32 text-center text-muted-foreground italic font-medium">{showMissed ? "No archived records found." : "No active requests in queue."}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic font-medium">{showMissed ? "No archived records found." : "No active requests in queue."}</TableCell></TableRow>
               ) : displayLeaveRequests.map((request) => (
                   <TableRow key={request.id} className="border-border/50 group">
                     {isExecutiveTier && (
@@ -834,4 +834,3 @@ export default function LeavePage() {
     </>
   );
 }
-
