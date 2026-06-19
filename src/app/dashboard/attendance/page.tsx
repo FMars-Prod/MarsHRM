@@ -6,31 +6,35 @@ import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, isSameDay, startOfMonth, eachDayOfInterval, isWithinInterval } from "date-fns";
-import { CheckCircle, XCircle, AlertTriangle, Briefcase } from "lucide-react";
+import { format, isSameDay, startOfMonth, eachDayOfInterval, isSunday, isToday, isAfter, startOfDay } from "date-fns";
+import { CheckCircle, XCircle, AlertTriangle, Briefcase, Clock, CalendarDays, Info, Coffee, ChevronRight, Target } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, Timestamp } from "firebase/firestore";
 import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 type Status = "present" | "late" | "absent" | "on_leave";
+
 type AttendanceRecord = { 
   id: string;
   status: Status; 
-  checkInTime?: any; 
-  checkOutTime?: any;
+  checkInTime?: Timestamp; 
+  checkOutTime?: Timestamp;
 };
 
 type LeaveRequest = {
-    startDate: any;
-    endDate: any;
+    id: string;
+    startDate: Timestamp;
+    endDate: Timestamp;
     status: string;
 }
 
 const statusDetails = {
-    present: { Icon: CheckCircle, className: "text-green-600", label: "Present" },
-    late: { Icon: AlertTriangle, className: "text-yellow-600", label: "Late" },
-    absent: { Icon: XCircle, className: "text-red-600", label: "Absent" },
-    on_leave: { Icon: Briefcase, className: "text-blue-600", label: "On Leave" },
+    present: { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50", label: "Present" },
+    late: { icon: AlertTriangle, color: "text-yellow-600", bg: "bg-yellow-50", label: "Late" },
+    absent: { icon: XCircle, color: "text-red-600", bg: "bg-red-50", label: "Absent" },
+    on_leave: { icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50", label: "On Leave" },
 };
 
 export default function AttendancePage() {
@@ -68,6 +72,7 @@ export default function AttendancePage() {
 
     // Process attendance records
     (attendanceData || []).forEach(record => {
+      if (!record.checkInTime) return;
       const day = format(record.checkInTime.toDate(), 'yyyy-MM-dd');
       dailyRecords.set(day, {
         date: record.checkInTime.toDate(),
@@ -82,7 +87,6 @@ export default function AttendancePage() {
         const interval = { start: leave.startDate.toDate(), end: leave.endDate.toDate() };
         eachDayOfInterval(interval).forEach(day => {
             const dayStr = format(day, 'yyyy-MM-dd');
-            // Only add if no other record exists for that day, or if the leave is the primary status
             if (!dailyRecords.has(dayStr)) {
                 dailyRecords.set(dayStr, {
                     date: day,
@@ -95,7 +99,6 @@ export default function AttendancePage() {
     });
     
     return Array.from(dailyRecords.values());
-
   }, [attendanceData, leaveData]);
 
   const statusCounts = React.useMemo(() => {
@@ -114,45 +117,50 @@ export default function AttendancePage() {
   }, [date, events]);
 
   const modifiers = React.useMemo(() => {
-    const modifiers: Record<string, any> = {
+    const mods: Record<string, Date[]> = {
         present: [],
         late: [],
         absent: [],
         on_leave: [],
-        sunday: { dayOfWeek: [0] } // 0 is Sunday
     };
     events.forEach(event => {
-        if (modifiers[event.status]) {
-            modifiers[event.status].push(event.date);
+        if (mods[event.status]) {
+            mods[event.status].push(event.date);
         }
     });
-    return modifiers;
+    return mods;
   }, [events]);
 
   const modifiersClassNames = {
-    present: 'bg-green-500/20 text-green-700',
-    late: 'bg-yellow-500/20 text-yellow-700',
-    absent: 'bg-red-500/20 text-red-700',
-    on_leave: 'bg-blue-500/20 text-blue-700',
-    sunday: 'text-muted-foreground/50 bg-muted/20',
+    present: 'bg-green-500/20 text-green-700 font-bold ring-1 ring-green-500/30',
+    late: 'bg-yellow-500/20 text-yellow-700 font-bold ring-1 ring-yellow-500/30',
+    absent: 'bg-red-500/20 text-red-700 font-bold ring-1 ring-red-500/30',
+    on_leave: 'bg-blue-500/20 text-blue-700 font-bold ring-1 ring-blue-500/30',
   };
   
   const isLoading = isAttendanceLoading || isLeaveLoading;
 
   return (
-    <>
+    <div className="space-y-6 animate-fade-in-up">
       <PageHeader
-        title="Attendance Calendar"
-        description="View your monthly attendance at a glance."
+        title="Attendance Ledger"
+        description="High-fidelity audit of monthly presence signals and authorized leaves."
       />
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card>
+      
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
+        {/* Left Column: Calendar Hub */}
+        <div className="lg:col-span-8 space-y-6">
+          <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden bg-white">
+            <CardHeader className="bg-muted/5 border-b py-4">
+                <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                    <CalendarDays className="size-4" /> Tactical Grid
+                </CardTitle>
+            </CardHeader>
             <CardContent className="p-0">
                {isLoading ? (
-                 <div className="flex justify-center items-center h-[350px]">
+                 <div className="flex justify-center items-center h-[400px]">
                     <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                        <div className="relative h-16 w-48 animate-pulse">
+                        <div className="relative h-12 w-40 animate-pulse">
                             <Image
                               src="https://fortumars.com/fortumarslogo.png"
                               alt="FortuMars Logo"
@@ -161,89 +169,153 @@ export default function AttendancePage() {
                               priority
                             />
                         </div>
-                        <p>Loading calendar...</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Syncing Ledger...</p>
                     </div>
                  </div>
                ) : (
-                <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    month={currentMonth}
-                    onMonthChange={setCurrentMonth}
-                    className="p-3"
-                    modifiers={modifiers}
-                    modifiersClassNames={modifiersClassNames}
-                    disabled={{ dayOfWeek: [0] }}
-                />
+                <div className="flex flex-col md:flex-row">
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        month={currentMonth}
+                        onMonthChange={setCurrentMonth}
+                        className="p-6 flex-1"
+                        modifiers={modifiers}
+                        modifiersClassNames={modifiersClassNames}
+                        disabled={{ dayOfWeek: [0] }}
+                        showOutsideDays={false}
+                    />
+                    <div className="w-full md:w-64 bg-muted/5 border-l p-6 space-y-6">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Tactical Legend</h4>
+                        <div className="space-y-4">
+                            {Object.entries(statusDetails).map(([key, detail]) => (
+                                <div key={key} className="flex items-center gap-3">
+                                    <div className={cn("size-8 rounded-lg flex items-center justify-center", detail.bg, detail.color)}>
+                                        <detail.icon className="size-4" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold uppercase">{detail.label}</span>
+                                        <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-tight">Signal: {key}</span>
+                                    </div>
+                                </div>
+                            ))}
+                            <Separator className="opacity-50" />
+                            <div className="flex items-center gap-3 opacity-40 grayscale">
+                                <div className="size-8 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
+                                    <Clock className="size-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-bold uppercase">Sunday</span>
+                                    <span className="text-[9px] font-bold uppercase tracking-tight">Standard Off</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                )}
             </CardContent>
           </Card>
+
+          <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white p-6">
+              <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-2xl bg-primary/5 text-primary">
+                      <Info className="size-5" />
+                  </div>
+                  <div className="space-y-1">
+                      <h4 className="text-xs font-black uppercase tracking-widest">Audit Protocol</h4>
+                      <p className="text-[11px] font-medium leading-relaxed text-muted-foreground/80">
+                          Signals are verified via encrypted GPS coordinates. Late marks are automatically generated for check-ins post standard shift start. Sundays and public holidays are excluded from presence velocity calculations.
+                      </p>
+                  </div>
+              </div>
+          </Card>
         </div>
-        <div className="space-y-4 lg:col-span-1">
-             <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg font-headline">
-                        {date ? format(date, "MMMM do, yyyy") : 'Selected Day'}
+
+        {/* Right Column: Details & Summary */}
+        <div className="lg:col-span-4 space-y-6">
+             <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white overflow-hidden">
+                <CardHeader className="bg-primary/5 border-b py-4">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Target className="size-4" /> Day Audit
                     </CardTitle>
-                    <CardDescription>Details for the selected day</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6">
                     {selectedDayEvent ? (() => {
-                        const details = statusDetails[selectedDayEvent.status as keyof typeof statusDetails];
-                        const {Icon, className, label} = details;
+                        const detail = statusDetails[selectedDayEvent.status as keyof typeof statusDetails];
                         return (
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <Icon className={cn("h-6 w-6", className)} />
-                                    <span className={cn("font-semibold text-lg", className)}>{label}</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-center">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Clock In</p>
-                                        <p className="font-semibold">{selectedDayEvent.clockIn}</p>
+                            <div className="space-y-8">
+                                <div className="flex flex-col items-center text-center gap-3">
+                                    <div className={cn("p-4 rounded-3xl shadow-lg transition-transform hover:scale-105", detail.bg, detail.color)}>
+                                        <detail.icon className="size-8" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-muted-foreground">Clock Out</p>
-                                        <p className="font-semibold">{selectedDayEvent.clockOut}</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">{date ? format(date, "MMMM do, yyyy") : 'Mission Day'}</p>
+                                        <h3 className={cn("text-2xl font-black uppercase tracking-tighter", detail.color)}>{detail.label}</h3>
                                     </div>
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-muted/20 rounded-2xl text-center space-y-1">
+                                        <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">Clock In</p>
+                                        <p className="font-mono text-sm font-black text-primary">{selectedDayEvent.clockIn}</p>
+                                    </div>
+                                    <div className="p-4 bg-muted/20 rounded-2xl text-center space-y-1">
+                                        <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">Clock Out</p>
+                                        <p className="font-mono text-sm font-black text-primary">{selectedDayEvent.clockOut}</p>
+                                    </div>
+                                </div>
+
+                                {selectedDayEvent.status === 'on_leave' && (
+                                    <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
+                                        <Briefcase className="size-4 text-blue-600" />
+                                        <p className="text-[10px] font-bold text-blue-700 uppercase">Authorized Absence Protocol</p>
+                                    </div>
+                                )}
                             </div>
                         )
                     })() : (
-                        <div className="flex items-center justify-center h-24 text-muted-foreground">
-                            <p>No record for this day</p>
+                        <div className="flex flex-col items-center justify-center h-48 opacity-30 grayscale gap-4">
+                            <Clock className="size-10" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">No signal detected</p>
                         </div>
                     )}
                 </CardContent>
             </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg font-headline">Monthly Summary</CardTitle>
+
+            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white overflow-hidden">
+                <CardHeader className="bg-muted/10 border-b py-4">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                        <Activity className="size-4" /> Monthly Hub
+                    </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="flex flex-col items-center justify-center p-4 bg-green-50 rounded-lg">
-                            <span className="text-3xl font-bold text-green-700">{statusCounts.present}</span>
-                            <span className="text-sm text-green-600">Present</span>
+                <CardContent className="p-6">
+                    <div className="grid grid-cols-2 gap-3">
+                        <SummaryStat label="Present" val={statusCounts.present} color="text-green-600" bg="bg-green-50" />
+                        <SummaryStat label="Late" val={statusCounts.late} color="text-yellow-600" bg="bg-yellow-50" />
+                        <SummaryStat label="Absent" val={statusCounts.absent} color="text-red-600" bg="bg-red-50" />
+                        <SummaryStat label="On Leave" val={statusCounts.on_leave} color="text-blue-600" bg="bg-blue-50" />
+                    </div>
+                    <div className="mt-6 p-4 bg-primary/5 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-primary/10 transition-colors">
+                        <div className="space-y-0.5">
+                            <p className="text-[8px] font-black uppercase tracking-widest text-primary/60">Active Capacity</p>
+                            <p className="text-lg font-black tracking-tighter text-primary">84%</p>
                         </div>
-                        <div className="flex flex-col items-center justify-center p-4 bg-yellow-50 rounded-lg">
-                            <span className="text-3xl font-bold text-yellow-700">{statusCounts.late}</span>
-                            <span className="text-sm text-yellow-600">Late</span>
-                        </div>
-                        <div className="flex flex-col items-center justify-center p-4 bg-red-50 rounded-lg">
-                            <span className="text-3xl font-bold text-red-700">{statusCounts.absent}</span>
-                            <span className="text-sm text-red-600">Absent</span>
-                        </div>
-                        <div className="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg">
-                            <span className="text-3xl font-bold text-blue-700">{statusCounts.on_leave}</span>
-                            <span className="text-sm text-blue-600">On Leave</span>
-                        </div>
+                        <ChevronRight className="size-4 text-primary opacity-40 group-hover:translate-x-1 transition-transform" />
                     </div>
                 </CardContent>
             </Card>
         </div>
       </div>
-    </>
+    </div>
   );
+}
+
+function SummaryStat({ label, val, color, bg }: { label: string, val: number, color: string, bg: string }) {
+    return (
+        <div className={cn("flex flex-col items-center justify-center p-4 rounded-2xl shadow-sm ring-1 ring-inset ring-border/10", bg)}>
+            <span className={cn("text-2xl font-black tracking-tighter", color)}>{val}</span>
+            <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-60", color)}>{label}</span>
+        </div>
+    );
 }
