@@ -6,83 +6,33 @@ import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp, where, limit, Timestamp, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, where, limit, getDocs } from 'firebase/firestore';
 import { 
     TrendingUp, Plus, Trash2, Edit, ExternalLink, ShieldCheck, 
-    BarChart3, PieChart, Users, Zap, DollarSign, Target, 
+    BarChart3, Users, Zap, DollarSign, Target, 
     Globe, PhoneCall, Mic, LayoutGrid, CheckCircle2, 
     MoreHorizontal, Download, Share2, Info, ArrowUpRight, 
-    ArrowDownRight, Instagram, Linkedin, Facebook, Twitter, 
-    Youtube, Briefcase, Settings2, PlusCircle, Filter, 
-    Clock, ListTodo, Activity, BadgeCheck, Search, X
+    Instagram, Linkedin, Facebook, Twitter, 
+    Youtube, Briefcase, Settings2, PlusCircle, 
+    BadgeCheck, X, Activity, Clock
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, endOfMonth, subMonths, eachMonthOfInterval, isSameMonth } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
     Area, AreaChart, Bar, BarChart, CartesianGrid, 
-    XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Line, LineChart
+    XAxis, YAxis, Tooltip, ResponsiveContainer, Line
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-
-// --- DATA TYPES ---
-
-type Brand = {
-    id: string;
-    name: string;
-    gradient: string;
-    channels: string[]; // e.g., ["Instagram", "LinkedIn"]
-};
-
-type AdPlatform = {
-    id: string;
-    name: string;
-    color: string;
-};
-
-type SocialLog = {
-    brandId: string;
-    platformId: string;
-    count: number;
-};
-
-type SpendLog = {
-    platformId: string;
-    amount: number;
-    reason: string;
-};
-
-type CampaignLog = {
-    id: string;
-    name: string;
-    brandId: string;
-    platformId: string;
-    status: 'Active' | 'Completed' | 'Paused';
-    spend: number;
-    budget: number;
-    clicks: number;
-    roi: number;
-};
-
-type MarketingSession = {
-    id: string;
-    date: any;
-    auditedBy: string;
-    auditedByName: string;
-    socialLogs: SocialLog[];
-    adSpends: SpendLog[];
-    campaigns: CampaignLog[];
-};
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 // --- UTILITIES ---
 
@@ -111,6 +61,43 @@ const PLATFORM_ICONS: Record<string, any> = {
     'LinkedIn Ads': Linkedin,
     'YouTube Ads': Youtube,
     'Naukri': Briefcase
+};
+
+// --- DATA TYPES ---
+
+type Brand = {
+    id: string;
+    name: string;
+    gradient: string;
+    channels: string[]; 
+};
+
+type AdPlatform = {
+    id: string;
+    name: string;
+    color: string;
+};
+
+type SocialLog = {
+    brandId: string;
+    platformId: string;
+    count: number;
+    posts?: number;
+};
+
+type SpendLog = {
+    platformId: string;
+    amount: number;
+    reason: string;
+};
+
+type MarketingSession = {
+    id: string;
+    date: any;
+    auditedBy: string;
+    auditedByName: string;
+    socialLogs: SocialLog[];
+    adSpends: SpendLog[];
 };
 
 // --- MAIN PAGE ---
@@ -151,8 +138,7 @@ export default function MarketingManagementPage() {
     // Form States
     const [formData, setFormData] = React.useState<Partial<MarketingSession>>({
         socialLogs: [],
-        adSpends: [],
-        campaigns: []
+        adSpends: []
     });
 
     const [selectedAuditEntry, setSelectedAuditEntry] = React.useState<MarketingSession | null>(null);
@@ -160,7 +146,7 @@ export default function MarketingManagementPage() {
     // Derived Analytics
     const totalFollowers = React.useMemo(() => {
         if (!latestSession?.socialLogs) return 0;
-        return latestSession.socialLogs.reduce((acc, curr) => acc + curr.count, 0);
+        return latestSession.socialLogs.reduce((acc, curr) => acc + (curr.count || 0), 0);
     }, [latestSession]);
 
     const mtdSpend = React.useMemo(() => {
@@ -168,15 +154,15 @@ export default function MarketingManagementPage() {
         const start = startOfMonth(new Date());
         return sessions
             .filter(s => s.date && s.date.toDate() >= start)
-            .reduce((acc, curr) => acc + (curr.adSpends?.reduce((a, c) => a + c.amount, 0) || 0), 0);
+            .reduce((acc, curr) => acc + (curr.adSpends?.reduce((a, c) => a + (c.amount || 0), 0) || 0), 0);
     }, [sessions]);
 
     const chartData = React.useMemo(() => {
         if (!sessions) return [];
         return [...sessions].reverse().map(s => ({
             date: format(s.date?.toDate() || new Date(), 'MMM dd'),
-            followers: s.socialLogs?.reduce((acc, curr) => acc + curr.count, 0) || 0,
-            spend: s.adSpends?.reduce((acc, curr) => acc + curr.amount, 0) || 0
+            followers: s.socialLogs?.reduce((acc, curr) => acc + (curr.count || 0), 0) || 0,
+            spend: s.adSpends?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
         }));
     }, [sessions]);
 
@@ -196,7 +182,7 @@ export default function MarketingManagementPage() {
         addDocumentNonBlocking(collection(firestore, 'marketing_sessions'), payload);
         toast({ title: 'Intelligence Synchronized', description: 'Cross-company data logged to executive ledger.' });
         setIsAddOpen(false);
-        setFormData({ socialLogs: [], adSpends: [], campaigns: [] });
+        setFormData({ socialLogs: [], adSpends: [] });
     };
 
     const handleUpdateRegistry = (newRegistry: any) => {
@@ -214,44 +200,66 @@ export default function MarketingManagementPage() {
                                 <Settings2 className="size-4 mr-2" /> Registry Control
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-3xl rounded-none border-none shadow-2xl p-0 overflow-hidden h-[80vh] flex flex-col">
+                        <DialogContent className="max-w-4xl rounded-none border-none shadow-2xl p-0 overflow-hidden h-[85vh] flex flex-col">
                             <DialogHeader className="p-8 border-b bg-white shrink-0">
                                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Organizational Registry</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Manage authorized brands and tactical platforms</DialogDescription>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Manage authorized brands, channels, and tactical platforms</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
-                                <div className="p-8 space-y-10">
-                                    {/* Brands Config */}
-                                    <div className="space-y-4">
+                                <div className="p-8 space-y-12">
+                                    {/* Brand Sectors */}
+                                    <div className="space-y-6">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><BadgeCheck className="size-4"/> Authorized Brands</h4>
+                                            <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><BadgeCheck className="size-4"/> Brand Strategic Sectors</h4>
                                             <Button variant="ghost" size="sm" className="h-7 rounded-none font-bold uppercase text-[9px]" onClick={() => {
                                                 const name = prompt("Enter Brand Name:");
                                                 if (name) handleUpdateRegistry({ brands: [...brands, { id: name.toLowerCase().replace(/\s/g, ''), name, gradient: 'from-slate-400 to-slate-600', channels: ['Facebook', 'Instagram'] }] });
-                                            }}><Plus className="size-3 mr-1" /> Add Brand</Button>
+                                            }}><Plus className="size-3 mr-1" /> Add Brand Sector</Button>
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {brands.map(brand => (
-                                                <Card key={brand.id} className="rounded-none border-none ring-1 ring-border shadow-sm overflow-hidden">
+                                                <Card key={brand.id} className="rounded-none border-none ring-1 ring-border shadow-md overflow-hidden bg-white group">
                                                     <div className={cn("h-1.5 w-full bg-gradient-to-r", brand.gradient)} />
-                                                    <CardContent className="p-4 flex items-center justify-between">
-                                                        <div className="space-y-1">
-                                                            <p className="font-black text-sm uppercase tracking-tight">{brand.name}</p>
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {brand.channels.map(c => <Badge key={c} variant="outline" className="rounded-none text-[8px] font-bold uppercase px-1.5 h-4">{c}</Badge>)}
+                                                    <CardContent className="p-6 space-y-6">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="space-y-1">
+                                                                <p className="font-black text-sm uppercase tracking-tight text-primary">{brand.name}</p>
+                                                                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Active Operations</p>
+                                                            </div>
+                                                            <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50 h-8 w-8" onClick={() => handleUpdateRegistry({ brands: brands.filter(b => b.id !== brand.id) })}>
+                                                                <Trash2 className="size-4" />
+                                                            </Button>
+                                                        </div>
+                                                        <Separator className="border-dashed" />
+                                                        <div className="space-y-3">
+                                                            <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Monitored Channels</p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {brand.channels.map(channel => (
+                                                                    <Badge key={channel} variant="outline" className="rounded-none font-bold text-[9px] uppercase px-2 py-1 gap-2 bg-muted/20 border-border/50">
+                                                                        {channel}
+                                                                        <X className="size-2.5 cursor-pointer opacity-40 hover:opacity-100" onClick={() => {
+                                                                            const updated = brands.map(b => b.id === brand.id ? { ...b, channels: b.channels.filter(c => c !== channel) } : b);
+                                                                            handleUpdateRegistry({ brands: updated });
+                                                                        }} />
+                                                                    </Badge>
+                                                                ))}
+                                                                <Button variant="outline" size="sm" className="h-6 rounded-none font-black uppercase text-[8px] border-dashed border-primary/20 text-primary px-2" onClick={() => {
+                                                                    const chan = prompt("Enter Channel Name (e.g. TikTok):");
+                                                                    if (chan) {
+                                                                        const updated = brands.map(b => b.id === brand.id ? { ...b, channels: [...b.channels, chan] } : b);
+                                                                        handleUpdateRegistry({ brands: updated });
+                                                                    }
+                                                                }}>+ Add Channel</Button>
                                                             </div>
                                                         </div>
-                                                        <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50" onClick={() => handleUpdateRegistry({ brands: brands.filter(b => b.id !== brand.id) })}>
-                                                            <Trash2 className="size-3.5" />
-                                                        </Button>
                                                     </CardContent>
                                                 </Card>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Platforms Config */}
-                                    <div className="space-y-4">
+                                    {/* Ad Platform Boxes */}
+                                    <div className="space-y-6">
                                         <div className="flex items-center justify-between">
                                             <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Zap className="size-4"/> Advertising Channels</h4>
                                             <Button variant="ghost" size="sm" className="h-7 rounded-none font-bold uppercase text-[9px]" onClick={() => {
@@ -261,12 +269,12 @@ export default function MarketingManagementPage() {
                                         </div>
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                             {adPlatforms.map(plat => (
-                                                <div key={plat.id} className="p-3 bg-white border border-border flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="size-2" style={{ backgroundColor: plat.color }} />
+                                                <div key={plat.id} className="p-4 bg-white border border-border shadow-sm flex items-center justify-between group hover:border-primary/40 transition-all">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="size-2.5 shadow-sm" style={{ backgroundColor: plat.color }} />
                                                         <span className="text-[10px] font-black uppercase tracking-tight">{plat.name}</span>
                                                     </div>
-                                                    <X className="size-3 cursor-pointer opacity-30 hover:opacity-100" onClick={() => handleUpdateRegistry({ adPlatforms: adPlatforms.filter(p => p.id !== plat.id) })} />
+                                                    <X className="size-3 cursor-pointer opacity-0 group-hover:opacity-30 hover:!opacity-100 transition-opacity" onClick={() => handleUpdateRegistry({ adPlatforms: adPlatforms.filter(p => p.id !== plat.id) })} />
                                                 </div>
                                             ))}
                                         </div>
@@ -299,22 +307,28 @@ export default function MarketingManagementPage() {
                                                         <p className="font-black text-sm uppercase tracking-tight">{brand.name}</p>
                                                         <div className={cn("size-3 rounded-full bg-gradient-to-r", brand.gradient)} />
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-2 gap-6">
                                                         {brand.channels.map(channel => (
-                                                            <div key={channel} className="space-y-1.5">
-                                                                <Label className="text-[9px] font-black uppercase text-muted-foreground">{channel} Followers</Label>
-                                                                <Input 
-                                                                    type="number" 
-                                                                    placeholder="Count..." 
-                                                                    className="h-10 rounded-none border-none ring-1 ring-muted bg-muted/5 font-bold"
-                                                                    onChange={e => {
-                                                                        const logs = [...(formData.socialLogs || [])];
-                                                                        const existing = logs.find(l => l.brandId === brand.id && l.platformId === channel);
-                                                                        if (existing) existing.count = parseInt(e.target.value) || 0;
-                                                                        else logs.push({ brandId: brand.id, platformId: channel, count: parseInt(e.target.value) || 0 });
-                                                                        setFormData({ ...formData, socialLogs: logs });
-                                                                    }}
-                                                                />
+                                                            <div key={channel} className="space-y-3 p-3 bg-muted/10 border border-transparent hover:border-primary/10 transition-all">
+                                                                <Label className="text-[9px] font-black uppercase text-muted-foreground flex items-center gap-2">
+                                                                    {PLATFORM_ICONS[channel] ? React.createElement(PLATFORM_ICONS[channel], { className: "size-3" }) : <Share2 className="size-3" />}
+                                                                    {channel}
+                                                                </Label>
+                                                                <div className="space-y-1.5">
+                                                                    <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Follower Count</p>
+                                                                    <Input 
+                                                                        type="number" 
+                                                                        placeholder="0" 
+                                                                        className="h-10 rounded-none border-none ring-1 ring-muted bg-white font-bold"
+                                                                        onChange={e => {
+                                                                            const logs = [...(formData.socialLogs || [])];
+                                                                            const existing = logs.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                                            if (existing) existing.count = parseInt(e.target.value) || 0;
+                                                                            else logs.push({ brandId: brand.id, platformId: channel, count: parseInt(e.target.value) || 0 });
+                                                                            setFormData({ ...formData, socialLogs: logs });
+                                                                        }}
+                                                                    />
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -423,7 +437,7 @@ export default function MarketingManagementPage() {
                     <CardContent className="p-0 flex-1">
                         <Table>
                             <TableHeader className="bg-muted/20">
-                                <TableRow className="hover:bg-transparent">
+                                <TableRow className="hover:bg-transparent border-none">
                                     <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Company</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px]">Total Reach</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px]">Breakdown</TableHead>
@@ -431,8 +445,8 @@ export default function MarketingManagementPage() {
                             </TableHeader>
                             <TableBody>
                                 {brands.map(brand => {
-                                    const brandLogs = latestSession?.socialLogs.filter(l => l.brandId === brand.id) || [];
-                                    const total = brandLogs.reduce((acc, curr) => acc + curr.count, 0);
+                                    const brandLogs = latestSession?.socialLogs?.filter(l => l.brandId === brand.id) || [];
+                                    const total = brandLogs.reduce((acc, curr) => acc + (curr.count || 0), 0);
                                     
                                     return (
                                         <TableRow key={brand.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
@@ -542,16 +556,12 @@ export default function MarketingManagementPage() {
                             </CardTitle>
                             <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Consolidated history of authorized marketing sessions</CardDescription>
                         </div>
-                        <div className="flex bg-white ring-1 ring-border p-1 rounded-none shadow-sm">
-                            <Button variant="ghost" size="sm" className="h-8 rounded-none font-bold uppercase text-[9px] px-4">Daily</Button>
-                            <Button variant="ghost" size="sm" className="h-8 rounded-none font-bold uppercase text-[9px] px-4 bg-muted/50">MTD Audit</Button>
-                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader className="bg-muted/20">
-                            <TableRow className="hover:bg-transparent">
+                            <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 px-10">Audit Period & Attribution</TableHead>
                                 <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 text-center">Total Audited Spend</TableHead>
                                 <TableHead className="text-right font-black uppercase tracking-widest text-[10px] py-6 px-10">Control</TableHead>
@@ -579,7 +589,7 @@ export default function MarketingManagementPage() {
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex flex-col items-center">
-                                            <span className="text-base font-black text-indigo-600">₹{(session.adSpends?.reduce((acc, curr) => acc + curr.amount, 0) || 0).toLocaleString()}</span>
+                                            <span className="text-base font-black text-indigo-600">₹{(session.adSpends?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0).toLocaleString()}</span>
                                             <span className="text-[8px] font-black uppercase text-muted-foreground/40">authorized expenditure</span>
                                         </div>
                                     </TableCell>
@@ -629,7 +639,7 @@ export default function MarketingManagementPage() {
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {brands.map(brand => {
-                                        const logs = selectedAuditEntry?.socialLogs.filter(l => l.brandId === brand.id) || [];
+                                        const logs = selectedAuditEntry?.socialLogs?.filter(l => l.brandId === brand.id) || [];
                                         if (logs.length === 0) return null;
                                         return (
                                             <Card key={brand.id} className="rounded-none border-none ring-1 ring-border/50 shadow-sm p-6 bg-white space-y-4">
@@ -646,7 +656,7 @@ export default function MarketingManagementPage() {
                                                                     <Icon className="size-3" />
                                                                     <span className="text-[8px] font-black uppercase tracking-tight">{log.platformId}</span>
                                                                 </div>
-                                                                <p className="text-sm font-black tracking-tight">{log.count.toLocaleString()}</p>
+                                                                <p className="text-sm font-black tracking-tight">{(log.count || 0).toLocaleString()}</p>
                                                             </div>
                                                         );
                                                     })}
@@ -663,7 +673,7 @@ export default function MarketingManagementPage() {
                                     <DollarSign className="size-4" /> Authorized Expenditures
                                 </h4>
                                 <div className="space-y-4">
-                                    {selectedAuditEntry?.adSpends.filter(s => s.amount > 0).map((spend, i) => {
+                                    {selectedAuditEntry?.adSpends?.filter(s => (s.amount || 0) > 0).map((spend, i) => {
                                         const Icon = PLATFORM_ICONS[spend.platformId] || Globe;
                                         return (
                                             <Card key={i} className="rounded-none border-none ring-1 ring-border/50 shadow-sm p-6 bg-white overflow-hidden relative">
@@ -672,13 +682,13 @@ export default function MarketingManagementPage() {
                                                         <div className="p-3 bg-muted/10 text-primary rounded-none"><Icon className="size-5"/></div>
                                                         <div>
                                                             <p className="font-black text-sm uppercase tracking-tight">{spend.platformId}</p>
-                                                            <p className="text-xl font-black text-indigo-600">₹{spend.amount.toLocaleString()}</p>
+                                                            <p className="text-xl font-black text-indigo-600">₹{(spend.amount || 0).toLocaleString()}</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex-1 p-5 bg-muted/20 border-l-4 border-primary/20 space-y-2">
                                                         <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Strategic Justification</p>
                                                         <p className="text-sm font-medium italic leading-relaxed text-foreground/80">"{spend.reason || 'No justification provided for this tactical expenditure.'}"</p>
-                                                        <p className="text-[8px] font-black uppercase text-indigo-600/40 mt-3">{numberToWords(spend.amount)}</p>
+                                                        <p className="text-[8px] font-black uppercase text-indigo-600/40 mt-3">{numberToWords(spend.amount || 0)}</p>
                                                     </div>
                                                 </div>
                                             </Card>
