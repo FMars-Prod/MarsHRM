@@ -12,25 +12,21 @@ import { MissionHeatmapWidget } from "@/components/geohrm/mission-heatmap-widget
 import { ProfileBentoCard } from "@/components/geohrm/profile-bento-card";
 import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
 import { 
-  BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, 
+  AreaChart, Area, PieChart, Pie, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, 
-  Legend
+  Line
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   DollarSign, TrendingUp, Users, Briefcase, Zap, 
   ArrowUpRight, ArrowDownRight, Bell, Calendar,
-  MoreVertical, Target, MousePointer2, PieChart as PieChartIcon,
+  Target, MousePointer2, 
   BarChart3, LayoutGrid, CheckCircle2, AlertCircle, Clock, Plus,
-  PhoneCall, Signal, ShieldCheck, ExternalLink, ChevronRight,
-  TrendingDown, FileText, Settings, UserPlus, Building2
+  PhoneCall, ShieldCheck, ChevronRight, FileText, Settings, UserPlus, Building2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { 
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
-} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
@@ -136,14 +132,14 @@ export default function DashboardPage() {
     );
   }
 
-  // --- ENTERPRISE EXECUTIVE DASHBOARD (SCROLLABLE & ALIGNED) ---
+  // --- ENTERPRISE EXECUTIVE DASHBOARD ---
   return (
     <div className="min-h-screen space-y-8 pb-20 font-jakarta bg-[#F8FAFC]">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-1 animate-fade-in-up">
         <div className="space-y-1">
           <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none">
-            Good Morning, Antony Joseph 👋
+            Good Morning, {currentUserData?.firstName || 'Executive'} 👋
           </h1>
           <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Founder & CEO, Cognithorz</p>
         </div>
@@ -157,19 +153,6 @@ export default function DashboardPage() {
             <Bell className="size-6 text-slate-600" />
             <span className="absolute top-3 right-3 size-2.5 bg-rose-500 rounded-full ring-2 ring-white" />
           </Button>
-          <div className="flex items-center gap-4 ml-2 pl-6 border-l border-slate-200">
-             <div className="text-right hidden sm:block">
-               <p className="text-sm font-black uppercase tracking-tight text-slate-900 leading-none">Antony Joseph</p>
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Founder & CEO</p>
-             </div>
-             <div className="relative">
-                <Avatar className="h-12 w-12 ring-4 ring-white shadow-xl">
-                    <AvatarImage src="https://picsum.photos/seed/executive/100/100" className="object-cover" />
-                    <AvatarFallback className="font-black text-sm">AJ</AvatarFallback>
-                </Avatar>
-                <div className="absolute bottom-0 right-0 size-3.5 bg-emerald-500 rounded-full border-2 border-white" />
-             </div>
-          </div>
         </div>
       </div>
 
