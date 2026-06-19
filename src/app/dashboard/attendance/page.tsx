@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, isSameDay, startOfMonth, eachDayOfInterval, isSunday, isToday, isAfter, startOfDay } from "date-fns";
-import { CheckCircle, XCircle, AlertTriangle, Briefcase, Clock, CalendarDays, Info, Coffee, ChevronRight, Target } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, Briefcase, Clock, CalendarDays, Info, Coffee, ChevronRight, Target, Activity } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, Timestamp } from "firebase/firestore";
 import Image from "next/image";
