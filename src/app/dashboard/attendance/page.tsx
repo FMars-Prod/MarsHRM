@@ -142,8 +142,8 @@ export default function AttendancePage() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader
-        title="Attendance Ledger"
-        description="High-fidelity audit of monthly presence signals and authorized leaves."
+        title="Attendance History"
+        description="A simple overview of your monthly attendance and approved leaves."
       />
       
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
@@ -152,7 +152,7 @@ export default function AttendancePage() {
           <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden bg-white">
             <CardHeader className="bg-muted/5 border-b py-4">
                 <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-primary">
-                    <CalendarDays className="size-4" /> Tactical Grid
+                    <CalendarDays className="size-4" /> Attendance Calendar — {format(currentMonth, 'MMMM yyyy')}
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -168,7 +168,7 @@ export default function AttendancePage() {
                               priority
                             />
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Syncing Ledger...</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Syncing...</p>
                     </div>
                  </div>
                ) : (
@@ -186,7 +186,7 @@ export default function AttendancePage() {
                         showOutsideDays={false}
                     />
                     <div className="w-full md:w-64 bg-muted/5 border-l p-6 space-y-6">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Tactical Legend</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Status Legend</h4>
                         <div className="space-y-4">
                             {Object.entries(statusDetails).map(([key, detail]) => (
                                 <div key={key} className="flex items-center gap-3">
@@ -195,7 +195,7 @@ export default function AttendancePage() {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-xs font-bold uppercase">{detail.label}</span>
-                                        <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-tight">Signal: {key}</span>
+                                        <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-tight">Status: {key}</span>
                                     </div>
                                 </div>
                             ))}
@@ -206,7 +206,7 @@ export default function AttendancePage() {
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-xs font-bold uppercase">Sunday</span>
-                                    <span className="text-[9px] font-bold uppercase tracking-tight">Standard Off</span>
+                                    <span className="text-[9px] font-bold uppercase tracking-tight">Weekly Off</span>
                                 </div>
                             </div>
                         </div>
@@ -222,9 +222,9 @@ export default function AttendancePage() {
                       <Info className="size-5" />
                   </div>
                   <div className="space-y-1">
-                      <h4 className="text-xs font-black uppercase tracking-widest">Audit Protocol</h4>
+                      <h4 className="text-xs font-black uppercase tracking-widest">Attendance Notes</h4>
                       <p className="text-[11px] font-medium leading-relaxed text-muted-foreground/80">
-                          Signals are verified via encrypted GPS coordinates. Late marks are automatically generated for check-ins post standard shift start. Sundays and public holidays are excluded from presence velocity calculations.
+                          Attendance is verified using GPS location. Late marks are automatically added for check-ins after the shift start time. Sundays and holidays are not included in attendance calculations.
                       </p>
                   </div>
               </div>
@@ -236,7 +236,7 @@ export default function AttendancePage() {
              <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white overflow-hidden">
                 <CardHeader className="bg-primary/5 border-b py-4">
                     <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <Target className="size-4" /> Day Audit
+                        <Target className="size-4" /> Day Details
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -249,7 +249,7 @@ export default function AttendancePage() {
                                         <detail.icon className="size-8" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">{date ? format(date, "MMMM do, yyyy") : 'Mission Day'}</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">{date ? format(date, "MMMM do, yyyy") : 'Selected Date'}</p>
                                         <h3 className={cn("text-2xl font-black uppercase tracking-tighter", detail.color)}>{detail.label}</h3>
                                     </div>
                                 </div>
@@ -268,7 +268,7 @@ export default function AttendancePage() {
                                 {selectedDayEvent.status === 'on_leave' && (
                                     <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
                                         <Briefcase className="size-4 text-blue-600" />
-                                        <p className="text-[10px] font-bold text-blue-700 uppercase">Authorized Absence Protocol</p>
+                                        <p className="text-[10px] font-bold text-blue-700 uppercase">Approved Leave</p>
                                     </div>
                                 )}
                             </div>
@@ -276,7 +276,7 @@ export default function AttendancePage() {
                     })() : (
                         <div className="flex flex-col items-center justify-center h-48 opacity-30 grayscale gap-4">
                             <Clock className="size-10" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">No signal detected</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest">No data for this date</p>
                         </div>
                     )}
                 </CardContent>
@@ -285,7 +285,7 @@ export default function AttendancePage() {
             <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white overflow-hidden">
                 <CardHeader className="bg-muted/10 border-b py-4">
                     <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                        <Activity className="size-4" /> Monthly Hub
+                        <Activity className="size-4" /> Monthly Summary
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -297,7 +297,7 @@ export default function AttendancePage() {
                     </div>
                     <div className="mt-6 p-4 bg-primary/5 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-primary/10 transition-colors">
                         <div className="space-y-0.5">
-                            <p className="text-[8px] font-black uppercase tracking-widest text-primary/60">Active Capacity</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-primary/60">Present Rate</p>
                             <p className="text-lg font-black tracking-tighter text-primary">84%</p>
                         </div>
                         <ChevronRight className="size-4 text-primary opacity-40 group-hover:translate-x-1 transition-transform" />
