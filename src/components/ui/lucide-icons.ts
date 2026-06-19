@@ -56,5 +56,12 @@ export {
   Activity,
   RotateCcw,
   UserPlus,
-  ListTodo
+  ListTodo,
+  Banknote,
+  TrendingUp,
+  Zap,
+  DollarSign,
+  Beaker,
+  BarChart3,
+  Construction
 } from "lucide-react";
