@@ -5,7 +5,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where, limit, Timestamp, getDocs } from 'firebase/firestore';
 import { 
     TrendingUp, Plus, Trash2, Edit, ExternalLink, ShieldCheck, 
@@ -14,7 +14,7 @@ import {
     MoreHorizontal, Download, Share2, Info, ArrowUpRight, 
     ArrowDownRight, Instagram, Linkedin, Facebook, Twitter, 
     Youtube, Briefcase, Settings2, PlusCircle, Filter, 
-    Clock, ListTodo, Activity, BadgeCheck, Search
+    Clock, ListTodo, Activity, BadgeCheck, Search, X
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -123,7 +123,6 @@ export default function MarketingManagementPage() {
     // Registry States
     const [isRegistryOpen, setIsRegistryOpen] = React.useState(false);
     const [isAddOpen, setIsAddOpen] = React.useState(false);
-    const [selectedBrandForEntry, setSelectedBrandForEntry] = React.useState<string>('all');
     
     // Dynamic Config Ref
     const registryRef = useMemoFirebase(() => doc(firestore, 'settings', 'marketing_registry'), [firestore]);
