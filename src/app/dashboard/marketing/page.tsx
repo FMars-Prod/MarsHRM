@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -15,7 +16,7 @@ import {
     Instagram, Linkedin, Facebook, Twitter, 
     Youtube, Settings2, PlusCircle, 
     BadgeCheck, X, Loader2, Briefcase,
-    ShieldAlert, TrendingUp
+    ShieldAlert, TrendingUp, IndianRupee, AlertCircle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
     Area, AreaChart, CartesianGrid, 
-    XAxis, YAxis, Tooltip
+    XAxis, YAxis, Tooltip, Line, LineChart, ResponsiveContainer
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -153,6 +154,7 @@ export default function MarketingManagementPage() {
     const [isRegistryOpen, setIsRegistryOpen] = React.useState(false);
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [isTopupOpen, setIsTopupOpen] = React.useState(false);
+    const [isBudgetWarningOpen, setIsBudgetWarningOpen] = React.useState(false);
     const [selectedAuditEntry, setSelectedAuditEntry] = React.useState<MarketingSession | null>(null);
     
     // Form Persistence State
@@ -257,6 +259,16 @@ export default function MarketingManagementPage() {
 
     const handleSaveSession = async () => {
         if (!user || !userData) return;
+
+        // Calculate total requested spend
+        const totalRequestedSpend = (formData.adSpends || []).reduce((acc: number, curr: any) => acc + (parseFloat(curr.amount) || 0), 0);
+
+        // Prevent negative balance
+        if (totalRequestedSpend > currentBalance) {
+            setIsBudgetWarningOpen(true);
+            return;
+        }
+
         const processedLogs = (formData.socialLogs || []).map((log: any) => ({
             brandId: log.brandId, platformId: log.platformId, count: log.count, posts: (log.posts || 0) + (log.newPosts || 0)
         }));
@@ -318,7 +330,7 @@ export default function MarketingManagementPage() {
             <PageHeader title="Marketing Manager" description="Track your company growth and advertising spend.">
                 <div className="flex gap-2">
                     <Button onClick={() => setIsTopupOpen(true)} variant="outline" className="rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm border-border bg-emerald-50 text-emerald-700">
-                        <PlusSquare className="size-3.5 mr-2" /> Add Budget
+                        <IndianRupee className="size-3.5 mr-2" /> Add Budget
                     </Button>
                     <Dialog open={isRegistryOpen} onOpenChange={setIsRegistryOpen}>
                         <DialogTrigger asChild>
@@ -427,13 +439,13 @@ export default function MarketingManagementPage() {
                                                             const log = formData.socialLogs?.find((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                             return (
                                                                 <div key={channel} className="space-y-3 p-3 bg-muted/10 rounded-xl">
-                                                                    <Label className="text-[9px] font-black uppercase text-muted-foreground">{channel}</Label>
+                                                                    <div className="flex items-center justify-between">
+                                                                        <Label className="text-[9px] font-black uppercase text-muted-foreground">{channel}</Label>
+                                                                        {log?.count > 0 && <span className="text-[8px] font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded">{formatCompact(log.count)} Preview</span>}
+                                                                    </div>
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         <div className="space-y-1">
-                                                                            <div className="flex items-center justify-between">
-                                                                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Snapshot)</p>
-                                                                                <span className="text-[8px] font-black text-primary bg-primary/5 px-1.5 rounded">{formatCompact(log?.count || 0)}</span>
-                                                                            </div>
+                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Snapshot)</p>
                                                                             <Input type="number" value={log?.count || 0} className="h-10 rounded-lg font-black" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
@@ -504,6 +516,34 @@ export default function MarketingManagementPage() {
                 </div>
             </PageHeader>
 
+            {/* Budget Depletion Sentinel Dialog */}
+            <Dialog open={isBudgetWarningOpen} onOpenChange={setIsBudgetWarningOpen}>
+                <DialogContent className="rounded-3xl border-none shadow-2xl p-10 sm:max-w-md">
+                    <DialogHeader>
+                        <div className="size-16 rounded-full bg-rose-50 flex items-center justify-center mb-6 ring-8 ring-rose-50/50">
+                            <AlertCircle className="size-8 text-rose-600" />
+                        </div>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-tight">Budget Exhaustion Protocol Triggered</DialogTitle>
+                        <DialogDescription className="text-sm font-bold uppercase tracking-widest opacity-60 pt-2">Capital Reserve Insufficient</DialogDescription>
+                    </DialogHeader>
+                    <div className="py-8 space-y-4">
+                        <p className="text-sm font-medium leading-relaxed text-slate-600">
+                            The requested ad expenditure exceeds your current mission balance. To proceed, please inject additional capital into the marketing ledger.
+                        </p>
+                        <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border/50">
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Available Capital</p>
+                            <p className="text-2xl font-black text-emerald-600">₹{currentBalance.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <DialogFooter className="flex flex-col gap-3 sm:flex-row">
+                        <Button variant="outline" className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => setIsBudgetWarningOpen(false)}>Cancel Entry</Button>
+                        <Button className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200" onClick={() => { setIsBudgetWarningOpen(false); setIsAddOpen(false); setIsTopupOpen(true); }}>
+                           <IndianRupee className="size-3 mr-2" /> Add Extra Budget
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Metric Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <MetricCard label="Global Reach" value={formatCompact(totalFollowers)} sub={`Updated on: ${lastUpdateStr}`} icon={Users} color="text-primary" />
@@ -530,50 +570,71 @@ export default function MarketingManagementPage() {
                                 <Table>
                                     <TableHeader className="bg-muted/10 border-b">
                                         <TableRow className="hover:bg-transparent">
-                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 px-6">Brand</TableHead>
+                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 px-6">Brand Identity</TableHead>
+                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 text-center">Velocity</TableHead>
                                             {allPlatformIds.map(platform => (
                                                 <TableHead key={platform} className="font-black uppercase tracking-widest text-[8px] py-4 text-center">{platform}</TableHead>
                                             ))}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {brands.map(brand => (
-                                            <TableRow key={brand.id} className="border-border/50 hover:bg-primary/5 transition-colors">
-                                                <TableCell className="py-4 px-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={cn("size-8 rounded-xl flex items-center justify-center text-xs text-white font-black bg-gradient-to-br shadow-sm", brand.gradient)}>
-                                                            {brand.name[0]}
-                                                        </div>
-                                                        <span className="font-black text-xs uppercase tracking-tighter">{brand.name}</span>
-                                                    </div>
-                                                </TableCell>
-                                                {allPlatformIds.map(platform => {
-                                                    const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === platform);
-                                                    const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === platform);
-                                                    const hasChannel = brand.channels.includes(platform);
-                                                    
-                                                    const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
-                                                    const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
+                                        {brands.map(brand => {
+                                            // Extract historical data for sparkline
+                                            const brandTrend = sessions
+                                                .filter(s => s.type === 'spend')
+                                                .reverse()
+                                                .slice(-14)
+                                                .map(s => ({
+                                                    v: (s.socialLogs || []).filter(l => l.brandId === brand.id).reduce((a, c) => a + (c.count || 0), 0)
+                                                }));
 
-                                                    if (!hasChannel) return <TableCell key={platform} className="text-center opacity-10">—</TableCell>;
-
-                                                    return (
-                                                        <TableCell key={platform} className="py-4 text-center">
-                                                            <div className="space-y-1">
-                                                                <div className="flex flex-col items-center">
-                                                                    <span className="text-xs font-black tabular-nums">{formatCompact(log?.count || 0)}</span>
-                                                                    {followerDiff > 0 && <span className="text-[8px] font-black text-emerald-600">+{formatCompact(followerDiff)}</span>}
-                                                                </div>
-                                                                <div className="pt-1 border-t border-dashed border-border/50 flex flex-col items-center">
-                                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase">{log?.posts || 0} posts</span>
-                                                                    {postDiff > 0 && <span className="text-[7px] font-black text-emerald-600">+{postDiff}</span>}
-                                                                </div>
+                                            return (
+                                                <TableRow key={brand.id} className="border-border/50 hover:bg-primary/5 transition-colors">
+                                                    <TableCell className="py-4 px-6">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={cn("size-8 rounded-xl flex items-center justify-center text-xs text-white font-black bg-gradient-to-br shadow-sm", brand.gradient)}>
+                                                                {brand.name[0]}
                                                             </div>
-                                                        </TableCell>
-                                                    );
-                                                })}
-                                            </TableRow>
-                                        ))}
+                                                            <span className="font-black text-xs uppercase tracking-tighter">{brand.name}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="py-4 w-24">
+                                                        <div className="h-10 w-full opacity-60">
+                                                            <ResponsiveContainer width="100%" height="100%">
+                                                                <LineChart data={brandTrend}>
+                                                                    <Line type="linear" dataKey="v" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                                                                </LineChart>
+                                                            </ResponsiveContainer>
+                                                        </div>
+                                                    </TableCell>
+                                                    {allPlatformIds.map(platform => {
+                                                        const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === platform);
+                                                        const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === platform);
+                                                        const hasChannel = brand.channels.includes(platform);
+                                                        
+                                                        const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
+                                                        const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
+
+                                                        if (!hasChannel) return <TableCell key={platform} className="text-center opacity-10">—</TableCell>;
+
+                                                        return (
+                                                            <TableCell key={platform} className="py-4 text-center">
+                                                                <div className="space-y-1">
+                                                                    <div className="flex flex-col items-center">
+                                                                        <span className="text-xs font-black tabular-nums">{formatCompact(log?.count || 0)}</span>
+                                                                        {followerDiff > 0 && <span className="text-[8px] font-black text-emerald-600">+{formatCompact(followerDiff)}</span>}
+                                                                    </div>
+                                                                    <div className="pt-1 border-t border-dashed border-border/50 flex flex-col items-center">
+                                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase">{log?.posts || 0} posts</span>
+                                                                        {postDiff > 0 && <span className="text-[7px] font-black text-emerald-600">+{postDiff}</span>}
+                                                                    </div>
+                                                                </div>
+                                                            </TableCell>
+                                                        );
+                                                    })}
+                                                </TableRow>
+                                            );
+                                        })}
                                     </TableBody>
                                 </Table>
                             </div>
@@ -643,7 +704,7 @@ export default function MarketingManagementPage() {
 
                 {/* Tactical Sidebar Area */}
                 <div className="lg:col-span-4 space-y-4">
-                    {/* Performance Pulse (Relocated and Fixed) */}
+                    {/* Performance Pulse */}
                     <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
                         <CardHeader className="p-5 pb-2">
                             <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><TrendingUp className="size-3.5" /> Performance Pulse</CardTitle>
