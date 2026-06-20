@@ -551,7 +551,7 @@ export default function MarketingManagementPage() {
                                         <TableRow key={brand.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
                                             <TableCell className="py-6 px-8"><div className="flex items-center gap-3"><div className={cn("size-8 rounded-lg flex items-center justify-center text-white text-[10px] font-black shadow-sm bg-gradient-to-br", brand.gradient)}>{brand.name[0]}</div><span className="font-black text-xs uppercase tracking-tight">{brand.name}</span></div></TableCell>
                                             <TableCell><span className="text-sm font-black tabular-nums">{total.toLocaleString()}</span></TableCell>
-                                            <TableCell><span className="text-xs font-bold text-muted-foreground uppercase">{totalPosts} Missions</span></TableCell>
+                                            <TableCell><span className="text-xs font-bold text-muted-foreground uppercase">{totalPosts}</span></TableCell>
                                             <TableCell className="text-right px-8"><Badge variant="outline" className="rounded-full bg-emerald-50 text-emerald-600 border-none font-black text-[8px] px-3 h-5">SYNCED</Badge></TableCell>
                                         </TableRow>
                                     );
@@ -691,7 +691,7 @@ export default function MarketingManagementPage() {
                                                             {logs.map(log => (
                                                                 <div key={log.platformId} className="flex items-center justify-between p-3 bg-muted/10 rounded-xl">
                                                                     <span className="text-[10px] font-black uppercase">{log.platformId}</span>
-                                                                    <div className="text-right"><p className="text-sm font-black tabular-nums">{(log.count || 0).toLocaleString()}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">{(log.posts || 0)} Missions</p></div>
+                                                                    <div className="text-right"><p className="text-sm font-black tabular-nums">{(log.count || 0).toLocaleString()}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">{(log.posts || 0)}</p></div>
                                                                 </div>
                                                             ))}
                                                         </div>
