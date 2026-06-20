@@ -15,7 +15,8 @@ import {
     Calendar, Timer, Link as LinkIcon,
     Instagram, Linkedin, Facebook, Twitter, 
     Youtube, Settings2, PlusCircle, 
-    BadgeCheck, X, Loader2, Briefcase
+    BadgeCheck, X, Loader2, Briefcase,
+    ShieldAlert, Lock
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import Link from 'next/link';
 
 // --- UTILITIES ---
 
@@ -135,6 +137,12 @@ export default function MarketingManagementPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
+    // Access Control
+    const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+    const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
+    const userRole = userData?.role;
+    const isAuthorized = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
+
     // Dialog & UI States
     const [isRegistryOpen, setIsRegistryOpen] = React.useState(false);
     const [isAddOpen, setIsAddOpen] = React.useState(false);
@@ -158,7 +166,7 @@ export default function MarketingManagementPage() {
 
     // Data Queries
     const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'marketing_sessions'), orderBy('date', 'desc'), limit(200)), [firestore]);
-    const { data: rawSessions, isLoading } = useCollection<MarketingSession>(sessionsQuery);
+    const { data: rawSessions, isLoading: sessionsLoading } = useCollection<MarketingSession>(sessionsQuery);
 
     // Calculate Running Balance
     const sessions = React.useMemo(() => {
@@ -266,6 +274,33 @@ export default function MarketingManagementPage() {
         setDocumentNonBlocking(registryRef, update, { merge: true });
         toast({ title: 'Settings Updated' });
     };
+
+    if (isUserDocLoading) {
+        return (
+            <div className="flex h-[60vh] w-full items-center justify-center">
+                <Loader2 className="size-8 animate-spin text-primary opacity-20" />
+            </div>
+        );
+    }
+
+    if (!isAuthorized) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6 space-y-6">
+                <div className="p-6 rounded-[2.5rem] bg-rose-50 ring-8 ring-rose-50/50 shadow-inner">
+                    <ShieldAlert className="size-20 text-rose-600 opacity-80" />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900">Access Restricted</h2>
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest max-w-sm mx-auto">
+                        This terminal is limited to Executive Tier personnel only. Your access attempt has been logged for security.
+                    </p>
+                </div>
+                <Button asChild variant="outline" className="rounded-full h-12 px-10 font-black uppercase text-[10px] tracking-widest border-2">
+                    <Link href="/dashboard">Return to Mission Hub</Link>
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 animate-fade-in-up pb-20 max-w-[1600px] mx-auto font-jakarta text-slate-900">
@@ -498,7 +533,7 @@ export default function MarketingManagementPage() {
                         <ScrollArea className="flex-1 h-[300px]">
                             <div className="space-y-3">
                                 {deadlines.map((d, i) => (
-                                    <div key={i} className="p-4 rounded-2xl bg-muted/20 border border-transparent hover:border-primary/20 transition-all flex items-center justify-between">
+                                    <div key={i} className="p-4 rounded-2xl bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white hover:shadow-md transition-all flex items-center justify-between">
                                         <div className="flex items-center gap-4">
                                             <div className={cn("p-2 rounded-xl text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
                                                 <Calendar className="size-3.5" />
@@ -544,76 +579,76 @@ export default function MarketingManagementPage() {
                         <CardTitle className="text-base font-black uppercase tracking-widest text-primary flex items-center gap-2">
                             <Users className="size-4" /> Social Media Growth
                         </CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Multi-brand performance matrix</CardDescription>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Consolidated brand growth matrix</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader className="bg-muted/10 border-b">
                             <TableRow className="hover:bg-transparent">
-                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-5 px-8 min-w-[240px]">Platform & Brand</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Follower Hub</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Content Hub</TableHead>
-                                <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-5 px-8">Tactical Access</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 px-8 min-w-[240px]">Company & Branding</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-6">Social Platform Intelligence</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {brands.map(brand => (
-                                <React.Fragment key={brand.id}>
-                                    {brand.channels.map((channel, cIdx) => {
-                                        const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
-                                        const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
-                                        
-                                        const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
-                                        const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
-                                        
-                                        const Icon = PLATFORM_ICONS[channel] || Globe;
+                                <TableRow key={brand.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
+                                    <TableCell className="py-8 px-8 align-top">
+                                        <div className="flex items-center gap-5">
+                                            <div className={cn("size-14 rounded-2xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br", brand.gradient)}>
+                                                <span className="text-xl font-black">{brand.name[0]}</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="font-black text-lg uppercase tracking-tighter text-slate-800">{brand.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                    <p className="text-[10px] font-black text-muted-foreground uppercase opacity-60 tracking-widest">Active Channels: {brand.channels.length}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="py-8 px-8">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {brand.channels.map(channel => {
+                                                const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                
+                                                const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
+                                                const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
+                                                
+                                                const Icon = PLATFORM_ICONS[channel] || Globe;
 
-                                        return (
-                                            <TableRow key={`${brand.id}-${channel}`} className="border-border/50 group hover:bg-primary/5 transition-colors">
-                                                <TableCell className="py-6 px-8">
-                                                    <div className="flex items-center gap-5">
-                                                        <div className={cn("size-12 rounded-2xl flex items-center justify-center text-white shadow-sm bg-gradient-to-br", brand.gradient)}>
-                                                            <Icon className="size-5" />
+                                                return (
+                                                    <div key={channel} className="p-5 rounded-2xl bg-white border ring-1 ring-border/50 shadow-sm group/item hover:ring-primary/40 hover:shadow-md transition-all space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <Icon className="size-4 text-primary opacity-60" />
+                                                                <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">{channel}</span>
+                                                            </div>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-20 group-hover/item:opacity-100 hover:bg-primary/5 hover:text-primary transition-all rounded-lg" asChild>
+                                                                <Link href="#" target="_blank">
+                                                                    <ExternalLink className="size-3" />
+                                                                </Link>
+                                                            </Button>
                                                         </div>
-                                                        <div className="space-y-1">
-                                                            <span className="font-black text-sm uppercase tracking-tighter text-slate-800">{brand.name}</span>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="size-1.5 rounded-full bg-primary" />
-                                                                <p className="text-[10px] font-black text-muted-foreground uppercase opacity-60 tracking-widest">{channel}</p>
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div className="space-y-1">
+                                                                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest opacity-40">Followers</p>
+                                                                <p className="text-sm font-black tabular-nums">{(log?.count || 0).toLocaleString()}</p>
+                                                                {followerDiff > 0 && <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">({followerDiff}+)</span>}
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest opacity-40">Total Posts</p>
+                                                                <p className="text-sm font-black tabular-nums">{(log?.posts || 0).toLocaleString()}</p>
+                                                                {postDiff > 0 && <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">({postDiff}+)</span>}
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="flex flex-col items-center gap-1">
-                                                        <span className="text-lg font-black tabular-nums text-slate-900">{(log?.count || 0).toLocaleString()}</span>
-                                                        {followerDiff > 0 && (
-                                                            <Badge variant="outline" className="h-5 px-2 rounded-full bg-emerald-50 text-emerald-600 border-none font-black text-[9px] uppercase">
-                                                                (+{followerDiff})
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="flex flex-col items-center gap-1">
-                                                        <span className="text-lg font-black tabular-nums text-slate-900">{(log?.posts || 0).toLocaleString()}</span>
-                                                        {postDiff > 0 && (
-                                                            <Badge variant="outline" className="h-5 px-2 rounded-full bg-emerald-50 text-emerald-600 border-none font-black text-[9px] uppercase">
-                                                                (+{postDiff})
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right px-8">
-                                                    <Button variant="outline" size="sm" className="rounded-xl h-10 font-black uppercase text-[10px] tracking-widest px-6 bg-white shadow-sm border-none ring-1 ring-border group-hover:ring-primary/40 group-hover:text-primary transition-all">
-                                                        Visit Page <ExternalLink className="size-3.5 ml-2 opacity-40 group-hover:opacity-100" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </React.Fragment>
+                                                );
+                                            })}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
                             ))}
                         </TableBody>
                     </Table>
@@ -627,7 +662,7 @@ export default function MarketingManagementPage() {
                 </CardHeader>
                 <CardContent className="p-0 flex-1">
                     <ScrollArea className="h-[500px]">
-                        {isLoading ? (
+                        {sessionsLoading ? (
                             <div className="p-20 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-widest">Scanning records...</div>
                         ) : sessions.length === 0 ? (
                             <div className="p-20 text-center text-muted-foreground italic uppercase font-black text-[10px]">No activity found.</div>
@@ -797,5 +832,22 @@ function MetricCard({ label, value, sub, icon: Icon, color }: any) {
                 <p className="text-[9px] font-bold uppercase text-muted-foreground/60 tracking-tight">{sub}</p>
             </div>
         </Card>
+    );
+}
+
+function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
+    return (
+        <div className="flex gap-4 items-start relative group">
+            <div className={cn("p-2 rounded-xl shrink-0 shadow-sm", color)}>
+                <Icon className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                    <p className="text-[11px] font-black uppercase text-slate-800 truncate">{title}</p>
+                    <span className="text-[8px] font-bold text-slate-300 uppercase">{time}</span>
+                </div>
+                <p className="text-[9px] font-bold text-slate-400 uppercase truncate mt-0.5">{desc}</p>
+            </div>
+        </div>
     );
 }
