@@ -15,7 +15,7 @@ import {
     Calendar, Timer, Link as LinkIcon,
     Instagram, Linkedin, Facebook, Twitter, 
     Youtube, Settings2, PlusCircle, 
-    BadgeCheck, X, Loader2
+    BadgeCheck, X, Loader2, Briefcase
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
