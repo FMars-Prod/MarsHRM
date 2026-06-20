@@ -33,6 +33,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Separator } from '@/components/ui/separator';
 import { setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 
 // --- UTILITIES ---
@@ -281,7 +282,7 @@ export default function MarketingManagementPage() {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in-up pb-20 max-w-[1600px] mx-auto font-jakarta">
+        <div className="space-y-6 animate-fade-in-up pb-20 max-w-[1600px] mx-auto font-jakarta text-slate-900">
             <PageHeader title="Marketing Manager" description="Track your company growth and advertising spend.">
                 <div className="flex gap-2">
                     <Button onClick={() => setIsTopupOpen(true)} variant="outline" className="rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm border-border bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
