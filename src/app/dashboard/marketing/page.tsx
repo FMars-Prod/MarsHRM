@@ -599,22 +599,22 @@ export default function MarketingManagementPage() {
                         <div className="size-16 rounded-full bg-rose-50 flex items-center justify-center mb-6 ring-8 ring-rose-50/50">
                             <AlertCircle className="size-8 text-rose-600" />
                         </div>
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-tight">Budget Exhaustion Protocol Triggered</DialogTitle>
-                        <DialogDescription className="text-sm font-bold uppercase tracking-widest opacity-60 pt-2">Capital Reserve Insufficient</DialogDescription>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-tight">Insufficient Budget</DialogTitle>
+                        <DialogDescription className="text-sm font-bold uppercase tracking-widest opacity-60 pt-2">Your balance is too low</DialogDescription>
                     </DialogHeader>
                     <div className="py-8 space-y-4">
                         <p className="text-sm font-medium leading-relaxed text-slate-600">
-                            The requested ad expenditure exceeds your current mission balance. To proceed, please inject additional capital into the marketing ledger.
+                            You don't have enough funds left in your budget to save this spend. Please add more budget to continue.
                         </p>
                         <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Available Capital</p>
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Remaining Balance</p>
                             <p className="text-2xl font-black text-emerald-600">₹{currentBalance.toLocaleString()}</p>
                         </div>
                     </div>
                     <DialogFooter className="flex flex-col gap-3 sm:flex-row">
-                        <Button variant="outline" className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => setIsBudgetWarningOpen(false)}>Cancel Entry</Button>
+                        <Button variant="outline" className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => setIsBudgetWarningOpen(false)}>Cancel</Button>
                         <Button className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200" onClick={() => { setIsBudgetWarningOpen(false); setIsAddOpen(false); setIsTopupOpen(true); }}>
-                           <IndianRupee className="size-3 mr-2" /> Add Extra Budget
+                           <IndianRupee className="size-3 mr-2" /> Add Budget
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -998,3 +998,4 @@ function InfoRow({ label, value }: { label: string, value: string }) {
         </div>
     );
 }
+
