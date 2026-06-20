@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp, where, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, where, limit } from 'firebase/firestore';
 import { 
     Plus, Trash2, ExternalLink, ShieldCheck, 
     Users, Zap, DollarSign, 
@@ -15,8 +15,7 @@ import {
     Instagram, Linkedin, Facebook, Twitter, 
     Youtube, Settings2, PlusCircle, 
     BadgeCheck, X, Loader2, Briefcase,
-    ShieldAlert, Lock, TrendingUp,
-    Search
+    ShieldAlert, TrendingUp
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -29,7 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
     Area, AreaChart, CartesianGrid, 
-    XAxis, YAxis, Tooltip, ResponsiveContainer
+    XAxis, YAxis, Tooltip
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -52,6 +51,13 @@ function numberToWords(num: number): string {
         return n.toString();
     };
     return translate(num) + ' rupees only';
+}
+
+function formatCompact(num: number) {
+    return Intl.NumberFormat('en-US', {
+        notation: 'compact',
+        maximumFractionDigits: 1
+    }).format(num).toLowerCase();
 }
 
 const PLATFORM_ICONS: Record<string, any> = {
@@ -163,6 +169,12 @@ export default function MarketingManagementPage() {
     // Memoize registry data
     const brands = React.useMemo(() => registry?.brands || DEFAULT_BRANDS, [registry]);
     const adPlatforms = React.useMemo(() => registry?.adPlatforms || DEFAULT_AD_PLATFORMS, [registry]);
+
+    const allPlatformIds = React.useMemo(() => {
+        const ids = new Set<string>();
+        brands.forEach(b => b.channels.forEach(c => ids.add(c)));
+        return Array.from(ids).sort();
+    }, [brands]);
 
     // Data Queries
     const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'marketing_sessions'), orderBy('date', 'desc'), limit(200)), [firestore]);
@@ -415,7 +427,10 @@ export default function MarketingManagementPage() {
                                                                     <Label className="text-[9px] font-black uppercase text-muted-foreground">{channel}</Label>
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         <div className="space-y-1">
-                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Snapshot)</p>
+                                                                            <div className="flex items-center justify-between">
+                                                                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Snapshot)</p>
+                                                                                <span className="text-[8px] font-black text-primary bg-primary/5 px-1.5 rounded">{formatCompact(log?.count || 0)}</span>
+                                                                            </div>
                                                                             <Input type="number" value={log?.count || 0} className="h-10 rounded-lg font-black" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
@@ -488,16 +503,16 @@ export default function MarketingManagementPage() {
 
             {/* Metric Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <MetricCard label="Global Reach" value={totalFollowers.toLocaleString()} sub="Aggregated Fleet Reach" icon={Users} color="text-primary" />
-                <MetricCard label="Total Budget" value={`₹${(currentBalance + mtdSpend).toLocaleString()}`} sub="Monthly Capital Cap" icon={Wallet} color="text-indigo-600" />
-                <MetricCard label="Money Spent" value={`₹${mtdSpend.toLocaleString()}`} sub="MTD Expenditure" icon={PieChart} color="text-rose-600" />
-                <MetricCard label="Budget Left" value={`₹${currentBalance.toLocaleString()}`} sub="Deployable Capital" icon={ShieldCheck} color="text-emerald-600" />
+                <MetricCard label="Global Reach" value={formatCompact(totalFollowers)} sub="Aggregated Fleet Reach" icon={Users} color="text-primary" />
+                <MetricCard label="Total Budget" value={`₹${formatCompact(currentBalance + mtdSpend)}`} sub="Monthly Capital Cap" icon={Wallet} color="text-indigo-600" />
+                <MetricCard label="Money Spent" value={`₹${formatCompact(mtdSpend)}`} sub="MTD Expenditure" icon={PieChart} color="text-rose-600" />
+                <MetricCard label="Budget Left" value={`₹${formatCompact(currentBalance)}`} sub="Deployable Capital" icon={ShieldCheck} color="text-emerald-600" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 {/* Main Content Area */}
                 <div className="lg:col-span-8 space-y-4">
-                    {/* Social Media Growth (Proper Table Format) */}
+                    {/* Social Media Growth Matrix (Brand Centric) */}
                     <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white overflow-hidden">
                         <CardHeader className="bg-muted/5 border-b p-5">
                             <div className="space-y-0.5">
@@ -513,63 +528,48 @@ export default function MarketingManagementPage() {
                                     <TableHeader className="bg-muted/10 border-b">
                                         <TableRow className="hover:bg-transparent">
                                             <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 px-6">Brand</TableHead>
-                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4">Channel</TableHead>
-                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4">Followers</TableHead>
-                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4">Total Posts</TableHead>
-                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 text-right px-6">Link</TableHead>
+                                            {allPlatformIds.map(platform => (
+                                                <TableHead key={platform} className="font-black uppercase tracking-widest text-[8px] py-4 text-center">{platform}</TableHead>
+                                            ))}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {brands.map(brand => (
-                                            <React.Fragment key={brand.id}>
-                                                {brand.channels.map((channel, cIdx) => {
-                                                    const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
-                                                    const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                            <TableRow key={brand.id} className="border-border/50 hover:bg-primary/5 transition-colors">
+                                                <TableCell className="py-4 px-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={cn("size-8 rounded-xl flex items-center justify-center text-xs text-white font-black bg-gradient-to-br shadow-sm", brand.gradient)}>
+                                                            {brand.name[0]}
+                                                        </div>
+                                                        <span className="font-black text-xs uppercase tracking-tighter">{brand.name}</span>
+                                                    </div>
+                                                </TableCell>
+                                                {allPlatformIds.map(platform => {
+                                                    const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === platform);
+                                                    const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === platform);
+                                                    const hasChannel = brand.channels.includes(platform);
                                                     
                                                     const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
                                                     const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
-                                                    
-                                                    const Icon = PLATFORM_ICONS[channel] || Globe;
+
+                                                    if (!hasChannel) return <TableCell key={platform} className="text-center opacity-10">—</TableCell>;
 
                                                     return (
-                                                        <TableRow key={`${brand.id}-${channel}`} className="border-border/50 hover:bg-primary/5 transition-colors">
-                                                            <TableCell className="py-3 px-6">
-                                                                {cIdx === 0 ? (
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className={cn("size-6 rounded-lg flex items-center justify-center text-[10px] text-white font-black bg-gradient-to-br shadow-sm", brand.gradient)}>
-                                                                            {brand.name[0]}
-                                                                        </div>
-                                                                        <span className="font-black text-[10px] uppercase tracking-tighter truncate max-w-[80px]">{brand.name}</span>
-                                                                    </div>
-                                                                ) : null}
-                                                            </TableCell>
-                                                            <TableCell className="py-3">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Icon className="size-3 text-primary opacity-60" />
-                                                                    <span className="text-[10px] font-bold uppercase text-slate-600">{channel}</span>
+                                                        <TableCell key={platform} className="py-4 text-center">
+                                                            <div className="space-y-1">
+                                                                <div className="flex flex-col items-center">
+                                                                    <span className="text-xs font-black tabular-nums">{formatCompact(log?.count || 0)}</span>
+                                                                    {followerDiff > 0 && <span className="text-[8px] font-black text-emerald-600">+{formatCompact(followerDiff)}</span>}
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell className="py-3">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs font-black tabular-nums">{(log?.count || 0).toLocaleString()}</span>
-                                                                    {followerDiff > 0 && <span className="text-[9px] font-black text-emerald-600">+{followerDiff}</span>}
+                                                                <div className="pt-1 border-t border-dashed border-border/50 flex flex-col items-center">
+                                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase">{log?.posts || 0} posts</span>
+                                                                    {postDiff > 0 && <span className="text-[7px] font-black text-emerald-600">+{postDiff}</span>}
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell className="py-3">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs font-black tabular-nums">{(log?.posts || 0).toLocaleString()}</span>
-                                                                    {postDiff > 0 && <span className="text-[9px] font-black text-emerald-600">+{postDiff}</span>}
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell className="py-3 text-right px-6">
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-primary/10 text-primary transition-all" asChild>
-                                                                    <Link href="#" target="_blank"><ExternalLink className="size-3" /></Link>
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
+                                                            </div>
+                                                        </TableCell>
                                                     );
                                                 })}
-                                            </React.Fragment>
+                                            </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
@@ -784,7 +784,7 @@ export default function MarketingManagementPage() {
                                                             {logs.map(log => (
                                                                 <div key={log.platformId} className="flex items-center justify-between p-3 bg-muted/10 rounded-xl">
                                                                     <span className="text-[10px] font-black uppercase">{log.platformId}</span>
-                                                                    <div className="text-right"><p className="text-sm font-black tabular-nums">{(log.count || 0).toLocaleString()}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">Total Posts: {(log.posts || 0)}</p></div>
+                                                                    <div className="text-right"><p className="text-sm font-black tabular-nums">{formatCompact(log.count || 0)}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">Total Posts: {(log.posts || 0)}</p></div>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -834,14 +834,5 @@ function MetricCard({ label, value, sub, icon: Icon, color }: any) {
                 <p className="text-[7px] font-bold uppercase text-muted-foreground/60 tracking-tight">{sub}</p>
             </div>
         </Card>
-    );
-}
-
-function InfoRow({ label, value }: { label: string, value: string }) {
-    return (
-        <div className="flex items-center justify-between py-3 border-b border-dashed border-border/50 last:border-none group gap-4">
-            <span className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest shrink-0">{label}</span>
-            <span className="text-sm font-bold text-foreground/80 uppercase text-right leading-tight">{value}</span>
-        </div>
     );
 }
