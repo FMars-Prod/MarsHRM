@@ -31,7 +31,6 @@ import {
     XAxis, YAxis, Tooltip
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -84,8 +83,9 @@ type AdPlatform = {
 type SocialLog = {
     brandId: string;
     platformId: string;
-    count: number;
-    posts: number;
+    count: number; // Followers
+    posts: number; // Cumulative total posts
+    newPosts?: number; // UI temporary field for adding today's count
 };
 
 type SpendLog = {
@@ -124,7 +124,7 @@ const DEFAULT_AD_PLATFORMS: AdPlatform[] = [
 
 const performanceChartConfig = {
   reach: { label: "Followers", color: "hsl(var(--primary))" },
-  spend: { label: "Spend", color: "hsl(var(--accent))" },
+  spend: { label: "Spend", color: "#f43f5e" },
 } satisfies ChartConfig;
 
 // --- MAIN COMPONENT ---
@@ -141,7 +141,7 @@ export default function MarketingManagementPage() {
     const [selectedAuditEntry, setSelectedAuditEntry] = React.useState<MarketingSession | null>(null);
     
     // Form Persistence State
-    const [formData, setFormData] = React.useState<Partial<MarketingSession>>({
+    const [formData, setFormData] = React.useState<any>({
         socialLogs: [],
         adSpends: []
     });
@@ -225,7 +225,21 @@ export default function MarketingManagementPage() {
     // Populate form from latest session when opening
     React.useEffect(() => {
         if (isAddOpen) {
-            const initialSocialLogs = latestSession?.socialLogs || [];
+            // Pre-calculate social logs for ALL current brand/channel combos
+            const initialSocialLogs: any[] = [];
+            brands.forEach(brand => {
+                brand.channels.forEach(channel => {
+                    const prev = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                    initialSocialLogs.push({
+                        brandId: brand.id,
+                        platformId: channel,
+                        count: prev?.count || 0, // Current total followers (pre-filled)
+                        posts: prev?.posts || 0, // Current total posts (to know what to add to)
+                        newPosts: 0 // New field for today's additive increment
+                    });
+                });
+            });
+
             const initialAdSpends = adPlatforms.map(p => {
                 const prev = latestSession?.adSpends?.find(s => s.platformId === p.id);
                 return { platformId: p.id, amount: 0, reason: prev?.reason || '' };
@@ -236,16 +250,26 @@ export default function MarketingManagementPage() {
                 adSpends: initialAdSpends
             });
         }
-    }, [isAddOpen, latestSession, adPlatforms]);
+    }, [isAddOpen, latestSession, adPlatforms, brands]);
 
     // Handlers
     const handleSaveSession = async () => {
         if (!user) return;
+        
+        // Finalize social logs by adding newPosts to cumulative total posts
+        const processedLogs = (formData.socialLogs || []).map((log: any) => ({
+            brandId: log.brandId,
+            platformId: log.platformId,
+            count: log.count,
+            posts: (log.posts || 0) + (log.newPosts || 0) // ADDITIVE logic
+        }));
+
         const userDoc = await getDocs(query(collection(firestore, 'users'), where('id', '==', user.uid)));
         const userData = userDoc.docs[0]?.data();
 
         const payload = {
-            ...formData,
+            socialLogs: processedLogs,
+            adSpends: formData.adSpends,
             type: 'spend',
             date: serverTimestamp(),
             auditedBy: user.uid,
@@ -379,7 +403,7 @@ export default function MarketingManagementPage() {
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl rounded-3xl border-none shadow-2xl p-0 overflow-hidden h-[90vh] flex flex-col">
                             <DialogHeader className="p-8 border-b shrink-0 bg-white">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Daily Intelligence Update</DialogTitle>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Daily Update</DialogTitle>
                                 <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Record your brand growth and spending</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
@@ -392,28 +416,26 @@ export default function MarketingManagementPage() {
                                                     <p className="font-black text-sm uppercase tracking-tight border-b pb-3">{brand.name}</p>
                                                     <div className="grid grid-cols-1 gap-6">
                                                         {brand.channels.map(channel => {
-                                                            const log = formData.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                            const log = formData.socialLogs?.find((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                             return (
                                                                 <div key={channel} className="space-y-3 p-3 bg-muted/10 rounded-xl">
                                                                     <Label className="text-[9px] font-black uppercase text-muted-foreground">{channel}</Label>
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         <div className="space-y-1">
-                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers</p>
+                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Total Followers</p>
                                                                             <Input type="number" value={log?.count || 0} className="h-10 rounded-lg font-black" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
-                                                                                const idx = logs.findIndex(l => l.brandId === brand.id && l.platformId === channel);
+                                                                                const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                                                 if (idx > -1) logs[idx].count = parseInt(e.target.value) || 0;
-                                                                                else logs.push({ brandId: brand.id, platformId: channel, count: parseInt(e.target.value) || 0, posts: 0 });
                                                                                 setFormData({ ...formData, socialLogs: logs });
                                                                             }} />
                                                                         </div>
                                                                         <div className="space-y-1">
-                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Daily Posts</p>
-                                                                            <Input type="number" value={log?.posts || 0} className="h-10 rounded-lg font-black" onChange={e => {
+                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">New Posts Today</p>
+                                                                            <Input type="number" value={log?.newPosts || 0} className="h-10 rounded-lg font-black" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
-                                                                                const idx = logs.findIndex(l => l.brandId === brand.id && l.platformId === channel);
-                                                                                if (idx > -1) logs[idx].posts = parseInt(e.target.value) || 0;
-                                                                                else logs.push({ brandId: brand.id, platformId: channel, count: 0, posts: parseInt(e.target.value) || 0 });
+                                                                                const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
+                                                                                if (idx > -1) logs[idx].newPosts = parseInt(e.target.value) || 0;
                                                                                 setFormData({ ...formData, socialLogs: logs });
                                                                             }} />
                                                                         </div>
@@ -430,7 +452,7 @@ export default function MarketingManagementPage() {
                                         <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><DollarSign className="size-4"/> Advertising Spend</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {adPlatforms.map(plat => {
-                                                const spend = formData.adSpends?.find(s => s.platformId === plat.id);
+                                                const spend = formData.adSpends?.find((s: any) => s.platformId === plat.id);
                                                 return (
                                                     <div key={plat.id} className="p-6 bg-white border rounded-2xl shadow-sm space-y-4">
                                                         <p className="font-black text-[11px] uppercase tracking-widest">{plat.name}</p>
@@ -439,7 +461,7 @@ export default function MarketingManagementPage() {
                                                                 <Label className="text-[9px] font-black uppercase text-muted-foreground">Spend (₹)</Label>
                                                                 <Input type="number" value={spend?.amount || 0} className="h-10 rounded-lg font-black text-primary" onChange={e => {
                                                                     const spends = [...(formData.adSpends || [])];
-                                                                    const idx = spends.findIndex(s => s.platformId === plat.id);
+                                                                    const idx = spends.findIndex((s: any) => s.platformId === plat.id);
                                                                     if (idx > -1) spends[idx].amount = parseInt(e.target.value) || 0;
                                                                     else spends.push({ platformId: plat.id, amount: parseInt(e.target.value) || 0, reason: '' });
                                                                     setFormData({ ...formData, adSpends: spends });
@@ -449,7 +471,7 @@ export default function MarketingManagementPage() {
                                                                 <Label className="text-[9px] font-black uppercase text-muted-foreground">Reason for spend</Label>
                                                                 <Textarea value={spend?.reason || ''} className="rounded-lg min-h-[80px]" placeholder="Strategic justification..." onChange={e => {
                                                                     const spends = [...(formData.adSpends || [])];
-                                                                    const idx = spends.findIndex(s => s.platformId === plat.id);
+                                                                    const idx = spends.findIndex((s: any) => s.platformId === plat.id);
                                                                     if (idx > -1) spends[idx].reason = e.target.value;
                                                                     else spends.push({ platformId: plat.id, amount: 0, reason: e.target.value });
                                                                     setFormData({ ...formData, adSpends: spends });
@@ -497,7 +519,7 @@ export default function MarketingManagementPage() {
                                     <linearGradient id="colorReach" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/></linearGradient>
                                     <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/><stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/></linearGradient>
                                 </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
+                                <CartesianGrid vertical={false} strokeDasharray="0" stroke="#F1F5F9" />
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-[10px] font-black uppercase fill-muted-foreground" tickMargin={10} />
                                 <YAxis axisLine={false} tickLine={false} className="text-[10px] font-black fill-muted-foreground" tickFormatter={v => `₹${v/1000}K`} />
                                 <ChartTooltip content={<ChartTooltipContent />} />
@@ -538,7 +560,7 @@ export default function MarketingManagementPage() {
             {/* Bottom Row: Social Matrix & Google Pay Style Ledger */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <Card className="lg:col-span-7 border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden">
-                    <CardHeader className="bg-muted/5 border-b p-6"><CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4" /> Social Media Matrix</CardTitle></CardHeader>
+                    <CardHeader className="bg-muted/5 border-b p-6"><CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4" /> Social Media Growth</CardTitle></CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader className="bg-muted/10"><TableRow><TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-8">Brand</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px]">Followers</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px]">Posts</TableHead></TableRow></TableHeader>
@@ -563,7 +585,7 @@ export default function MarketingManagementPage() {
                 {/* GOOGLE PAY STYLE LEDGER */}
                 <Card className="lg:col-span-5 border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden flex flex-col">
                     <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between">
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><History className="size-4" /> Monthly Ledger</CardTitle>
+                        <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><History className="size-4" /> History</CardTitle>
                         <Badge className="bg-emerald-100 text-emerald-700 rounded-lg font-black text-[8px] border-none px-3 py-1">TOTAL AUDITED</Badge>
                     </CardHeader>
                     <CardContent className="p-0 flex-1">
@@ -571,7 +593,7 @@ export default function MarketingManagementPage() {
                             {isLoading ? (
                                 <div className="p-20 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-widest">Scanning records...</div>
                             ) : sessions.length === 0 ? (
-                                <div className="p-20 text-center text-muted-foreground italic uppercase font-black text-[10px]">No fleet activity found.</div>
+                                <div className="p-20 text-center text-muted-foreground italic uppercase font-black text-[10px]">No activity found.</div>
                             ) : (
                                 <div className="divide-y divide-border/50">
                                     {/* Monthly Grouping */}
@@ -597,10 +619,10 @@ export default function MarketingManagementPage() {
                                                         </div>
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="font-black text-xs uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Expenditure"}</span>
+                                                                <span className="font-black text-xs uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Spend"}</span>
                                                                 <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">{format(date, 'hh:mm a')}</span>
                                                             </div>
-                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Auditor: {session.auditedByName}</p>
+                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">By {session.auditedByName}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right space-y-1">
@@ -627,7 +649,7 @@ export default function MarketingManagementPage() {
                 <DialogContent className="rounded-3xl border-none shadow-2xl p-8 sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter">Add Budget</DialogTitle>
-                        <DialogDescription className="text-xs font-bold uppercase opacity-60">Inject capital into the fleet marketing budget</DialogDescription>
+                        <DialogDescription className="text-xs font-bold uppercase opacity-60">Add money to the marketing budget</DialogDescription>
                     </DialogHeader>
                     <div className="py-8 space-y-6">
                         <div className="space-y-2">
@@ -655,7 +677,7 @@ export default function MarketingManagementPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Entry Details</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">Audited session intelligence breakdown</DialogDescription>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">Breakdown of this update</DialogDescription>
                             </div>
                             <div className="text-right">
                                 <p className="text-sm font-black uppercase">{selectedAuditEntry?.date ? format(selectedAuditEntry.date.toDate(), 'PPP') : ''}</p>
@@ -678,7 +700,7 @@ export default function MarketingManagementPage() {
                             ) : (
                                 <>
                                     <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3"><Users className="size-4" /> Social Matrix Snapshot</h4>
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3"><Users className="size-4" /> Social Growth Snapshot</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {brands.map(brand => {
                                                 const logs = selectedAuditEntry?.socialLogs?.filter(l => l.brandId === brand.id) || [];
@@ -690,7 +712,7 @@ export default function MarketingManagementPage() {
                                                             {logs.map(log => (
                                                                 <div key={log.platformId} className="flex items-center justify-between p-3 bg-muted/10 rounded-xl">
                                                                     <span className="text-[10px] font-black uppercase">{log.platformId}</span>
-                                                                    <div className="text-right"><p className="text-sm font-black tabular-nums">{(log.count || 0).toLocaleString()}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">{(log.posts || 0)}</p></div>
+                                                                    <div className="text-right"><p className="text-sm font-black tabular-nums">{(log.count || 0).toLocaleString()}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">Total Posts: {(log.posts || 0)}</p></div>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -700,12 +722,12 @@ export default function MarketingManagementPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3"><DollarSign className="size-4" /> Expenditure Audit</h4>
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3"><DollarSign className="size-4" /> Ad Spending</h4>
                                         <div className="space-y-4">
                                             {selectedAuditEntry?.adSpends?.filter(s => (s.amount || 0) > 0).map((spend, i) => (
                                                 <Card key={i} className="rounded-2xl border-none ring-1 ring-border/50 shadow-sm p-6 bg-white flex flex-col md:flex-row gap-6">
                                                     <div className="min-w-[150px]"><p className="font-black text-xs uppercase tracking-tight text-muted-foreground">{spend.platformId}</p><p className="text-2xl font-black text-rose-600">-₹{(spend.amount || 0).toLocaleString()}</p></div>
-                                                    <div className="flex-1 p-4 bg-muted/20 border-l-4 border-primary rounded-r-xl space-y-1.5"><p className="text-[9px] font-black uppercase text-muted-foreground opacity-60">Strategic Justification</p><p className="text-sm font-medium italic leading-relaxed">"{spend.reason || 'Routine tactical maintenance.'}"</p></div>
+                                                    <div className="flex-1 p-4 bg-muted/20 border-l-4 border-primary rounded-r-xl space-y-1.5"><p className="text-[9px] font-black uppercase text-muted-foreground opacity-60">Reason for spend</p><p className="text-sm font-medium italic leading-relaxed">"{spend.reason || 'Routine update.'}"</p></div>
                                                 </Card>
                                             ))}
                                         </div>
@@ -716,7 +738,7 @@ export default function MarketingManagementPage() {
                     </ScrollArea>
                     <div className="p-8 border-t bg-white flex gap-4">
                         <Button variant="outline" className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => setSelectedAuditEntry(null)}>Close</Button>
-                        <Button variant="destructive" className="rounded-xl h-12 px-6 font-black uppercase text-[10px]" onClick={() => { if(confirm("Confirm record purge?")) { deleteDocumentNonBlocking(doc(firestore, 'marketing_sessions', selectedAuditEntry!.id)); setSelectedAuditEntry(null); } }}><Trash2 className="size-4" /></Button>
+                        <Button variant="destructive" className="rounded-xl h-12 px-6 font-black uppercase text-[10px]" onClick={() => { if(confirm("Confirm record delete?")) { deleteDocumentNonBlocking(doc(firestore, 'marketing_sessions', selectedAuditEntry!.id)); setSelectedAuditEntry(null); } }}><Trash2 className="size-4" /></Button>
                     </div>
                 </DialogContent>
             </Dialog>
