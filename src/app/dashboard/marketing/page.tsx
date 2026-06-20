@@ -227,6 +227,9 @@ export default function MarketingManagementPage() {
             }));
     }, [sessions]);
 
+    const lastUpdateDate = sessions[0]?.date;
+    const lastUpdateStr = lastUpdateDate ? format(lastUpdateDate.toDate(), 'MMM dd, yyyy') : 'N/A';
+
     // Placeholder deadlines
     const deadlines = [
         { title: 'Meta Brand Awareness', end: addDays(new Date(), 2), status: 'Active' },
@@ -503,10 +506,10 @@ export default function MarketingManagementPage() {
 
             {/* Metric Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <MetricCard label="Global Reach" value={formatCompact(totalFollowers)} sub="Aggregated Fleet Reach" icon={Users} color="text-primary" />
-                <MetricCard label="Total Budget" value={`₹${formatCompact(currentBalance + mtdSpend)}`} sub="Monthly Capital Cap" icon={Wallet} color="text-indigo-600" />
-                <MetricCard label="Money Spent" value={`₹${formatCompact(mtdSpend)}`} sub="MTD Expenditure" icon={PieChart} color="text-rose-600" />
-                <MetricCard label="Budget Left" value={`₹${formatCompact(currentBalance)}`} sub="Deployable Capital" icon={ShieldCheck} color="text-emerald-600" />
+                <MetricCard label="Global Reach" value={formatCompact(totalFollowers)} sub={`Updated on: ${lastUpdateStr}`} icon={Users} color="text-primary" />
+                <MetricCard label="Total Budget" value={`₹${(currentBalance + mtdSpend).toLocaleString()}`} sub={`Updated on: ${lastUpdateStr}`} icon={Wallet} color="text-indigo-600" />
+                <MetricCard label="Money Spent" value={`₹${mtdSpend.toLocaleString()}`} sub={`Updated on: ${lastUpdateStr}`} icon={PieChart} color="text-rose-600" />
+                <MetricCard label="Budget Left" value={`₹${currentBalance.toLocaleString()}`} sub={`Updated on: ${lastUpdateStr}`} icon={ShieldCheck} color="text-emerald-600" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -613,7 +616,7 @@ export default function MarketingManagementPage() {
                                                             </div>
                                                             <div className="space-y-0.5">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="font-black text-[11px] uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Spend"}</span>
+                                                                    <span className="font-black text-11px uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Spend"}</span>
                                                                     <span className="text-[7px] font-bold text-muted-foreground/40 uppercase">{format(date, 'hh:mm a')}</span>
                                                                 </div>
                                                                 <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">By {session.auditedByName}</p>
