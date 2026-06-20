@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -541,7 +540,7 @@ export default function MarketingManagementPage() {
                     <CardHeader className="bg-muted/5 border-b p-6"><CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4" /> Social Media Matrix</CardTitle></CardHeader>
                     <CardContent className="p-0">
                         <Table>
-                            <TableHeader className="bg-muted/10"><TableRow><TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-8">Brand</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px]">Followers</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px]">Posts</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px] text-right px-8">Status</TableHead></TableRow></TableHeader>
+                            <TableHeader className="bg-muted/10"><TableRow><TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-8">Brand</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px]">Followers</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px]">Posts</TableHead></TableRow></TableHeader>
                             <TableBody>
                                 {brands.map(brand => {
                                     const logs = latestSession?.socialLogs?.filter(l => l.brandId === brand.id) || [];
@@ -552,7 +551,6 @@ export default function MarketingManagementPage() {
                                             <TableCell className="py-6 px-8"><div className="flex items-center gap-3"><div className={cn("size-8 rounded-lg flex items-center justify-center text-white text-[10px] font-black shadow-sm bg-gradient-to-br", brand.gradient)}>{brand.name[0]}</div><span className="font-black text-xs uppercase tracking-tight">{brand.name}</span></div></TableCell>
                                             <TableCell><span className="text-sm font-black tabular-nums">{total.toLocaleString()}</span></TableCell>
                                             <TableCell><span className="text-xs font-bold text-muted-foreground uppercase">{totalPosts}</span></TableCell>
-                                            <TableCell className="text-right px-8"><Badge variant="outline" className="rounded-full bg-emerald-50 text-emerald-600 border-none font-black text-[8px] px-3 h-5">SYNCED</Badge></TableCell>
                                         </TableRow>
                                     );
                                 })}
