@@ -29,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
     Area, AreaChart, CartesianGrid, 
-    XAxis, YAxis, Tooltip
+    XAxis, YAxis, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -303,7 +303,7 @@ export default function MarketingManagementPage() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in-up pb-20 max-w-[1600px] mx-auto font-jakarta text-slate-900">
+        <div className="space-y-4 animate-fade-in-up pb-20 max-w-[1600px] mx-auto font-jakarta text-slate-900">
             <PageHeader title="Marketing Manager" description="Track your company growth and advertising spend.">
                 <div className="flex gap-2">
                     <Button onClick={() => setIsTopupOpen(true)} variant="outline" className="rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm border-border bg-emerald-50 text-emerald-700">
@@ -419,7 +419,7 @@ export default function MarketingManagementPage() {
                                                                     <Label className="text-[9px] font-black uppercase text-muted-foreground">{channel}</Label>
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         <div className="space-y-1">
-                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Total)</p>
+                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Snapshot)</p>
                                                                             <Input type="number" value={log?.count || 0} className="h-10 rounded-lg font-black" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
@@ -490,81 +490,231 @@ export default function MarketingManagementPage() {
                 </div>
             </PageHeader>
 
-            {/* Metric Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MetricCard label="Total Followers" value={totalFollowers.toLocaleString()} sub="Fleet Reach" icon={Users} color="text-primary" />
-                <MetricCard label="Total Budget" value={`₹${(currentBalance + mtdSpend).toLocaleString()}`} sub="Monthly Budget" icon={Wallet} color="text-indigo-600" />
-                <MetricCard label="Money Spent" value={`₹${mtdSpend.toLocaleString()}`} sub="Money Spent" icon={PieChart} color="text-rose-600" />
-                <MetricCard label="Budget Left" value={`₹${currentBalance.toLocaleString()}`} sub="Budget Left" icon={ShieldCheck} color="text-emerald-600" />
+            {/* Metric Row - Smaller footprint */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <MetricCard label="Global Reach" value={totalFollowers.toLocaleString()} sub="Aggregated Fleet Reach" icon={Users} color="text-primary" />
+                <MetricCard label="Total Budget" value={`₹${(currentBalance + mtdSpend).toLocaleString()}`} sub="Monthly Capital Cap" icon={Wallet} color="text-indigo-600" />
+                <MetricCard label="Money Spent" value={`₹${mtdSpend.toLocaleString()}`} sub="MTD Expenditure" icon={PieChart} color="text-rose-600" />
+                <MetricCard label="Budget Left" value={`₹${currentBalance.toLocaleString()}`} sub="Deployable Capital" icon={ShieldCheck} color="text-emerald-600" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <Card className="lg:col-span-8 border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden flex flex-col">
-                    <CardHeader className="p-8 pb-2">
-                        <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Growth & Spend Chart</CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Brand reach vs ad spend</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-8 h-[400px]">
-                        <ChartContainer config={performanceChartConfig} className="h-full w-full">
-                            <AreaChart data={chartData}>
-                                <defs>
-                                    <linearGradient id="colorReach" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/></linearGradient>
-                                    <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/><stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/></linearGradient>
-                                </defs>
-                                <CartesianGrid vertical={false} stroke="#F1F5F9" />
-                                <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-[10px] font-black uppercase fill-muted-foreground" tickMargin={10} />
-                                <YAxis axisLine={false} tickLine={false} className="text-[10px] font-black fill-muted-foreground" />
-                                <ChartTooltip content={<ChartTooltipContent />} />
-                                <Area type="linear" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={4} fill="url(#colorReach)" />
-                                <Area type="linear" dataKey="spend" stroke="#f43f5e" strokeWidth={2} fill="url(#colorSpend)" strokeDasharray="4 4" />
-                            </AreaChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-
-                <div className="lg:col-span-4 space-y-6">
-                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-3xl bg-white p-6 overflow-hidden flex flex-col">
-                        <CardHeader className="p-0 mb-6">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Timer className="size-4" /> Deadlines</CardTitle>
-                                <Badge className="bg-rose-500 text-white rounded-none font-black text-[8px] border-none">{deadlines.filter(d => d.status === 'Overdue').length} AT RISK</Badge>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                {/* Main Content Area */}
+                <div className="lg:col-span-8 space-y-4">
+                    {/* Social Media Matrix - One Brand per Row */}
+                    <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white overflow-hidden">
+                        <CardHeader className="bg-muted/5 border-b p-5 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <Users className="size-4" /> Social Media Matrix
+                                </CardTitle>
+                                <CardDescription className="text-[8px] font-bold uppercase tracking-widest opacity-60">Consolidated brand activity & reach</CardDescription>
                             </div>
                         </CardHeader>
-                        <ScrollArea className="flex-1 h-[300px]">
-                            <div className="space-y-3">
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader className="bg-muted/10 border-b">
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 px-6 min-w-[180px]">Company</TableHead>
+                                        <TableHead className="font-black uppercase tracking-widest text-[8px] py-4">Channel Intelligence Matrix</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {brands.map(brand => (
+                                        <TableRow key={brand.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
+                                            <TableCell className="py-6 px-6 align-top">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={cn("size-10 rounded-xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br", brand.gradient)}>
+                                                        <span className="text-sm font-black">{brand.name[0]}</span>
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <span className="font-black text-sm uppercase tracking-tight text-slate-800">{brand.name}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="size-1 rounded-full bg-emerald-500 animate-pulse" />
+                                                            <p className="text-[8px] font-black text-muted-foreground uppercase opacity-40 tracking-widest">Active Channels: {brand.channels.length}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="py-6 px-6">
+                                                <div className="flex flex-wrap gap-3">
+                                                    {brand.channels.map(channel => {
+                                                        const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                        const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                        
+                                                        const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
+                                                        const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
+                                                        
+                                                        const Icon = PLATFORM_ICONS[channel] || Globe;
+
+                                                        return (
+                                                            <div key={channel} className="p-4 min-w-[140px] rounded-xl bg-white border ring-1 ring-border/50 shadow-sm group/item hover:ring-primary/40 transition-all space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Icon className="size-3 text-primary opacity-60" />
+                                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">{channel}</span>
+                                                                    </div>
+                                                                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-20 group-hover/item:opacity-100 hover:bg-primary/5 hover:text-primary transition-all rounded-md" asChild>
+                                                                        <Link href="#" target="_blank">
+                                                                            <ExternalLink className="size-2.5" />
+                                                                        </Link>
+                                                                    </Button>
+                                                                </div>
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    <div className="space-y-0.5">
+                                                                        <p className="text-[7px] font-black uppercase text-muted-foreground tracking-widest opacity-40">Followers</p>
+                                                                        <p className="text-xs font-black tabular-nums">{(log?.count || 0).toLocaleString()}</p>
+                                                                        {followerDiff > 0 && <span className="text-[7px] font-black text-emerald-600 uppercase tracking-tighter">+{followerDiff}</span>}
+                                                                    </div>
+                                                                    <div className="space-y-0.5 text-right">
+                                                                        <p className="text-[7px] font-black uppercase text-muted-foreground tracking-widest opacity-40">Posts</p>
+                                                                        <p className="text-xs font-black tabular-nums">{(log?.posts || 0).toLocaleString()}</p>
+                                                                        {postDiff > 0 && <span className="text-[7px] font-black text-emerald-600 uppercase tracking-tighter">+{postDiff}</span>}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+
+                    {/* Financial Ledger */}
+                    <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
+                        <CardHeader className="bg-muted/5 border-b p-5 flex flex-row items-center justify-between">
+                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2"><History className="size-3.5" /> Financial Ledger</CardTitle>
+                            <Badge className="bg-emerald-100 text-emerald-700 rounded-lg font-black text-[7px] border-none px-2 py-0.5">AUDITED LOG</Badge>
+                        </CardHeader>
+                        <CardContent className="p-0 flex-1">
+                            <ScrollArea className="h-[400px]">
+                                {sessionsLoading ? (
+                                    <div className="p-20 text-center animate-pulse uppercase font-black text-[9px] text-muted-foreground tracking-widest">Scanning records...</div>
+                                ) : sessions.length === 0 ? (
+                                    <div className="p-20 text-center text-muted-foreground italic uppercase font-black text-[8px]">No activity found.</div>
+                                ) : (
+                                    <div className="divide-y divide-border/50">
+                                        {sessions.map((session, index) => {
+                                            const date = session.date?.toDate?.() || new Date();
+                                            const prev = sessions[index - 1];
+                                            const showMonth = !prev || !isSameMonth(date, prev.date?.toDate?.() || new Date());
+                                            const isTopup = session.type === 'topup';
+                                            const totalSpend = Array.isArray(session.adSpends) ? session.adSpends.reduce((a, c) => a + (c.amount || 0), 0) : 0;
+                                            const amount = isTopup ? (session.topupAmount || 0) : totalSpend;
+
+                                            return (
+                                                <div key={session.id}>
+                                                    {showMonth && (
+                                                        <div className="bg-muted/30 px-6 py-2 sticky top-0 z-10 backdrop-blur-sm border-b">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{format(date, 'MMMM yyyy')}</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="px-6 py-4 hover:bg-muted/10 transition-all group flex items-center justify-between cursor-pointer" onClick={() => setSelectedAuditEntry(session)}>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={cn("size-8 rounded-lg flex items-center justify-center shadow-sm", isTopup ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
+                                                                {isTopup ? <Wallet className="size-4" /> : <Activity className="size-4" />}
+                                                            </div>
+                                                            <div className="space-y-0.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-black text-[11px] uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Spend"}</span>
+                                                                    <span className="text-[7px] font-bold text-muted-foreground/40 uppercase">{format(date, 'hh:mm a')}</span>
+                                                                </div>
+                                                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">By {session.auditedByName}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right space-y-0.5">
+                                                            <p className={cn("text-xs font-black tabular-nums", isTopup ? "text-emerald-600" : "text-rose-600")}>
+                                                                {isTopup ? `+₹${amount.toLocaleString()}` : `-₹${amount.toLocaleString()}`}
+                                                            </p>
+                                                            <p className="text-[7px] font-black uppercase text-muted-foreground/30 tracking-tight">
+                                                                Balance: ₹{(session.runningBalance || 0).toLocaleString()}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Tactical Sidebar Area */}
+                <div className="lg:col-span-4 space-y-4">
+                    {/* Performance Pulse - Now smaller and sidebar based */}
+                    <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
+                        <CardHeader className="p-5 pb-2">
+                            <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><TrendingUp className="size-3.5" /> Performance Pulse</CardTitle>
+                            <CardDescription className="text-[8px] font-bold uppercase tracking-widest opacity-60">Follower growth vs spend trends</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-5 h-[200px]">
+                            <ChartContainer config={performanceChartConfig} className="h-full w-full">
+                                <AreaChart data={chartData}>
+                                    <defs>
+                                        <linearGradient id="colorReach" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/></linearGradient>
+                                        <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/><stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/></linearGradient>
+                                    </defs>
+                                    <CartesianGrid vertical={false} stroke="#F1F5F9" />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-[7px] font-black uppercase fill-muted-foreground/40" tickMargin={8} />
+                                    <YAxis hide />
+                                    <ChartTooltip content={<ChartTooltipContent />} />
+                                    <Area type="linear" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#colorReach)" />
+                                    <Area type="linear" dataKey="spend" stroke="#f43f5e" strokeWidth={1} fill="url(#colorSpend)" strokeDasharray="3 3" />
+                                </AreaChart>
+                            </ChartContainer>
+                        </CardContent>
+                    </Card>
+
+                    {/* Mission Deadlines */}
+                    <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white p-5 overflow-hidden flex flex-col">
+                        <CardHeader className="p-0 mb-4">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Timer className="size-3.5" /> Deadlines</CardTitle>
+                                <Badge className="bg-rose-500 text-white rounded-none font-black text-[7px] border-none h-4 px-1.5">{deadlines.filter(d => d.status === 'Overdue').length} ALERT</Badge>
+                            </div>
+                        </CardHeader>
+                        <ScrollArea className="h-[200px]">
+                            <div className="space-y-2">
                                 {deadlines.map((d, i) => (
-                                    <div key={i} className="p-4 rounded-2xl bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white hover:shadow-md transition-all flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className={cn("p-2 rounded-xl text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
-                                                <Calendar className="size-3.5" />
+                                    <div key={i} className="p-3 rounded-xl bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white transition-all flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn("p-1.5 rounded-lg text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
+                                                <Calendar className="size-3" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-xs font-black uppercase truncate max-w-[120px]">{d.title}</p>
-                                                <p className="text-[9px] font-bold text-muted-foreground uppercase">{format(d.end, 'MMM dd, yyyy')}</p>
+                                                <p className="text-[10px] font-black uppercase truncate max-w-[100px]">{d.title}</p>
+                                                <p className="text-[8px] font-bold text-muted-foreground uppercase">{format(d.end, 'MMM dd')}</p>
                                             </div>
                                         </div>
-                                        <Badge variant="outline" className={cn("text-[8px] font-black uppercase h-5 px-2 rounded-lg border-none", d.status === 'Overdue' ? "bg-rose-100 text-rose-700" : "bg-sky-100 text-sky-700")}>{d.status}</Badge>
+                                        <Badge variant="outline" className={cn("text-[7px] font-black uppercase h-4 px-1.5 rounded-md border-none", d.status === 'Overdue' ? "bg-rose-100 text-rose-700" : "bg-sky-100 text-sky-700")}>{d.status}</Badge>
                                     </div>
                                 ))}
                             </div>
                         </ScrollArea>
                     </Card>
 
-                    <div className="space-y-4">
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Ad Platforms</h4>
+                    {/* Ad Platform Spend Snapshot */}
+                    <div className="space-y-3">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Platform Spends</h4>
                         {adPlatforms.map(plat => {
                             const platSpend = latestSession?.adSpends?.find(s => s.platformId === plat.id)?.amount || 0;
                             const Icon = PLATFORM_ICONS[plat.name] || Globe;
                             return (
-                                <Card key={plat.id} className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white p-5 group hover:shadow-md transition-all">
+                                <Card key={plat.id} className="border-none ring-1 ring-border/50 shadow-sm rounded-xl bg-white p-4 group hover:shadow-md transition-all">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 rounded-xl bg-muted/5 border border-border group-hover:border-primary/20 transition-colors">
-                                                <Icon className="size-5" style={{ color: plat.color }} />
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-muted/5 border border-border group-hover:border-primary/20 transition-colors">
+                                                <Icon className="size-4" style={{ color: plat.color }} />
                                             </div>
-                                            <p className="font-black text-xs uppercase tracking-tight">{plat.name}</p>
+                                            <p className="font-black text-[10px] uppercase tracking-tight">{plat.name}</p>
                                         </div>
-                                        <p className="text-lg font-black tracking-tight text-rose-600">-₹{platSpend.toLocaleString()}</p>
+                                        <p className="text-sm font-black tracking-tight text-rose-600">-₹{platSpend.toLocaleString()}</p>
                                     </div>
                                 </Card>
                             );
@@ -573,153 +723,12 @@ export default function MarketingManagementPage() {
                 </div>
             </div>
 
-            <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden">
-                <CardHeader className="bg-muted/5 border-b p-6 flex items-center justify-between">
-                    <div className="space-y-1">
-                        <CardTitle className="text-base font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                            <Users className="size-4" /> Social Media Growth
-                        </CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Consolidated brand growth matrix</CardDescription>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader className="bg-muted/10 border-b">
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 px-8 min-w-[240px]">Company & Branding</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-6">Social Platform Intelligence</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {brands.map(brand => (
-                                <TableRow key={brand.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
-                                    <TableCell className="py-8 px-8 align-top">
-                                        <div className="flex items-center gap-5">
-                                            <div className={cn("size-14 rounded-2xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br", brand.gradient)}>
-                                                <span className="text-xl font-black">{brand.name[0]}</span>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <span className="font-black text-lg uppercase tracking-tighter text-slate-800">{brand.name}</span>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                    <p className="text-[10px] font-black text-muted-foreground uppercase opacity-60 tracking-widest">Active Channels: {brand.channels.length}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="py-8 px-8">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {brand.channels.map(channel => {
-                                                const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
-                                                const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
-                                                
-                                                const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
-                                                const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
-                                                
-                                                const Icon = PLATFORM_ICONS[channel] || Globe;
-
-                                                return (
-                                                    <div key={channel} className="p-5 rounded-2xl bg-white border ring-1 ring-border/50 shadow-sm group/item hover:ring-primary/40 hover:shadow-md transition-all space-y-4">
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-3">
-                                                                <Icon className="size-4 text-primary opacity-60" />
-                                                                <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">{channel}</span>
-                                                            </div>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-20 group-hover/item:opacity-100 hover:bg-primary/5 hover:text-primary transition-all rounded-lg" asChild>
-                                                                <Link href="#" target="_blank">
-                                                                    <ExternalLink className="size-3" />
-                                                                </Link>
-                                                            </Button>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div className="space-y-1">
-                                                                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest opacity-40">Followers</p>
-                                                                <p className="text-sm font-black tabular-nums">{(log?.count || 0).toLocaleString()}</p>
-                                                                {followerDiff > 0 && <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">({followerDiff}+)</span>}
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest opacity-40">Total Posts</p>
-                                                                <p className="text-sm font-black tabular-nums">{(log?.posts || 0).toLocaleString()}</p>
-                                                                {postDiff > 0 && <span className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter">({postDiff}+)</span>}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
-            <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden flex flex-col">
-                <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><History className="size-4" /> History</CardTitle>
-                    <Badge className="bg-emerald-100 text-emerald-700 rounded-lg font-black text-[8px] border-none px-3 py-1">TOTAL AUDITED</Badge>
-                </CardHeader>
-                <CardContent className="p-0 flex-1">
-                    <ScrollArea className="h-[500px]">
-                        {sessionsLoading ? (
-                            <div className="p-20 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-widest">Scanning records...</div>
-                        ) : sessions.length === 0 ? (
-                            <div className="p-20 text-center text-muted-foreground italic uppercase font-black text-[10px]">No activity found.</div>
-                        ) : (
-                            <div className="divide-y divide-border/50">
-                                {sessions.map((session, index) => {
-                                    const date = session.date?.toDate?.() || new Date();
-                                    const prev = sessions[index - 1];
-                                    const showMonth = !prev || !isSameMonth(date, prev.date?.toDate?.() || new Date());
-                                    const isTopup = session.type === 'topup';
-                                    const totalSpend = Array.isArray(session.adSpends) ? session.adSpends.reduce((a, c) => a + (c.amount || 0), 0) : 0;
-                                    const amount = isTopup ? (session.topupAmount || 0) : totalSpend;
-
-                                    return (
-                                        <div key={session.id}>
-                                            {showMonth && (
-                                                <div className="bg-muted/30 px-6 py-3 sticky top-0 z-10 backdrop-blur-sm border-b">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{format(date, 'MMMM yyyy')}</span>
-                                                </div>
-                                            )}
-                                            <div className="p-6 hover:bg-muted/10 transition-all group flex items-center justify-between cursor-pointer" onClick={() => setSelectedAuditEntry(session)}>
-                                                <div className="flex items-center gap-4">
-                                                    <div className={cn("size-10 rounded-2xl flex items-center justify-center shadow-sm", isTopup ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
-                                                        {isTopup ? <Wallet className="size-5" /> : <Activity className="size-5" />}
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-black text-xs uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Spend"}</span>
-                                                            <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">{format(date, 'hh:mm a')}</span>
-                                                        </div>
-                                                        <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">By {session.auditedByName}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right space-y-1">
-                                                    <p className={cn("text-sm font-black tabular-nums", isTopup ? "text-emerald-600" : "text-rose-600")}>
-                                                        {isTopup ? `+₹${amount.toLocaleString()}` : `-₹${amount.toLocaleString()}`}
-                                                    </p>
-                                                    <p className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-tight">
-                                                        Balance: ₹{(session.runningBalance || 0).toLocaleString()}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-
             {/* Top-up Dialog */}
             <Dialog open={isTopupOpen} onOpenChange={setIsTopupOpen}>
                 <DialogContent className="rounded-3xl border-none shadow-2xl p-8 sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter">Add Budget</DialogTitle>
-                        <DialogDescription className="text-xs font-bold uppercase opacity-60">Add money to the marketing budget</DialogDescription>
+                        <DialogDescription className="text-xs font-bold uppercase opacity-60">Inject capital into the marketing wallet</DialogDescription>
                     </DialogHeader>
                     <div className="py-8 space-y-6">
                         <div className="space-y-2">
@@ -807,7 +816,7 @@ export default function MarketingManagementPage() {
                         </div>
                     </ScrollArea>
                     <div className="p-8 border-t bg-white flex gap-4">
-                        <Button variant="outline" className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => setSelectedAuditEntry(null)}>Close</Button>
+                        <Button variant="outline" className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => setSelectedAuditEntry(null)}>Just Close</Button>
                         <Button variant="destructive" className="rounded-xl h-12 px-6 font-black uppercase text-[10px]" onClick={() => { if(confirm("Confirm record delete?")) { deleteDocumentNonBlocking(doc(firestore, 'marketing_sessions', selectedAuditEntry!.id)); setSelectedAuditEntry(null); } }}><Trash2 className="size-4" /></Button>
                     </div>
                 </DialogContent>
@@ -820,16 +829,16 @@ export default function MarketingManagementPage() {
 
 function MetricCard({ label, value, sub, icon: Icon, color }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-4 space-y-2 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-lg">
             <div className="flex justify-between items-start">
-                <div className={cn("p-3 rounded-xl shadow-sm transition-transform group-hover:scale-110", color, "bg-muted/10")}>
-                    <Icon className="size-5" />
+                <div className={cn("p-2 rounded-lg shadow-sm transition-transform group-hover:scale-110", color, "bg-muted/10")}>
+                    <Icon className="size-3.5" />
                 </div>
             </div>
             <div>
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1.5">{label}</p>
-                <h3 className="text-3xl font-black tracking-tighter leading-none mb-2">{value}</h3>
-                <p className="text-[9px] font-bold uppercase text-muted-foreground/60 tracking-tight">{sub}</p>
+                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest mb-0.5">{label}</p>
+                <h3 className="text-xl font-black tracking-tighter leading-none mb-1">{value}</h3>
+                <p className="text-[7px] font-bold uppercase text-muted-foreground/60 tracking-tight">{sub}</p>
             </div>
         </Card>
     );
@@ -848,6 +857,15 @@ function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
                 </div>
                 <p className="text-[9px] font-bold text-slate-400 uppercase truncate mt-0.5">{desc}</p>
             </div>
+        </div>
+    );
+}
+
+function InfoRow({ label, value }: { label: string, value: string }) {
+    return (
+        <div className="flex items-center justify-between py-3 border-b border-dashed border-border/50 last:border-none group gap-4">
+            <span className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest shrink-0">{label}</span>
+            <span className="text-sm font-bold text-foreground/80 uppercase text-right leading-tight">{value}</span>
         </div>
     );
 }
