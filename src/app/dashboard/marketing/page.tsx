@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, isSameMonth, addDays } from 'date-fns';
+import { format, startOfMonth, isSameMonth, addDays, isAfter } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -225,7 +225,7 @@ export default function MarketingManagementPage() {
             .map(s => ({
                 date: format(s.date?.toDate() || new Date(), 'MMM dd'),
                 reach: Array.isArray(s.socialLogs) ? s.socialLogs.reduce((acc, curr) => acc + (curr.count || 0), 0) : 0,
-                spend: Array.isArray(s.adSpends) ? s.adSpends.reduce((acc, curr) => acc + (curr.amount || 0), 0) : 0
+                spend: Array.isArray(s.adSpends) ? s.adSpends.reduce((a, c) => a + (c.amount || 0), 0) : 0
             }));
     }, [sessions]);
 
@@ -233,11 +233,21 @@ export default function MarketingManagementPage() {
     const lastUpdateStr = lastUpdateDate ? format(lastUpdateDate.toDate(), 'MMM dd, yyyy') : 'N/A';
 
     // Placeholder deadlines
-    const deadlines = [
+    const deadlines = React.useMemo(() => [
         { title: 'Meta Brand Awareness', end: addDays(new Date(), 2), status: 'Active' },
         { title: 'Google Q2 Search Hub', end: addDays(new Date(), 5), status: 'Review' },
         { title: 'LinkedIn Recruitment Drive', end: addDays(new Date(), -1), status: 'Overdue' }
-    ];
+    ], []);
+
+    const upcomingDeadline = React.useMemo(() => {
+        const futureOnly = deadlines.filter(d => isAfter(d.end, new Date()));
+        if (futureOnly.length === 0) return null;
+        return futureOnly.sort((a, b) => a.end.getTime() - b.end.getTime())[0];
+    }, [deadlines]);
+
+    const upcomingDeadlineStr = upcomingDeadline 
+        ? `Next end: ${format(upcomingDeadline.end, 'MMM dd')}` 
+        : 'No upcoming ends';
 
     // Populate form with pre-filled previous snapshot values
     React.useEffect(() => {
@@ -546,7 +556,7 @@ export default function MarketingManagementPage() {
 
             {/* Metric Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <MetricCard label="Global Reach" value={formatCompact(totalFollowers)} sub={`Updated on: ${lastUpdateStr}`} icon={Users} color="text-primary" />
+                <MetricCard label="Campaign Deadlines" value={deadlines.length} sub={upcomingDeadlineStr} icon={Timer} color="text-amber-600" />
                 <MetricCard label="Total Budget" value={`₹${(currentBalance + mtdSpend).toLocaleString()}`} sub={`Updated on: ${lastUpdateStr}`} icon={Wallet} color="text-indigo-600" />
                 <MetricCard label="Money Spent" value={`₹${mtdSpend.toLocaleString()}`} sub={`Updated on: ${lastUpdateStr}`} icon={PieChart} color="text-rose-600" />
                 <MetricCard label="Budget Left" value={`₹${currentBalance.toLocaleString()}`} sub={`Updated on: ${lastUpdateStr}`} icon={ShieldCheck} color="text-emerald-600" />
