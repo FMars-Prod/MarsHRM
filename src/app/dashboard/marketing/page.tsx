@@ -154,7 +154,6 @@ export default function MarketingManagementPage() {
     // Memoize registry data to prevent re-renders
     const brands = React.useMemo(() => registry?.brands || DEFAULT_BRANDS, [registry]);
     const adPlatforms = React.useMemo(() => registry?.adPlatforms || DEFAULT_AD_PLATFORMS, [registry]);
-    const baseBudget = React.useMemo(() => registry?.monthlyBudget || 0, [registry]);
 
     // Data Queries
     const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'marketing_sessions'), orderBy('date', 'desc'), limit(200)), [firestore]);
@@ -717,7 +716,7 @@ export default function MarketingManagementPage() {
                         </div>
                     </ScrollArea>
                     <div className="p-8 border-t bg-white flex gap-4">
-                        <Button variant="outline" className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => setSelectedAuditEntry(null)}>Close Intelligence</Button>
+                        <Button variant="outline" className="flex-1 rounded-xl h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => setSelectedAuditEntry(null)}>Close</Button>
                         <Button variant="destructive" className="rounded-xl h-12 px-6 font-black uppercase text-[10px]" onClick={() => { if(confirm("Confirm record purge?")) { deleteDocumentNonBlocking(doc(firestore, 'marketing_sessions', selectedAuditEntry!.id)); setSelectedAuditEntry(null); } }}><Trash2 className="size-4" /></Button>
                     </div>
                 </DialogContent>
