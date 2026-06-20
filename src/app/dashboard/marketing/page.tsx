@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp, where, limit } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, where, limit, Timestamp } from 'firebase/firestore';
 import { 
     Plus, Trash2, ExternalLink, ShieldCheck, 
     Users, Zap, DollarSign, 
@@ -214,11 +214,6 @@ export default function MarketingManagementPage() {
             .reduce((acc, curr) => acc + (Array.isArray(curr.adSpends) ? curr.adSpends.reduce((a, c) => a + (c.amount || 0), 0) : 0), 0);
     }, [sessions]);
 
-    const totalFollowers = React.useMemo(() => {
-        if (!latestSession?.socialLogs) return 0;
-        return latestSession.socialLogs.reduce((acc, curr) => acc + (curr.count || 0), 0);
-    }, [latestSession]);
-
     const chartData = React.useMemo(() => {
         if (!sessions || sessions.length === 0) return [];
         return [...sessions]
@@ -330,8 +325,11 @@ export default function MarketingManagementPage() {
 
     const handleAddBudget = async () => {
         if (!user || !topupValue || !userData) return;
+        const amount = parseFloat(topupValue);
+        if (amount <= 0) return;
+
         const payload = {
-            type: 'topup', topupAmount: parseFloat(topupValue),
+            type: 'topup', topupAmount: amount,
             date: serverTimestamp(), auditedBy: user.uid, auditedByName: `${userData.firstName} ${userData.lastName}`
         };
         addDocumentNonBlocking(collection(firestore, 'marketing_sessions'), payload);
@@ -493,19 +491,19 @@ export default function MarketingManagementPage() {
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         <div className="space-y-1">
                                                                             <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Snapshot)</p>
-                                                                            <Input type="number" value={log?.count || 0} className="h-10 rounded-lg font-black" onChange={e => {
+                                                                            <Input type="number" min="0" value={log?.count || 0} className="h-10 rounded-lg font-black" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
-                                                                                if (idx > -1) logs[idx].count = parseInt(e.target.value) || 0;
+                                                                                if (idx > -1) logs[idx].count = Math.max(0, parseInt(e.target.value) || 0);
                                                                                 setFormData({ ...formData, socialLogs: logs });
                                                                             }} />
                                                                         </div>
                                                                         <div className="space-y-1">
                                                                             <p className="text-[8px] font-bold text-emerald-600 uppercase opacity-60">New Posts Today (+)</p>
-                                                                            <Input type="number" value={log?.newPosts || 0} className="h-10 rounded-lg font-black border-emerald-200" onChange={e => {
+                                                                            <Input type="number" min="0" value={log?.newPosts || 0} className="h-10 rounded-lg font-black border-emerald-200" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
-                                                                                if (idx > -1) logs[idx].newPosts = parseInt(e.target.value) || 0;
+                                                                                if (idx > -1) logs[idx].newPosts = Math.max(0, parseInt(e.target.value) || 0);
                                                                                 setFormData({ ...formData, socialLogs: logs });
                                                                             }} />
                                                                         </div>
@@ -559,11 +557,12 @@ export default function MarketingManagementPage() {
 
                                                             <div className="space-y-1">
                                                                 <Label className="text-[9px] font-black uppercase text-muted-foreground">Money Spent (₹)</Label>
-                                                                <Input type="number" value={spend?.amount || 0} className="h-10 rounded-lg font-black text-primary" onChange={e => {
+                                                                <Input type="number" min="0" value={spend?.amount || 0} className="h-10 rounded-lg font-black text-primary" onChange={e => {
                                                                     const spends = [...(formData.adSpends || [])];
                                                                     const idx = spends.findIndex((s: any) => s.platformId === plat.id);
-                                                                    if (idx > -1) spends[idx].amount = parseInt(e.target.value) || 0;
-                                                                    else spends.push({ platformId: plat.id, amount: parseInt(e.target.value) || 0, reason: '' });
+                                                                    const val = Math.max(0, parseInt(e.target.value) || 0);
+                                                                    if (idx > -1) spends[idx].amount = val;
+                                                                    else spends.push({ platformId: plat.id, amount: val, reason: '' });
                                                                     setFormData({ ...formData, adSpends: spends });
                                                                 }} />
                                                             </div>
@@ -754,7 +753,7 @@ export default function MarketingManagementPage() {
                                                             </div>
                                                             <div className="space-y-0.5">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="font-black text-11px uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Spend"}</span>
+                                                                    <span className="font-black text-[11px] uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Spend"}</span>
                                                                     <span className="text-[7px] font-bold text-muted-foreground/40 uppercase">{format(date, 'hh:mm a')}</span>
                                                                 </div>
                                                                 <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">By {session.auditedByName}</p>
@@ -872,12 +871,13 @@ export default function MarketingManagementPage() {
                             <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><IndianRupee className="size-3"/> Amount (₹)</Label>
                             <Input 
                                 type="number" 
+                                min="0"
                                 value={topupValue}
                                 onChange={e => setTopupValue(e.target.value)}
                                 placeholder="0" 
                                 className="h-12 rounded-2xl font-black text-xl border-none ring-1 ring-border bg-muted/20"
                             />
-                            {topupValue && <p className="text-[8px] font-black uppercase text-emerald-600 italic">"{numberToWords(parseFloat(topupValue))}"</p>}
+                            {topupValue && <p className="text-[8px] font-black uppercase text-emerald-600 italic">"{numberToWords(Math.max(0, parseFloat(topupValue)))}"</p>}
                         </div>
                     </div>
                     <DialogFooter>
