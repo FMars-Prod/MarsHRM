@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -102,7 +103,7 @@ type MarketingSession = {
     adSpends?: SpendLog[];
     type: 'spend' | 'topup';
     topupAmount?: number;
-    runningBalance?: number; // Calculated field
+    runningBalance?: number; 
 };
 
 // --- CONSTANTS ---
@@ -208,8 +209,8 @@ export default function MarketingManagementPage() {
     const currentBalance = React.useMemo(() => sessions[0]?.runningBalance || 0, [sessions]);
 
     const chartData = React.useMemo(() => {
-        if (!sessions) return [];
-        return [...sessions]
+        if (!sessions || sessions.length === 0) return [];
+        const filtered = [...sessions]
             .filter(s => s.type === 'spend')
             .reverse()
             .slice(-14)
@@ -218,6 +219,7 @@ export default function MarketingManagementPage() {
                 reach: Array.isArray(s.socialLogs) ? s.socialLogs.reduce((acc, curr) => acc + (curr.count || 0), 0) : 0,
                 spend: Array.isArray(s.adSpends) ? s.adSpends.reduce((acc, curr) => acc + (curr.amount || 0), 0) : 0
             }));
+        return filtered;
     }, [sessions]);
 
     // Populate form from latest session when opening
@@ -499,8 +501,8 @@ export default function MarketingManagementPage() {
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-[10px] font-black uppercase fill-muted-foreground" tickMargin={10} />
                                 <YAxis axisLine={false} tickLine={false} className="text-[10px] font-black fill-muted-foreground" tickFormatter={v => `₹${v/1000}K`} />
                                 <ChartTooltip content={<ChartTooltipContent />} />
-                                <Area type="monotone" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={4} fill="url(#colorReach)" />
-                                <Area type="monotone" dataKey="spend" stroke="#f43f5e" strokeWidth={2} fill="url(#colorSpend)" strokeDasharray="4 4" />
+                                <Area type="linear" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={4} fill="url(#colorReach)" />
+                                <Area type="linear" dataKey="spend" stroke="#f43f5e" strokeWidth={2} fill="url(#colorSpend)" strokeDasharray="4 4" />
                             </AreaChart>
                         </ChartContainer>
                     </CardContent>
@@ -520,7 +522,6 @@ export default function MarketingManagementPage() {
                                         </div>
                                         <div className="space-y-0.5">
                                             <p className="font-black text-xs uppercase tracking-tight">{plat.name}</p>
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Authorized Sector</p>
                                         </div>
                                     </div>
                                     <div className="text-right">
