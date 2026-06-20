@@ -9,14 +9,13 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@
 import { collection, query, orderBy, doc, serverTimestamp, where, limit, getDocs } from 'firebase/firestore';
 import { 
     Plus, Trash2, ExternalLink, ShieldCheck, 
-    BarChart3, Users, Zap, DollarSign, 
-    Globe, LayoutGrid, CheckCircle2, 
-    MoreHorizontal, Info, ArrowUpRight, 
+    Users, Zap, DollarSign, 
+    Globe, Activity, Wallet, PieChart,
+    ChevronRight, History, PlusSquare,
+    Calendar, Timer, Link as LinkIcon,
     Instagram, Linkedin, Facebook, Twitter, 
-    Youtube, Briefcase, Settings2, PlusCircle, 
-    BadgeCheck, X, Activity, Clock, Wallet, PieChart,
-    ChevronRight, ArrowUp, ArrowDown, History, PlusSquare,
-    AlertCircle, Calendar, Timer, Link as LinkIcon
+    Youtube, Settings2, PlusCircle, 
+    BadgeCheck, X, Loader2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -270,7 +269,7 @@ export default function MarketingManagementPage() {
 
     return (
         <div className="space-y-6 animate-fade-in-up pb-20 max-w-[1600px] mx-auto font-jakarta text-slate-900">
-            <PageHeader title="Marketing Intelligence Hub" description="Cross-brand growth velocity and financial audit terminal.">
+            <PageHeader title="Marketing Manager" description="Track your company growth and advertising spend.">
                 <div className="flex gap-2">
                     <Button onClick={() => setIsTopupOpen(true)} variant="outline" className="rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm border-border bg-emerald-50 text-emerald-700">
                         <PlusSquare className="size-3.5 mr-2" /> Add Budget
@@ -283,7 +282,7 @@ export default function MarketingManagementPage() {
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl rounded-3xl border-none shadow-2xl p-0 h-[85vh] flex flex-col">
                             <DialogHeader className="p-8 border-b shrink-0">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Registry Control</DialogTitle>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Settings</DialogTitle>
                                 <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Manage brands and ad platforms</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
@@ -361,18 +360,18 @@ export default function MarketingManagementPage() {
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
                             <Button className="rounded-xl h-10 shadow-lg font-black uppercase text-[10px] tracking-widest px-8 shadow-primary/20">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Update Data
+                                <PlusCircle className="mr-2 h-4 w-4" /> Update Today's Data
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl rounded-3xl border-none shadow-2xl p-0 overflow-hidden h-[90vh] flex flex-col">
                             <DialogHeader className="p-8 border-b shrink-0 bg-white">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily Intelligence</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Additive activity tracking</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily Update</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Add activity tracking</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
                                 <div className="p-8 space-y-12">
                                     <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4"/> Social Matrix</h4>
+                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4"/> Social Media</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             {brands.map(brand => (
                                                 <div key={brand.id} className="space-y-4 p-6 bg-white border rounded-2xl shadow-sm">
@@ -385,7 +384,7 @@ export default function MarketingManagementPage() {
                                                                     <Label className="text-[9px] font-black uppercase text-muted-foreground">{channel}</Label>
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         <div className="space-y-1">
-                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Snapshot)</p>
+                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Total)</p>
                                                                             <Input type="number" value={log?.count || 0} className="h-10 rounded-lg font-black" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
@@ -394,7 +393,7 @@ export default function MarketingManagementPage() {
                                                                             }} />
                                                                         </div>
                                                                         <div className="space-y-1">
-                                                                            <p className="text-[8px] font-bold text-emerald-600 uppercase opacity-60">New Posts (+)</p>
+                                                                            <p className="text-[8px] font-bold text-emerald-600 uppercase opacity-60">New Posts Today (+)</p>
                                                                             <Input type="number" value={log?.newPosts || 0} className="h-10 rounded-lg font-black border-emerald-200" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
@@ -421,7 +420,7 @@ export default function MarketingManagementPage() {
                                                         <p className="font-black text-[11px] uppercase tracking-widest">{plat.name}</p>
                                                         <div className="space-y-4">
                                                             <div className="space-y-1">
-                                                                <Label className="text-[9px] font-black uppercase text-muted-foreground">Spend (₹)</Label>
+                                                                <Label className="text-[9px] font-black uppercase text-muted-foreground">Money Spent (₹)</Label>
                                                                 <Input type="number" value={spend?.amount || 0} className="h-10 rounded-lg font-black text-primary" onChange={e => {
                                                                     const spends = [...(formData.adSpends || [])];
                                                                     const idx = spends.findIndex((s: any) => s.platformId === plat.id);
@@ -431,7 +430,7 @@ export default function MarketingManagementPage() {
                                                                 }} />
                                                             </div>
                                                             <div className="space-y-1">
-                                                                <Label className="text-[9px] font-black uppercase text-muted-foreground">Reason</Label>
+                                                                <Label className="text-[9px] font-black uppercase text-muted-foreground">Reason for spend</Label>
                                                                 <Textarea value={spend?.reason || ''} className="rounded-lg min-h-[80px]" onChange={e => {
                                                                     const spends = [...(formData.adSpends || [])];
                                                                     const idx = spends.findIndex((s: any) => s.platformId === plat.id);
@@ -449,7 +448,7 @@ export default function MarketingManagementPage() {
                                 </div>
                             </ScrollArea>
                             <div className="p-8 border-t bg-white shrink-0">
-                                <Button onClick={handleSaveSession} className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Update</Button>
+                                <Button onClick={handleSaveSession} className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20">Save Update</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
@@ -458,17 +457,17 @@ export default function MarketingManagementPage() {
 
             {/* Metric Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MetricCard label="Global Fleet Reach" value={totalFollowers.toLocaleString()} sub="Aggregated Followers" icon={Users} color="text-primary" />
-                <MetricCard label="Monthly Budget" value={`₹${(currentBalance + mtdSpend).toLocaleString()}`} sub="Fleet Capital Cap" icon={Wallet} color="text-indigo-600" />
-                <MetricCard label="Money Spent" value={`₹${mtdSpend.toLocaleString()}`} sub="Ad Expenditure MTD" icon={PieChart} color="text-rose-600" />
-                <MetricCard label="Budget Left" value={`₹${currentBalance.toLocaleString()}`} sub="Available Funds" icon={ShieldCheck} color="text-emerald-600" />
+                <MetricCard label="Total Followers" value={totalFollowers.toLocaleString()} sub="Fleet Reach" icon={Users} color="text-primary" />
+                <MetricCard label="Total Budget" value={`₹${(currentBalance + mtdSpend).toLocaleString()}`} sub="Monthly Budget" icon={Wallet} color="text-indigo-600" />
+                <MetricCard label="Money Spent" value={`₹${mtdSpend.toLocaleString()}`} sub="Money Spent" icon={PieChart} color="text-rose-600" />
+                <MetricCard label="Budget Left" value={`₹${currentBalance.toLocaleString()}`} sub="Budget Left" icon={ShieldCheck} color="text-emerald-600" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <Card className="lg:col-span-8 border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden flex flex-col">
                     <CardHeader className="p-8 pb-2">
-                        <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Growth & Spend</CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">High-fidelity reach vs financial velocity</CardDescription>
+                        <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Growth & Spend Chart</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Brand reach vs ad spend</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8 h-[400px]">
                         <ChartContainer config={performanceChartConfig} className="h-full w-full">
@@ -492,7 +491,7 @@ export default function MarketingManagementPage() {
                     <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-3xl bg-white p-6 overflow-hidden flex flex-col">
                         <CardHeader className="p-0 mb-6">
                             <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Timer className="size-4" /> Mission Deadlines</CardTitle>
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Timer className="size-4" /> Deadlines</CardTitle>
                                 <Badge className="bg-rose-500 text-white rounded-none font-black text-[8px] border-none">{deadlines.filter(d => d.status === 'Overdue').length} AT RISK</Badge>
                             </div>
                         </CardHeader>
@@ -540,21 +539,28 @@ export default function MarketingManagementPage() {
             </div>
 
             <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden">
-                <CardHeader className="bg-muted/5 border-b p-6"><CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4" /> Social Media Growth Matrix</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/5 border-b p-6 flex items-center justify-between">
+                    <div className="space-y-1">
+                        <CardTitle className="text-base font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                            <Users className="size-4" /> Social Media Growth
+                        </CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Multi-brand performance matrix</CardDescription>
+                    </div>
+                </CardHeader>
                 <CardContent className="p-0">
                     <Table>
-                        <TableHeader className="bg-muted/10">
-                            <TableRow>
-                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-8">Company & Channel</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Followers</TableHead>
-                                <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Activity (Posts)</TableHead>
-                                <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-4 px-8">Command</TableHead>
+                        <TableHeader className="bg-muted/10 border-b">
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-5 px-8 min-w-[240px]">Platform & Brand</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Follower Hub</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Content Hub</TableHead>
+                                <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-5 px-8">Tactical Access</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {brands.map(brand => (
                                 <React.Fragment key={brand.id}>
-                                    {brand.channels.map(channel => {
+                                    {brand.channels.map((channel, cIdx) => {
                                         const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
                                         const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
                                         
@@ -565,32 +571,43 @@ export default function MarketingManagementPage() {
 
                                         return (
                                             <TableRow key={`${brand.id}-${channel}`} className="border-border/50 group hover:bg-primary/5 transition-colors">
-                                                <TableCell className="py-5 px-8">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={cn("size-10 rounded-2xl flex items-center justify-center text-white text-[12px] font-black shadow-sm bg-gradient-to-br", brand.gradient)}>
-                                                            <Icon className="size-4" />
+                                                <TableCell className="py-6 px-8">
+                                                    <div className="flex items-center gap-5">
+                                                        <div className={cn("size-12 rounded-2xl flex items-center justify-center text-white shadow-sm bg-gradient-to-br", brand.gradient)}>
+                                                            <Icon className="size-5" />
                                                         </div>
-                                                        <div className="space-y-0.5">
-                                                            <span className="font-black text-xs uppercase tracking-tight">{brand.name}</span>
-                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{channel}</p>
+                                                        <div className="space-y-1">
+                                                            <span className="font-black text-sm uppercase tracking-tighter text-slate-800">{brand.name}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="size-1.5 rounded-full bg-primary" />
+                                                                <p className="text-[10px] font-black text-muted-foreground uppercase opacity-60 tracking-widest">{channel}</p>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <div className="flex flex-col items-center">
-                                                        <span className="text-sm font-black tabular-nums">{(log?.count || 0).toLocaleString()}</span>
-                                                        {followerDiff > 0 && <span className="text-[8px] font-black text-emerald-600 uppercase mt-1">({followerDiff}+)</span>}
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <span className="text-lg font-black tabular-nums text-slate-900">{(log?.count || 0).toLocaleString()}</span>
+                                                        {followerDiff > 0 && (
+                                                            <Badge variant="outline" className="h-5 px-2 rounded-full bg-emerald-50 text-emerald-600 border-none font-black text-[9px] uppercase">
+                                                                (+{followerDiff})
+                                                            </Badge>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <div className="flex flex-col items-center">
-                                                        <span className="text-sm font-black tabular-nums">{(log?.posts || 0).toLocaleString()}</span>
-                                                        {postDiff > 0 && <span className="text-[8px] font-black text-emerald-600 uppercase mt-1">({postDiff}+)</span>}
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <span className="text-lg font-black tabular-nums text-slate-900">{(log?.posts || 0).toLocaleString()}</span>
+                                                        {postDiff > 0 && (
+                                                            <Badge variant="outline" className="h-5 px-2 rounded-full bg-emerald-50 text-emerald-600 border-none font-black text-[9px] uppercase">
+                                                                (+{postDiff})
+                                                            </Badge>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right px-8">
-                                                    <Button variant="outline" size="sm" className="rounded-xl h-8 font-black uppercase text-[9px] tracking-widest px-4 group-hover:bg-primary group-hover:text-white transition-all">
-                                                        Open <ExternalLink className="size-2.5 ml-2 opacity-40 group-hover:opacity-100" />
+                                                    <Button variant="outline" size="sm" className="rounded-xl h-10 font-black uppercase text-[10px] tracking-widest px-6 bg-white shadow-sm border-none ring-1 ring-border group-hover:ring-primary/40 group-hover:text-primary transition-all">
+                                                        Visit Page <ExternalLink className="size-3.5 ml-2 opacity-40 group-hover:opacity-100" />
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
