@@ -15,7 +15,8 @@ import {
     Instagram, Linkedin, Facebook, Twitter, 
     Youtube, Briefcase, Settings2, PlusCircle, 
     BadgeCheck, X, Activity, Clock, Wallet, PieChart,
-    ChevronRight, ArrowUp, ArrowDown, History, PlusSquare
+    ChevronRight, ArrowUp, ArrowDown, History, PlusSquare,
+    AlertCircle, Calendar, Timer, Link as LinkIcon
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -23,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, isSameMonth } from 'date-fns';
+import { format, startOfMonth, isSameMonth, isBefore, addDays } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -77,7 +78,7 @@ type AdPlatform = {
     id: string;
     name: string;
     color: string;
-    category: 'Search' | 'Social' | 'Video' | 'Professional';
+    category: 'Search' | 'Social' | 'Video' | 'Professional' | 'Job Board';
 };
 
 type SocialLog = {
@@ -85,7 +86,7 @@ type SocialLog = {
     platformId: string;
     count: number; // Followers
     posts: number; // Cumulative total posts
-    newPosts?: number; // UI temporary field for adding today's count
+    newPosts?: number; // Added today
 };
 
 type SpendLog = {
@@ -110,7 +111,7 @@ type MarketingSession = {
 
 const DEFAULT_BRANDS: Brand[] = [
     { id: 'cognithorz', name: 'Cognithorz', gradient: 'from-sky-400 to-blue-600', channels: ['Instagram', 'LinkedIn', 'Facebook'] },
-    { id: 'fortumars', name: 'FortuMars', gradient: 'from-orange-400 to-blue-900', channels: ['Instagram', 'LinkedIn', 'Facebook'] },
+    { id: 'fortumars', name: 'FortuMars', gradient: 'from-red-600 to-blue-900', channels: ['Instagram', 'LinkedIn', 'Facebook'] },
     { id: 'blackticket', name: 'Black Ticket', gradient: 'from-slate-900 to-rose-600', channels: ['Instagram', 'LinkedIn', 'Facebook'] },
     { id: 'campusconnect', name: 'Campus Connect', gradient: 'from-purple-500 to-indigo-600', channels: ['Instagram', 'LinkedIn', 'Facebook'] }
 ];
@@ -119,7 +120,8 @@ const DEFAULT_AD_PLATFORMS: AdPlatform[] = [
     { id: 'meta', name: 'Meta Ads', color: '#0181F5', category: 'Social' },
     { id: 'google', name: 'Google Ads', color: '#F4B400', category: 'Search' },
     { id: 'linkedin', name: 'LinkedIn Ads', color: '#0077B5', category: 'Professional' },
-    { id: 'youtube', name: 'YouTube Ads', color: '#FF0000', category: 'Video' }
+    { id: 'youtube', name: 'YouTube Ads', color: '#FF0000', category: 'Video' },
+    { id: 'naukri', name: 'Naukri', color: '#FF7F0E', category: 'Job Board' }
 ];
 
 const performanceChartConfig = {
@@ -151,7 +153,7 @@ export default function MarketingManagementPage() {
     const registryRef = useMemoFirebase(() => doc(firestore, 'settings', 'marketing_registry'), [firestore]);
     const { data: registry } = useDoc<any>(registryRef);
 
-    // Memoize registry data to prevent re-renders
+    // Memoize registry data
     const brands = React.useMemo(() => registry?.brands || DEFAULT_BRANDS, [registry]);
     const adPlatforms = React.useMemo(() => registry?.adPlatforms || DEFAULT_AD_PLATFORMS, [registry]);
 
@@ -159,58 +161,43 @@ export default function MarketingManagementPage() {
     const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'marketing_sessions'), orderBy('date', 'desc'), limit(200)), [firestore]);
     const { data: rawSessions, isLoading } = useCollection<MarketingSession>(sessionsQuery);
 
-    // Calculate Running Balance for History
+    // Calculate Running Balance
     const sessions = React.useMemo(() => {
         if (!rawSessions) return [];
-        // Sort ascending to calculate balance
-        const sorted = [...rawSessions].sort((a, b) => {
-            const timeA = a.date?.toDate?.()?.getTime() || 0;
-            const timeB = b.date?.toDate?.()?.getTime() || 0;
-            return timeA - timeB;
-        });
-
+        const sorted = [...rawSessions].sort((a, b) => (a.date?.toDate?.()?.getTime() || 0) - (b.date?.toDate?.()?.getTime() || 0));
         let currentBal = 0;
         const mapped = sorted.map(session => {
-            if (session.type === 'topup') {
-                currentBal += (session.topupAmount || 0);
-            } else {
+            if (session.type === 'topup') currentBal += (session.topupAmount || 0);
+            else {
                 const spend = Array.isArray(session.adSpends) ? session.adSpends.reduce((a, c) => a + (c.amount || 0), 0) : 0;
                 currentBal -= spend;
             }
             return { ...session, runningBalance: currentBal };
         });
-
-        // Return descending for display
         return mapped.reverse();
     }, [rawSessions]);
 
     const latestSession = React.useMemo(() => sessions.find(s => s.type === 'spend'), [sessions]);
+    const prevSession = React.useMemo(() => sessions.filter(s => s.type === 'spend')[1], [sessions]);
 
-    // Total followers aggregation from latest session
-    const totalFollowers = React.useMemo(() => {
-        if (!latestSession?.socialLogs || !Array.isArray(latestSession.socialLogs)) return 0;
-        return latestSession.socialLogs.reduce((acc, curr) => acc + (curr.count || 0), 0);
-    }, [latestSession]);
-
-    // MTD spend calculation (current month only)
+    // Financial Metrics
+    const currentBalance = React.useMemo(() => sessions[0]?.runningBalance || 0, [sessions]);
     const mtdSpend = React.useMemo(() => {
         if (!sessions) return 0;
         const start = startOfMonth(new Date());
         return sessions
             .filter(s => s.type === 'spend' && s.date && s.date.toDate() >= start)
-            .reduce((acc, curr) => {
-                const sessionTotal = Array.isArray(curr.adSpends) 
-                    ? curr.adSpends.reduce((a, c) => a + (c.amount || 0), 0) 
-                    : 0;
-                return acc + sessionTotal;
-            }, 0);
+            .reduce((acc, curr) => acc + (Array.isArray(curr.adSpends) ? curr.adSpends.reduce((a, c) => a + (c.amount || 0), 0) : 0), 0);
     }, [sessions]);
 
-    const currentBalance = React.useMemo(() => sessions[0]?.runningBalance || 0, [sessions]);
+    const totalFollowers = React.useMemo(() => {
+        if (!latestSession?.socialLogs) return 0;
+        return latestSession.socialLogs.reduce((acc, curr) => acc + (curr.count || 0), 0);
+    }, [latestSession]);
 
     const chartData = React.useMemo(() => {
         if (!sessions || sessions.length === 0) return [];
-        const filtered = [...sessions]
+        return [...sessions]
             .filter(s => s.type === 'spend')
             .reverse()
             .slice(-14)
@@ -219,65 +206,46 @@ export default function MarketingManagementPage() {
                 reach: Array.isArray(s.socialLogs) ? s.socialLogs.reduce((acc, curr) => acc + (curr.count || 0), 0) : 0,
                 spend: Array.isArray(s.adSpends) ? s.adSpends.reduce((acc, curr) => acc + (curr.amount || 0), 0) : 0
             }));
-        return filtered;
     }, [sessions]);
 
-    // Populate form from latest session when opening
+    // Placeholder deadlines
+    const deadlines = [
+        { title: 'Meta Brand Awareness', end: addDays(new Date(), 2), status: 'Active' },
+        { title: 'Google Q2 Search Hub', end: addDays(new Date(), 5), status: 'Review' },
+        { title: 'LinkedIn Recruitment Drive', end: addDays(new Date(), -1), status: 'Overdue' }
+    ];
+
+    // Populate form
     React.useEffect(() => {
         if (isAddOpen) {
-            // Pre-calculate social logs for ALL current brand/channel combos
             const initialSocialLogs: any[] = [];
             brands.forEach(brand => {
                 brand.channels.forEach(channel => {
                     const prev = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
-                    initialSocialLogs.push({
-                        brandId: brand.id,
-                        platformId: channel,
-                        count: prev?.count || 0, // Current total followers (pre-filled)
-                        posts: prev?.posts || 0, // Current total posts (to know what to add to)
-                        newPosts: 0 // New field for today's additive increment
-                    });
+                    initialSocialLogs.push({ brandId: brand.id, platformId: channel, count: prev?.count || 0, posts: prev?.posts || 0, newPosts: 0 });
                 });
             });
-
             const initialAdSpends = adPlatforms.map(p => {
                 const prev = latestSession?.adSpends?.find(s => s.platformId === p.id);
                 return { platformId: p.id, amount: 0, reason: prev?.reason || '' };
             });
-
-            setFormData({
-                socialLogs: initialSocialLogs,
-                adSpends: initialAdSpends
-            });
+            setFormData({ socialLogs: initialSocialLogs, adSpends: initialAdSpends });
         }
     }, [isAddOpen, latestSession, adPlatforms, brands]);
 
-    // Handlers
     const handleSaveSession = async () => {
         if (!user) return;
-        
-        // Finalize social logs by adding newPosts to cumulative total posts
         const processedLogs = (formData.socialLogs || []).map((log: any) => ({
-            brandId: log.brandId,
-            platformId: log.platformId,
-            count: log.count,
-            posts: (log.posts || 0) + (log.newPosts || 0) // ADDITIVE logic
+            brandId: log.brandId, platformId: log.platformId, count: log.count, posts: (log.posts || 0) + (log.newPosts || 0)
         }));
-
         const userDoc = await getDocs(query(collection(firestore, 'users'), where('id', '==', user.uid)));
         const userData = userDoc.docs[0]?.data();
-
         const payload = {
-            socialLogs: processedLogs,
-            adSpends: formData.adSpends,
-            type: 'spend',
-            date: serverTimestamp(),
-            auditedBy: user.uid,
-            auditedByName: userData ? `${userData.firstName} ${userData.lastName}` : 'Auditor'
+            socialLogs: processedLogs, adSpends: formData.adSpends, type: 'spend',
+            date: serverTimestamp(), auditedBy: user.uid, auditedByName: userData ? `${userData.firstName} ${userData.lastName}` : 'Auditor'
         };
-
         addDocumentNonBlocking(collection(firestore, 'marketing_sessions'), payload);
-        toast({ title: 'Today\'s Data Recorded' });
+        toast({ title: 'Records Updated' });
         setIsAddOpen(false);
     };
 
@@ -285,17 +253,12 @@ export default function MarketingManagementPage() {
         if (!user || !topupValue) return;
         const userDoc = await getDocs(query(collection(firestore, 'users'), where('id', '==', user.uid)));
         const userData = userDoc.docs[0]?.data();
-
         const payload = {
-            type: 'topup',
-            topupAmount: parseFloat(topupValue),
-            date: serverTimestamp(),
-            auditedBy: user.uid,
-            auditedByName: userData ? `${userData.firstName} ${userData.lastName}` : 'Auditor'
+            type: 'topup', topupAmount: parseFloat(topupValue),
+            date: serverTimestamp(), auditedBy: user.uid, auditedByName: userData ? `${userData.firstName} ${userData.lastName}` : 'Auditor'
         };
-
         addDocumentNonBlocking(collection(firestore, 'marketing_sessions'), payload);
-        toast({ title: 'Budget Added', description: `₹${parseFloat(topupValue).toLocaleString()} added to fleet capital.` });
+        toast({ title: 'Budget Added' });
         setIsTopupOpen(false);
         setTopupValue("");
     };
@@ -307,27 +270,27 @@ export default function MarketingManagementPage() {
 
     return (
         <div className="space-y-6 animate-fade-in-up pb-20 max-w-[1600px] mx-auto font-jakarta text-slate-900">
-            <PageHeader title="Marketing Manager" description="Track your company growth and advertising spend.">
+            <PageHeader title="Marketing Intelligence Hub" description="Cross-brand growth velocity and financial audit terminal.">
                 <div className="flex gap-2">
-                    <Button onClick={() => setIsTopupOpen(true)} variant="outline" className="rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm border-border bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                    <Button onClick={() => setIsTopupOpen(true)} variant="outline" className="rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm border-border bg-emerald-50 text-emerald-700">
                         <PlusSquare className="size-3.5 mr-2" /> Add Budget
                     </Button>
                     <Dialog open={isRegistryOpen} onOpenChange={setIsRegistryOpen}>
                         <DialogTrigger asChild>
-                            <Button variant="outline" className="rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm border-border bg-white hover:bg-muted/50">
+                            <Button variant="outline" className="rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm border-border bg-white">
                                 <Settings2 className="size-3.5 mr-2" /> Settings
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl rounded-3xl border-none shadow-2xl p-0 h-[85vh] flex flex-col">
                             <DialogHeader className="p-8 border-b shrink-0">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Company Registry</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Manage your brands and platforms</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Registry Control</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Manage brands and ad platforms</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
                                 <div className="p-8 space-y-10">
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><BadgeCheck className="size-4"/> Your Brands</h4>
+                                            <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><BadgeCheck className="size-4"/> Brands</h4>
                                             <Button variant="ghost" size="sm" className="h-7 rounded-lg font-bold uppercase text-[9px]" onClick={() => {
                                                 const name = prompt("Enter Brand Name:");
                                                 if (name) handleUpdateRegistry({ brands: [...brands, { id: name.toLowerCase().replace(/\s/g, ''), name, gradient: 'from-slate-400 to-slate-600', channels: ['Facebook', 'Instagram'] }] });
@@ -398,18 +361,18 @@ export default function MarketingManagementPage() {
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
                             <Button className="rounded-xl h-10 shadow-lg font-black uppercase text-[10px] tracking-widest px-8 shadow-primary/20">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Update Today's Data
+                                <PlusCircle className="mr-2 h-4 w-4" /> Update Data
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl rounded-3xl border-none shadow-2xl p-0 overflow-hidden h-[90vh] flex flex-col">
                             <DialogHeader className="p-8 border-b shrink-0 bg-white">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Daily Update</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Record your brand growth and spending</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily Intelligence</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Additive activity tracking</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
                                 <div className="p-8 space-y-12">
                                     <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4"/> Social Performance</h4>
+                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4"/> Social Matrix</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             {brands.map(brand => (
                                                 <div key={brand.id} className="space-y-4 p-6 bg-white border rounded-2xl shadow-sm">
@@ -422,7 +385,7 @@ export default function MarketingManagementPage() {
                                                                     <Label className="text-[9px] font-black uppercase text-muted-foreground">{channel}</Label>
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         <div className="space-y-1">
-                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Total Followers</p>
+                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers (Snapshot)</p>
                                                                             <Input type="number" value={log?.count || 0} className="h-10 rounded-lg font-black" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
@@ -431,8 +394,8 @@ export default function MarketingManagementPage() {
                                                                             }} />
                                                                         </div>
                                                                         <div className="space-y-1">
-                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">New Posts Today</p>
-                                                                            <Input type="number" value={log?.newPosts || 0} className="h-10 rounded-lg font-black" onChange={e => {
+                                                                            <p className="text-[8px] font-bold text-emerald-600 uppercase opacity-60">New Posts (+)</p>
+                                                                            <Input type="number" value={log?.newPosts || 0} className="h-10 rounded-lg font-black border-emerald-200" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                                                 if (idx > -1) logs[idx].newPosts = parseInt(e.target.value) || 0;
@@ -449,7 +412,7 @@ export default function MarketingManagementPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><DollarSign className="size-4"/> Advertising Spend</h4>
+                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><DollarSign className="size-4"/> Ad Platforms</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {adPlatforms.map(plat => {
                                                 const spend = formData.adSpends?.find((s: any) => s.platformId === plat.id);
@@ -468,8 +431,8 @@ export default function MarketingManagementPage() {
                                                                 }} />
                                                             </div>
                                                             <div className="space-y-1">
-                                                                <Label className="text-[9px] font-black uppercase text-muted-foreground">Reason for spend</Label>
-                                                                <Textarea value={spend?.reason || ''} className="rounded-lg min-h-[80px]" placeholder="Strategic justification..." onChange={e => {
+                                                                <Label className="text-[9px] font-black uppercase text-muted-foreground">Reason</Label>
+                                                                <Textarea value={spend?.reason || ''} className="rounded-lg min-h-[80px]" onChange={e => {
                                                                     const spends = [...(formData.adSpends || [])];
                                                                     const idx = spends.findIndex((s: any) => s.platformId === plat.id);
                                                                     if (idx > -1) spends[idx].reason = e.target.value;
@@ -486,31 +449,26 @@ export default function MarketingManagementPage() {
                                 </div>
                             </ScrollArea>
                             <div className="p-8 border-t bg-white shrink-0">
-                                <Button onClick={handleSaveSession} className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Today's Records</Button>
+                                <Button onClick={handleSaveSession} className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Update</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
                 </div>
             </PageHeader>
 
-            {/* Top Row: Financial Summary */}
+            {/* Metric Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MetricCard label="Total Followers" value={totalFollowers.toLocaleString()} sub="Fleet Reach" icon={Users} color="text-primary" />
-                <MetricCard label="Total Budget" value={`₹${currentBalance.toLocaleString()}`} sub="Current Fleet Capital" icon={Wallet} color="text-indigo-600" />
-                <MetricCard label="Money Spent" value={`₹${mtdSpend.toLocaleString()}`} sub="Ad Cost MTD" icon={PieChart} color="text-rose-600" trend={`${mtdSpend > 0 && currentBalance > 0 ? ((mtdSpend / (currentBalance + mtdSpend)) * 100).toFixed(1) : 0}% Used`} />
+                <MetricCard label="Global Fleet Reach" value={totalFollowers.toLocaleString()} sub="Aggregated Followers" icon={Users} color="text-primary" />
+                <MetricCard label="Monthly Budget" value={`₹${(currentBalance + mtdSpend).toLocaleString()}`} sub="Fleet Capital Cap" icon={Wallet} color="text-indigo-600" />
+                <MetricCard label="Money Spent" value={`₹${mtdSpend.toLocaleString()}`} sub="Ad Expenditure MTD" icon={PieChart} color="text-rose-600" />
                 <MetricCard label="Budget Left" value={`₹${currentBalance.toLocaleString()}`} sub="Available Funds" icon={ShieldCheck} color="text-emerald-600" />
             </div>
 
-            {/* Main Visual Row */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <Card className="lg:col-span-8 border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden flex flex-col">
                     <CardHeader className="p-8 pb-2">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                                <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">Growth & Spend</CardTitle>
-                                <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Correlation between spending and reach</CardDescription>
-                            </div>
-                        </div>
+                        <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Growth & Spend</CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">High-fidelity reach vs financial velocity</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8 h-[400px]">
                         <ChartContainer config={performanceChartConfig} className="h-full w-full">
@@ -519,9 +477,9 @@ export default function MarketingManagementPage() {
                                     <linearGradient id="colorReach" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/></linearGradient>
                                     <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/><stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/></linearGradient>
                                 </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="0" stroke="#F1F5F9" />
+                                <CartesianGrid vertical={false} stroke="#F1F5F9" />
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-[10px] font-black uppercase fill-muted-foreground" tickMargin={10} />
-                                <YAxis axisLine={false} tickLine={false} className="text-[10px] font-black fill-muted-foreground" tickFormatter={v => `₹${v/1000}K`} />
+                                <YAxis axisLine={false} tickLine={false} className="text-[10px] font-black fill-muted-foreground" />
                                 <ChartTooltip content={<ChartTooltipContent />} />
                                 <Area type="linear" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={4} fill="url(#colorReach)" />
                                 <Area type="linear" dataKey="spend" stroke="#f43f5e" strokeWidth={2} fill="url(#colorSpend)" strokeDasharray="4 4" />
@@ -530,119 +488,179 @@ export default function MarketingManagementPage() {
                     </CardContent>
                 </Card>
 
-                <div className="lg:col-span-4 flex flex-col gap-4">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Ad Platforms</h4>
-                    {adPlatforms.map(plat => {
-                        const platSpend = latestSession?.adSpends?.find(s => s.platformId === plat.id)?.amount || 0;
-                        const Icon = PLATFORM_ICONS[plat.name] || Globe;
-                        return (
-                            <Card key={plat.id} className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white p-5 group hover:shadow-md transition-all">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 rounded-xl bg-muted/5 border border-border group-hover:border-primary/20 transition-colors">
-                                            <Icon className="size-5" style={{ color: plat.color }} />
+                <div className="lg:col-span-4 space-y-6">
+                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-3xl bg-white p-6 overflow-hidden flex flex-col">
+                        <CardHeader className="p-0 mb-6">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Timer className="size-4" /> Mission Deadlines</CardTitle>
+                                <Badge className="bg-rose-500 text-white rounded-none font-black text-[8px] border-none">{deadlines.filter(d => d.status === 'Overdue').length} AT RISK</Badge>
+                            </div>
+                        </CardHeader>
+                        <ScrollArea className="flex-1 h-[300px]">
+                            <div className="space-y-3">
+                                {deadlines.map((d, i) => (
+                                    <div key={i} className="p-4 rounded-2xl bg-muted/20 border border-transparent hover:border-primary/20 transition-all flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className={cn("p-2 rounded-xl text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
+                                                <Calendar className="size-3.5" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-black uppercase truncate max-w-[120px]">{d.title}</p>
+                                                <p className="text-[9px] font-bold text-muted-foreground uppercase">{format(d.end, 'MMM dd, yyyy')}</p>
+                                            </div>
                                         </div>
-                                        <div className="space-y-0.5">
+                                        <Badge variant="outline" className={cn("text-[8px] font-black uppercase h-5 px-2 rounded-lg border-none", d.status === 'Overdue' ? "bg-rose-100 text-rose-700" : "bg-sky-100 text-sky-700")}>{d.status}</Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </Card>
+
+                    <div className="space-y-4">
+                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Ad Platforms</h4>
+                        {adPlatforms.map(plat => {
+                            const platSpend = latestSession?.adSpends?.find(s => s.platformId === plat.id)?.amount || 0;
+                            const Icon = PLATFORM_ICONS[plat.name] || Globe;
+                            return (
+                                <Card key={plat.id} className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white p-5 group hover:shadow-md transition-all">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 rounded-xl bg-muted/5 border border-border group-hover:border-primary/20 transition-colors">
+                                                <Icon className="size-5" style={{ color: plat.color }} />
+                                            </div>
                                             <p className="font-black text-xs uppercase tracking-tight">{plat.name}</p>
                                         </div>
-                                    </div>
-                                    <div className="text-right">
                                         <p className="text-lg font-black tracking-tight text-rose-600">-₹{platSpend.toLocaleString()}</p>
-                                        <p className="text-[8px] font-black text-muted-foreground uppercase opacity-40">Today's Spend</p>
                                     </div>
-                                </div>
-                            </Card>
-                        );
-                    })}
+                                </Card>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
-            {/* Bottom Row: Social Matrix & Google Pay Style Ledger */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <Card className="lg:col-span-7 border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden">
-                    <CardHeader className="bg-muted/5 border-b p-6"><CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4" /> Social Media Growth</CardTitle></CardHeader>
-                    <CardContent className="p-0">
-                        <Table>
-                            <TableHeader className="bg-muted/10"><TableRow><TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-8">Brand</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px]">Followers</TableHead><TableHead className="font-black uppercase tracking-widest text-[9px]">Posts</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {brands.map(brand => {
-                                    const logs = latestSession?.socialLogs?.filter(l => l.brandId === brand.id) || [];
-                                    const total = logs.reduce((acc, curr) => acc + (curr.count || 0), 0);
-                                    const totalPosts = logs.reduce((acc, curr) => acc + (curr.posts || 0), 0);
-                                    return (
-                                        <TableRow key={brand.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
-                                            <TableCell className="py-6 px-8"><div className="flex items-center gap-3"><div className={cn("size-8 rounded-lg flex items-center justify-center text-white text-[10px] font-black shadow-sm bg-gradient-to-br", brand.gradient)}>{brand.name[0]}</div><span className="font-black text-xs uppercase tracking-tight">{brand.name}</span></div></TableCell>
-                                            <TableCell><span className="text-sm font-black tabular-nums">{total.toLocaleString()}</span></TableCell>
-                                            <TableCell><span className="text-xs font-bold text-muted-foreground uppercase">{totalPosts}</span></TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-
-                {/* GOOGLE PAY STYLE LEDGER */}
-                <Card className="lg:col-span-5 border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden flex flex-col">
-                    <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between">
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><History className="size-4" /> History</CardTitle>
-                        <Badge className="bg-emerald-100 text-emerald-700 rounded-lg font-black text-[8px] border-none px-3 py-1">TOTAL AUDITED</Badge>
-                    </CardHeader>
-                    <CardContent className="p-0 flex-1">
-                        <ScrollArea className="h-[500px]">
-                            {isLoading ? (
-                                <div className="p-20 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-widest">Scanning records...</div>
-                            ) : sessions.length === 0 ? (
-                                <div className="p-20 text-center text-muted-foreground italic uppercase font-black text-[10px]">No activity found.</div>
-                            ) : (
-                                <div className="divide-y divide-border/50">
-                                    {/* Monthly Grouping */}
-                                    {sessions.map((session, index) => {
-                                        const date = session.date?.toDate?.() || new Date();
-                                        const prev = sessions[index - 1];
-                                        const showMonth = !prev || !isSameMonth(date, prev.date?.toDate?.() || new Date());
-                                        const isTopup = session.type === 'topup';
-                                        const totalSpend = Array.isArray(session.adSpends) ? session.adSpends.reduce((a, c) => a + (c.amount || 0), 0) : 0;
-                                        const amount = isTopup ? (session.topupAmount || 0) : totalSpend;
+            <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden">
+                <CardHeader className="bg-muted/5 border-b p-6"><CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4" /> Social Media Growth Matrix</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                    <Table>
+                        <TableHeader className="bg-muted/10">
+                            <TableRow>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-8">Company & Channel</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Followers</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Activity (Posts)</TableHead>
+                                <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-4 px-8">Command</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {brands.map(brand => (
+                                <React.Fragment key={brand.id}>
+                                    {brand.channels.map(channel => {
+                                        const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                        const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                        
+                                        const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
+                                        const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
+                                        
+                                        const Icon = PLATFORM_ICONS[channel] || Globe;
 
                                         return (
-                                            <div key={session.id}>
-                                                {showMonth && (
-                                                    <div className="bg-muted/30 px-6 py-3 sticky top-0 z-10 backdrop-blur-sm border-b">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{format(date, 'MMMM yyyy')}</span>
-                                                    </div>
-                                                )}
-                                                <div className="p-6 hover:bg-muted/10 transition-all group flex items-center justify-between cursor-pointer" onClick={() => setSelectedAuditEntry(session)}>
+                                            <TableRow key={`${brand.id}-${channel}`} className="border-border/50 group hover:bg-primary/5 transition-colors">
+                                                <TableCell className="py-5 px-8">
                                                     <div className="flex items-center gap-4">
-                                                        <div className={cn("size-10 rounded-2xl flex items-center justify-center shadow-sm", isTopup ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
-                                                            {isTopup ? <Wallet className="size-5" /> : <Activity className="size-5" />}
+                                                        <div className={cn("size-10 rounded-2xl flex items-center justify-center text-white text-[12px] font-black shadow-sm bg-gradient-to-br", brand.gradient)}>
+                                                            <Icon className="size-4" />
                                                         </div>
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-black text-xs uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Spend"}</span>
-                                                                <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">{format(date, 'hh:mm a')}</span>
-                                                            </div>
-                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">By {session.auditedByName}</p>
+                                                        <div className="space-y-0.5">
+                                                            <span className="font-black text-xs uppercase tracking-tight">{brand.name}</span>
+                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{channel}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right space-y-1">
-                                                        <p className={cn("text-sm font-black tabular-nums", isTopup ? "text-emerald-600" : "text-rose-600")}>
-                                                            {isTopup ? `+₹${amount.toLocaleString()}` : `-₹${amount.toLocaleString()}`}
-                                                        </p>
-                                                        <p className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-tight">
-                                                            Balance: ₹{(session.runningBalance || 0).toLocaleString()}
-                                                        </p>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-sm font-black tabular-nums">{(log?.count || 0).toLocaleString()}</span>
+                                                        {followerDiff > 0 && <span className="text-[8px] font-black text-emerald-600 uppercase mt-1">({followerDiff}+)</span>}
                                                     </div>
-                                                </div>
-                                            </div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-sm font-black tabular-nums">{(log?.posts || 0).toLocaleString()}</span>
+                                                        {postDiff > 0 && <span className="text-[8px] font-black text-emerald-600 uppercase mt-1">({postDiff}+)</span>}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right px-8">
+                                                    <Button variant="outline" size="sm" className="rounded-xl h-8 font-black uppercase text-[9px] tracking-widest px-4 group-hover:bg-primary group-hover:text-white transition-all">
+                                                        Open <ExternalLink className="size-2.5 ml-2 opacity-40 group-hover:opacity-100" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
                                         );
                                     })}
-                                </div>
-                            )}
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
-            </div>
+                                </React.Fragment>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+            <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-3xl bg-white overflow-hidden flex flex-col">
+                <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2"><History className="size-4" /> History</CardTitle>
+                    <Badge className="bg-emerald-100 text-emerald-700 rounded-lg font-black text-[8px] border-none px-3 py-1">TOTAL AUDITED</Badge>
+                </CardHeader>
+                <CardContent className="p-0 flex-1">
+                    <ScrollArea className="h-[500px]">
+                        {isLoading ? (
+                            <div className="p-20 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-widest">Scanning records...</div>
+                        ) : sessions.length === 0 ? (
+                            <div className="p-20 text-center text-muted-foreground italic uppercase font-black text-[10px]">No activity found.</div>
+                        ) : (
+                            <div className="divide-y divide-border/50">
+                                {sessions.map((session, index) => {
+                                    const date = session.date?.toDate?.() || new Date();
+                                    const prev = sessions[index - 1];
+                                    const showMonth = !prev || !isSameMonth(date, prev.date?.toDate?.() || new Date());
+                                    const isTopup = session.type === 'topup';
+                                    const totalSpend = Array.isArray(session.adSpends) ? session.adSpends.reduce((a, c) => a + (c.amount || 0), 0) : 0;
+                                    const amount = isTopup ? (session.topupAmount || 0) : totalSpend;
+
+                                    return (
+                                        <div key={session.id}>
+                                            {showMonth && (
+                                                <div className="bg-muted/30 px-6 py-3 sticky top-0 z-10 backdrop-blur-sm border-b">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{format(date, 'MMMM yyyy')}</span>
+                                                </div>
+                                            )}
+                                            <div className="p-6 hover:bg-muted/10 transition-all group flex items-center justify-between cursor-pointer" onClick={() => setSelectedAuditEntry(session)}>
+                                                <div className="flex items-center gap-4">
+                                                    <div className={cn("size-10 rounded-2xl flex items-center justify-center shadow-sm", isTopup ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
+                                                        {isTopup ? <Wallet className="size-5" /> : <Activity className="size-5" />}
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-black text-xs uppercase tracking-tight">{isTopup ? "Budget Added" : "Ad Spend"}</span>
+                                                            <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">{format(date, 'hh:mm a')}</span>
+                                                        </div>
+                                                        <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">By {session.auditedByName}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right space-y-1">
+                                                    <p className={cn("text-sm font-black tabular-nums", isTopup ? "text-emerald-600" : "text-rose-600")}>
+                                                        {isTopup ? `+₹${amount.toLocaleString()}` : `-₹${amount.toLocaleString()}`}
+                                                    </p>
+                                                    <p className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-tight">
+                                                        Balance: ₹{(session.runningBalance || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </ScrollArea>
+                </CardContent>
+            </Card>
 
             {/* Top-up Dialog */}
             <Dialog open={isTopupOpen} onOpenChange={setIsTopupOpen}>
@@ -670,14 +688,14 @@ export default function MarketingManagementPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Entry Details Deep-Dive */}
+            {/* Entry Details */}
             <Dialog open={!!selectedAuditEntry} onOpenChange={o => !o && setSelectedAuditEntry(null)}>
                 <DialogContent className="max-w-4xl rounded-3xl border-none shadow-2xl p-0 h-[85vh] flex flex-col overflow-hidden">
                     <DialogHeader className="p-10 border-b shrink-0 bg-white">
                         <div className="flex items-center justify-between">
                             <div>
                                 <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Entry Details</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">Breakdown of this update</DialogDescription>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">Audit Breakdown</DialogDescription>
                             </div>
                             <div className="text-right">
                                 <p className="text-sm font-black uppercase">{selectedAuditEntry?.date ? format(selectedAuditEntry.date.toDate(), 'PPP') : ''}</p>
@@ -727,7 +745,7 @@ export default function MarketingManagementPage() {
                                             {selectedAuditEntry?.adSpends?.filter(s => (s.amount || 0) > 0).map((spend, i) => (
                                                 <Card key={i} className="rounded-2xl border-none ring-1 ring-border/50 shadow-sm p-6 bg-white flex flex-col md:flex-row gap-6">
                                                     <div className="min-w-[150px]"><p className="font-black text-xs uppercase tracking-tight text-muted-foreground">{spend.platformId}</p><p className="text-2xl font-black text-rose-600">-₹{(spend.amount || 0).toLocaleString()}</p></div>
-                                                    <div className="flex-1 p-4 bg-muted/20 border-l-4 border-primary rounded-r-xl space-y-1.5"><p className="text-[9px] font-black uppercase text-muted-foreground opacity-60">Reason for spend</p><p className="text-sm font-medium italic leading-relaxed">"{spend.reason || 'Routine update.'}"</p></div>
+                                                    <div className="flex-1 p-4 bg-muted/20 border-l-4 border-primary rounded-r-xl space-y-1.5"><p className="text-[9px] font-black uppercase text-muted-foreground opacity-60">Reason</p><p className="text-sm font-medium italic leading-relaxed">"{spend.reason || 'Routine update.'}"</p></div>
                                                 </Card>
                                             ))}
                                         </div>
@@ -748,18 +766,13 @@ export default function MarketingManagementPage() {
 
 // --- HELPER COMPONENTS ---
 
-function MetricCard({ label, value, sub, icon: Icon, color, trend }: any) {
+function MetricCard({ label, value, sub, icon: Icon, color }: any) {
     return (
         <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
             <div className="flex justify-between items-start">
                 <div className={cn("p-3 rounded-xl shadow-sm transition-transform group-hover:scale-110", color, "bg-muted/10")}>
                     <Icon className="size-5" />
                 </div>
-                {trend && (
-                    <Badge variant="outline" className="text-[9px] font-black uppercase border-none bg-emerald-50 text-emerald-600 rounded-full h-6 px-3 tracking-widest flex items-center gap-1">
-                        <Info className="size-2.5" /> {trend}
-                    </Badge>
-                )}
             </div>
             <div>
                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1.5">{label}</p>
