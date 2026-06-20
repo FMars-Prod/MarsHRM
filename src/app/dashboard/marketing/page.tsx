@@ -15,7 +15,8 @@ import {
     Instagram, Linkedin, Facebook, Twitter, 
     Youtube, Settings2, PlusCircle, 
     BadgeCheck, X, Loader2, Briefcase,
-    ShieldAlert, Lock, TrendingUp
+    ShieldAlert, Lock, TrendingUp,
+    Search
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -496,9 +497,9 @@ export default function MarketingManagementPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 {/* Main Content Area */}
                 <div className="lg:col-span-8 space-y-4">
-                    {/* Social Media Matrix */}
+                    {/* Social Media Growth (Proper Table Format) */}
                     <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white overflow-hidden">
-                        <CardHeader className="bg-muted/5 border-b p-5 flex items-center justify-between">
+                        <CardHeader className="bg-muted/5 border-b p-5">
                             <div className="space-y-0.5">
                                 <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                     <Users className="size-4" /> Social Media Matrix
@@ -507,75 +508,72 @@ export default function MarketingManagementPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-0">
-                            <Table>
-                                <TableHeader className="bg-muted/10 border-b">
-                                    <TableRow className="hover:bg-transparent">
-                                        <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 px-6 min-w-[180px]">Company</TableHead>
-                                        <TableHead className="font-black uppercase tracking-widest text-[8px] py-4">Channel Intelligence Matrix</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {brands.map(brand => (
-                                        <TableRow key={brand.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
-                                            <TableCell className="py-6 px-6 align-top">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={cn("size-10 rounded-xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br", brand.gradient)}>
-                                                        <span className="text-sm font-black">{brand.name[0]}</span>
-                                                    </div>
-                                                    <div className="space-y-0.5">
-                                                        <span className="font-black text-sm uppercase tracking-tight text-slate-800">{brand.name}</span>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <div className="size-1 rounded-full bg-emerald-500 animate-pulse" />
-                                                            <p className="text-[8px] font-black text-muted-foreground uppercase opacity-40 tracking-widest">Active Channels: {brand.channels.length}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="py-6 px-6">
-                                                <div className="flex flex-wrap gap-3">
-                                                    {brand.channels.map(channel => {
-                                                        const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
-                                                        const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
-                                                        
-                                                        const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
-                                                        const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
-                                                        
-                                                        const Icon = PLATFORM_ICONS[channel] || Globe;
-
-                                                        return (
-                                                            <div key={channel} className="p-4 min-w-[140px] rounded-xl bg-white border ring-1 ring-border/50 shadow-sm group/item hover:ring-primary/40 transition-all space-y-3">
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Icon className="size-3 text-primary opacity-60" />
-                                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">{channel}</span>
-                                                                    </div>
-                                                                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-20 group-hover/item:opacity-100 hover:bg-primary/5 hover:text-primary transition-all rounded-md" asChild>
-                                                                        <Link href="#" target="_blank">
-                                                                            <ExternalLink className="size-2.5" />
-                                                                        </Link>
-                                                                    </Button>
-                                                                </div>
-                                                                <div className="grid grid-cols-2 gap-2">
-                                                                    <div className="space-y-0.5">
-                                                                        <p className="text-[7px] font-black uppercase text-muted-foreground tracking-widest opacity-40">Followers</p>
-                                                                        <p className="text-xs font-black tabular-nums">{(log?.count || 0).toLocaleString()}</p>
-                                                                        {followerDiff > 0 && <span className="text-[7px] font-black text-emerald-600 uppercase tracking-tighter">+{followerDiff}</span>}
-                                                                    </div>
-                                                                    <div className="space-y-0.5 text-right">
-                                                                        <p className="text-[7px] font-black uppercase text-muted-foreground tracking-widest opacity-40">Posts</p>
-                                                                        <p className="text-xs font-black tabular-nums">{(log?.posts || 0).toLocaleString()}</p>
-                                                                        {postDiff > 0 && <span className="text-[7px] font-black text-emerald-600 uppercase tracking-tighter">+{postDiff}</span>}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </TableCell>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader className="bg-muted/10 border-b">
+                                        <TableRow className="hover:bg-transparent">
+                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 px-6">Brand</TableHead>
+                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4">Channel</TableHead>
+                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4">Followers</TableHead>
+                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4">Total Posts</TableHead>
+                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 text-right px-6">Link</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {brands.map(brand => (
+                                            <React.Fragment key={brand.id}>
+                                                {brand.channels.map((channel, cIdx) => {
+                                                    const log = latestSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                    const prevLog = prevSession?.socialLogs?.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                    
+                                                    const followerDiff = log && prevLog ? (log.count - prevLog.count) : 0;
+                                                    const postDiff = log && prevLog ? (log.posts - prevLog.posts) : 0;
+                                                    
+                                                    const Icon = PLATFORM_ICONS[channel] || Globe;
+
+                                                    return (
+                                                        <TableRow key={`${brand.id}-${channel}`} className="border-border/50 hover:bg-primary/5 transition-colors">
+                                                            <TableCell className="py-3 px-6">
+                                                                {cIdx === 0 ? (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className={cn("size-6 rounded-lg flex items-center justify-center text-[10px] text-white font-black bg-gradient-to-br shadow-sm", brand.gradient)}>
+                                                                            {brand.name[0]}
+                                                                        </div>
+                                                                        <span className="font-black text-[10px] uppercase tracking-tighter truncate max-w-[80px]">{brand.name}</span>
+                                                                    </div>
+                                                                ) : null}
+                                                            </TableCell>
+                                                            <TableCell className="py-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Icon className="size-3 text-primary opacity-60" />
+                                                                    <span className="text-[10px] font-bold uppercase text-slate-600">{channel}</span>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="py-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs font-black tabular-nums">{(log?.count || 0).toLocaleString()}</span>
+                                                                    {followerDiff > 0 && <span className="text-[9px] font-black text-emerald-600">+{followerDiff}</span>}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="py-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs font-black tabular-nums">{(log?.posts || 0).toLocaleString()}</span>
+                                                                    {postDiff > 0 && <span className="text-[9px] font-black text-emerald-600">+{postDiff}</span>}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="py-3 text-right px-6">
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-primary/10 text-primary transition-all" asChild>
+                                                                    <Link href="#" target="_blank"><ExternalLink className="size-3" /></Link>
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </React.Fragment>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -642,7 +640,7 @@ export default function MarketingManagementPage() {
 
                 {/* Tactical Sidebar Area */}
                 <div className="lg:col-span-4 space-y-4">
-                    {/* Performance Pulse */}
+                    {/* Performance Pulse (Relocated and Fixed) */}
                     <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
                         <CardHeader className="p-5 pb-2">
                             <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><TrendingUp className="size-3.5" /> Performance Pulse</CardTitle>
@@ -682,7 +680,7 @@ export default function MarketingManagementPage() {
                                             <div className={cn("p-1.5 rounded-lg text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
                                                 <Calendar className="size-3" />
                                             </div>
-                                            <div className="min-w-0">
+                                            <div className="min-w-0 flex-1">
                                                 <p className="text-[10px] font-black uppercase truncate max-w-[100px]">{d.title}</p>
                                                 <p className="text-[8px] font-bold text-muted-foreground uppercase">{format(d.end, 'MMM dd')}</p>
                                             </div>
@@ -836,23 +834,6 @@ function MetricCard({ label, value, sub, icon: Icon, color }: any) {
                 <p className="text-[7px] font-bold uppercase text-muted-foreground/60 tracking-tight">{sub}</p>
             </div>
         </Card>
-    );
-}
-
-function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
-    return (
-        <div className="flex gap-4 items-start relative group">
-            <div className={cn("p-2 rounded-xl shrink-0 shadow-sm", color)}>
-                <Icon className="size-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                    <p className="text-[11px] font-black uppercase text-slate-800 truncate">{title}</p>
-                    <span className="text-[8px] font-bold text-slate-300 uppercase">{time}</span>
-                </div>
-                <p className="text-[9px] font-bold text-slate-400 uppercase truncate mt-0.5">{desc}</p>
-            </div>
-        </div>
     );
 }
 
