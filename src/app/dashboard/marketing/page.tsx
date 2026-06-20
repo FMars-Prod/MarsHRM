@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, isSameMonth, addDays, isAfter } from 'date-fns';
+import { format, startOfMonth, isSameMonth, addDays, isAfter, isBefore } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -37,6 +37,7 @@ import { Separator } from '@/components/ui/separator';
 import { setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // --- UTILITIES ---
 
@@ -101,6 +102,8 @@ type SpendLog = {
     platformId: string;
     amount: number;
     reason: string;
+    type?: 'Campaign' | 'Boosting';
+    deadline?: any;
 };
 
 type MarketingSession = {
@@ -232,17 +235,35 @@ export default function MarketingManagementPage() {
     const lastUpdateDate = sessions[0]?.date;
     const lastUpdateStr = lastUpdateDate ? format(lastUpdateDate.toDate(), 'MMM dd, yyyy') : 'N/A';
 
-    // Placeholder deadlines
-    const deadlines = React.useMemo(() => [
-        { title: 'Meta Brand Awareness', end: addDays(new Date(), 2), status: 'Active' },
-        { title: 'Google Q2 Search Hub', end: addDays(new Date(), 5), status: 'Review' },
-        { title: 'LinkedIn Recruitment Drive', end: addDays(new Date(), -1), status: 'Overdue' }
-    ], []);
+    // Derived Deadlines from Spend Data
+    const deadlines = React.useMemo(() => {
+        if (!sessions) return [];
+        const activeCampaignsMap = new Map<string, any>();
+        
+        [...sessions].reverse().forEach(session => {
+            if (session.type === 'spend' && session.adSpends) {
+                session.adSpends.forEach(spend => {
+                    if (spend.type === 'Campaign' && spend.deadline && spend.reason) {
+                        const key = `${spend.platformId}-${spend.reason}`;
+                        const deadlineDate = spend.deadline.toDate ? spend.deadline.toDate() : new Date(spend.deadline);
+                        
+                        activeCampaignsMap.set(key, {
+                            title: `${spend.platformId}: ${spend.reason}`,
+                            end: deadlineDate,
+                            status: isAfter(deadlineDate, new Date()) ? 'Active' : 'Overdue'
+                        });
+                    }
+                });
+            }
+        });
+        
+        return Array.from(activeCampaignsMap.values()).sort((a, b) => a.end.getTime() - b.end.getTime());
+    }, [sessions]);
 
     const upcomingDeadline = React.useMemo(() => {
         const futureOnly = deadlines.filter(d => isAfter(d.end, new Date()));
         if (futureOnly.length === 0) return null;
-        return futureOnly.sort((a, b) => a.end.getTime() - b.end.getTime())[0];
+        return futureOnly[0];
     }, [deadlines]);
 
     const upcomingDeadlineStr = upcomingDeadline 
@@ -261,7 +282,13 @@ export default function MarketingManagementPage() {
             });
             const initialAdSpends = adPlatforms.map(p => {
                 const prev = latestSession?.adSpends?.find(s => s.platformId === p.id);
-                return { platformId: p.id, amount: 0, reason: prev?.reason || '' };
+                return { 
+                    platformId: p.id, 
+                    amount: 0, 
+                    reason: prev?.reason || '', 
+                    type: prev?.type || 'Boosting',
+                    deadline: prev?.deadline || ''
+                };
             });
             setFormData({ socialLogs: initialSocialLogs, adSpends: initialAdSpends });
         }
@@ -282,9 +309,19 @@ export default function MarketingManagementPage() {
         const processedLogs = (formData.socialLogs || []).map((log: any) => ({
             brandId: log.brandId, platformId: log.platformId, count: log.count, posts: (log.posts || 0) + (log.newPosts || 0)
         }));
+        
+        const processedAdSpends = (formData.adSpends || []).map((spend: any) => ({
+            ...spend,
+            deadline: spend.deadline ? Timestamp.fromDate(new Date(spend.deadline)) : null
+        }));
+
         const payload = {
-            socialLogs: processedLogs, adSpends: formData.adSpends, type: 'spend',
-            date: serverTimestamp(), auditedBy: user.uid, auditedByName: `${userData.firstName} ${userData.lastName}`
+            socialLogs: processedLogs, 
+            adSpends: processedAdSpends, 
+            type: 'spend',
+            date: serverTimestamp(), 
+            auditedBy: user.uid, 
+            auditedByName: `${userData.firstName} ${userData.lastName}`
         };
         addDocumentNonBlocking(collection(firestore, 'marketing_sessions'), payload);
         toast({ title: 'Records Updated' });
@@ -490,6 +527,36 @@ export default function MarketingManagementPage() {
                                                     <div key={plat.id} className="p-6 bg-white border rounded-2xl shadow-sm space-y-4">
                                                         <p className="font-black text-[11px] uppercase tracking-widest">{plat.name}</p>
                                                         <div className="space-y-4">
+                                                            <div className="space-y-1">
+                                                                <Label className="text-[9px] font-black uppercase text-muted-foreground">Transaction Type</Label>
+                                                                <Select value={spend?.type || 'Boosting'} onValueChange={v => {
+                                                                    const spends = [...(formData.adSpends || [])];
+                                                                    const idx = spends.findIndex((s: any) => s.platformId === plat.id);
+                                                                    if (idx > -1) spends[idx].type = v;
+                                                                    else spends.push({ platformId: plat.id, amount: 0, reason: '', type: v });
+                                                                    setFormData({ ...formData, adSpends: spends });
+                                                                }}>
+                                                                    <SelectTrigger className="h-10 rounded-lg font-bold text-xs"><SelectValue /></SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="Campaign">Campaign</SelectItem>
+                                                                        <SelectItem value="Boosting">Boosting</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+
+                                                            {spend?.type === 'Campaign' && (
+                                                                <div className="space-y-1 animate-fade-in-up">
+                                                                    <Label className="text-[9px] font-black uppercase text-primary tracking-widest">Mission Deadline</Label>
+                                                                    <Input type="date" value={spend?.deadline || ''} className="h-10 rounded-lg font-bold text-xs" onChange={e => {
+                                                                        const spends = [...(formData.adSpends || [])];
+                                                                        const idx = spends.findIndex((s: any) => s.platformId === plat.id);
+                                                                        if (idx > -1) spends[idx].deadline = e.target.value;
+                                                                        else spends.push({ platformId: plat.id, amount: 0, reason: '', type: 'Campaign', deadline: e.target.value });
+                                                                        setFormData({ ...formData, adSpends: spends });
+                                                                    }} />
+                                                                </div>
+                                                            )}
+
                                                             <div className="space-y-1">
                                                                 <Label className="text-[9px] font-black uppercase text-muted-foreground">Money Spent (₹)</Label>
                                                                 <Input type="number" value={spend?.amount || 0} className="h-10 rounded-lg font-black text-primary" onChange={e => {
@@ -762,6 +829,9 @@ export default function MarketingManagementPage() {
                                         <Badge variant="outline" className={cn("text-[7px] font-black uppercase h-4 px-1.5 rounded-md border-none", d.status === 'Overdue' ? "bg-rose-100 text-rose-700" : "bg-sky-100 text-sky-700")}>{d.status}</Badge>
                                     </div>
                                 ))}
+                                {deadlines.length === 0 && (
+                                    <p className="py-10 text-center uppercase font-black text-[8px] text-muted-foreground opacity-30">No Active Missions</p>
+                                )}
                             </div>
                         </ScrollArea>
                     </Card>
@@ -799,7 +869,7 @@ export default function MarketingManagementPage() {
                     </DialogHeader>
                     <div className="py-8 space-y-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Amount (₹)</Label>
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><IndianRupee className="size-3"/> Amount (₹)</Label>
                             <Input 
                                 type="number" 
                                 value={topupValue}
@@ -872,7 +942,16 @@ export default function MarketingManagementPage() {
                                         <div className="space-y-4">
                                             {selectedAuditEntry?.adSpends?.filter(s => (s.amount || 0) > 0).map((spend, i) => (
                                                 <Card key={i} className="rounded-2xl border-none ring-1 ring-border/50 shadow-sm p-6 bg-white flex flex-col md:flex-row gap-6">
-                                                    <div className="min-w-[150px]"><p className="font-black text-xs uppercase tracking-tight text-muted-foreground">{spend.platformId}</p><p className="text-2xl font-black text-rose-600">-₹{(spend.amount || 0).toLocaleString()}</p></div>
+                                                    <div className="min-w-[150px]">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <p className="font-black text-xs uppercase tracking-tight text-muted-foreground">{spend.platformId}</p>
+                                                            {spend.type && <Badge variant="secondary" className="text-[7px] font-black uppercase h-4 px-1">{spend.type}</Badge>}
+                                                        </div>
+                                                        <p className="text-2xl font-black text-rose-600">-₹{(spend.amount || 0).toLocaleString()}</p>
+                                                        {spend.deadline && (
+                                                            <p className="text-[8px] font-bold text-primary uppercase mt-1">Deadline: {format(spend.deadline.toDate ? spend.deadline.toDate() : new Date(spend.deadline), 'MMM dd')}</p>
+                                                        )}
+                                                    </div>
                                                     <div className="flex-1 p-4 bg-muted/20 border-l-4 border-primary rounded-r-xl space-y-1.5"><p className="text-[9px] font-black uppercase text-muted-foreground opacity-60">Reason</p><p className="text-sm font-medium italic leading-relaxed">"{spend.reason || 'Routine update.'}"</p></div>
                                                 </Card>
                                             ))}
@@ -908,5 +987,14 @@ function MetricCard({ label, value, sub, icon: Icon, color }: any) {
                 <p className="text-[7px] font-bold uppercase text-muted-foreground/60 tracking-tight">{sub}</p>
             </div>
         </Card>
+    );
+}
+
+function InfoRow({ label, value }: { label: string, value: string }) {
+    return (
+        <div className="flex items-center justify-between py-3 border-b border-dashed border-border/50 last:border-none group gap-4">
+            <span className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest shrink-0">{label}</span>
+            <span className="text-sm font-bold text-foreground/80 uppercase text-right leading-tight">{value}</span>
+        </div>
     );
 }
