@@ -1,11 +1,10 @@
-
 'use client';
 
 import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where, limit, getDocs } from 'firebase/firestore';
 import { 
     Plus, Trash2, ExternalLink, ShieldCheck, 
@@ -16,7 +15,7 @@ import {
     Instagram, Linkedin, Facebook, Twitter, 
     Youtube, Settings2, PlusCircle, 
     BadgeCheck, X, Loader2, Briefcase,
-    ShieldAlert, Lock
+    ShieldAlert, Lock, TrendingUp
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -24,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, isSameMonth, isBefore, addDays } from 'date-fns';
+import { format, startOfMonth, isSameMonth, addDays } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -35,6 +34,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import Link from 'next/link';
 
 // --- UTILITIES ---
@@ -85,9 +85,8 @@ type AdPlatform = {
 type SocialLog = {
     brandId: string;
     platformId: string;
-    count: number; // Followers
-    posts: number; // Cumulative total posts
-    newPosts?: number; // Added today
+    count: number; 
+    posts: number; 
 };
 
 type SpendLog = {
@@ -222,7 +221,7 @@ export default function MarketingManagementPage() {
         { title: 'LinkedIn Recruitment Drive', end: addDays(new Date(), -1), status: 'Overdue' }
     ];
 
-    // Populate form
+    // Populate form with pre-filled previous snapshot values
     React.useEffect(() => {
         if (isAddOpen) {
             const initialSocialLogs: any[] = [];
@@ -241,15 +240,13 @@ export default function MarketingManagementPage() {
     }, [isAddOpen, latestSession, adPlatforms, brands]);
 
     const handleSaveSession = async () => {
-        if (!user) return;
+        if (!user || !userData) return;
         const processedLogs = (formData.socialLogs || []).map((log: any) => ({
             brandId: log.brandId, platformId: log.platformId, count: log.count, posts: (log.posts || 0) + (log.newPosts || 0)
         }));
-        const userDoc = await getDocs(query(collection(firestore, 'users'), where('id', '==', user.uid)));
-        const userData = userDoc.docs[0]?.data();
         const payload = {
             socialLogs: processedLogs, adSpends: formData.adSpends, type: 'spend',
-            date: serverTimestamp(), auditedBy: user.uid, auditedByName: userData ? `${userData.firstName} ${userData.lastName}` : 'Auditor'
+            date: serverTimestamp(), auditedBy: user.uid, auditedByName: `${userData.firstName} ${userData.lastName}`
         };
         addDocumentNonBlocking(collection(firestore, 'marketing_sessions'), payload);
         toast({ title: 'Records Updated' });
@@ -257,12 +254,10 @@ export default function MarketingManagementPage() {
     };
 
     const handleAddBudget = async () => {
-        if (!user || !topupValue) return;
-        const userDoc = await getDocs(query(collection(firestore, 'users'), where('id', '==', user.uid)));
-        const userData = userDoc.docs[0]?.data();
+        if (!user || !topupValue || !userData) return;
         const payload = {
             type: 'topup', topupAmount: parseFloat(topupValue),
-            date: serverTimestamp(), auditedBy: user.uid, auditedByName: userData ? `${userData.firstName} ${userData.lastName}` : 'Auditor'
+            date: serverTimestamp(), auditedBy: user.uid, auditedByName: `${userData.firstName} ${userData.lastName}`
         };
         addDocumentNonBlocking(collection(firestore, 'marketing_sessions'), payload);
         toast({ title: 'Budget Added' });
@@ -490,7 +485,7 @@ export default function MarketingManagementPage() {
                 </div>
             </PageHeader>
 
-            {/* Metric Row - Smaller footprint */}
+            {/* Metric Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <MetricCard label="Global Reach" value={totalFollowers.toLocaleString()} sub="Aggregated Fleet Reach" icon={Users} color="text-primary" />
                 <MetricCard label="Total Budget" value={`₹${(currentBalance + mtdSpend).toLocaleString()}`} sub="Monthly Capital Cap" icon={Wallet} color="text-indigo-600" />
@@ -501,7 +496,7 @@ export default function MarketingManagementPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 {/* Main Content Area */}
                 <div className="lg:col-span-8 space-y-4">
-                    {/* Social Media Matrix - One Brand per Row */}
+                    {/* Social Media Matrix */}
                     <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white overflow-hidden">
                         <CardHeader className="bg-muted/5 border-b p-5 flex items-center justify-between">
                             <div className="space-y-0.5">
@@ -647,7 +642,7 @@ export default function MarketingManagementPage() {
 
                 {/* Tactical Sidebar Area */}
                 <div className="lg:col-span-4 space-y-4">
-                    {/* Performance Pulse - Now smaller and sidebar based */}
+                    {/* Performance Pulse */}
                     <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-2xl bg-white overflow-hidden flex flex-col">
                         <CardHeader className="p-5 pb-2">
                             <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><TrendingUp className="size-3.5" /> Performance Pulse</CardTitle>
