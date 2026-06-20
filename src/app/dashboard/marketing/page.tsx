@@ -5,7 +5,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where, limit, getDocs } from 'firebase/firestore';
 import { 
     TrendingUp, Plus, Trash2, Edit, ExternalLink, ShieldCheck, 
@@ -29,7 +29,7 @@ import {
     Area, AreaChart, Bar, BarChart, CartesianGrid, 
     XAxis, YAxis, Tooltip, ResponsiveContainer, Line
 } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -82,7 +82,7 @@ type SocialLog = {
     brandId: string;
     platformId: string;
     count: number;
-    posts?: number;
+    posts: number;
 };
 
 type SpendLog = {
@@ -99,6 +99,26 @@ type MarketingSession = {
     socialLogs: SocialLog[];
     adSpends: SpendLog[];
 };
+
+// --- CHART CONFIGS ---
+
+const spendChartConfig = {
+  spend: {
+    label: "Ad Spend",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
+const velocityChartConfig = {
+  followers: {
+    label: "Reach",
+    color: "hsl(var(--primary))",
+  },
+  spend: {
+    label: "Expenditure",
+    color: "#f43f5e",
+  },
+} satisfies ChartConfig;
 
 // --- MAIN PAGE ---
 
@@ -307,27 +327,44 @@ export default function MarketingManagementPage() {
                                                         <p className="font-black text-sm uppercase tracking-tight">{brand.name}</p>
                                                         <div className={cn("size-3 rounded-full bg-gradient-to-r", brand.gradient)} />
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-6">
+                                                    <div className="grid grid-cols-1 gap-6">
                                                         {brand.channels.map(channel => (
                                                             <div key={channel} className="space-y-3 p-3 bg-muted/10 border border-transparent hover:border-primary/10 transition-all">
                                                                 <Label className="text-[9px] font-black uppercase text-muted-foreground flex items-center gap-2">
                                                                     {PLATFORM_ICONS[channel] ? React.createElement(PLATFORM_ICONS[channel], { className: "size-3" }) : <Share2 className="size-3" />}
                                                                     {channel}
                                                                 </Label>
-                                                                <div className="space-y-1.5">
-                                                                    <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Follower Count</p>
-                                                                    <Input 
-                                                                        type="number" 
-                                                                        placeholder="0" 
-                                                                        className="h-10 rounded-none border-none ring-1 ring-muted bg-white font-bold"
-                                                                        onChange={e => {
-                                                                            const logs = [...(formData.socialLogs || [])];
-                                                                            const existing = logs.find(l => l.brandId === brand.id && l.platformId === channel);
-                                                                            if (existing) existing.count = parseInt(e.target.value) || 0;
-                                                                            else logs.push({ brandId: brand.id, platformId: channel, count: parseInt(e.target.value) || 0 });
-                                                                            setFormData({ ...formData, socialLogs: logs });
-                                                                        }}
-                                                                    />
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    <div className="space-y-1.5">
+                                                                        <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Follower Count</p>
+                                                                        <Input 
+                                                                            type="number" 
+                                                                            placeholder="0" 
+                                                                            className="h-10 rounded-none border-none ring-1 ring-muted bg-white font-bold"
+                                                                            onChange={e => {
+                                                                                const logs = [...(formData.socialLogs || [])];
+                                                                                const existing = logs.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                                                if (existing) existing.count = parseInt(e.target.value) || 0;
+                                                                                else logs.push({ brandId: brand.id, platformId: channel, count: parseInt(e.target.value) || 0, posts: 0 });
+                                                                                setFormData({ ...formData, socialLogs: logs });
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Posts Created</p>
+                                                                        <Input 
+                                                                            type="number" 
+                                                                            placeholder="0" 
+                                                                            className="h-10 rounded-none border-none ring-1 ring-muted bg-white font-bold"
+                                                                            onChange={e => {
+                                                                                const logs = [...(formData.socialLogs || [])];
+                                                                                const existing = logs.find(l => l.brandId === brand.id && l.platformId === channel);
+                                                                                if (existing) existing.posts = parseInt(e.target.value) || 0;
+                                                                                else logs.push({ brandId: brand.id, platformId: channel, count: 0, posts: parseInt(e.target.value) || 0 });
+                                                                                setFormData({ ...formData, socialLogs: logs });
+                                                                            }}
+                                                                        />
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -440,7 +477,7 @@ export default function MarketingManagementPage() {
                                 <TableRow className="hover:bg-transparent border-none">
                                     <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Company</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px]">Total Reach</TableHead>
-                                    <TableHead className="font-black uppercase tracking-widest text-[9px]">Breakdown</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px]">Channel Intelligence</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -465,12 +502,16 @@ export default function MarketingManagementPage() {
                                             <TableCell>
                                                 <div className="flex items-center gap-4">
                                                     {brand.channels.slice(0, 4).map(ch => {
-                                                        const count = brandLogs.find(l => l.platformId === ch)?.count || 0;
+                                                        const log = brandLogs.find(l => l.platformId === ch);
+                                                        const count = log?.count || 0;
                                                         const Icon = PLATFORM_ICONS[ch] || Share2;
                                                         return (
-                                                            <div key={ch} className="flex items-center gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                                <Icon className="size-3 text-muted-foreground" />
-                                                                <span className="text-[10px] font-bold">{count >= 1000 ? `${(count/1000).toFixed(1)}K` : count}</span>
+                                                            <div key={ch} className="flex flex-col gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Icon className="size-3 text-muted-foreground" />
+                                                                    <span className="text-[10px] font-bold">{count >= 1000 ? `${(count/1000).toFixed(1)}K` : count}</span>
+                                                                </div>
+                                                                <span className="text-[7px] font-black uppercase text-primary/40">{log?.posts || 0} Posts</span>
                                                             </div>
                                                         );
                                                     })}
@@ -492,15 +533,15 @@ export default function MarketingManagementPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6 pt-2 h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ChartContainer config={spendChartConfig} className="h-full w-full">
                             <BarChart data={chartData.slice(-6)}>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-[10px] font-bold uppercase fill-muted-foreground" tickMargin={10} />
                                 <YAxis axisLine={false} tickLine={false} className="text-[9px] font-bold fill-muted-foreground" tickFormatter={v => `₹${v/1000}K`} />
-                                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} content={<ChartTooltipContent />} />
+                                <ChartTooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} content={<ChartTooltipContent />} />
                                 <Bar dataKey="spend" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
                             </BarChart>
-                        </ResponsiveContainer>
+                        </ChartContainer>
                     </CardContent>
                     <div className="p-6 pt-0 mt-auto border-t border-dashed border-border/50">
                         <div className="pt-4 flex items-center justify-between">
@@ -531,18 +572,18 @@ export default function MarketingManagementPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="p-8 pt-6 h-[250px]">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ChartContainer config={velocityChartConfig} className="h-full w-full">
                         <AreaChart data={chartData}>
                             <defs>
                                 <linearGradient id="colorReach" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/></linearGradient>
                             </defs>
                             <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
                             <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-[10px] font-bold uppercase fill-muted-foreground" />
-                            <Tooltip content={<ChartTooltipContent />} />
+                            <ChartTooltip content={<ChartTooltipContent />} />
                             <Area type="monotone" dataKey="followers" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorReach)" />
                             <Line type="monotone" dataKey="spend" stroke="#f43f5e" strokeWidth={2} dot={false} strokeDasharray="5 5" />
                         </AreaChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                 </CardContent>
             </Card>
 
@@ -647,16 +688,19 @@ export default function MarketingManagementPage() {
                                                     <p className="font-black text-sm uppercase tracking-tight">{brand.name}</p>
                                                     <div className={cn("size-2 rounded-full", brand.gradient.split(' ')[1].replace('to-', 'bg-'))} />
                                                 </div>
-                                                <div className="grid grid-cols-3 gap-4">
+                                                <div className="grid grid-cols-2 gap-4">
                                                     {logs.map(log => {
                                                         const Icon = PLATFORM_ICONS[log.platformId] || Share2;
                                                         return (
-                                                            <div key={log.platformId} className="space-y-1">
+                                                            <div key={log.platformId} className="space-y-2 p-3 bg-muted/10">
                                                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                                                     <Icon className="size-3" />
                                                                     <span className="text-[8px] font-black uppercase tracking-tight">{log.platformId}</span>
                                                                 </div>
-                                                                <p className="text-sm font-black tracking-tight">{(log.count || 0).toLocaleString()}</p>
+                                                                <div className="flex flex-col">
+                                                                    <p className="text-sm font-black tracking-tight">{(log.count || 0).toLocaleString()} Followers</p>
+                                                                    <p className="text-[10px] font-bold text-primary">{(log.posts || 0)} Posts Created</p>
+                                                                </div>
                                                             </div>
                                                         );
                                                     })}
@@ -703,7 +747,7 @@ export default function MarketingManagementPage() {
                                 <div className="space-y-1">
                                     <p className="text-sm font-black uppercase tracking-tighter text-primary">Authenticated Audit Session</p>
                                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Verified by Officer: {selectedAuditEntry?.auditedByName}</p>
-                                    <p className="text-[8px] font-mono text-muted-foreground italic opacity-40 mt-4">Platform: MarsHRM Marketing Engine v4.0 • E-Signed and Sealed</p>
+                                    <p className="text-[8px] font-mono text-muted-foreground italic opacity-40 mt-4">Platform: MarsHRM Marketing Engine v5.0 • E-Signed and Sealed</p>
                                 </div>
                             </div>
                         </div>
@@ -718,7 +762,7 @@ export default function MarketingManagementPage() {
 
 function MetricCard({ label, value, sub, icon: Icon, color, trend }: { label: string, value: string, sub: string, icon: any, color: string, trend?: string }) {
     return (
-        <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-none bg-white p-6 space-y-4 group hover:shadow-md transition-all">
+        <Card className="border-none shadow-sm rounded-none bg-white p-6 space-y-4 group hover:shadow-md transition-all ring-1 ring-border/50">
             <div className="flex justify-between items-start">
                 <div className={cn("p-4 rounded-none shadow-sm transition-transform group-hover:scale-105", color, "bg-muted/10")}>
                     <Icon className="size-5" />
@@ -737,3 +781,4 @@ function MetricCard({ label, value, sub, icon: Icon, color, trend }: { label: st
         </Card>
     );
 }
+
