@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where } from 'firebase/firestore';
-import { Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, UserCheck, Briefcase } from 'lucide-react';
+import { Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, UserCheck, Briefcase, Zap } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import Image from 'next/image';
+import Link from 'next/link';
 
 type Client = {
     id: string;
@@ -56,7 +56,8 @@ export default function ClientsPage() {
     // Access Control
     const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
     const { data: userData } = useDoc<any>(userDocRef);
-    const isAuthorized = userData?.role === 'HR Manager' || userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD';
+    const userRole = userData?.role;
+    const isAuthorized = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
     // Data Fetching
     const clientsQuery = useMemoFirebase(() => query(collection(firestore, 'clients'), orderBy('name', 'asc')), [firestore]);
@@ -389,4 +390,8 @@ function DetailItem({ icon: Icon, label, value }: any) {
             <p className="text-sm font-black uppercase tracking-tight text-foreground/90">{value}</p>
         </div>
     );
+}
+
+function Separator({ className }: { className?: string }) {
+    return <div className={cn("h-px bg-border", className)} />;
 }
