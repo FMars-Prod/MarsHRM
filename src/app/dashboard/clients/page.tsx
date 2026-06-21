@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where } from 'firebase/firestore';
-import { Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, UserCheck, Briefcase, Zap } from 'lucide-react';
+import { Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, UserCheck, Briefcase, Zap, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
