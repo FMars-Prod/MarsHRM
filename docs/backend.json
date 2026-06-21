@@ -79,6 +79,25 @@
         "requestDate": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "assetId", "requesterId", "status"]
+    },
+    "Client": {
+      "title": "Client",
+      "type": "object",
+      "description": "Strategic business partner or account.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "companyName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive", "Lead", "Archived"] },
+        "category": { "type": "string", "enum": ["Premium", "Standard", "Enterprise"] },
+        "logoUrl": { "type": "string" },
+        "address": { "type": "string" },
+        "website": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "companyName", "status"]
     }
   },
   "auth": {
@@ -112,6 +131,13 @@
         "definition": {
           "entityName": "AssetRequest",
           "description": "Global log of asset allocation requests."
+        }
+      },
+      {
+        "path": "/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "description": "Strategic client registry."
         }
       },
       {
