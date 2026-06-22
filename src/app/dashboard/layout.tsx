@@ -20,6 +20,7 @@ import { doc, collection, query, where, Timestamp, getDocs, or } from 'firebase/
 import { format, isToday, startOfDay, endOfDay, isBefore, addDays } from 'date-fns';
 import Image from 'next/image';
 import { AutomatedReportSender } from '@/components/geohrm/automated-report-sender';
+import { MeetingReminder } from '@/components/geohrm/meeting-reminder';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,49 +46,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-
-type LeaveRequest = {
-  status: string;
-  employeeName: string;
-};
-type Announcement = {
-  id: string;
-  title: string;
-};
-type EventItem = {
-  date: Timestamp;
-}
-type LocationRequest = {
-  status: string;
-  employeeName: string;
-};
-type SupportTicket = {
-  id: string;
-  title: string;
-  employeeId: string;
-  lastUpdatedDate?: Timestamp;
-}
-type AttendanceApprovalRequest = {
-  status: string;
-  employeeName: string;
-}
-type Todo = {
-    id: string;
-    task: string;
-    completed: boolean;
-    dueDate?: Timestamp;
-    assignedTo: string;
-}
-
-type Team = {
-  id: string;
-  memberIds: string[];
-}
-
-type UserData = {
-  id: string;
-  reportingHeadIds?: string[];
-};
 
 const SEARCHABLE_LINKS = [
     { label: "Dashboard", href: "/dashboard", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
@@ -151,21 +109,21 @@ export default function DashboardLayout({
   const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
   const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
-  const { data: allUsers } = useCollection<UserData>(usersQuery);
+  const { data: allUsers } = useCollection<any>(usersQuery);
 
   const teamLeadQuery = useMemoFirebase(() => {
     if (!user || userRole !== 'Team Lead') return null;
     return query(collection(firestore, 'teams'), where('teamLeadId', '==', user.uid));
   }, [firestore, user, userRole]);
-  const { data: teamsLed } = useCollection<Team>(teamLeadQuery);
+  const { data: teamsLed } = useCollection<any>(teamLeadQuery);
 
   const subordinateIds = useMemo(() => {
     const ids = new Set<string>();
     if (teamsLed) {
-      teamsLed.forEach(t => t.memberIds.forEach(id => ids.add(id)));
+      teamsLed.forEach((t: any) => t.memberIds.forEach((id: string) => ids.add(id)));
     }
     if (user && allUsers) {
-      allUsers.forEach(u => {
+      allUsers.forEach((u: any) => {
         if (u.reportingHeadIds?.includes(user.uid)) ids.add(u.id);
       });
     }
@@ -188,13 +146,13 @@ export default function DashboardLayout({
     
     return null;
   }, [firestore, user, userRole, subordinateIds]);
-  const { data: leaveRequests } = useCollection<LeaveRequest>(leaveRequestsQuery);
+  const { data: leaveRequests } = useCollection<any>(leaveRequestsQuery);
 
   const locationRequestsQuery = useMemoFirebase(() => {
     if (!isPrivileged || !user) return null;
     return query(collection(firestore, "location_change_requests"), where("status", "==", "pending"));
   }, [firestore, isPrivileged, user]);
-  const { data: locationRequests } = useCollection<LocationRequest>(locationRequestsQuery);
+  const { data: locationRequests } = useCollection<any>(locationRequestsQuery);
 
   const attRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
@@ -213,35 +171,35 @@ export default function DashboardLayout({
 
     return null;
   }, [firestore, isPrivileged, user, userRole, subordinateIds]);
-  const { data: attRequests } = useCollection<AttendanceApprovalRequest>(attRequestsQuery);
+  const { data: attRequests } = useCollection<any>(attRequestsQuery);
 
   const allAnnouncementsQuery = useMemoFirebase(() => user ? collection(firestore, 'announcements') : null, [firestore, user]);
-  const { data: allAnnouncements } = useCollection<Announcement>(allAnnouncementsQuery);
+  const { data: allAnnouncements } = useCollection<any>(allAnnouncementsQuery);
   
   const readAnnouncementsQuery = useMemoFirebase(() => user ? collection(firestore, `users/${user.uid}/readAnnouncements`) : null, [user, firestore]);
-  const { data: readAnnouncements } = useCollection<{id: string}>(readAnnouncementsQuery);
+  const { data: readAnnouncements } = useCollection<any>(readAnnouncementsQuery);
 
   useEffect(() => {
     if (allAnnouncements && readAnnouncements) {
-      const readIds = new Set(readAnnouncements.map(a => a.id));
-      const unreadCount = allAnnouncements.filter(a => !readIds.has(a.id)).length;
+      const readIds = new Set(readAnnouncements.map((a: any) => a.id));
+      const unreadCount = allAnnouncements.filter((a: any) => !readIds.has(a.id)).length;
       setUnreadAnnouncements(unreadCount);
     }
   }, [allAnnouncements, readAnnouncements]);
 
   const eventsQuery = useMemoFirebase(() => user ? collection(firestore, 'events') : null, [firestore, user]);
-  const { data: events } = useCollection<EventItem>(eventsQuery);
+  const { data: events } = useCollection<any>(eventsQuery);
   const todaysEventsCount = useMemo(() => {
     if (!events) return 0;
-    return events.filter(e => e.date && isToday(e.date.toDate())).length;
+    return events.filter((e: any) => e.date && isToday(e.date.toDate())).length;
   }, [events]);
 
   const ticketQuery = useMemoFirebase(() => user ? query(collection(firestore, "issue_reports"), where("employeeId", "==", user.uid)) : null, [firestore, user]);
-  const { data: userTickets } = useCollection<SupportTicket>(ticketQuery);
+  const { data: userTickets } = useCollection<any>(ticketQuery);
   const ticketUpdateCount = useMemo(() => {
     if (!userTickets) return 0;
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    return userTickets.filter(t => t.lastUpdatedDate && (t.lastUpdatedDate.toDate ? t.lastUpdatedDate.toDate() : new Date(t.lastUpdatedDate)) > twentyFourHoursAgo).length;
+    return userTickets.filter((t: any) => t.lastUpdatedDate && (t.lastUpdatedDate.toDate ? t.lastUpdatedDate.toDate() : new Date(t.lastUpdatedDate)) > twentyFourHoursAgo).length;
   }, [userTickets]);
 
   const todosQuery = useMemoFirebase(() => {
@@ -249,12 +207,12 @@ export default function DashboardLayout({
       return query(collection(firestore, "todos"), where("assignedTo", "==", user.uid), where("completed", "==", false));
   }, [firestore, user]);
   
-  const { data: activeTodos } = useCollection<Todo>(todosQuery);
+  const { data: activeTodos } = useCollection<any>(todosQuery);
   const taskReminders = useMemo(() => {
     if (!activeTodos) return [];
     const now = new Date();
     const alertThreshold = addDays(now, 1);
-    return activeTodos.filter(t => t.dueDate && isBefore(t.dueDate.toDate(), alertThreshold));
+    return activeTodos.filter((t: any) => t.dueDate && isBefore(t.dueDate.toDate(), alertThreshold));
   }, [activeTodos]);
 
   const totalNotifications = (leaveRequests?.length || 0) + unreadAnnouncements + todaysEventsCount + (locationRequests?.length || 0) + ticketUpdateCount + (attRequests?.length || 0) + taskReminders.length;
@@ -428,7 +386,7 @@ export default function DashboardLayout({
                                    </div>
                                ) : (
                                    <>
-                                       {taskReminders.map(todo => (
+                                       {taskReminders.map((todo: any) => (
                                            <Link 
                                               href="/dashboard/todo" 
                                               key={todo.id}
@@ -442,7 +400,7 @@ export default function DashboardLayout({
                                                </div>
                                            </Link>
                                        ))}
-                                       {leaveRequests?.map((req, i) => (
+                                       {leaveRequests?.map((req: any, i: number) => (
                                            <Link 
                                               href="/dashboard/leave" 
                                               key={i}
@@ -524,6 +482,7 @@ export default function DashboardLayout({
                 </AlertDialogContent>
              </AlertDialog>
           </div>
+          <MeetingReminder />
           <AutomatedReportSender />
         </header>
 
