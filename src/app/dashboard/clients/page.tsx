@@ -12,7 +12,8 @@ import {
     Building2, Filter, Download, 
     Briefcase, Zap, MapPin, X, 
     DollarSign, BriefcaseBusiness, IndianRupee, Loader2, TrendingUp, ReceiptIndianRupee,
-    Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal, Mail, Phone, Calendar, FileText, CheckCircle, AlertCircle, LayoutGrid, Globe, Map, UserCircle
+    Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal, Mail, Phone, Calendar, FileText, CheckCircle, AlertCircle, LayoutGrid, Globe, Map, UserCircle,
+    Info, CalendarDays, Receipt, BadgeIndianRupee, HandCoins, UserPlus
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -35,12 +36,19 @@ import Link from 'next/link';
 type PaymentInstallment = {
     id: string;
     amount: string;
-    status: 'Pending' | 'Paid';
+    dueDate?: string;
+    status: 'Pending' | 'Partially Paid' | 'Paid' | 'Overdue';
+    invoiceNumber?: string;
+    invoiceDate?: string;
+    amountReceived?: string;
+    remainingBalance?: string;
+    remarks?: string;
 };
 
 type Client = {
     id: string;
     companyName: string;
+    clientName: string;
     legalBusinessName?: string;
     email: string;
     phone: string;
@@ -51,6 +59,11 @@ type Client = {
     assignedTeamId?: string;
     productHeadId?: string;
     fullPaymentPrice?: number;
+    currencyType: string;
+    expectedAnnualRevenue?: number;
+    discountOffered?: number;
+    projectTotalCost?: number;
+    contractStartDate?: string;
     payments?: PaymentInstallment[];
     status: 'Active' | 'Prospect' | 'On Hold' | 'Inactive' | 'Archived';
     category: string; // Industry Sector
@@ -84,6 +97,8 @@ const COMPANY_SIZES = [
 
 const COUNTRIES = ["India", "United States", "United Kingdom", "UAE", "Singapore", "Australia", "Canada"];
 
+const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD"];
+
 export default function ClientsPage() {
     const { user } = useUser();
     const firestore = useFirestore();
@@ -103,13 +118,15 @@ export default function ClientsPage() {
 
     // Form States
     const [clientForm, setClientForm] = React.useState<Partial<Client>>({
-        companyName: '', legalBusinessName: '', email: '', phone: '', status: 'Active', category: 'Manufacturing', 
+        companyName: '', clientName: '', legalBusinessName: '', email: '', phone: '', status: 'Active', category: 'Manufacturing', 
         companySize: '1-10 Employees', priority: 'Medium', representativeName: '',
         address: '', website: '', hqLocation: '', country: 'India', state: '', city: '',
         pocPosition: '', productNeeded: '', projectType: 'Technical',
         handlingEmployeeId: '', assignedTeamId: '', productHeadId: '', fullPaymentPrice: 0,
+        currencyType: 'INR', expectedAnnualRevenue: 0, discountOffered: 0, projectTotalCost: 0,
+        contractStartDate: format(new Date(), 'yyyy-MM-dd'),
         gstNumber: '', notes: '',
-        payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending' }]
+        payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }]
     });
 
     // Access Control
@@ -212,6 +229,7 @@ export default function ClientsPage() {
         if (searchQuery) {
             filtered = filtered.filter(c => 
                 c.companyName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                (c.clientName && c.clientName.toLowerCase().includes(searchQuery.toLowerCase())) ||
                 c.category.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
@@ -236,15 +254,16 @@ export default function ClientsPage() {
         let marketingVal = 0;
 
         filteredClients.forEach(c => {
-            const clientTotal = c.fullPaymentPrice || 0;
+            const clientTotal = c.projectTotalCost || c.fullPaymentPrice || 0;
             if (c.projectType === 'Technical') technicalVal += clientTotal;
             if (c.projectType === 'Digital Marketing') marketingVal += clientTotal;
 
             if (c.payments) {
                 c.payments.forEach(p => {
-                    const amt = parseFloat(p.amount) || 0;
-                    if (p.status === 'Paid') collected += amt;
-                    else pending += amt;
+                    const amtReceived = parseFloat(p.amountReceived || '0') || 0;
+                    const amtDue = parseFloat(p.amount) || 0;
+                    collected += amtReceived;
+                    if (p.status !== 'Paid') pending += (amtDue - amtReceived);
                 });
             }
         });
@@ -257,7 +276,7 @@ export default function ClientsPage() {
             ...prev,
             payments: [
                 ...(prev.payments || []),
-                { id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending' }
+                { id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }
             ]
         }));
     };
@@ -270,15 +289,37 @@ export default function ClientsPage() {
     };
 
     const handlePaymentChange = (id: string, field: keyof PaymentInstallment, value: string) => {
-        setClientForm(prev => ({
-            ...prev,
-            payments: (prev.payments || []).map(p => p.id === id ? { ...p, [field]: value } : p)
-        }));
+        setClientForm(prev => {
+            const updatedPayments = (prev.payments || []).map(p => {
+                if (p.id === id) {
+                    const updatedP = { ...p, [field]: value };
+                    // Auto-calculate remaining balance if amount or amountReceived changes
+                    if (field === 'amount' || field === 'amountReceived') {
+                        const total = parseFloat(updatedP.amount) || 0;
+                        const received = parseFloat(updatedP.amountReceived || '0') || 0;
+                        updatedP.remainingBalance = (total - received).toString();
+                    }
+                    return updatedP;
+                }
+                return p;
+            });
+            return { ...prev, payments: updatedPayments };
+        });
     };
 
     const totalCalculatedPayment = React.useMemo(() => {
         return (clientForm.payments || []).reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
     }, [clientForm.payments]);
+
+    // Sync project total cost when project value or discount changes
+    React.useEffect(() => {
+        const val = Number(clientForm.fullPaymentPrice) || 0;
+        const discount = Number(clientForm.discountOffered) || 0;
+        const total = val - (val * (discount / 100));
+        if (total !== clientForm.projectTotalCost) {
+            setClientForm(prev => ({ ...prev, projectTotalCost: total }));
+        }
+    }, [clientForm.fullPaymentPrice, clientForm.discountOffered]);
 
     const handleSaveClient = async () => {
         if (!clientForm.companyName) {
@@ -289,6 +330,9 @@ export default function ClientsPage() {
         const payload = {
             ...clientForm,
             fullPaymentPrice: Number(clientForm.fullPaymentPrice) || 0,
+            projectTotalCost: Number(clientForm.projectTotalCost) || 0,
+            expectedAnnualRevenue: Number(clientForm.expectedAnnualRevenue) || 0,
+            discountOffered: Number(clientForm.discountOffered) || 0,
             createdAt: editingClient ? editingClient.createdAt : serverTimestamp(),
             lastActivity: 'Record Updated'
         };
@@ -307,13 +351,15 @@ export default function ClientsPage() {
 
     const resetForm = () => {
         setClientForm({
-            companyName: '', legalBusinessName: '', email: '', phone: '', status: 'Active', category: 'Manufacturing', 
+            companyName: '', clientName: '', legalBusinessName: '', email: '', phone: '', status: 'Active', category: 'Manufacturing', 
             companySize: '1-10 Employees', priority: 'Medium', representativeName: '',
             address: '', website: '', hqLocation: '', country: 'India', state: '', city: '',
             pocPosition: '', productNeeded: '', projectType: 'Technical',
             handlingEmployeeId: '', assignedTeamId: '', productHeadId: '', fullPaymentPrice: 0,
+            currencyType: 'INR', expectedAnnualRevenue: 0, discountOffered: 0, projectTotalCost: 0,
+            contractStartDate: format(new Date(), 'yyyy-MM-dd'),
             gstNumber: '', notes: '',
-            payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending' }]
+            payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }]
         });
     };
 
@@ -410,10 +456,10 @@ export default function ClientsPage() {
             {/* Metrics Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <MetricCard label="Total Clients" value={filteredClients.length} sub="Filtered Capacity" icon={Users} color="text-blue-600" bg="bg-blue-50" />
-                <MetricCard label="Revenue Got" value={`₹${stats.collected.toLocaleString()}`} sub="Paid Invoices" icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" />
-                <MetricCard label="In Pipeline" value={`₹${stats.pending.toLocaleString()}`} sub="Pending Dues" icon={Clock} color="text-amber-600" bg="bg-amber-50" />
-                <MetricCard label="Technical Val" value={`₹${stats.technicalVal.toLocaleString()}`} sub="Engineering Tier" icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" />
-                <MetricCard label="Marketing Val" value={`₹${stats.marketingVal.toLocaleString()}`} sub="Growth Strategy" icon={Zap} color="text-purple-600" bg="bg-purple-50" />
+                <MetricCard label="Revenue Got" value={`${clientForm.currencyType || '₹'}${stats.collected.toLocaleString()}`} sub="Paid Invoices" icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" />
+                <MetricCard label="In Pipeline" value={`${clientForm.currencyType || '₹'}${stats.pending.toLocaleString()}`} sub="Pending Dues" icon={Clock} color="text-amber-600" bg="bg-amber-50" />
+                <MetricCard label="Technical Val" value={`${clientForm.currencyType || '₹'}${stats.technicalVal.toLocaleString()}`} sub="Engineering Tier" icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" />
+                <MetricCard label="Marketing Val" value={`${clientForm.currencyType || '₹'}${stats.marketingVal.toLocaleString()}`} sub="Growth Strategy" icon={Zap} color="text-purple-600" bg="bg-purple-50" />
             </div>
 
             {/* Main Terminal */}
@@ -435,7 +481,7 @@ export default function ClientsPage() {
                                 <Plus className="size-4" /> Provision Account
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-3xl flex flex-col h-[90vh]">
+                        <DialogContent className="max-w-5xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-3xl flex flex-col h-[90vh]">
                             <DialogHeader className="p-10 border-b bg-white shrink-0">
                                 <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Client Provisioning</DialogTitle>
                                 <DialogDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60">Register new strategic account details</DialogDescription>
@@ -443,16 +489,16 @@ export default function ClientsPage() {
                             
                             <ScrollArea className="flex-1 bg-muted/5">
                                 <div className="p-10 space-y-12 pb-20">
-                                    {/* Section 1: Identity */}
+                                    {/* Section 1: Client Information */}
                                     <div className="space-y-8">
                                         <div className="flex items-center gap-3 text-primary">
                                             <Building2 className="size-4" />
-                                            <h4 className="text-[11px] font-black uppercase tracking-widest">Organization Identity</h4>
+                                            <h4 className="text-[11px] font-black uppercase tracking-widest">Client Information</h4>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Organization Name</Label>
-                                                <Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} placeholder="e.g., ABC Tech Solutions" className="h-12 font-bold rounded-xl" />
+                                                <Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} placeholder="Full company name" className="h-12 font-bold rounded-xl" />
                                                 {suggestedNames.length > 0 && !clientForm.companyName && (
                                                     <div className="flex flex-wrap gap-1.5 mt-2">
                                                         <span className="text-[8px] font-bold text-muted-foreground uppercase py-1 px-2">Suggestions:</span>
@@ -463,13 +509,13 @@ export default function ClientsPage() {
                                                 )}
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Legal Business Name</Label>
-                                                <Input value={clientForm.legalBusinessName} onChange={e => setClientForm({...clientForm, legalBusinessName: e.target.value})} placeholder="Full legal registered entity name" className="h-12 font-bold rounded-xl" />
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Client Name</Label>
+                                                <Input value={clientForm.clientName} onChange={e => setClientForm({...clientForm, clientName: e.target.value})} placeholder="Primary point of contact name" className="h-12 font-bold rounded-xl" />
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Industry Sector</Label>
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Industry Type</Label>
                                                 <Select value={clientForm.category} onValueChange={v => setClientForm({...clientForm, category: v})}>
                                                     <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
                                                     <SelectContent>
@@ -478,51 +524,29 @@ export default function ClientsPage() {
                                                 </Select>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Company Size</Label>
-                                                <Select value={clientForm.companySize} onValueChange={v => setClientForm({...clientForm, companySize: v})}>
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Service Type</Label>
+                                                <Select value={clientForm.projectType} onValueChange={v => setClientForm({...clientForm, projectType: v as any})}>
                                                     <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
                                                     <SelectContent>
-                                                        {COMPANY_SIZES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                                        <SelectItem value="Technical">Technical</SelectItem>
+                                                        <SelectItem value="Digital Marketing">Digital Marketing</SelectItem>
                                                     </SelectContent>
                                                 </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Client Phone Number</Label>
+                                                <Input value={clientForm.phone} onChange={e => setClientForm({...clientForm, phone: e.target.value})} placeholder="+91 ..." className="h-12 font-bold rounded-xl" />
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-8">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">GST/Tax ID</Label>
-                                                <Input value={clientForm.gstNumber} onChange={e => setClientForm({...clientForm, gstNumber: e.target.value})} placeholder="e.g., 27ABCDE..." className="h-12 font-bold rounded-xl uppercase" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Account Status</Label>
-                                                <Select value={clientForm.status} onValueChange={v => setClientForm({...clientForm, status: v as any})}>
-                                                    <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Active">Active Client</SelectItem>
-                                                        <SelectItem value="Prospect">Prospect</SelectItem>
-                                                        <SelectItem value="On Hold">On Hold</SelectItem>
-                                                        <SelectItem value="Inactive">Inactive</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Priority Level</Label>
-                                                <Select value={clientForm.priority} onValueChange={v => setClientForm({...clientForm, priority: v as any})}>
-                                                    <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Strategic">Strategic</SelectItem>
-                                                        <SelectItem value="High">High Priority</SelectItem>
-                                                        <SelectItem value="Medium">Medium</SelectItem>
-                                                        <SelectItem value="Low">Low</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                    </div>
+
+                                    {/* Section 2: Location Details */}
+                                    <div className="space-y-8">
+                                        <div className="flex items-center gap-3 text-indigo-600">
+                                            <MapPin className="size-4" />
+                                            <h4 className="text-[11px] font-black uppercase tracking-widest">Location Details</h4>
                                         </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-8">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Headquarters Location</Label>
-                                                <Input value={clientForm.hqLocation} onChange={e => setClientForm({...clientForm, hqLocation: e.target.value})} placeholder="e.g., Mumbai, India" className="h-12 font-bold rounded-xl" />
-                                            </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Country</Label>
                                                 <Select value={clientForm.country} onValueChange={v => setClientForm({...clientForm, country: v})}>
@@ -532,53 +556,104 @@ export default function ClientsPage() {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">State/Province</Label>
+                                                <Input value={clientForm.state} onChange={e => setClientForm({...clientForm, state: e.target.value})} placeholder="State" className="h-12 font-bold rounded-xl" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">City</Label>
+                                                <Input value={clientForm.city} onChange={e => setClientForm({...clientForm, city: e.target.value})} placeholder="City" className="h-12 font-bold rounded-xl" />
+                                            </div>
                                         </div>
-
                                         <div className="space-y-2">
                                             <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Organization Address</Label>
-                                            <Textarea value={clientForm.address} onChange={e => setClientForm({...clientForm, address: e.target.value})} placeholder="Complete registered office address..." className="rounded-xl min-h-[80px]" />
+                                            <Textarea value={clientForm.address} onChange={e => setClientForm({...clientForm, address: e.target.value})} placeholder="Full street address..." className="rounded-xl min-h-[80px]" />
                                         </div>
                                     </div>
 
-                                    {/* POC Section */}
+                                    {/* Section 3: Account Details */}
                                     <div className="space-y-8">
-                                        <div className="flex items-center gap-3 text-indigo-600">
+                                        <div className="flex items-center gap-3 text-amber-600">
                                             <UserCircle className="size-4" />
-                                            <h4 className="text-[11px] font-black uppercase tracking-widest">Point of Contact</h4>
+                                            <h4 className="text-[11px] font-black uppercase tracking-widest">Account Details</h4>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Representative Name</Label>
-                                                <Input value={clientForm.representativeName} onChange={e => setClientForm({...clientForm, representativeName: e.target.value})} placeholder="Full name of contact person" className="h-12 font-bold rounded-xl" />
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Account Status</Label>
+                                                <Select value={clientForm.status} onValueChange={v => setClientForm({...clientForm, status: v as any})}>
+                                                    <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Active">Active</SelectItem>
+                                                        <SelectItem value="Prospect">Prospect</SelectItem>
+                                                        <SelectItem value="On Hold">On Hold</SelectItem>
+                                                        <SelectItem value="Inactive">Inactive</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Position/Role</Label>
-                                                <Input value={clientForm.pocPosition} onChange={e => setClientForm({...clientForm, pocPosition: e.target.value})} placeholder="e.g., Managing Director" className="h-12 font-bold rounded-xl" />
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Client Priority Level</Label>
+                                                <Select value={clientForm.priority} onValueChange={v => setClientForm({...clientForm, priority: v as any})}>
+                                                    <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Strategic">Strategic</SelectItem>
+                                                        <SelectItem value="High">High</SelectItem>
+                                                        <SelectItem value="Medium">Medium</SelectItem>
+                                                        <SelectItem value="Low">Low</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-8">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Email Address</Label>
-                                                <Input type="email" value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} placeholder="poc@organization.com" className="h-12 font-bold rounded-xl" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Phone Number</Label>
-                                                <Input value={clientForm.phone} onChange={e => setClientForm({...clientForm, phone: e.target.value})} placeholder="+91 ..." className="h-12 font-bold rounded-xl" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Product Needed</Label>
-                                            <Input value={clientForm.productNeeded} onChange={e => setClientForm({...clientForm, productNeeded: e.target.value})} placeholder="e.g., Mobile ERP Suite" className="h-12 font-bold rounded-xl" />
                                         </div>
                                     </div>
 
-                                    {/* Deployment Section */}
+                                    {/* Section 4: Financial Details */}
+                                    <div className="space-y-8">
+                                        <div className="flex items-center gap-3 text-emerald-600">
+                                            <DollarSign className="size-4" />
+                                            <h4 className="text-[11px] font-black uppercase tracking-widest">Financial Details</h4>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary">Total Project Value</Label>
+                                                <Input type="number" value={clientForm.fullPaymentPrice} onChange={e => setClientForm({...clientForm, fullPaymentPrice: parseFloat(e.target.value) || 0})} placeholder="0.00" className="h-12 font-bold rounded-xl" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary">Currency Type</Label>
+                                                <Select value={clientForm.currencyType} onValueChange={v => setClientForm({...clientForm, currencyType: v})}>
+                                                    <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary">Expected Annual Revenue</Label>
+                                                <Input type="number" value={clientForm.expectedAnnualRevenue} onChange={e => setClientForm({...clientForm, expectedAnnualRevenue: parseFloat(e.target.value) || 0})} placeholder="0.00" className="h-12 font-bold rounded-xl" />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary">Discount Offered (%)</Label>
+                                                <Input type="number" value={clientForm.discountOffered} onChange={e => setClientForm({...clientForm, discountOffered: parseFloat(e.target.value) || 0})} placeholder="0" className="h-12 font-bold rounded-xl" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary">Project Total Cost</Label>
+                                                <Input type="number" value={clientForm.projectTotalCost} disabled className="h-12 font-bold rounded-xl bg-muted/50" />
+                                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Auto-calculated from Value & Discount</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase text-primary">Contract Start Date</Label>
+                                                <Input type="date" value={clientForm.contractStartDate} onChange={e => setClientForm({...clientForm, contractStartDate: e.target.value})} className="h-12 font-bold rounded-xl" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Section 5: Team Assignment */}
                                     <div className="space-y-8">
                                         <div className="flex items-center gap-3 text-purple-600">
-                                            <ShieldCheck className="size-4" />
-                                            <h4 className="text-[11px] font-black uppercase tracking-widest">Internal Deployment</h4>
+                                            <Users className="size-4" />
+                                            <h4 className="text-[11px] font-black uppercase tracking-widest">Team Assignment</h4>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Handled By</Label>
                                                 <Select value={clientForm.handlingEmployeeId} onValueChange={v => setClientForm({...clientForm, handlingEmployeeId: v})}>
@@ -589,19 +664,7 @@ export default function ClientsPage() {
                                                 </Select>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Project Classification</Label>
-                                                <Select value={clientForm.projectType} onValueChange={v => setClientForm({...clientForm, projectType: v as any})}>
-                                                    <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Technical">Technical Sprint</SelectItem>
-                                                        <SelectItem value="Digital Marketing">Digital Marketing</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-8">
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assign to Team</Label>
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assign to Existing Team</Label>
                                                 <Select value={clientForm.assignedTeamId} onValueChange={v => setClientForm({...clientForm, assignedTeamId: v})}>
                                                     <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue placeholder="Select Team" /></SelectTrigger>
                                                     <SelectContent>
@@ -609,6 +672,8 @@ export default function ClientsPage() {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Head of Product/Project</Label>
                                                 <Select value={clientForm.productHeadId} onValueChange={v => setClientForm({...clientForm, productHeadId: v})}>
@@ -623,82 +688,93 @@ export default function ClientsPage() {
                                         </div>
                                     </div>
 
-                                    {/* Financial Section */}
+                                    {/* Section 6: Payment Milestones */}
                                     <div className="space-y-8">
-                                        <div className="flex items-center gap-3 text-emerald-600">
-                                            <DollarSign className="size-4" />
-                                            <h4 className="text-[11px] font-black uppercase tracking-widest">Financial Structure</h4>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3 text-emerald-600">
+                                                <Receipt className="size-4" />
+                                                <h4 className="text-[11px] font-black uppercase tracking-widest">Payment Milestones</h4>
+                                            </div>
+                                            <Button type="button" onClick={handleAddPaymentRow} className="rounded-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase px-6">
+                                                <Plus className="size-3.5 mr-2" /> Add Milestone
+                                            </Button>
                                         </div>
                                         
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-primary">Total Project Value (Required)</Label>
-                                            <div className="relative">
-                                                <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-primary" />
-                                                <Input 
-                                                    type="number" 
-                                                    value={clientForm.fullPaymentPrice} 
-                                                    onChange={e => setClientForm({...clientForm, fullPaymentPrice: parseFloat(e.target.value) || 0})} 
-                                                    placeholder="Enter Total Contract Amount" 
-                                                    className="pl-12 h-16 text-3xl font-black rounded-2xl border-2 border-primary/20 focus:border-primary shadow-inner" 
-                                                />
-                                            </div>
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">This is the total target amount for the entire project.</p>
-                                        </div>
-
-                                        <div className="p-8 bg-white border-2 border-dashed border-emerald-100 rounded-[2rem] space-y-8 shadow-sm">
-                                            <div className="flex items-center justify-between">
-                                                <div className="space-y-1">
-                                                    <Label className="text-xs font-black uppercase text-emerald-700">Payment Milestone Tracking</Label>
-                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Divide the total ₹{clientForm.fullPaymentPrice?.toLocaleString()} into installments.</p>
-                                                </div>
-                                                <Button type="button" onClick={handleAddPaymentRow} className="rounded-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase px-6">
-                                                    <Plus className="size-3.5 mr-2" /> Add Installment
-                                                </Button>
-                                            </div>
-                                            
-                                            <div className="space-y-4">
-                                                {clientForm.payments?.map((payment, idx) => (
-                                                    <div key={payment.id} className="flex gap-6 items-center animate-fade-in-up">
-                                                        <div className="flex-1">
+                                        <div className="space-y-6">
+                                            {clientForm.payments?.map((payment, idx) => (
+                                                <Card key={payment.id} className="p-6 border-2 border-dashed border-emerald-100 rounded-3xl bg-white shadow-sm relative overflow-hidden group">
+                                                    <div className="absolute top-0 right-0 p-4">
+                                                        <Button type="button" variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemovePaymentRow(payment.id)}>
+                                                            <Trash2 className="size-5" />
+                                                        </Button>
+                                                    </div>
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Installment Amount</Label>
                                                             <div className="relative">
-                                                                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                                                                <Input 
-                                                                    type="number" 
-                                                                    value={payment.amount} 
-                                                                    onChange={e => handlePaymentChange(payment.id, 'amount', e.target.value)} 
-                                                                    placeholder="Amount" 
-                                                                    className="pl-10 h-12 rounded-xl font-black text-sm" 
-                                                                />
+                                                                <HandCoins className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                                                                <Input type="number" value={payment.amount} onChange={e => handlePaymentChange(payment.id, 'amount', e.target.value)} placeholder="0.00" className="pl-10 h-10 rounded-xl font-bold" />
                                                             </div>
                                                         </div>
-                                                        <Select value={payment.status} onValueChange={v => handlePaymentChange(payment.id, 'status', v as any)}>
-                                                            <SelectTrigger className="w-40 h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="Pending">Pending</SelectItem>
-                                                                <SelectItem value="Paid">Paid</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                        {clientForm.payments!.length > 1 && (
-                                                            <Button type="button" variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50" onClick={() => handleRemovePaymentRow(payment.id)}>
-                                                                <Trash2 className="size-5" />
-                                                            </Button>
-                                                        )}
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Due Date</Label>
+                                                            <Input type="date" value={payment.dueDate} onChange={e => handlePaymentChange(payment.id, 'dueDate', e.target.value)} className="h-10 rounded-xl font-bold" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Payment Status</Label>
+                                                            <Select value={payment.status} onValueChange={v => handlePaymentChange(payment.id, 'status', v as any)}>
+                                                                <SelectTrigger className="h-10 rounded-xl font-bold"><SelectValue /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="Pending">Pending</SelectItem>
+                                                                    <SelectItem value="Partially Paid">Partially Paid</SelectItem>
+                                                                    <SelectItem value="Paid">Paid</SelectItem>
+                                                                    <SelectItem value="Overdue">Overdue</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Invoice Number</Label>
+                                                            <Input value={payment.invoiceNumber} onChange={e => handlePaymentChange(payment.id, 'invoiceNumber', e.target.value)} placeholder="INV-001" className="h-10 rounded-xl font-bold" />
+                                                        </div>
                                                     </div>
-                                                ))}
-                                            </div>
 
-                                            <Separator />
-                                            <div className="flex items-center justify-between pt-4">
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Target Project Value</p>
-                                                    <p className="text-3xl font-black text-slate-900 tracking-tighter">₹{Number(clientForm.fullPaymentPrice).toLocaleString()}</p>
-                                                </div>
-                                                <div className="text-right space-y-1">
-                                                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Scheduled Total</p>
-                                                    <p className={cn("text-2xl font-black tracking-tighter", totalCalculatedPayment > (clientForm.fullPaymentPrice || 0) ? "text-rose-600" : "text-emerald-600")}>
-                                                        ₹{totalCalculatedPayment.toLocaleString()}
-                                                    </p>
-                                                </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-6 pt-6 border-t border-dashed border-emerald-50">
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Invoice Date</Label>
+                                                            <Input type="date" value={payment.invoiceDate} onChange={e => handlePaymentChange(payment.id, 'invoiceDate', e.target.value)} className="h-10 rounded-xl font-bold" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Amount Received</Label>
+                                                            <Input type="number" value={payment.amountReceived} onChange={e => handlePaymentChange(payment.id, 'amountReceived', e.target.value)} placeholder="0.00" className="h-10 rounded-xl font-bold text-emerald-600" />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Remaining Balance</Label>
+                                                            <Input type="number" value={payment.remainingBalance} disabled className="h-10 rounded-xl font-bold bg-muted/30" />
+                                                        </div>
+                                                        <div className="lg:col-span-2 space-y-2">
+                                                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Remarks</Label>
+                                                            <Input value={payment.remarks} onChange={e => handlePaymentChange(payment.id, 'remarks', e.target.value)} placeholder="Notes for this payment..." className="h-10 rounded-xl" />
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                        </div>
+
+                                        <Separator />
+                                        <div className="flex items-center justify-between p-8 bg-white border-2 border-primary/5 rounded-[2rem] shadow-sm">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Project Total Cost</p>
+                                                <p className="text-3xl font-black text-slate-900 tracking-tighter">{clientForm.currencyType} {Number(clientForm.projectTotalCost).toLocaleString()}</p>
+                                            </div>
+                                            <div className="text-right space-y-1">
+                                                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Scheduled Milestones</p>
+                                                <p className={cn("text-2xl font-black tracking-tighter", totalCalculatedPayment !== (clientForm.projectTotalCost || 0) ? "text-rose-600" : "text-emerald-600")}>
+                                                    {clientForm.currencyType} {totalCalculatedPayment.toLocaleString()}
+                                                </p>
+                                                {totalCalculatedPayment !== (clientForm.projectTotalCost || 0) && (
+                                                    <p className="text-[8px] font-bold text-rose-500 uppercase">Mismatch with Project Total Cost</p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -753,7 +829,7 @@ export default function ClientsPage() {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-center font-black text-sm text-slate-900">
-                                        ₹{(client.fullPaymentPrice || 0).toLocaleString()}
+                                        {client.currencyType} {(client.projectTotalCost || client.fullPaymentPrice || 0).toLocaleString()}
                                     </TableCell>
                                     <TableCell>
                                         <Badge className={cn(
