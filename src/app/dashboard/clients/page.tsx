@@ -12,7 +12,7 @@ import {
     Building2, Filter, Download, 
     Briefcase, Zap, MapPin, X, 
     DollarSign, BriefcaseBusiness, IndianRupee, Loader2, TrendingUp, ReceiptIndianRupee,
-    Wallet, CheckCircle2, Clock
+    Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
