@@ -11,7 +11,7 @@ import {
     Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, 
     Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, 
     UserCheck, Briefcase, Zap, MapPin, ChevronRight, FileText, 
-    Calendar, Clock, CheckCircle2, MessageSquare, ListTodo, X, LayoutGrid,
+    Calendar, Clock, CheckCircle2, MessageSquare開, ListTodo, X, LayoutGrid,
     DollarSign, BriefcaseBusiness, UserPlus, IndianRupee, Layers, UserCircle2, Loader2, TrendingUp
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -99,19 +99,17 @@ export default function ClientsPage() {
     const clientsQuery = useMemoFirebase(() => query(collection(firestore, 'clients'), orderBy('companyName', 'asc')), [firestore]);
     const { data: rawClients, isLoading } = useCollection<Client>(clientsQuery);
 
-    // Business Reports Data Sourcing (Experimental)
+    // Business Reports Data Sourcing
     const [suggestedClients, setSuggestedClients] = React.useState<string[]>([]);
     React.useEffect(() => {
         const fetchReportSuggestions = async () => {
             if (!isAddOpen || !firestore) return;
             try {
-                // Fetch reports to find client names mentioned in "clientWin" or similar
                 const reportsSnap = await getDocs(query(collectionGroup(firestore, 'reports'), limit(50)));
                 const names = new Set<string>();
                 reportsSnap.docs.forEach(d => {
                     const data = d.data();
                     if (data.clientWin && data.clientWin !== 'NIL') {
-                        // Very basic extraction: first few words might be a company name
                         const match = data.clientWin.match(/([A-Z][a-z0-9]+(?:\s+[A-Z][a-z0-9]+)*)/);
                         if (match) names.add(match[1]);
                     }
@@ -169,7 +167,6 @@ export default function ClientsPage() {
         }));
     };
 
-    // Calculate dynamic full payment
     const totalCalculatedPayment = React.useMemo(() => {
         return (clientForm.payments || []).reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
     }, [clientForm.payments]);
@@ -484,6 +481,7 @@ export default function ClientsPage() {
                                 <TableHead className="font-black text-[9px] text-slate-500 uppercase h-14 tracking-widest">Industry</TableHead>
                                 <TableHead className="font-black text-[9px] text-slate-500 uppercase h-14 tracking-widest">Account Manager</TableHead>
                                 <TableHead className="font-black text-[9px] text-slate-500 uppercase h-14 tracking-widest">Classification</TableHead>
+                                <TableHead className="font-black text-[9px] text-slate-500 uppercase h-14 tracking-widest text-center">Project Value</TableHead>
                                 <TableHead className="font-black text-[9px] text-slate-500 uppercase h-14 tracking-widest">Status</TableHead>
                                 <TableHead className="font-black text-[9px] text-slate-500 uppercase h-14 tracking-widest">Activity</TableHead>
                                 <TableHead className="h-14"></TableHead>
@@ -491,9 +489,9 @@ export default function ClientsPage() {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={7} className="h-64 text-center animate-pulse text-xs font-black text-muted-foreground uppercase tracking-[0.3em]">Scanning Strategic Registry...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={8} className="h-64 text-center animate-pulse text-xs font-black text-muted-foreground uppercase tracking-[0.3em]">Scanning Strategic Registry...</TableCell></TableRow>
                             ) : filteredClients.length === 0 ? (
-                                <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground italic font-medium uppercase text-[10px] tracking-widest opacity-30">No active partnerships detected.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={8} className="h-64 text-center text-muted-foreground italic font-medium uppercase text-[10px] tracking-widest opacity-30">No active partnerships detected.</TableCell></TableRow>
                             ) : filteredClients.map(client => (
                                 <TableRow key={client.id} className="border-b group hover:bg-slate-50/50 cursor-pointer transition-colors" onClick={() => setSelectedClient(client)}>
                                     <TableCell className="py-6 px-6">
@@ -525,6 +523,9 @@ export default function ClientsPage() {
                                             {client.projectType || 'General'}
                                         </Badge>
                                     </TableCell>
+                                    <TableCell className="text-center font-black text-sm text-slate-900">
+                                        ₹{(client.fullPaymentPrice || 0).toLocaleString()}
+                                    </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <div className={cn("size-2 rounded-full", client.status === 'Active' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-slate-300")} />
@@ -534,17 +535,17 @@ export default function ClientsPage() {
                                     <TableCell className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{client.lastActivity}</TableCell>
                                     <TableCell className="text-right pr-6">
                                         <DropdownMenu>
-                                            <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                                                <Button variant="ghost" size="icon" className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="size-4.5" /></Button>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="size-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}><MoreHorizontal className="size-4.5" /></Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="rounded-xl p-2 w-52 border-none shadow-2xl">
-                                                <DropdownMenuItem onClick={() => { setEditingClient(client); setClientForm(client); setIsAddOpen(true); }} className="font-black text-[10px] uppercase tracking-widest gap-3 py-3 px-3">
+                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingClient(client); setClientForm(client); setIsAddOpen(true); }} className="font-black text-[10px] uppercase tracking-widest gap-3 py-3 px-3">
                                                     <Edit className="size-4 text-primary" /> Edit Record
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem onSelect={e => e.preventDefault()} className="font-black text-[10px] uppercase tracking-widest gap-3 py-3 px-3 text-rose-600 hover:bg-rose-50">
+                                                        <DropdownMenuItem onSelect={e => { e.preventDefault(); e.stopPropagation(); }} className="font-black text-[10px] uppercase tracking-widest gap-3 py-3 px-3 text-rose-600 hover:bg-rose-50">
                                                             <Trash2 className="size-4" /> Purge Partner
                                                         </DropdownMenuItem>
                                                     </AlertDialogTrigger>
@@ -582,12 +583,7 @@ export default function ClientsPage() {
             {/* Account Intelligence Sheet */}
             <Sheet open={!!selectedClient} onOpenChange={o => !o && setSelectedClient(null)}>
                 <SheetContent className="w-full sm:max-w-[540px] p-0 border-none shadow-2xl overflow-hidden flex flex-col bg-[#F8FAFC]">
-                    <SheetHeader className="sr-only">
-                        <SheetTitle>Client Intelligence: {selectedClient?.companyName}</SheetTitle>
-                        <SheetDescription>Comprehensive strategic overview of the partner account.</SheetDescription>
-                    </SheetHeader>
-                    
-                    <div className="p-10 pb-8 bg-white border-b shadow-sm">
+                    <SheetHeader className="p-10 pb-8 bg-white border-b shadow-sm">
                         <div className="flex items-start justify-between mb-8">
                             <div className="flex items-center gap-6">
                                 <div className="size-20 rounded-full bg-primary/5 flex items-center justify-center text-primary font-black text-2xl shadow-inner border-2 border-primary/10">
@@ -595,10 +591,10 @@ export default function ClientsPage() {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-3 mb-1.5">
-                                        <h3 className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-none">{selectedClient?.companyName}</h3>
+                                        <SheetTitle className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-none">{selectedClient?.companyName}</SheetTitle>
                                         <Badge className="bg-emerald-50 text-emerald-700 border-none text-[9px] font-black h-5 uppercase tracking-widest px-2.5 shadow-sm">Active</Badge>
                                     </div>
-                                    <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">{selectedClient?.category} Unit • Provisioned {selectedClient?.createdAt ? format(selectedClient.createdAt.toDate ? selectedClient.createdAt.toDate() : new Date(selectedClient.createdAt), 'MMM yyyy') : 'N/A'}</p>
+                                    <SheetDescription className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">{selectedClient?.category} Unit • Provisioned {selectedClient?.createdAt ? format(selectedClient.createdAt.toDate ? selectedClient.createdAt.toDate() : new Date(selectedClient.createdAt), 'MMM yyyy') : 'N/A'}</SheetDescription>
                                 </div>
                             </div>
                             <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted" onClick={() => setSelectedClient(null)}><X className="size-5"/></Button>
@@ -619,7 +615,7 @@ export default function ClientsPage() {
                                 ))}
                             </TabsList>
                         </Tabs>
-                    </div>
+                    </SheetHeader>
 
                     <ScrollArea className="flex-1">
                         <div className="p-10 space-y-12 pb-24">
@@ -630,6 +626,8 @@ export default function ClientsPage() {
                                         <Briefcase className="size-3.5 text-primary" /> Profile Brief
                                     </h4>
                                     <div className="space-y-5">
+                                        <InfoLine label="Account Status" value={selectedClient?.status || 'Active'} />
+                                        <InfoLine label="Project Value" value={`₹${(selectedClient?.fullPaymentPrice || 0).toLocaleString()}`} />
                                         <InfoLine label="Product" value={selectedClient?.productNeeded || 'Enterprise Suite'} />
                                         <InfoLine label="Project Tier" value={selectedClient?.projectType || 'General'} />
                                         <InfoLine label="HQ Website" value={selectedClient?.website || 'N/A'} isLink />
