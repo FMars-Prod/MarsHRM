@@ -11,7 +11,8 @@ import {
     Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, 
     Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, 
     UserCheck, Briefcase, Zap, MapPin, ChevronRight, FileText, 
-    Calendar, Clock, CheckCircle2, MessageSquare, ListTodo, X, LayoutGrid
+    Calendar, Clock, CheckCircle2, MessageSquare, ListTodo, X, LayoutGrid,
+    DollarSign
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
