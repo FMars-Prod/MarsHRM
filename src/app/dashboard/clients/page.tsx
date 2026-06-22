@@ -11,7 +11,7 @@ import {
     Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, 
     Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, 
     UserCheck, Briefcase, Zap, MapPin, ChevronRight, FileText, 
-    Calendar, Clock, CheckCircle2, MessageSquare開, ListTodo, X, LayoutGrid,
+    Calendar, Clock, CheckCircle2, ListTodo, X, LayoutGrid,
     DollarSign, BriefcaseBusiness, UserPlus, IndianRupee, Layers, UserCircle2, Loader2, TrendingUp
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -601,113 +601,137 @@ export default function ClientsPage() {
                         </div>
 
                         <div className="grid grid-cols-3 gap-8 p-6 bg-muted/10 rounded-3xl border border-dashed border-border/50">
-                            <DetailCol label="Strategist" value={selectedClient?.managerName || 'Unassigned'} />
+                            <div className="space-y-2">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Handling By</p>
+                                <div className="flex items-center gap-2">
+                                    <Avatar className="size-6 ring-1 ring-border shadow-sm">
+                                        <AvatarImage src={selectedClient?.managerAvatar} className="object-cover" />
+                                        <AvatarFallback className="text-[8px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback>
+                                    </Avatar>
+                                    <p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.managerName || 'Unassigned'}</p>
+                                </div>
+                            </div>
                             <DetailCol label="Official Email" value={selectedClient?.email || 'N/A'} />
                             <DetailCol label="Phone Signal" value={selectedClient?.phone || 'N/A'} />
                         </div>
+                    </SheetHeader>
 
-                        <Tabs defaultValue="overview" className="mt-10">
-                            <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-10 border-b rounded-none overflow-x-auto no-scrollbar">
+                    <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
+                        <div className="px-10 bg-white border-b shrink-0">
+                            <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-10 border-none rounded-none overflow-x-auto no-scrollbar">
                                 {['Overview', 'Milestones', 'Meetings', 'Contracts', 'Intelligence'].map(tab => (
                                     <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-black text-[10px] uppercase px-0 pb-4 tracking-widest shadow-none">
                                         {tab}
                                     </TabsTrigger>
                                 ))}
                             </TabsList>
-                        </Tabs>
-                    </SheetHeader>
-
-                    <ScrollArea className="flex-1">
-                        <div className="p-10 space-y-12 pb-24">
-                            {/* Mission Classification */}
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
-                                <div className="md:col-span-7 space-y-8">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
-                                        <Briefcase className="size-3.5 text-primary" /> Profile Brief
-                                    </h4>
-                                    <div className="space-y-5">
-                                        <InfoLine label="Account Status" value={selectedClient?.status || 'Active'} />
-                                        <InfoLine label="Project Value" value={`₹${(selectedClient?.fullPaymentPrice || 0).toLocaleString()}`} />
-                                        <InfoLine label="Product" value={selectedClient?.productNeeded || 'Enterprise Suite'} />
-                                        <InfoLine label="Project Tier" value={selectedClient?.projectType || 'General'} />
-                                        <InfoLine label="HQ Website" value={selectedClient?.website || 'N/A'} isLink />
-                                        <InfoLine label="Reference ID" value={`#REF-${selectedClient?.id.slice(0, 8).toUpperCase()}`} />
-                                        <div className="pt-2">
-                                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-3">Operational HQ</p>
-                                            <div className="p-5 bg-white rounded-2xl ring-1 ring-border shadow-sm flex items-start gap-3">
-                                                <MapPin className="size-4 text-primary mt-0.5" />
-                                                <p className="text-xs font-bold leading-relaxed text-slate-600 uppercase italic">"{selectedClient?.address || 'No physical address registered.'}"</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="md:col-span-5 space-y-6">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
-                                        <TrendingUp className="size-3.5 text-primary" /> Velocity
-                                    </h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <StatBox icon={Zap} label="Growth" value="4.2x" color="text-emerald-600" bg="bg-emerald-50" />
-                                        <StatBox icon={Users} label="Stakeholders" value="12" color="text-blue-600" bg="bg-blue-50" />
-                                        <StatBox icon={FileText} label="Invoices" value="08" color="text-purple-600" bg="bg-purple-50" />
-                                        <StatBox icon={Clock} label="Days Active" value="142" color="text-orange-600" bg="bg-orange-50" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Strategic Milestones */}
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
-                                        <DollarSign className="size-3.5 text-primary" /> Payment Milestones
-                                    </h4>
-                                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Total: ₹{selectedClient?.fullPaymentPrice?.toLocaleString()}</p>
-                                </div>
-                                <div className="space-y-4">
-                                    {selectedClient?.payments?.map((p, i) => (
-                                        <div key={p.id} className="flex items-center justify-between p-5 bg-white rounded-2xl ring-1 ring-border shadow-sm group hover:ring-primary/20 transition-all">
-                                            <div className="flex items-center gap-4">
-                                                <div className="size-9 rounded-xl bg-muted/20 flex items-center justify-center font-black text-[10px] text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all">0{i+1}</div>
-                                                <span className="font-black text-sm text-slate-800 tracking-tight uppercase leading-none">Milestone {i+1}</span>
-                                            </div>
-                                            <div className="flex items-center gap-6">
-                                                <span className="font-black text-sm text-slate-900">₹{parseFloat(p.amount).toLocaleString()}</span>
-                                                <Badge className={cn(
-                                                    "rounded-lg font-black text-[8px] uppercase tracking-widest border-none px-3 h-6",
-                                                    p.status === 'Paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                                                )}>{p.status}</Badge>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {(!selectedClient?.payments || selectedClient.payments.length === 0) && (
-                                        <div className="py-10 text-center opacity-20 italic text-sm font-bold uppercase tracking-widest">No financial milestones provisioned.</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Timeline Intelligence */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                <div className="space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Recent Signals</h4>
-                                        <Button variant="link" className="text-primary p-0 h-auto text-[10px] font-black uppercase tracking-widest">Audit All</Button>
-                                    </div>
-                                    <div className="space-y-8 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-                                        <ActivityItem icon={DollarSign} title="Invoice Milestone 01 Verified" time="Today, 10:30 AM" color="bg-emerald-500" />
-                                        <ActivityItem icon={Users} title="Stakeholder Alignment Meeting" time="Yesterday, 09:15 AM" color="bg-blue-500" />
-                                        <ActivityItem icon={FileText} title="Tactical Briefing Synced" time="2 days ago" color="bg-purple-500" />
-                                    </div>
-                                </div>
-                                <div className="space-y-6">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Upcoming Windows</h4>
-                                    <div className="space-y-4">
-                                        <UpcomingItem date="16" month="MAY" title="Sprint Alignment Window" time="10:00 AM" color="text-primary" />
-                                        <UpcomingItem date="20" month="MAY" title="Revenue Milestone 02 Due" time="02:00 PM" color="text-rose-600" />
-                                        <UpcomingItem date="25" month="MAY" title="Account Status Audit" time="11:00 AM" color="text-emerald-600" />
-                                    </div>
-                                </div>
-                            </div>
                         </div>
-                    </ScrollArea>
+
+                        <ScrollArea className="flex-1">
+                            <div className="p-10 pb-24">
+                                <TabsContent value="overview" className="mt-0 space-y-12">
+                                    {/* Mission Classification */}
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
+                                        <div className="md:col-span-7 space-y-8">
+                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                <Briefcase className="size-3.5 text-primary" /> Profile Brief
+                                            </h4>
+                                            <div className="space-y-5">
+                                                <InfoLine label="Account Status" value={selectedClient?.status || 'Active'} />
+                                                <InfoLine label="Project Value" value={`₹${(selectedClient?.fullPaymentPrice || 0).toLocaleString()}`} />
+                                                <InfoLine label="Product" value={selectedClient?.productNeeded || 'Enterprise Suite'} />
+                                                <InfoLine label="Project Tier" value={selectedClient?.projectType || 'General'} />
+                                                <InfoLine label="HQ Website" value={selectedClient?.website || 'N/A'} isLink />
+                                                <InfoLine label="Reference ID" value={`#REF-${selectedClient?.id.slice(0, 8).toUpperCase()}`} />
+                                                <div className="pt-2">
+                                                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-3">Operational HQ</p>
+                                                    <div className="p-5 bg-white rounded-2xl ring-1 ring-border shadow-sm flex items-start gap-3">
+                                                        <MapPin className="size-4 text-primary mt-0.5" />
+                                                        <p className="text-xs font-bold leading-relaxed text-slate-600 uppercase italic">"{selectedClient?.address || 'No physical address registered.'}"</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="md:col-span-5 space-y-6">
+                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                <TrendingUp className="size-3.5 text-primary" /> Velocity
+                                            </h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <StatBox icon={Zap} label="Growth" value="4.2x" color="text-emerald-600" bg="bg-emerald-50" />
+                                                <StatBox icon={Users} label="Stakeholders" value="12" color="text-blue-600" bg="bg-blue-50" />
+                                                <StatBox icon={FileText} label="Invoices" value="08" color="text-purple-600" bg="bg-purple-50" />
+                                                <StatBox icon={Clock} label="Days Active" value="142" color="text-orange-600" bg="bg-orange-50" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Timeline Intelligence */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                        <div className="space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Recent Signals</h4>
+                                                <Button variant="link" className="text-primary p-0 h-auto text-[10px] font-black uppercase tracking-widest">Audit All</Button>
+                                            </div>
+                                            <div className="space-y-8 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                                                <ActivityItem icon={DollarSign} title="Invoice Milestone 01 Verified" time="Today, 10:30 AM" color="bg-emerald-500" />
+                                                <ActivityItem icon={Users} title="Stakeholder Alignment Meeting" time="Yesterday, 09:15 AM" color="bg-blue-500" />
+                                                <ActivityItem icon={FileText} title="Tactical Briefing Synced" time="2 days ago" color="bg-purple-500" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-6">
+                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Upcoming Windows</h4>
+                                            <div className="space-y-4">
+                                                <UpcomingItem date="16" month="MAY" title="Sprint Alignment Window" time="10:00 AM" color="text-primary" />
+                                                <UpcomingItem date="20" month="MAY" title="Revenue Milestone 02 Due" time="02:00 PM" color="text-rose-600" />
+                                                <UpcomingItem date="25" month="MAY" title="Account Status Audit" time="11:00 AM" color="text-emerald-600" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="milestones" className="mt-0 space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
+                                            <DollarSign className="size-3.5 text-primary" /> Payment Milestones
+                                        </h4>
+                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Total: ₹{selectedClient?.fullPaymentPrice?.toLocaleString()}</p>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {selectedClient?.payments?.map((p, i) => (
+                                            <div key={p.id} className="flex items-center justify-between p-5 bg-white rounded-2xl ring-1 ring-border shadow-sm group hover:ring-primary/20 transition-all">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="size-9 rounded-xl bg-muted/20 flex items-center justify-center font-black text-[10px] text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all">0{i+1}</div>
+                                                    <span className="font-black text-sm text-slate-800 tracking-tight uppercase leading-none">Milestone {i+1}</span>
+                                                </div>
+                                                <div className="flex items-center gap-6">
+                                                    <span className="font-black text-sm text-slate-900">₹{parseFloat(p.amount).toLocaleString()}</span>
+                                                    <Badge className={cn(
+                                                        "rounded-lg font-black text-[8px] uppercase tracking-widest border-none px-3 h-6",
+                                                        p.status === 'Paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                                                    )}>{p.status}</Badge>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(!selectedClient?.payments || selectedClient.payments.length === 0) && (
+                                            <div className="py-10 text-center opacity-20 italic text-sm font-bold uppercase tracking-widest">No financial milestones provisioned.</div>
+                                        )}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="meetings" className="mt-0">
+                                    <div className="py-20 text-center opacity-20 italic text-sm font-bold uppercase tracking-widest">No strategic meetings archived in current sprint.</div>
+                                </TabsContent>
+
+                                <TabsContent value="contracts" className="mt-0">
+                                    <div className="py-20 text-center opacity-20 italic text-sm font-bold uppercase tracking-widest">Awaiting digital signature for master service agreement.</div>
+                                </TabsContent>
+
+                                <TabsContent value="intelligence" className="mt-0">
+                                    <div className="py-20 text-center opacity-20 italic text-sm font-bold uppercase tracking-widest">AI analysis restricted to Tier 1 Executive credentials.</div>
+                                </TabsContent>
+                            </div>
+                        </ScrollArea>
+                    </Tabs>
                 </SheetContent>
             </Sheet>
         </div>
