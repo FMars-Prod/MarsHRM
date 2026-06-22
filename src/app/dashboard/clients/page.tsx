@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -722,18 +721,18 @@ export default function ClientsPage() {
 
             <Sheet open={!!selectedClient} onOpenChange={o => !o && setSelectedClient(null)}>
                 <SheetContent className="w-full sm:max-w-[540px] p-0 border-none shadow-3xl flex flex-col bg-[#F8FAFC]">
-                    <SheetHeader className="p-10 pb-8 bg-white border-b shadow-sm">
-                        <div className="flex items-start justify-between mb-8">
-                            <div className="flex items-center gap-6">
-                                <div className="size-20 rounded-none bg-primary/5 flex items-center justify-center text-primary font-black text-2xl border-2 border-primary/10 shadow-inner">
+                    <SheetHeader className="p-6 bg-white border-b shadow-sm">
+                        <div className="flex items-start justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className="size-16 rounded-none bg-primary/5 flex items-center justify-center text-primary font-black text-xl border-2 border-primary/10 shadow-inner">
                                     {selectedClient?.companyName.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-3 mb-1">
-                                        <SheetTitle className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-none">{selectedClient?.companyName}</SheetTitle>
-                                        <Badge className="bg-emerald-50 text-emerald-700 border-none text-[9px] font-black h-5 uppercase px-2.5 shadow-sm">{selectedClient?.status}</Badge>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <SheetTitle className="text-xl font-black tracking-tighter text-slate-900 uppercase leading-none">{selectedClient?.companyName}</SheetTitle>
+                                        <Badge className="bg-emerald-50 text-emerald-700 border-none text-[8px] font-black h-4 uppercase px-2 shadow-sm">{selectedClient?.status}</Badge>
                                     </div>
-                                    <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                    <div className="flex items-center gap-3 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
                                         <span>{selectedClient?.industryType}</span>
                                         <span>•</span>
                                         <span>Since {selectedClient?.createdAt ? format(selectedClient.createdAt.toDate(), 'MMM yyyy') : 'Jan 2025'}</span>
@@ -743,34 +742,34 @@ export default function ClientsPage() {
                         </div>
 
                         {/* Revenue Progress Terminal */}
-                        <div className="p-6 bg-emerald-50/50 rounded-none ring-1 ring-emerald-100/50 space-y-4">
+                        <div className="p-4 bg-emerald-50/50 rounded-none ring-1 ring-emerald-100/50 space-y-3">
                             <div className="flex justify-between items-end">
-                                <div className="space-y-1">
-                                    <p className="text-[9px] font-black uppercase text-emerald-700 opacity-60 tracking-widest">Collection Pulse</p>
-                                    <p className="text-lg font-black text-emerald-900">
-                                        {selectedClient?.currencyType}{moneyCollected.toLocaleString()} <span className="text-[10px] font-bold text-emerald-600/50 mx-2">/</span> {selectedClient?.currencyType}{totalProjectValue.toLocaleString()}
+                                <div className="space-y-0.5">
+                                    <p className="text-[8px] font-black uppercase text-emerald-700 opacity-60 tracking-widest">Payment Progress</p>
+                                    <p className="text-base font-black text-emerald-900">
+                                        {selectedClient?.currencyType}{moneyCollected.toLocaleString()} <span className="text-[9px] font-bold text-emerald-600/50 mx-1">/</span> {selectedClient?.currencyType}{totalProjectValue.toLocaleString()}
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[9px] font-black uppercase text-rose-600 tracking-widest">Pending</p>
-                                    <p className="text-sm font-black text-rose-700">{selectedClient?.currencyType}{(totalProjectValue - moneyCollected).toLocaleString()}</p>
+                                    <p className="text-[8px] font-black uppercase text-rose-600 tracking-widest">Pending</p>
+                                    <p className="text-xs font-black text-rose-700">{selectedClient?.currencyType}{(totalProjectValue - moneyCollected).toLocaleString()}</p>
                                 </div>
                             </div>
-                            <Progress value={progressPercent} className="h-1.5 rounded-none bg-emerald-200/30" indicatorClassName="bg-emerald-600" />
+                            <Progress value={progressPercent} className="h-1 rounded-none bg-emerald-200/30" indicatorClassName="bg-emerald-600" />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-6 pt-6 border-t border-dashed">
-                            <div className="space-y-1.5"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Account Manager</p><div className="flex items-center gap-2.5"><Avatar className="size-7"><AvatarFallback className="text-[8px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback></Avatar><p className="text-[11px] font-black text-slate-800 uppercase truncate">{selectedClient?.managerName}</p></div></div>
-                            <div className="space-y-1.5"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Email</p><p className="text-[11px] font-black text-slate-800 uppercase truncate">{selectedClient?.email}</p></div>
-                            <div className="space-y-1.5"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Phone</p><p className="text-[11px] font-black text-slate-800 uppercase truncate">{selectedClient?.phone}</p></div>
+                        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-dashed">
+                            <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Manager</p><div className="flex items-center gap-2"><Avatar className="size-6"><AvatarFallback className="text-[7px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback></Avatar><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.managerName}</p></div></div>
+                            <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Email</p><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.email}</p></div>
+                            <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Phone</p><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.phone}</p></div>
                         </div>
                     </SheetHeader>
 
                     <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
-                        <div className="px-10 bg-white border-b shrink-0 overflow-x-auto no-scrollbar">
-                            <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-12 border-none rounded-none">
+                        <div className="px-6 bg-white border-b shrink-0 overflow-x-auto no-scrollbar">
+                            <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-8 border-none rounded-none">
                                 {['Overview', 'Invoices', 'Meetings', 'Audit'].map(tab => (
-                                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-black text-[11px] uppercase px-0 pb-5 tracking-widest">
+                                    <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-black text-[10px] uppercase px-0 pb-3 tracking-widest">
                                         {tab}
                                     </TabsTrigger>
                                 ))}
@@ -778,25 +777,25 @@ export default function ClientsPage() {
                         </div>
 
                         <ScrollArea className="flex-1">
-                            <div className="p-10 space-y-10">
-                                <TabsContent value="overview" className="mt-0 space-y-10">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                        <div className="space-y-6">
-                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">About Client</h4>
-                                            <div className="space-y-5">
+                            <div className="p-6 space-y-8 pb-32">
+                                <TabsContent value="overview" className="mt-0 space-y-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">About Client</h4>
+                                            <div className="space-y-4">
                                                 <DetailLine label="Value" value={`${selectedClient?.currencyType}${selectedClient?.projectTotalCost?.toLocaleString()}`} isPrice />
                                                 <DetailLine label="Size" value={selectedClient?.companySize || 'N/A'} />
                                                 <DetailLine label="GST" value={selectedClient?.gstNumber || 'N/A'} />
                                                 <DetailLine label="Website" value={selectedClient?.website || 'N/A'} />
-                                                <div className="pt-2">
-                                                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-3">Address</p>
-                                                    <p className="text-[11px] font-bold text-slate-600 leading-relaxed uppercase">{selectedClient?.address || 'No physical address registered.'}</p>
+                                                <div className="pt-1">
+                                                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-2">Address</p>
+                                                    <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase">{selectedClient?.address || 'No physical address registered.'}</p>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-6">
-                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Operational Stats</h4>
-                                            <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Stats</h4>
+                                            <div className="grid grid-cols-2 gap-3">
                                                 <StatBox label="Meetings" value={clientMeetings.length.toString()} icon={Users} color="bg-blue-50 text-blue-600" />
                                                 <StatBox label="Invoices" value={clientInvoices.length.toString()} icon={ReceiptIndianRupee} color="bg-purple-50 text-purple-600" />
                                                 <StatBox label="Milestones" value={selectedClient?.payments?.length?.toString() || '0'} icon={ListChecks} color="bg-emerald-50 text-emerald-600" />
@@ -806,67 +805,67 @@ export default function ClientsPage() {
                                     </div>
 
                                     {/* Timeline Audit Graph */}
-                                    <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Strategic Timeline Audit</h4>
-                                        <Card className="border-none shadow-sm rounded-none bg-white p-8 ring-1 ring-border/50 relative overflow-hidden">
-                                            <div className="absolute left-10 top-10 bottom-10 w-px bg-border border-dashed" />
-                                            <div className="space-y-8 relative z-10">
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Strategic Timeline</h4>
+                                        <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50 relative overflow-hidden">
+                                            <div className="absolute left-8 top-8 bottom-8 w-px bg-border border-dashed" />
+                                            <div className="space-y-6 relative z-10">
                                                 {timelineEvents.map((event, i) => (
-                                                    <div key={i} className="flex gap-6 items-start">
-                                                        <div className={cn("size-5 rounded-none flex items-center justify-center shrink-0 ring-4 ring-white shadow-sm", event.color)}>
-                                                            <div className="size-1.5 bg-white rounded-none" />
+                                                    <div key={i} className="flex gap-4 items-start">
+                                                        <div className={cn("size-4 rounded-none flex items-center justify-center shrink-0 ring-4 ring-white shadow-sm", event.color)}>
+                                                            <div className="size-1 bg-white rounded-none" />
                                                         </div>
-                                                        <div className="space-y-1">
-                                                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none">{format(event.date, 'MMM dd, yyyy')}</p>
-                                                            <p className="text-[11px] font-bold text-slate-800 uppercase leading-tight">{event.label}</p>
+                                                        <div className="space-y-0.5">
+                                                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none">{format(event.date, 'MMM dd, yyyy')}</p>
+                                                            <p className="text-[10px] font-bold text-slate-800 uppercase leading-tight">{event.label}</p>
                                                         </div>
                                                     </div>
                                                 ))}
                                                 {timelineEvents.length === 0 && (
-                                                    <div className="text-center py-4 opacity-30 italic text-[10px] font-bold uppercase">No historical markers captured.</div>
+                                                    <div className="text-center py-2 opacity-30 italic text-[9px] font-bold uppercase">No history found.</div>
                                                 )}
                                             </div>
                                         </Card>
                                     </div>
 
-                                    <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Account Executive Intelligence</h4>
-                                        <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50">
-                                            <p className="text-[11px] font-bold text-slate-600 leading-relaxed uppercase italic">"{selectedClient?.notes || 'Strategic partnership protocol initiated.'}"</p>
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Executive Intelligence</h4>
+                                        <Card className="border-none shadow-sm rounded-none bg-white p-4 ring-1 ring-border/50">
+                                            <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase italic">"{selectedClient?.notes || 'Strategic partnership protocol initiated.'}"</p>
                                         </Card>
                                     </div>
                                 </TabsContent>
                                 
-                                <TabsContent value="invoices" className="mt-0 space-y-6">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Account Invoices</h4>
-                                    <div className="space-y-4">
+                                <TabsContent value="invoices" className="mt-0 space-y-4">
+                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Invoices</h4>
+                                    <div className="space-y-3">
                                         {clientInvoices.map((inv: any) => (
-                                            <div key={inv.id} className="p-6 rounded-none bg-white ring-1 ring-border shadow-sm flex items-center justify-between hover:bg-slate-50 transition-all group">
-                                                <div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-purple-50 text-purple-600"><ReceiptIndianRupee className="size-5" /></div><div><p className="font-bold text-sm uppercase">{inv.title}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">{format(inv.uploadedAt.toDate(), 'PPP')}</p></div></div>
-                                                <Button variant="ghost" size="icon" asChild><Link href={inv.link} target="_blank"><ExternalLink className="size-4" /></Link></Button>
+                                            <div key={inv.id} className="p-4 rounded-none bg-white ring-1 ring-border shadow-sm flex items-center justify-between hover:bg-slate-50 transition-all group">
+                                                <div className="flex items-center gap-3"><div className="p-2 rounded-xl bg-purple-50 text-purple-600"><ReceiptIndianRupee className="size-4" /></div><div><p className="font-bold text-xs uppercase">{inv.title}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{format(inv.uploadedAt.toDate(), 'PPP')}</p></div></div>
+                                                <Button variant="ghost" size="icon" asChild><Link href={inv.link} target="_blank"><ExternalLink className="size-3" /></Link></Button>
                                             </div>
                                         ))}
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="meetings" className="mt-0 space-y-6">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Account Engagements</h4>
-                                    <div className="space-y-4">
+                                <TabsContent value="meetings" className="mt-0 space-y-4">
+                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Meetings</h4>
+                                    <div className="space-y-3">
                                         {clientMeetings.map((m: any) => (
-                                            <div key={m.id} className="p-6 rounded-none bg-white ring-1 ring-border shadow-sm space-y-4 hover:bg-slate-50 transition-all group">
+                                            <div key={m.id} className="p-4 rounded-none bg-white ring-1 ring-border shadow-sm space-y-3 hover:bg-slate-50 transition-all group">
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="p-3 rounded-xl bg-sky-50 text-sky-600"><Video className="size-5" /></div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-2 rounded-xl bg-sky-50 text-sky-600"><Video className="size-4" /></div>
                                                         <div>
-                                                            <p className="font-bold text-sm uppercase">{m.title}</p>
-                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">{format(m.date.toDate(), 'PPP p')}</p>
+                                                            <p className="font-bold text-xs uppercase">{m.title}</p>
+                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">{format(m.date.toDate(), 'PPP p')}</p>
                                                         </div>
                                                     </div>
-                                                    <Button variant="ghost" size="icon" asChild><Link href={m.link || '#'} target="_blank"><ExternalLink className="size-4" /></Link></Button>
+                                                    <Button variant="ghost" size="icon" asChild><Link href={m.link || '#'} target="_blank"><ExternalLink className="size-3" /></Link></Button>
                                                 </div>
                                                 {m.description && (
-                                                    <div className="p-4 bg-muted/20 border-l-4 border-primary/40">
-                                                        <p className="text-[11px] font-bold text-slate-600 uppercase tracking-tight italic">Regarding: "{m.description}"</p>
+                                                    <div className="p-3 bg-muted/20 border-l-4 border-primary/40">
+                                                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-tight italic">Regarding: "{m.description}"</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -906,17 +905,16 @@ function MetricCard({ label, value, trend, up, icon: Icon, color, bg, valueColor
 function DetailLine({ label, value, isPrice }: { label: string, value: string, isPrice?: boolean }) {
     return (
         <div className="grid grid-cols-5 items-center gap-4">
-            <span className="col-span-2 text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</span>
-            <span className={cn("col-span-3 text-[11px] font-black truncate uppercase text-right", isPrice ? "text-emerald-600" : "text-slate-800")}>{value}</span>
+            <span className="col-span-2 text-[8px] font-black text-muted-foreground uppercase tracking-widest">{label}</span>
+            <span className={cn("col-span-3 text-[10px] font-black truncate uppercase text-right", isPrice ? "text-emerald-600" : "text-slate-800")}>{value}</span>
         </div>
     );
 }
 
 function StatBox({ label, value, icon: Icon, color }: { label: string, value: string, icon: any, color: string }) {
     return (
-        <div className="p-4 bg-white rounded-none ring-1 ring-border shadow-sm space-y-3 transition-transform hover:scale-105">
-            <div className={cn("p-2 rounded-xl inline-block shadow-sm", color)}><Icon className="size-4" /></div>
-            <div><p className="text-xl font-black text-slate-900 leading-none">{value}</p><p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">{label}</p></div>
+        <div className="p-3 bg-white rounded-none ring-1 ring-border shadow-sm space-y-2 transition-transform hover:scale-105">
+            <div className={cn("p-1.5 rounded-lg inline-block shadow-sm", color)}><Icon className="size-3.5" /></div>
+            <div><p className="text-base font-black text-slate-900 leading-none">{value}</p><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{label}</p></div>
         </div>
-    );
 }
