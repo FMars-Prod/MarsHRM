@@ -352,7 +352,7 @@ export default function ClientsPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <div className="lg:col-span-8 bg-white rounded-3xl border shadow-sm overflow-hidden ring-1 ring-border/50">
+                <div className="lg:col-span-8 bg-white rounded-none border shadow-sm overflow-hidden ring-1 ring-border/50">
                     <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4 border-b">
                         <div className="flex flex-1 w-full gap-2">
                             <div className="relative flex-1">
@@ -361,11 +361,11 @@ export default function ClientsPage() {
                                     placeholder="Search clients..." 
                                     value={searchQuery} 
                                     onChange={e => setSearchQuery(e.target.value)}
-                                    className="pl-12 h-11 bg-muted/20 border-none ring-1 ring-border/50 rounded-2xl"
+                                    className="pl-12 h-11 bg-muted/20 border-none ring-1 ring-border/50 rounded-none"
                                 />
                             </div>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[140px] h-11 rounded-2xl bg-muted/20 border-none ring-1 ring-border/50">
+                                <SelectTrigger className="w-[140px] h-11 rounded-none bg-muted/20 border-none ring-1 ring-border/50">
                                     <SelectValue placeholder="All Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -379,27 +379,27 @@ export default function ClientsPage() {
                         </div>
                         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                             <DialogTrigger asChild>
-                                <Button className="h-11 px-8 rounded-2xl font-black uppercase text-[11px] tracking-widest gap-2 shadow-xl shadow-primary/20">
+                                <Button className="h-11 px-8 rounded-none font-black uppercase text-[11px] tracking-widest gap-2 shadow-xl shadow-primary/20">
                                     <Plus className="size-4" /> Add a Client!
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-4xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-3xl h-[90vh] flex flex-col">
+                            <DialogContent className="max-w-4xl rounded-none p-0 overflow-hidden border-none shadow-3xl h-[90vh] flex flex-col">
                                 <DialogHeader className="p-10 border-b bg-white">
                                     <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Add New Client</DialogTitle>
                                 </DialogHeader>
                                 <ScrollArea className="flex-1 bg-muted/5 p-10">
                                     <div className="space-y-10">
                                         <div className="grid grid-cols-2 gap-8">
-                                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Organization Name</Label><Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} className="h-12 rounded-xl" /></div>
-                                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Email</Label><Input value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className="h-12 rounded-xl" /></div>
+                                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Organization Name</Label><Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} className="h-12 rounded-none" /></div>
+                                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Email</Label><Input value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className="h-12 rounded-none" /></div>
                                         </div>
-                                        <div className="p-8 bg-white border-2 border-dashed border-primary/20 rounded-3xl space-y-6">
+                                        <div className="p-8 bg-white border-2 border-dashed border-primary/20 rounded-none space-y-6">
                                             <h4 className="text-xs font-black uppercase text-primary tracking-widest">Financial Structure</h4>
                                             <div className="grid grid-cols-2 gap-6">
-                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Project Value</Label><Input type="number" value={clientForm.fullPaymentPrice} onChange={e => setClientForm({...clientForm, fullPaymentPrice: parseFloat(e.target.value)})} className="h-12 rounded-xl" /></div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Project Value</Label><Input type="number" value={clientForm.fullPaymentPrice} onChange={e => setClientForm({...clientForm, fullPaymentPrice: parseFloat(e.target.value)})} className="h-12 rounded-none" /></div>
                                                 <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Currency</Label>
                                                     <Select value={clientForm.currencyType} onValueChange={v => setClientForm({...clientForm, currencyType: v})}>
-                                                        <SelectTrigger className="h-12 rounded-xl"><SelectValue /></SelectTrigger>
+                                                        <SelectTrigger className="h-12 rounded-none"><SelectValue /></SelectTrigger>
                                                         <SelectContent>{CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                                                     </Select>
                                                 </div>
@@ -408,7 +408,7 @@ export default function ClientsPage() {
                                     </div>
                                 </ScrollArea>
                                 <div className="p-10 border-t bg-white">
-                                    <Button onClick={handleSaveClient} className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-2xl">Finalize Registry</Button>
+                                    <Button onClick={handleSaveClient} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Finalize Registry</Button>
                                 </div>
                             </DialogContent>
                         </Dialog>
@@ -431,7 +431,7 @@ export default function ClientsPage() {
                                     <TableRow key={client.id} className="border-b group hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedClient(client)}>
                                         <TableCell className="py-8 px-8">
                                             <div className="flex items-center gap-5">
-                                                <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-sm">{client.companyName.slice(0,2).toUpperCase()}</div>
+                                                <div className="size-12 rounded-none bg-primary/10 flex items-center justify-center text-primary font-black text-sm">{client.companyName.slice(0,2).toUpperCase()}</div>
                                                 <div className="space-y-1">
                                                     <span className="font-black text-[15px] uppercase tracking-tight block">{client.companyName}</span>
                                                     <span className="text-[10px] font-bold text-muted-foreground uppercase">{client.category}</span>
@@ -442,7 +442,7 @@ export default function ClientsPage() {
                                             {client.currencyType}{client.projectTotalCost?.toLocaleString()}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge className={cn("rounded-lg font-black text-[9px] px-3 h-6 border-none uppercase tracking-widest shadow-sm", 
+                                            <Badge className={cn("rounded-none font-black text-[9px] px-3 h-6 border-none uppercase tracking-widest shadow-sm", 
                                                 client.status === 'Active' ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700")}>
                                                 {client.status}
                                             </Badge>
@@ -450,7 +450,7 @@ export default function ClientsPage() {
                                         <TableCell className="text-right px-8" onClick={e => e.stopPropagation()}>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-10"><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 border-none shadow-3xl">
+                                                <DropdownMenuContent align="end" className="w-56 rounded-none p-2 border-none shadow-3xl">
                                                     <DropdownMenuItem className="font-black text-[11px] uppercase gap-3 py-4 px-4" asChild>
                                                         <Link href={`/dashboard/meetings?clientId=${client.id}`}><Video className="size-4 text-primary" /> Schedule Meeting</Link>
                                                     </DropdownMenuItem>
@@ -472,12 +472,12 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="lg:col-span-4 space-y-6">
-                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
+                    <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden ring-1 ring-border/50">
                         <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between">
                             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2"><Trophy className="size-4" /> Top Clients</CardTitle>
-                            <div className="flex bg-muted/30 p-1 rounded-xl">
-                                <button onClick={() => setRankBy('price')} className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all", rankBy === 'price' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Price</button>
-                                <button onClick={() => setRankBy('services')} className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all", rankBy === 'services' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Services</button>
+                            <div className="flex bg-muted/30 p-1 rounded-none">
+                                <button onClick={() => setRankBy('price')} className={cn("px-3 py-1 rounded-none text-[9px] font-black uppercase transition-all", rankBy === 'price' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Price</button>
+                                <button onClick={() => setRankBy('services')} className={cn("px-3 py-1 rounded-none text-[9px] font-black uppercase transition-all", rankBy === 'services' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Services</button>
                             </div>
                         </CardHeader>
                         <CardContent className="p-8 pt-0 space-y-4">
@@ -485,7 +485,7 @@ export default function ClientsPage() {
                                 <div key={c.id} className="flex items-center justify-between group">
                                     <div className="flex items-center gap-3">
                                         <span className="text-[10px] font-black text-muted-foreground/30 w-4">#0{i+1}</span>
-                                        <div className="size-9 rounded-xl bg-muted/20 flex items-center justify-center font-black text-[10px]">{c.companyName[0]}</div>
+                                        <div className="size-9 rounded-none bg-muted/20 flex items-center justify-center font-black text-[10px]">{c.companyName[0]}</div>
                                         <p className="font-bold text-xs uppercase truncate max-w-[120px]">{c.companyName}</p>
                                     </div>
                                     <span className="text-[10px] font-black text-emerald-600">{rankBy === 'price' ? `${c.currencyType}${c.projectTotalCost?.toLocaleString()}` : "1 Service"}</span>
@@ -494,12 +494,12 @@ export default function ClientsPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
+                    <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden ring-1 ring-border/50">
                         <CardHeader className="p-8 pb-4"><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Video className="size-4" /> Upcoming Meets</CardTitle></CardHeader>
                         <ScrollArea className="h-64">
                             <div className="p-8 pt-0 space-y-4">
                                 {allMeetings?.filter(m => isAfter(m.date.toDate(), new Date())).map(m => (
-                                    <div key={m.id} className="p-4 rounded-2xl bg-muted/20 border border-transparent hover:bg-white hover:shadow-md transition-all space-y-2">
+                                    <div key={m.id} className="p-4 rounded-none bg-muted/20 border border-transparent hover:bg-white hover:shadow-md transition-all space-y-2">
                                         <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-primary">{m.title}</span><Badge className="h-4 text-[8px] bg-sky-100 text-sky-700 border-none uppercase">CLIENT MEET</Badge></div>
                                         <p className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-2"><Clock className="size-3"/> {format(m.date.toDate(), 'PPP p')}</p>
                                     </div>
@@ -515,7 +515,7 @@ export default function ClientsPage() {
                     <SheetHeader className="p-10 pb-8 bg-white border-b shadow-sm">
                         <div className="flex items-start justify-between mb-8">
                             <div className="flex items-center gap-6">
-                                <div className="size-20 rounded-3xl bg-primary/5 flex items-center justify-center text-primary font-black text-2xl border-2 border-primary/10 shadow-inner">
+                                <div className="size-20 rounded-none bg-primary/5 flex items-center justify-center text-primary font-black text-2xl border-2 border-primary/10 shadow-inner">
                                     {selectedClient?.companyName.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
@@ -579,7 +579,7 @@ export default function ClientsPage() {
                                     </div>
                                     <div className="space-y-6">
                                         <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Account Executive Intelligence</h4>
-                                        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 ring-1 ring-border/50">
+                                        <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50">
                                             <p className="text-[11px] font-bold text-slate-600 leading-relaxed uppercase italic">"{selectedClient?.notes || 'Strategic partnership protocol initiated.'}"</p>
                                         </Card>
                                     </div>
@@ -589,7 +589,7 @@ export default function ClientsPage() {
                                     <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Account Invoices</h4>
                                     <div className="space-y-4">
                                         {clientInvoices.map((inv: any) => (
-                                            <div key={inv.id} className="p-6 rounded-2xl bg-white ring-1 ring-border shadow-sm flex items-center justify-between hover:bg-slate-50 transition-all group">
+                                            <div key={inv.id} className="p-6 rounded-none bg-white ring-1 ring-border shadow-sm flex items-center justify-between hover:bg-slate-50 transition-all group">
                                                 <div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-purple-50 text-purple-600"><ReceiptIndianRupee className="size-5" /></div><div><p className="font-bold text-sm uppercase">{inv.title}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">{format(inv.uploadedAt.toDate(), 'PPP')}</p></div></div>
                                                 <Button variant="ghost" size="icon" asChild><Link href={inv.link} target="_blank"><ExternalLink className="size-4" /></Link></Button>
                                             </div>
@@ -601,7 +601,7 @@ export default function ClientsPage() {
                                     <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Account Engagements</h4>
                                     <div className="space-y-4">
                                         {clientMeetings.map((m: any) => (
-                                            <div key={m.id} className="p-6 rounded-2xl bg-white ring-1 ring-border shadow-sm flex items-center justify-between group">
+                                            <div key={m.id} className="p-6 rounded-none bg-white ring-1 ring-border shadow-sm flex items-center justify-between group">
                                                 <div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-sky-50 text-sky-600"><Video className="size-5" /></div><div><p className="font-bold text-sm uppercase">{m.title}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">{format(m.date.toDate(), 'PPP p')}</p></div></div>
                                                 <Button variant="ghost" size="icon" asChild><Link href={m.link} target="_blank"><ExternalLink className="size-4" /></Link></Button>
                                             </div>
@@ -619,9 +619,9 @@ export default function ClientsPage() {
 
 function MetricCard({ label, value, trend, up, icon: Icon, color, bg, valueColor, onClick, active }: any) {
     return (
-        <Card className={cn("border shadow-sm rounded-3xl bg-white p-5 space-y-4 group transition-all hover:shadow-xl ring-1 ring-border/50 cursor-pointer", active && "ring-2 ring-primary")} onClick={onClick}>
+        <Card className={cn("border shadow-sm rounded-none bg-white p-5 space-y-4 group transition-all hover:shadow-xl ring-1 ring-border/50 cursor-pointer", active && "ring-2 ring-primary")} onClick={onClick}>
             <div className="flex items-center gap-4">
-                <div className={cn("p-3 rounded-2xl shadow-sm transition-transform group-hover:scale-105", bg, color)}><Icon className="size-4" /></div>
+                <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}><Icon className="size-4" /></div>
                 <div className="min-w-0 flex-1">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
                     <h3 className={cn("text-lg font-black tracking-tight truncate leading-none", valueColor || "text-slate-900")}>{value}</h3>
@@ -649,7 +649,7 @@ function DetailLine({ label, value, isPrice }: { label: string, value: string, i
 
 function StatBox({ label, value, icon: Icon, color }: { label: string, value: string, icon: any, color: string }) {
     return (
-        <div className="p-4 bg-white rounded-2xl ring-1 ring-border shadow-sm space-y-3 transition-transform hover:scale-105">
+        <div className="p-4 bg-white rounded-none ring-1 ring-border shadow-sm space-y-3 transition-transform hover:scale-105">
             <div className={cn("p-2 rounded-xl inline-block shadow-sm", color)}><Icon className="size-4" /></div>
             <div><p className="text-xl font-black text-slate-900 leading-none">{value}</p><p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">{label}</p></div>
         </div>

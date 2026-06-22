@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, isSameMonth, addDays, isAfter, isBefore, subDays, startOfWeek, endOfWeek, subWeeks, subMonths, endOfMonth, startOfDay } from 'date-fns';
+import { format, startOfMonth, isSameMonth, addDays, isAfter, isBefore, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth as startOfMonthFn, subMonths, endOfMonth as endOfMonthFn, startOfDay } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -181,12 +181,12 @@ export default function MarketingManagementPage() {
                 end = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
                 break;
             case 'this-month':
-                start = startOfMonth(now);
-                end = endOfMonth(now);
+                start = startOfMonthFn(now);
+                end = endOfMonthFn(now);
                 break;
             case 'prev-month':
-                start = startOfMonth(subMonths(now, 1));
-                end = endOfMonth(subMonths(now, 1));
+                start = startOfMonthFn(subMonths(now, 1));
+                end = endOfMonthFn(subMonths(now, 1));
                 break;
             case 'custom-date':
                 start = startOfDay(new Date(customStartDate));
@@ -200,8 +200,8 @@ export default function MarketingManagementPage() {
                 start = null;
                 break;
             default:
-                start = startOfMonth(now);
-                end = endOfMonth(now);
+                start = startOfMonthFn(now);
+                end = endOfMonthFn(now);
                 break;
         }
         return { start, end };
@@ -311,7 +311,7 @@ export default function MarketingManagementPage() {
     if (!isAuthorized) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6 space-y-6">
-                <div className="p-6 rounded-[2.5rem] bg-rose-50 ring-8 ring-rose-50/50 shadow-inner"><ShieldAlert className="size-20 text-rose-600 opacity-80" /></div>
+                <div className="p-6 rounded-none bg-rose-50 ring-8 ring-rose-50/50 shadow-inner"><ShieldAlert className="size-20 text-rose-600 opacity-80" /></div>
                 <div className="space-y-2">
                     <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900">Access Restricted</h2>
                     <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest max-w-sm mx-auto">This terminal is limited to Executive Tier personnel only.</p>
@@ -384,7 +384,7 @@ export default function MarketingManagementPage() {
                                 <PlusCircle className="mr-2 h-4 w-4" /> Update Data
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl rounded-[2.5rem] border-none shadow-3xl p-0 overflow-hidden h-[90vh] flex flex-col">
+                        <DialogContent className="max-w-4xl rounded-none border-none shadow-3xl p-0 overflow-hidden h-[90vh] flex flex-col">
                             <DialogHeader className="p-10 border-b shrink-0 bg-white">
                                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily Marketing Snapshot</DialogTitle>
                                 <DialogDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60">Add activity tracking and ad spend</DialogDescription>
@@ -395,18 +395,18 @@ export default function MarketingManagementPage() {
                                         <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4"/> Social Media Performance</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             {brands.map(brand => (
-                                                <div key={brand.id} className="space-y-6 p-8 bg-white border-none ring-1 ring-border/50 rounded-3xl shadow-sm">
+                                                <div key={brand.id} className="space-y-6 p-8 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm">
                                                     <p className="font-black text-sm uppercase tracking-tight border-b border-dashed pb-4">{brand.name}</p>
                                                     <div className="space-y-6">
                                                         {brand.channels.map(channel => {
                                                             const log = formData.socialLogs?.find((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                             return (
-                                                                <div key={channel} className="space-y-4 p-4 bg-muted/10 rounded-2xl">
+                                                                <div key={channel} className="space-y-4 p-4 bg-muted/10 rounded-none">
                                                                     <Label className="text-[10px] font-black uppercase text-muted-foreground">{channel}</Label>
                                                                     <div className="grid grid-cols-2 gap-4">
                                                                         <div className="space-y-1.5">
                                                                             <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-40">Followers</p>
-                                                                            <Input type="number" min="0" value={log?.count || 0} className="h-10 rounded-xl font-black" onChange={e => {
+                                                                            <Input type="number" min="0" value={log?.count || 0} className="h-10 rounded-none font-black" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                                                 if (idx > -1) logs[idx].count = Math.max(0, parseInt(e.target.value) || 0);
@@ -415,7 +415,7 @@ export default function MarketingManagementPage() {
                                                                         </div>
                                                                         <div className="space-y-1.5">
                                                                             <p className="text-[9px] font-bold text-emerald-600 uppercase opacity-60">New Posts</p>
-                                                                            <Input type="number" min="0" value={log?.newPosts || 0} className="h-10 rounded-xl font-black border-emerald-100" onChange={e => {
+                                                                            <Input type="number" min="0" value={log?.newPosts || 0} className="h-10 rounded-none font-black border-emerald-100" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                                                 if (idx > -1) logs[idx].newPosts = Math.max(0, parseInt(e.target.value) || 0);
@@ -434,7 +434,7 @@ export default function MarketingManagementPage() {
                                 </div>
                             </ScrollArea>
                             <div className="p-10 border-t bg-white shrink-0">
-                                <Button onClick={handleSaveSession} className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-2xl shadow-primary/20">Finalize Snapshot</Button>
+                                <Button onClick={handleSaveSession} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl shadow-primary/20">Finalize Snapshot</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
@@ -451,7 +451,7 @@ export default function MarketingManagementPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8 space-y-6">
-                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-[2rem] bg-white overflow-hidden">
+                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white overflow-hidden">
                         <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
                             <div className="space-y-1">
                                 <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-3"><Users className="size-5" /> Social Growth Matrix</CardTitle>
@@ -474,7 +474,7 @@ export default function MarketingManagementPage() {
                                             <TableRow key={brand.id} className="border-border/50 hover:bg-primary/5 transition-colors">
                                                 <TableCell className="py-6 px-8">
                                                     <div className="flex items-center gap-4">
-                                                        <div className={cn("size-10 rounded-2xl flex items-center justify-center text-xs text-white font-black bg-gradient-to-br shadow-sm", brand.gradient)}>
+                                                        <div className={cn("size-10 rounded-none flex items-center justify-center text-xs text-white font-black bg-gradient-to-br shadow-sm", brand.gradient)}>
                                                             {brand.name[0]}
                                                         </div>
                                                         <span className="font-black text-sm uppercase tracking-tighter">{brand.name}</span>
@@ -509,10 +509,10 @@ export default function MarketingManagementPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-[2rem] bg-white overflow-hidden flex flex-col">
+                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white overflow-hidden flex flex-col">
                         <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-3"><History className="size-5" /> Operational Ledger</CardTitle>
-                            <Badge className="bg-emerald-100 text-emerald-700 rounded-lg font-black text-[8px] border-none px-3 h-6 uppercase tracking-widest">Audited Log</Badge>
+                            <Badge className="bg-emerald-100 text-emerald-700 rounded-none font-black text-[8px] border-none px-3 h-6 uppercase tracking-widest">Audited Log</Badge>
                         </CardHeader>
                         <CardContent className="p-0 flex-1">
                             <ScrollArea className="h-[500px]">
@@ -529,7 +529,7 @@ export default function MarketingManagementPage() {
                                             return (
                                                 <div key={session.id} className="px-8 py-6 hover:bg-muted/5 transition-all group flex items-center justify-between cursor-pointer" onClick={() => setSelectedAuditEntry(session)}>
                                                     <div className="flex items-center gap-5">
-                                                        <div className={cn("size-12 rounded-2xl flex items-center justify-center shadow-sm", isTopup ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
+                                                        <div className={cn("size-12 rounded-none flex items-center justify-center shadow-sm", isTopup ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
                                                             {isTopup ? <Wallet className="size-6" /> : <Activity className="size-6" />}
                                                         </div>
                                                         <div className="space-y-1">
@@ -557,7 +557,7 @@ export default function MarketingManagementPage() {
                 </div>
 
                 <div className="lg:col-span-4 space-y-6">
-                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-[2rem] bg-white overflow-hidden p-8 space-y-8">
+                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white overflow-hidden p-8 space-y-8">
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-3"><TrendingUp className="size-4" /> Reach Pulse</CardTitle>
                         </div>
@@ -579,17 +579,17 @@ export default function MarketingManagementPage() {
                         </div>
                     </Card>
 
-                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-[2rem] bg-white p-8 overflow-hidden flex flex-col space-y-6">
+                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white p-8 overflow-hidden flex flex-col space-y-6">
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-3"><Timer className="size-4" /> Mission Ends</CardTitle>
-                            <Badge className="bg-rose-500 text-white rounded-lg font-black text-[9px] px-2 h-5 shadow-sm">{deadlines.filter(d => d.status === 'Overdue').length} ALERTS</Badge>
+                            <Badge className="bg-rose-500 text-white rounded-none font-black text-[9px] px-2 h-5 shadow-sm">{deadlines.filter(d => d.status === 'Overdue').length} ALERTS</Badge>
                         </div>
                         <ScrollArea className="h-[280px]">
                             <div className="space-y-3">
                                 {deadlines.map((d, i) => (
-                                    <div key={i} className="p-4 rounded-2xl bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white transition-all flex items-center justify-between group">
+                                    <div key={i} className="p-4 rounded-none bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white transition-all flex items-center justify-between group">
                                         <div className="flex items-center gap-4">
-                                            <div className={cn("p-2 rounded-xl text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
+                                            <div className={cn("p-2 rounded-none text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
                                                 <Calendar className="size-4" />
                                             </div>
                                             <div className="min-w-0">
@@ -608,13 +608,13 @@ export default function MarketingManagementPage() {
             
             {/* Top-up Dialog */}
             <Dialog open={isTopupOpen} onOpenChange={setIsTopupOpen}>
-                <DialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10 sm:max-w-md">
+                <DialogContent className="rounded-none border-none shadow-3xl p-10 sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Budget Injection</DialogTitle>
                         <DialogDescription className="text-[11px] font-bold uppercase opacity-60">Provision capital for marketing operations</DialogDescription>
                     </DialogHeader>
                     <div className="py-10 space-y-6 text-center">
-                        <div className="p-6 bg-emerald-50 rounded-[2rem] inline-block mb-4"><IndianRupee className="size-10 text-emerald-600" /></div>
+                        <div className="p-6 bg-emerald-50 rounded-none inline-block mb-4"><IndianRupee className="size-10 text-emerald-600" /></div>
                         <div className="space-y-3">
                             <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Injection Amount (₹)</Label>
                             <Input 
@@ -622,35 +622,35 @@ export default function MarketingManagementPage() {
                                 value={topupValue}
                                 onChange={e => setTopupValue(e.target.value)}
                                 placeholder="0.00" 
-                                className="h-16 rounded-2xl font-black text-3xl text-center border-none ring-2 ring-emerald-100 bg-white shadow-inner focus:ring-emerald-300"
+                                className="h-16 rounded-none font-black text-3xl text-center border-none ring-2 ring-emerald-100 bg-white shadow-inner focus:ring-emerald-300"
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={handleAddBudget} className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-2xl shadow-emerald-200 bg-emerald-600 hover:bg-emerald-700">Finalize Deposit</Button>
+                        <Button onClick={handleAddBudget} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl shadow-emerald-200 bg-emerald-600 hover:bg-emerald-700">Finalize Deposit</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Budget Warning */}
             <Dialog open={isBudgetWarningOpen} onOpenChange={setIsBudgetWarningOpen}>
-                <DialogContent className="rounded-[2.5rem] border-none shadow-3xl p-10 sm:max-w-md">
+                <DialogContent className="rounded-none border-none shadow-3xl p-10 sm:max-w-md">
                     <DialogHeader>
-                        <div className="size-16 rounded-full bg-rose-50 flex items-center justify-center mb-6 ring-8 ring-rose-50/50 mx-auto">
+                        <div className="size-16 rounded-none bg-rose-50 flex items-center justify-center mb-6 ring-8 ring-rose-50/50 mx-auto">
                             <AlertCircle className="size-8 text-rose-600" />
                         </div>
                         <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900 text-center">Insufficient Balance</DialogTitle>
                     </DialogHeader>
                     <div className="py-8 space-y-6 text-center">
                         <p className="text-sm font-medium leading-relaxed text-slate-600">The requested expenditure exceeds the current marketing wallet balance.</p>
-                        <div className="p-6 bg-muted/30 rounded-[2rem] border-2 border-dashed border-border/50">
+                        <div className="p-6 bg-muted/30 rounded-none border-2 border-dashed border-border/50">
                             <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Available Budget</p>
                             <p className="text-3xl font-black text-emerald-600">₹{currentBalance.toLocaleString()}</p>
                         </div>
                     </div>
                     <DialogFooter className="flex flex-col gap-4 sm:flex-row">
-                        <Button variant="outline" className="flex-1 rounded-2xl h-14 font-black uppercase text-[11px]" onClick={() => setIsBudgetWarningOpen(false)}>Discard</Button>
-                        <Button className="flex-1 rounded-2xl h-14 font-black uppercase text-[11px] bg-emerald-600 hover:bg-emerald-700" onClick={() => { setIsBudgetWarningOpen(false); setIsTopupOpen(true); }}>Add Budget</Button>
+                        <Button variant="outline" className="flex-1 rounded-none h-14 font-black uppercase text-[11px]" onClick={() => setIsBudgetWarningOpen(false)}>Discard</Button>
+                        <Button className="flex-1 rounded-none h-14 font-black uppercase text-[11px] bg-emerald-600 hover:bg-emerald-700" onClick={() => { setIsBudgetWarningOpen(false); setIsTopupOpen(true); }}>Add Budget</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -660,9 +660,9 @@ export default function MarketingManagementPage() {
 
 function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 space-y-5 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
+        <Card className="border-none shadow-sm rounded-none bg-white p-6 space-y-5 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
             <div className="flex items-center gap-5">
-                <div className={cn("p-3.5 rounded-2xl shadow-sm transition-transform group-hover:scale-105", bg, color)}>
+                <div className={cn("p-3.5 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}>
                     <Icon className="size-5" />
                 </div>
                 <div className="min-w-0">
