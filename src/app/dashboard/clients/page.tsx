@@ -582,6 +582,11 @@ export default function ClientsPage() {
             {/* Account Intelligence Sheet */}
             <Sheet open={!!selectedClient} onOpenChange={o => !o && setSelectedClient(null)}>
                 <SheetContent className="w-full sm:max-w-[540px] p-0 border-none shadow-2xl overflow-hidden flex flex-col bg-[#F8FAFC]">
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Client Intelligence: {selectedClient?.companyName}</SheetTitle>
+                        <SheetDescription>Comprehensive strategic overview of the partner account.</SheetDescription>
+                    </SheetHeader>
+                    
                     <div className="p-10 pb-8 bg-white border-b shadow-sm">
                         <div className="flex items-start justify-between mb-8">
                             <div className="flex items-center gap-6">
@@ -591,7 +596,7 @@ export default function ClientsPage() {
                                 <div>
                                     <div className="flex items-center gap-3 mb-1.5">
                                         <h3 className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-none">{selectedClient?.companyName}</h3>
-                                        <Badge className="bg-emerald-50 text-emerald-600 border-none text-[9px] font-black h-5 uppercase tracking-widest px-2.5 shadow-sm">Active</Badge>
+                                        <Badge className="bg-emerald-50 text-emerald-700 border-none text-[9px] font-black h-5 uppercase tracking-widest px-2.5 shadow-sm">Active</Badge>
                                     </div>
                                     <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">{selectedClient?.category} Unit • Provisioned {selectedClient?.createdAt ? format(selectedClient.createdAt.toDate ? selectedClient.createdAt.toDate() : new Date(selectedClient.createdAt), 'MMM yyyy') : 'N/A'}</p>
                                 </div>
