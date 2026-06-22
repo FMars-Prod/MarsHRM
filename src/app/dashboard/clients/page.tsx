@@ -1016,18 +1016,18 @@ export default function ClientsPage() {
 
 function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     return (
-        <Card className="border shadow-sm rounded-3xl bg-white p-6 space-y-5 group transition-all hover:shadow-xl ring-1 ring-border/50">
-            <div className="flex items-center gap-5">
-                <div className={cn("p-3.5 rounded-2xl shadow-sm transition-transform group-hover:scale-105", bg, color)}>
-                    <Icon className="size-5" />
+        <Card className="border shadow-sm rounded-3xl bg-white p-5 space-y-4 group transition-all hover:shadow-xl ring-1 ring-border/50">
+            <div className="flex items-center gap-4">
+                <div className={cn("p-3 rounded-2xl shadow-sm transition-transform group-hover:scale-105", bg, color)}>
+                    <Icon className="size-4" />
                 </div>
                 <div className="min-w-0">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-2">{label}</p>
-                    <h3 className="text-2xl font-black tracking-tight text-slate-900 truncate">{value}</h3>
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
+                    <h3 className="text-lg font-black tracking-tight text-slate-900 truncate leading-none">{value}</h3>
                 </div>
             </div>
-            <div className="pt-4 border-t border-dashed border-border/50">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{sub}</span>
+            <div className="pt-3 border-t border-dashed border-border/50">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em]">{sub}</p>
             </div>
         </Card>
     );
