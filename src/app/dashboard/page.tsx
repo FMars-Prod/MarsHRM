@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -498,16 +497,6 @@ export default function DashboardPage() {
              </Button>
            ))}
         </div>
-      </div>
-
-      {/* Industrial Footer */}
-      <div className="pt-12 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 px-1 opacity-40">
-        <p className="text-[10px] font-black uppercase tracking-widest">© 2025 Cognithorz. Tactical Intelligence Suite.</p>
-        <div className="flex items-center gap-3">
-            <Building2 className="size-4" />
-            <p className="text-[10px] font-black uppercase tracking-widest">MarsHRM by Cognithorz</p>
-        </div>
-        <p className="text-[10px] font-black uppercase tracking-widest">Authorized Executive Access Tier 1</p>
       </div>
     </div>
   );
