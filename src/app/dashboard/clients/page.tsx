@@ -184,7 +184,8 @@ export default function ClientsPage() {
 
         const payload = {
             ...clientForm,
-            fullPaymentPrice: totalCalculatedPayment,
+            // Prioritize the manual project value field if it exists, otherwise use calculated milestones
+            fullPaymentPrice: Number(clientForm.fullPaymentPrice) || totalCalculatedPayment,
             createdAt: editingClient ? editingClient.createdAt : serverTimestamp(),
             lastActivity: 'Record Updated'
         };
@@ -331,13 +332,27 @@ export default function ClientsPage() {
                                                 <Select value={clientForm.status} onValueChange={v => setClientForm({...clientForm, status: v as any})}>
                                                     <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="Active">Active Partner</SelectItem>
-                                                        <SelectItem value="Lead">Tactical Lead</SelectItem>
-                                                        <SelectItem value="Inactive">Inactive</SelectItem>
-                                                        <SelectItem value="Archived">Archived</SelectItem>
+                                                        <SelectItem value="Active">Active Client</SelectItem>
+                                                        <SelectItem value="Lead">Potential Client</SelectItem>
+                                                        <SelectItem value="Inactive">Not Working</SelectItem>
+                                                        <SelectItem value="Archived">Closed Record</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Total Project Value (Required before milestones)</Label>
+                                            <div className="relative">
+                                                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
+                                                <Input 
+                                                    type="number" 
+                                                    value={clientForm.fullPaymentPrice} 
+                                                    onChange={e => setClientForm({...clientForm, fullPaymentPrice: parseFloat(e.target.value) || 0})} 
+                                                    placeholder="Enter Total Contract Amount" 
+                                                    className="pl-10 h-14 text-2xl font-black rounded-xl border-2 border-primary/20 focus:border-primary" 
+                                                />
+                                            </div>
+                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">This is the total target amount for the entire project.</p>
                                         </div>
                                     </div>
 
@@ -440,9 +455,12 @@ export default function ClientsPage() {
                                         </div>
                                         <div className="p-6 bg-white border-2 border-dashed border-emerald-100 rounded-3xl space-y-6">
                                             <div className="flex items-center justify-between">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Payment Milestone Calculation</Label>
+                                                <div className="space-y-0.5">
+                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Payment Milestone Tracking</Label>
+                                                    <p className="text-[9px] font-bold text-muted-foreground">Divide the total ₹{clientForm.fullPaymentPrice?.toLocaleString()} into installments.</p>
+                                                </div>
                                                 <Button type="button" size="sm" onClick={handleAddPaymentRow} className="rounded-full h-8 bg-emerald-600 text-white text-[9px] font-bold">
-                                                    <Plus className="size-3 mr-1" /> Add Milestone
+                                                    <Plus className="size-3 mr-1" /> Add Installment
                                                 </Button>
                                             </div>
                                             
@@ -480,10 +498,15 @@ export default function ClientsPage() {
                                             <Separator />
                                             <div className="flex items-center justify-between pt-2">
                                                 <div className="space-y-0.5">
-                                                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Total Contract Value</p>
-                                                    <p className="text-3xl font-black text-slate-900 tracking-tighter">₹{totalCalculatedPayment.toLocaleString()}</p>
+                                                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Target Project Value</p>
+                                                    <p className="text-3xl font-black text-slate-900 tracking-tighter">₹{Number(clientForm.fullPaymentPrice).toLocaleString()}</p>
                                                 </div>
-                                                <Badge className="bg-emerald-50 text-emerald-700 border-none font-black text-[10px] uppercase h-8 px-4">Milestone Basis</Badge>
+                                                <div className="text-right">
+                                                    <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Scheduled Total</p>
+                                                    <p className={cn("text-xl font-black tracking-tighter", totalCalculatedPayment > (clientForm.fullPaymentPrice || 0) ? "text-rose-600" : "text-emerald-600")}>
+                                                        ₹{totalCalculatedPayment.toLocaleString()}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -553,7 +576,11 @@ export default function ClientsPage() {
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <div className={cn("size-2 rounded-full", client.status === 'Active' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-slate-300")} />
-                                            <span className="font-black text-[10px] text-slate-800 uppercase tracking-widest">{client.status}</span>
+                                            <span className="font-black text-[10px] text-slate-800 uppercase tracking-widest">
+                                                {client.status === 'Active' ? 'Active' : 
+                                                 client.status === 'Lead' ? 'Lead' :
+                                                 client.status === 'Inactive' ? 'Inactive' : 'Archived'}
+                                            </span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{client.lastActivity}</TableCell>
