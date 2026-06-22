@@ -11,7 +11,7 @@ import {
     Video, Plus, Clock, Users, ExternalLink, Calendar, 
     Trash2, Search, Link as LinkIcon, ShieldCheck, 
     Loader2, CheckCircle2, UserCheck, Timer, Building2, MapPin,
-    Eye, BellRing, Info, MoreHorizontal, UserPlus, X
+    Eye, BellRing, Info, MoreHorizontal, UserPlus, X, FileText
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,7 @@ export default function MeetingsPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const searchParams = useSearchParams();
+    const router = useRouter();
     const prefilledClientId = searchParams.get('clientId');
 
     const [isAddOpen, setIsAddOpen] = React.useState(false);
@@ -64,10 +65,7 @@ export default function MeetingsPage() {
     const { data: userData } = useDoc<any>(userDocRef);
     const userRole = userData?.role;
     
-    // Authorization: Admin, CEO, and TL can schedule
     const canSchedule = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD' || userRole === 'Team Lead';
-    
-    // Visibility: Admin and CEO see all. Others see only their meetings.
     const isExecutive = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('firstName', 'asc')), [firestore]);
@@ -84,7 +82,6 @@ export default function MeetingsPage() {
             return query(base, orderBy('date', 'desc'));
         }
 
-        // For TL and Members: only meetings where they are participants or creators
         return query(
             base, 
             or(where('participantIds', 'array-contains', user.uid), where('createdBy', '==', user.uid)),
@@ -155,6 +152,10 @@ export default function MeetingsPage() {
                             <ScrollArea className="max-h-[60vh] p-10 bg-muted/5">
                                 <div className="space-y-8">
                                     <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Meeting Title</Label><Input value={meetingForm.title} onChange={e => setMeetingForm({...meetingForm, title: e.target.value})} placeholder="e.g., Weekly Sync" className="h-12 rounded-none" /></div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Meeting Regarding? (Topic)</Label>
+                                        <Textarea value={meetingForm.description} onChange={e => setMeetingForm({...meetingForm, description: e.target.value})} placeholder="Describe the purpose of this meeting..." className="rounded-none min-h-[80px]" />
+                                    </div>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Type</Label>
                                             <Select value={meetingForm.type} onValueChange={v => setMeetingForm({...meetingForm, type: v as any})}>
@@ -275,31 +276,51 @@ export default function MeetingsPage() {
                                 </div>
                             </div>
 
+                            {selectedMeeting?.description && (
+                                <div className="space-y-4">
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Topic / Regarding</Label>
+                                    <div className="p-5 bg-white border border-border/50 rounded-none">
+                                        <p className="text-sm font-medium italic text-foreground/70 leading-relaxed">"{selectedMeeting.description}"</p>
+                                    </div>
+                                </div>
+                            )}
+
                             {selectedMeeting?.type === 'Client Meet' && (
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Linked Client</Label>
-                                    <div className="flex items-center gap-4 p-5 bg-sky-50/50 border border-sky-100 rounded-none">
-                                        <Building2 className="size-5 text-sky-600" />
-                                        <p className="text-sm font-black uppercase text-sky-900">{selectedMeeting.clientName}</p>
-                                    </div>
+                                    <Link href={`/dashboard/clients?clientId=${selectedMeeting.clientId}`} className="block group">
+                                        <div className="flex items-center gap-4 p-5 bg-sky-50/50 border border-sky-100 rounded-none group-hover:bg-sky-50 transition-colors">
+                                            <Building2 className="size-5 text-sky-600" />
+                                            <p className="text-sm font-black uppercase text-sky-900 flex-1">{selectedMeeting.clientName}</p>
+                                            <ChevronRight className="size-4 text-sky-400 group-hover:translate-x-1 transition-transform" />
+                                        </div>
+                                    </Link>
                                 </div>
                             )}
 
                             <div className="space-y-4">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">People Attending</Label>
                                 <div className="space-y-3">
-                                    {selectedMeeting?.participantNames.map((name, i) => (
-                                        <div key={i} className="flex items-center gap-4 p-4 bg-white border border-border/50 rounded-none">
-                                            <Avatar className="size-8 rounded-none ring-1 ring-border"><AvatarFallback className="text-[10px] font-black bg-muted">{name[0]}</AvatarFallback></Avatar>
-                                            <span className="text-xs font-bold uppercase tracking-tight">{name}</span>
-                                        </div>
-                                    ))}
+                                    {selectedMeeting?.participantIds.map((id, i) => {
+                                        const name = selectedMeeting.participantNames[i];
+                                        return (
+                                            <Link href={`/dashboard/users/${id}`} key={id} className="block group">
+                                                <div className="flex items-center gap-4 p-4 bg-white border border-border/50 rounded-none group-hover:bg-primary/5 transition-colors">
+                                                    <Avatar className="size-8 rounded-none ring-1 ring-border"><AvatarFallback className="text-[10px] font-black bg-muted">{name?.[0]}</AvatarFallback></Avatar>
+                                                    <span className="text-xs font-bold uppercase tracking-tight flex-1">{name}</span>
+                                                    <ChevronRight className="size-3 text-muted-foreground opacity-0 group-hover:opacity-40 transition-all" />
+                                                </div>
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
                             <div className="space-y-4">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Organizer</Label>
-                                <p className="text-sm font-black text-primary uppercase">{selectedMeeting?.createdByName}</p>
+                                <Link href={`/dashboard/users/${selectedMeeting?.createdBy}`} className="block group">
+                                    <p className="text-sm font-black text-primary uppercase group-hover:underline">{selectedMeeting?.createdByName}</p>
+                                </Link>
                             </div>
                         </div>
                     </ScrollArea>

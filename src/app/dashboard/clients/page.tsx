@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 type PaymentInstallment = {
@@ -96,6 +97,8 @@ export default function ClientsPage() {
     const { user } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
+    const deepLinkClientId = searchParams.get('clientId');
 
     const [dateFilter, setDateFilter] = React.useState<string>("all-time");
     const [customStartDate, setCustomStartDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -193,6 +196,20 @@ export default function ClientsPage() {
             };
         });
     }, [rawClients, allUsers, searchQuery, statusFilter, dateRange, tableFilter]);
+
+    React.useEffect(() => {
+        if (deepLinkClientId && rawClients) {
+            const client = rawClients.find(c => c.id === deepLinkClientId);
+            if (client) {
+                const manager = allUsers?.find((u: any) => u.id === client.handlingEmployeeId);
+                setSelectedClient({
+                    ...client,
+                    managerName: manager ? `${manager.firstName} ${manager.lastName}` : (client.managerName || 'Unassigned'),
+                    managerAvatar: manager?.avatar || '',
+                });
+            }
+        }
+    }, [deepLinkClientId, rawClients, allUsers]);
 
     const stats = React.useMemo(() => {
         let collected = 0;
@@ -725,9 +742,22 @@ export default function ClientsPage() {
                                     <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Account Engagements</h4>
                                     <div className="space-y-4">
                                         {clientMeetings.map((m: any) => (
-                                            <div key={m.id} className="p-6 rounded-none bg-white ring-1 ring-border shadow-sm flex items-center justify-between group">
-                                                <div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-sky-50 text-sky-600"><Video className="size-5" /></div><div><p className="font-bold text-sm uppercase">{m.title}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">{format(m.date.toDate(), 'PPP p')}</p></div></div>
-                                                <Button variant="ghost" size="icon" asChild><Link href={m.link} target="_blank"><ExternalLink className="size-4" /></Link></Button>
+                                            <div key={m.id} className="p-6 rounded-none bg-white ring-1 ring-border shadow-sm space-y-4 hover:bg-slate-50 transition-all group">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="p-3 rounded-xl bg-sky-50 text-sky-600"><Video className="size-5" /></div>
+                                                        <div>
+                                                            <p className="font-bold text-sm uppercase">{m.title}</p>
+                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">{format(m.date.toDate(), 'PPP p')}</p>
+                                                        </div>
+                                                    </div>
+                                                    <Button variant="ghost" size="icon" asChild><Link href={m.link || '#'} target="_blank"><ExternalLink className="size-4" /></Link></Button>
+                                                </div>
+                                                {m.description && (
+                                                    <div className="p-4 bg-muted/20 border-l-4 border-primary/40">
+                                                        <p className="text-[11px] font-bold text-slate-600 uppercase tracking-tight italic">Regarding: "{m.description}"</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
