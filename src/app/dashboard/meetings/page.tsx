@@ -4,7 +4,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where, Timestamp } from 'firebase/firestore';
 import { 
     Video, Plus, Clock, Users, ExternalLink, Calendar, 
@@ -86,7 +86,7 @@ export default function MeetingsPage() {
 
         const payload = {
             ...meetingForm,
-            date: Timestamp.fromDate(new Date(meetingForm.date)),
+            date: Timestamp.fromDate(new Date(meetingForm.date!)),
             clientName: client?.companyName || null,
             participantNames: selectedParticipants.map(p => `${p.firstName} ${p.lastName}`),
             createdBy: user.uid,
@@ -169,15 +169,15 @@ export default function MeetingsPage() {
             </PageHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border-none shadow-sm rounded-none bg-emerald-50 p-6 flex items-center gap-5">
+                <Card className="border-none shadow-sm rounded-none bg-emerald-50 p-6 flex items-center gap-5 ring-1 ring-border/50">
                     <div className="p-4 bg-emerald-600 text-white rounded-none shadow-lg"><Video className="size-6" /></div>
                     <div><p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 opacity-60">Upcoming Meets</p><h3 className="text-3xl font-black text-emerald-900">{upcomingCount}</h3></div>
                 </Card>
-                <Card className="border-none shadow-sm rounded-none bg-blue-50 p-6 flex items-center gap-5">
+                <Card className="border-none shadow-sm rounded-none bg-blue-50 p-6 flex items-center gap-5 ring-1 ring-border/50">
                     <div className="p-4 bg-blue-600 text-white rounded-none shadow-lg"><Users className="size-6" /></div>
                     <div><p className="text-[10px] font-black uppercase tracking-widest text-blue-700 opacity-60">Fleet Engaged</p><h3 className="text-3xl font-black text-blue-900">{meetings?.length || 0}</h3></div>
                 </Card>
-                <Card className="border-none shadow-sm rounded-none bg-indigo-50 p-6 flex items-center gap-5">
+                <Card className="border-none shadow-sm rounded-none bg-indigo-50 p-6 flex items-center gap-5 ring-1 ring-border/50">
                     <div className="p-4 bg-indigo-600 text-white rounded-none shadow-lg"><Calendar className="size-6" /></div>
                     <div><p className="text-[10px] font-black uppercase tracking-widest text-indigo-700 opacity-60">Tactical Window</p><h3 className="text-xl font-black text-indigo-900">{format(new Date(), 'MMM yyyy')}</h3></div>
                 </Card>
