@@ -333,6 +333,66 @@ export default function ClientsPage() {
         return allMeetings.filter((m: any) => m.clientId === selectedClient.id);
     }, [selectedClient, allMeetings]);
 
+    const timelineEvents = React.useMemo(() => {
+        if (!selectedClient) return [];
+        const events: { date: Date, type: string, label: string, color: string }[] = [];
+
+        // Account Creation
+        if (selectedClient.createdAt) {
+            events.push({
+                date: selectedClient.createdAt.toDate ? selectedClient.createdAt.toDate() : new Date(selectedClient.createdAt),
+                type: 'INITIATED',
+                label: 'Partnership Protocol Initiated',
+                color: 'bg-slate-900'
+            });
+        }
+
+        // Project Start
+        if (selectedClient.contractStartDate) {
+            events.push({
+                date: new Date(selectedClient.contractStartDate),
+                type: 'PROJECT',
+                label: 'Mission Execution Commenced',
+                color: 'bg-amber-500'
+            });
+        }
+
+        // Meetings
+        clientMeetings.forEach((m: any) => {
+            events.push({
+                date: m.date.toDate(),
+                type: 'MEETING',
+                label: `Engagement: ${m.title}`,
+                color: 'bg-sky-500'
+            });
+        });
+
+        // Invoices
+        clientInvoices.forEach((inv: any) => {
+            events.push({
+                date: inv.uploadedAt.toDate(),
+                type: 'INVOICE',
+                label: `Invoice Logged: ${inv.title}`,
+                color: 'bg-purple-500'
+            });
+        });
+
+        // Payments
+        selectedClient.payments?.forEach((p: any) => {
+            if (p.status === 'Paid') {
+                const pDate = p.invoiceDate ? new Date(p.invoiceDate) : (p.dueDate ? new Date(p.dueDate) : (selectedClient.createdAt?.toDate?.() || new Date()));
+                events.push({
+                    date: pDate,
+                    type: 'PAYMENT',
+                    label: `Revenue Captured: ${selectedClient.currencyType}${p.amountReceived || p.amount}`,
+                    color: 'bg-emerald-500'
+                });
+            }
+        });
+
+        return events.sort((a, b) => b.date.getTime() - a.date.getTime());
+    }, [selectedClient, clientMeetings, clientInvoices]);
+
     const scheduledTotal = (clientForm.payments || []).reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0);
     const discountFactor = (1 - (Number(clientForm.discountOffered) || 0) / 100);
     const calculatedTotalCost = (Number(clientForm.totalProjectValue) || 0) * discountFactor;
@@ -718,6 +778,31 @@ export default function ClientsPage() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Timeline Audit Graph */}
+                                    <div className="space-y-6">
+                                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Strategic Timeline Audit</h4>
+                                        <Card className="border-none shadow-sm rounded-none bg-white p-8 ring-1 ring-border/50 relative overflow-hidden">
+                                            <div className="absolute left-10 top-10 bottom-10 w-px bg-border border-dashed" />
+                                            <div className="space-y-8 relative z-10">
+                                                {timelineEvents.map((event, i) => (
+                                                    <div key={i} className="flex gap-6 items-start">
+                                                        <div className={cn("size-5 rounded-none flex items-center justify-center shrink-0 ring-4 ring-white shadow-sm", event.color)}>
+                                                            <div className="size-1.5 bg-white rounded-none" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none">{format(event.date, 'MMM dd, yyyy')}</p>
+                                                            <p className="text-[11px] font-bold text-slate-800 uppercase leading-tight">{event.label}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {timelineEvents.length === 0 && (
+                                                    <div className="text-center py-4 opacity-30 italic text-[10px] font-bold uppercase">No historical markers captured.</div>
+                                                )}
+                                            </div>
+                                        </Card>
+                                    </div>
+
                                     <div className="space-y-6">
                                         <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Account Executive Intelligence</h4>
                                         <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50">
