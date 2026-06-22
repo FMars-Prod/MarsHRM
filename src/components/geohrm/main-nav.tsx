@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -45,6 +44,7 @@ import {
   CheckCircle2,
   BarChart3,
   UserIcon,
+  Video,
 } from "lucide-react";
 import React from "react";
 
@@ -62,6 +62,7 @@ const groups = [
     label: "BUSINESS",
     links: [
       { href: "/dashboard/clients", label: "Clients", icon: Users, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+      { href: "/dashboard/meetings", label: "Meetings", icon: Video, roles: ['Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/projects", label: "Projects", icon: Briefcase, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/pipeline", label: "Sales Pipeline", icon: TrendingUp, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/marketing", label: "Marketing", icon: Zap, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
