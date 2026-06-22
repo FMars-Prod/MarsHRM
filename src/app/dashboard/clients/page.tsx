@@ -8,12 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp, where, getDocs, limit, collectionGroup } from 'firebase/firestore';
 import { 
-    Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, 
+    Users, Plus, Trash2, Edit, Search, ExternalLink, 
     Building2, Filter, Download, 
-    Briefcase, Zap, MapPin, X, 
-    DollarSign, BriefcaseBusiness, IndianRupee, Loader2, TrendingUp, ReceiptIndianRupee,
-    Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal, Mail, Phone, Calendar, FileText, CheckCircle, AlertCircle, LayoutGrid, Globe, Map, UserCircle,
-    Info, CalendarDays, Receipt, BadgeIndianRupee, HandCoins, UserPlus, Video, Trophy, ListChecks, ArrowUpRight, ArrowDownRight, Handshake
+    Zap, MapPin, X, 
+    DollarSign, BriefcaseBusiness, IndianRupee, 
+    CheckCircle2, Clock, MoreHorizontal, Video,
+    UserCircle, ListChecks, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -23,9 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth, subMonths, endOfMonth, isAfter, isBefore } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, startOfMonth, isAfter, isBefore } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -101,8 +100,6 @@ export default function ClientsPage() {
     const deepLinkClientId = searchParams.get('clientId');
 
     const [dateFilter, setDateFilter] = React.useState<string>("all-time");
-    const [customStartDate, setCustomStartDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
-    const [customEndDate, setCustomEndDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
     const [rankBy, setRankBy] = React.useState<'price' | 'services'>('price');
 
     const [isAddOpen, setIsAddOpen] = React.useState(false);
@@ -125,8 +122,6 @@ export default function ClientsPage() {
 
     const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
     const { data: userData } = useDoc<any>(userDocRef);
-    const userRole = userData?.role;
-    const isAuthorized = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD' || userRole === 'Team Lead';
 
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('firstName', 'asc')), [firestore]);
     const { data: allUsers } = useCollection<any>(usersQuery);
@@ -337,7 +332,6 @@ export default function ClientsPage() {
         if (!selectedClient) return [];
         const events: { date: Date, type: string, label: string, color: string }[] = [];
 
-        // Account Creation
         if (selectedClient.createdAt) {
             events.push({
                 date: selectedClient.createdAt.toDate ? selectedClient.createdAt.toDate() : new Date(selectedClient.createdAt),
@@ -347,7 +341,6 @@ export default function ClientsPage() {
             });
         }
 
-        // Project Start
         if (selectedClient.contractStartDate) {
             events.push({
                 date: new Date(selectedClient.contractStartDate),
@@ -357,7 +350,6 @@ export default function ClientsPage() {
             });
         }
 
-        // Meetings
         clientMeetings.forEach((m: any) => {
             events.push({
                 date: m.date.toDate(),
@@ -367,7 +359,6 @@ export default function ClientsPage() {
             });
         });
 
-        // Invoices
         clientInvoices.forEach((inv: any) => {
             events.push({
                 date: inv.uploadedAt.toDate(),
@@ -377,7 +368,6 @@ export default function ClientsPage() {
             });
         });
 
-        // Payments
         selectedClient.payments?.forEach((p: any) => {
             if (p.status === 'Paid' || (parseFloat(p.amountReceived || '0') > 0)) {
                 const pDate = p.invoiceDate ? new Date(p.invoiceDate) : (p.dueDate ? new Date(p.dueDate) : (selectedClient.createdAt?.toDate?.() || new Date()));
@@ -478,7 +468,6 @@ export default function ClientsPage() {
                                 </DialogHeader>
                                 <ScrollArea className="flex-1 bg-muted/5 p-10">
                                     <div className="space-y-12">
-                                        {/* Client Info */}
                                         <div className="space-y-6">
                                             <div className="flex items-center gap-3 text-primary"><UserCircle className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Client Information</h4></div>
                                             <div className="grid grid-cols-2 gap-8">
@@ -505,7 +494,6 @@ export default function ClientsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Location & Status */}
                                         <div className="space-y-6">
                                             <div className="flex items-center gap-3 text-indigo-600"><MapPin className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Location & Status</h4></div>
                                             <div className="grid grid-cols-3 gap-6">
@@ -529,7 +517,6 @@ export default function ClientsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Financial Details */}
                                         <div className="p-8 bg-white border-2 border-dashed border-primary/20 rounded-none space-y-8">
                                             <div className="flex items-center gap-3 text-emerald-600"><DollarSign className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Financial Matrix</h4></div>
                                             <div className="grid grid-cols-3 gap-6">
@@ -549,7 +536,6 @@ export default function ClientsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Team Assignment */}
                                         <div className="space-y-6">
                                             <div className="flex items-center gap-3 text-purple-600"><Users className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Team Assignment</h4></div>
                                             <div className="grid grid-cols-3 gap-6">
@@ -574,19 +560,18 @@ export default function ClientsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Payment Milestones */}
                                         <div className="space-y-6">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3 text-primary"><ListChecks className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Payment Milestones</h4></div>
                                                 <Button type="button" onClick={handleAddMilestone} size="sm" variant="outline" className="rounded-none h-8 font-black uppercase text-[8px] tracking-widest gap-2"><Plus className="size-3"/> Add Milestone</Button>
                                             </div>
                                             <div className="space-y-4">
-                                                {(clientForm.payments || []).map((p, i) => (
+                                                {(clientForm.payments || []).map((p) => (
                                                     <Card key={p.id} className="p-6 rounded-none border-2 border-dashed border-border/50 bg-white relative space-y-6">
                                                         <Button type="button" onClick={() => removeMilestone(p.id)} variant="ghost" size="icon" className="absolute top-2 right-2 text-rose-500 h-6 w-6"><X className="size-4" /></Button>
                                                         <div className="grid grid-cols-4 gap-4">
                                                             <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Amount</Label><Input type="number" value={p.amount} onChange={e => updateMilestone(p.id, { amount: e.target.value })} className="h-9 rounded-none font-bold" /></div>
-                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Due Date</Label><Input type="date" value={p.dueDate} onChange={e => updateMilestone(p.id, { dueDate: e.target.value })} className="h-9 rounded-none" /></div>
+                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Due Date</Label><Input type="date" value={p.dueDate} onChange={updateMilestone.bind(null, p.id, { dueDate: '' })} className="h-9 rounded-none" /></div>
                                                             <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Status</Label>
                                                                 <Select value={p.status} onValueChange={v => updateMilestone(p.id, { status: v as any })}>
                                                                     <SelectTrigger className="h-9 rounded-none text-xs"><SelectValue /></SelectTrigger>
@@ -595,12 +580,6 @@ export default function ClientsPage() {
                                                             </div>
                                                             <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Amount Received</Label><Input type="number" value={p.amountReceived} onChange={e => updateMilestone(p.id, { amountReceived: e.target.value })} className="h-9 rounded-none font-bold text-emerald-600" /></div>
                                                         </div>
-                                                        <div className="grid grid-cols-3 gap-4">
-                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Invoice #</Label><Input value={p.invoiceNumber} onChange={e => updateMilestone(p.id, { invoiceNumber: e.target.value })} className="h-9 rounded-none" /></div>
-                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Invoice Date</Label><Input type="date" value={p.invoiceDate} onChange={e => updateMilestone(p.id, { invoiceDate: e.target.value })} className="h-9 rounded-none" /></div>
-                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Remaining</Label><div className="h-9 border flex items-center px-3 text-xs font-black bg-muted/20">{(parseFloat(p.amount) || 0) - (parseFloat(p.amountReceived || '0') || 0)}</div></div>
-                                                        </div>
-                                                        <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Remarks</Label><Input value={p.remarks} onChange={e => updateMilestone(p.id, { remarks: e.target.value })} className="h-9 rounded-none" /></div>
                                                     </Card>
                                                 ))}
                                             </div>
@@ -611,7 +590,6 @@ export default function ClientsPage() {
                                                         Scheduled: {clientForm.currencyType}{scheduledTotal.toLocaleString()} / Final Cost: {clientForm.currencyType}{calculatedTotalCost.toLocaleString()}
                                                     </p>
                                                 </div>
-                                                {scheduledTotal !== calculatedTotalCost && <Badge className="bg-rose-500 text-white border-none rounded-none text-[8px] font-black px-2 h-5">AUDIT MISMATCH</Badge>}
                                             </div>
                                         </div>
                                     </div>
@@ -683,7 +661,7 @@ export default function ClientsPage() {
                 <div className="lg:col-span-4 space-y-6">
                     <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden ring-1 ring-border/50">
                         <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between">
-                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2"><Trophy className="size-4" /> Top Clients</CardTitle>
+                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">Top Clients</CardTitle>
                             <div className="flex bg-muted/30 p-1 rounded-none">
                                 <button onClick={() => setRankBy('price')} className={cn("px-3 py-1 rounded-none text-[9px] font-black uppercase transition-all", rankBy === 'price' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Price</button>
                                 <button onClick={() => setRankBy('services')} className={cn("px-3 py-1 rounded-none text-[9px] font-black uppercase transition-all", rankBy === 'services' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Services</button>
@@ -702,26 +680,12 @@ export default function ClientsPage() {
                             ))}
                         </CardContent>
                     </Card>
-
-                    <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden ring-1 ring-border/50">
-                        <CardHeader className="p-8 pb-4"><CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2"><Video className="size-4" /> Upcoming Meets</CardTitle></CardHeader>
-                        <ScrollArea className="h-64">
-                            <div className="p-8 pt-0 space-y-4">
-                                {allMeetings?.filter(m => isAfter(m.date.toDate(), new Date())).map(m => (
-                                    <div key={m.id} className="p-4 rounded-none bg-muted/20 border border-transparent hover:bg-white hover:shadow-md transition-all space-y-2">
-                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-primary">{m.title}</span><Badge className="h-4 text-[8px] bg-sky-100 text-sky-700 border-none uppercase">CLIENT MEET</Badge></div>
-                                        <p className="text-[9px] font-bold text-muted-foreground uppercase flex items-center gap-2"><Clock className="size-3"/> {format(m.date.toDate(), 'PPP p')}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </Card>
                 </div>
             </div>
 
             <Sheet open={!!selectedClient} onOpenChange={o => !o && setSelectedClient(null)}>
                 <SheetContent className="w-full sm:max-w-[480px] p-0 border-none shadow-3xl flex flex-col bg-[#F8FAFC]">
-                    <SheetHeader className="p-6 bg-white border-b shadow-sm shrink-0">
+                    <SheetHeader className="p-6 pb-2 bg-white border-b shadow-sm shrink-0">
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-4">
                                 <div className="size-14 rounded-none bg-primary/5 flex items-center justify-center text-primary font-black text-lg border-2 border-primary/10 shadow-inner">
@@ -741,7 +705,6 @@ export default function ClientsPage() {
                             </div>
                         </div>
 
-                        {/* Revenue Progress Terminal */}
                         <div className="p-4 bg-emerald-50/50 rounded-none ring-1 ring-emerald-100/50 space-y-3">
                             <div className="flex justify-between items-end">
                                 <div className="space-y-0.5">
@@ -797,14 +760,12 @@ export default function ClientsPage() {
                                             <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Stats</h4>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <StatBox label="Meetings" value={clientMeetings.length.toString()} icon={Users} color="bg-blue-50 text-blue-600" />
-                                                <StatBox label="Invoices" value={clientInvoices.length.toString()} icon={ReceiptIndianRupee} color="bg-purple-50 text-purple-600" />
+                                                <StatBox label="Invoices" value={clientInvoices.length.toString()} icon={DollarSign} color="bg-purple-50 text-purple-600" />
                                                 <StatBox label="Milestones" value={selectedClient?.payments?.length?.toString() || '0'} icon={ListChecks} color="bg-emerald-50 text-emerald-600" />
-                                                <StatBox label="Priority" value={selectedClient?.priority || 'Low'} icon={Trophy} color="bg-amber-50 text-amber-600" />
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Timeline Audit Graph */}
                                     <div className="space-y-4">
                                         <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Strategic Timeline</h4>
                                         <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50 relative overflow-hidden">
@@ -821,9 +782,6 @@ export default function ClientsPage() {
                                                         </div>
                                                     </div>
                                                 ))}
-                                                {timelineEvents.length === 0 && (
-                                                    <div className="text-center py-2 opacity-30 italic text-[9px] font-bold uppercase">No history found.</div>
-                                                )}
                                             </div>
                                         </Card>
                                     </div>
@@ -841,7 +799,7 @@ export default function ClientsPage() {
                                     <div className="space-y-3">
                                         {clientInvoices.map((inv: any) => (
                                             <div key={inv.id} className="p-4 rounded-none bg-white ring-1 ring-border shadow-sm flex items-center justify-between hover:bg-slate-50 transition-all group">
-                                                <div className="flex items-center gap-3"><div className="p-2 rounded-xl bg-purple-50 text-purple-600"><ReceiptIndianRupee className="size-4" /></div><div><p className="font-bold text-xs uppercase">{inv.title}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{format(inv.uploadedAt.toDate(), 'PPP')}</p></div></div>
+                                                <div className="flex items-center gap-3"><div className="p-2 rounded-xl bg-purple-50 text-purple-600"><DollarSign className="size-4" /></div><div><p className="font-bold text-xs uppercase">{inv.title}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{format(inv.uploadedAt.toDate(), 'PPP')}</p></div></div>
                                                 <Button variant="ghost" size="icon" asChild><Link href={inv.link} target="_blank"><ExternalLink className="size-3" /></Link></Button>
                                             </div>
                                         ))}
@@ -863,11 +821,6 @@ export default function ClientsPage() {
                                                     </div>
                                                     <Button variant="ghost" size="icon" asChild><Link href={m.link || '#'} target="_blank"><ExternalLink className="size-3" /></Link></Button>
                                                 </div>
-                                                {m.description && (
-                                                    <div className="p-3 bg-muted/20 border-l-4 border-primary/40">
-                                                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-tight italic">Regarding: "{m.description}"</p>
-                                                    </div>
-                                                )}
                                             </div>
                                         ))}
                                     </div>
