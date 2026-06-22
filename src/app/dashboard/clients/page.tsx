@@ -12,7 +12,7 @@ import {
     Building2, Filter, Download, 
     Briefcase, Zap, MapPin, X, 
     DollarSign, BriefcaseBusiness, IndianRupee, Loader2, TrendingUp, ReceiptIndianRupee,
-    Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal
+    Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal, Mail, Phone, Calendar, FileText, CheckCircle, AlertCircle, LayoutGrid
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -22,13 +22,14 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth, subMonths, endOfMonth, isAfter, isBefore } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth, subMonths, endOfMonth, isAfter, isBefore, differenceInDays } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
 
 type PaymentInstallment = {
@@ -57,6 +58,8 @@ type Client = {
     address?: string;
     website?: string;
     createdAt?: any;
+    gstNumber?: string;
+    notes?: string;
     // UI Metadata
     managerName?: string;
     managerAvatar?: string;
@@ -85,6 +88,7 @@ export default function ClientsPage() {
         name: '', companyName: '', email: '', phone: '', status: 'Active', category: 'Manufacturing', 
         address: '', website: '', pocPosition: '', productNeeded: '', projectType: 'Technical',
         handlingEmployeeId: '', assignedTeamId: '', productHeadId: '', fullPaymentPrice: 0,
+        gstNumber: '', notes: '',
         payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending' }]
     });
 
@@ -264,6 +268,7 @@ export default function ClientsPage() {
             name: '', companyName: '', email: '', phone: '', status: 'Active', category: 'Manufacturing', 
             address: '', website: '', pocPosition: '', productNeeded: '', projectType: 'Technical',
             handlingEmployeeId: '', assignedTeamId: '', productHeadId: '', fullPaymentPrice: 0,
+            gstNumber: '', notes: '',
             payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending' }]
         });
     };
@@ -412,8 +417,8 @@ export default function ClientsPage() {
                                         </div>
                                         <div className="grid grid-cols-2 gap-8">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Product Needed</Label>
-                                                <Input value={clientForm.productNeeded} onChange={e => setClientForm({...clientForm, productNeeded: e.target.value})} placeholder="e.g., Mobile ERP Suite" className="h-12 font-bold rounded-xl" />
+                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">GST Number</Label>
+                                                <Input value={clientForm.gstNumber} onChange={e => setClientForm({...clientForm, gstNumber: e.target.value})} placeholder="e.g., 27ABCDE1234F1Z5" className="h-12 font-bold rounded-xl uppercase" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Account Status</Label>
@@ -604,42 +609,36 @@ export default function ClientsPage() {
                         </TableBody>
                     </Table>
                 </div>
-                
-                <div className="p-10 border-t flex flex-col sm:flex-row items-center justify-between gap-8 bg-muted/5">
-                    <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Audit Registry: {filteredClients.length} strategic partners</p>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="icon" className="size-11 rounded-2xl border-none ring-1 ring-border shadow-sm"><ChevronRight className="size-5 rotate-180"/></Button>
-                        <Button variant="secondary" size="sm" className="h-11 w-11 rounded-2xl bg-primary text-white font-black shadow-xl shadow-primary/20">1</Button>
-                        <Button variant="ghost" size="sm" className="h-11 w-11 rounded-2xl font-black text-xs">2</Button>
-                        <Button variant="outline" size="icon" className="size-11 rounded-2xl border-none ring-1 ring-border shadow-sm"><ChevronRight className="size-5"/></Button>
-                    </div>
-                </div>
             </div>
 
             {/* Account Intelligence Sheet */}
             <Sheet open={!!selectedClient} onOpenChange={o => !o && setSelectedClient(null)}>
                 <SheetContent className="w-full sm:max-w-[540px] p-0 border-none shadow-3xl overflow-hidden flex flex-col bg-[#F8FAFC]">
-                    <SheetHeader className="p-10 pb-8 bg-white border-b shadow-sm">
-                        <div className="flex items-start justify-between mb-10">
+                    <SheetHeader className="p-10 pb-8 bg-white border-b shadow-sm relative">
+                        <div className="flex items-start justify-between mb-8">
                             <div className="flex items-center gap-6">
                                 <div className="size-20 rounded-3xl bg-primary/5 flex items-center justify-center text-primary font-black text-2xl shadow-inner border-2 border-primary/10">
                                     {selectedClient?.companyName.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-3 mb-2">
+                                    <div className="flex items-center gap-3 mb-1">
                                         <SheetTitle className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-none">{selectedClient?.companyName}</SheetTitle>
                                         <Badge className="bg-emerald-50 text-emerald-700 border-none text-[9px] font-black h-5 uppercase tracking-widest px-2.5 shadow-sm">{selectedClient?.status}</Badge>
                                     </div>
-                                    <SheetDescription className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">{selectedClient?.category} Unit • Strategic Account</SheetDescription>
+                                    <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                        <span>{selectedClient?.category}</span>
+                                        <span>•</span>
+                                        <span>Since {selectedClient?.createdAt ? format(selectedClient.createdAt.toDate(), 'MMM yyyy') : 'Jan 2025'}</span>
+                                    </div>
                                 </div>
                             </div>
                             <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted" onClick={() => setSelectedClient(null)}><X className="size-6"/></Button>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-8 p-8 bg-muted/10 rounded-[2rem] border border-dashed border-border/50">
-                            <div className="space-y-2">
-                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Account Lead</p>
-                                <div className="flex items-center gap-3">
+                        <div className="grid grid-cols-3 gap-6 pt-6 border-t border-dashed">
+                            <div className="space-y-1.5">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Account Manager</p>
+                                <div className="flex items-center gap-2.5">
                                     <Avatar className="size-7 ring-1 ring-border shadow-sm">
                                         <AvatarImage src={selectedClient?.managerAvatar} className="object-cover" />
                                         <AvatarFallback className="text-[8px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback>
@@ -647,15 +646,21 @@ export default function ClientsPage() {
                                     <p className="text-[11px] font-black text-slate-800 uppercase truncate">{selectedClient?.managerName || 'Unassigned'}</p>
                                 </div>
                             </div>
-                            <DetailCol label="Official Email" value={selectedClient?.email || 'N/A'} />
-                            <DetailCol label="Contact Signal" value={selectedClient?.phone || 'N/A'} />
+                            <div className="space-y-1.5">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Email</p>
+                                <p className="text-[11px] font-black text-slate-800 uppercase truncate">{selectedClient?.email || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-1.5">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Phone</p>
+                                <p className="text-[11px] font-black text-slate-800 uppercase truncate">{selectedClient?.phone || 'N/A'}</p>
+                            </div>
                         </div>
                     </SheetHeader>
 
                     <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
                         <div className="px-10 bg-white border-b shrink-0 overflow-x-auto no-scrollbar">
                             <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-12 border-none rounded-none">
-                                {['Overview', 'Milestones', 'Invoices', 'Contracts'].map(tab => (
+                                {['Overview', 'Projects', 'Meetings', 'Invoices', 'Documents'].map(tab => (
                                     <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-black text-[11px] uppercase px-0 pb-5 tracking-widest shadow-none">
                                         {tab}
                                     </TabsTrigger>
@@ -664,73 +669,75 @@ export default function ClientsPage() {
                         </div>
 
                         <ScrollArea className="flex-1">
-                            <div className="p-10 pb-24">
-                                <TabsContent value="overview" className="mt-0 space-y-12">
-                                    <div className="space-y-8">
-                                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
-                                            <Briefcase className="size-3.5 text-primary" /> Profile Brief
-                                        </h4>
+                            <div className="p-10 pb-24 space-y-10">
+                                <TabsContent value="overview" className="mt-0 space-y-10">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                        {/* Left: About Client */}
                                         <div className="space-y-6">
-                                            <InfoLine label="Account Status" value={selectedClient?.status || 'Active'} />
-                                            <InfoLine label="Project Value" value={`₹${(selectedClient?.fullPaymentPrice || 0).toLocaleString()}`} />
-                                            <InfoLine label="Product" value={selectedClient?.productNeeded || 'Enterprise Suite'} />
-                                            <InfoLine label="Project Tier" value={selectedClient?.projectType || 'General'} />
-                                            <InfoLine label="HQ Website" value={selectedClient?.website || 'N/A'} isLink />
-                                            <div className="pt-4">
-                                                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-4">Operational HQ</p>
-                                                <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex items-start gap-4 border-l-4 border-primary">
-                                                    <MapPin className="size-5 text-primary mt-0.5" />
-                                                    <p className="text-sm font-bold leading-relaxed text-slate-600 uppercase italic">"{selectedClient?.address || 'No physical address registered.'}"</p>
+                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">About Client</h4>
+                                            <div className="space-y-5">
+                                                <DetailLine label="Industry" value={selectedClient?.category || 'N/A'} />
+                                                <DetailLine label="Website" value={selectedClient?.website || 'N/A'} isLink />
+                                                <DetailLine label="GST Number" value={selectedClient?.gstNumber || 'N/A'} />
+                                                <div className="pt-2">
+                                                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-3">Address</p>
+                                                    <p className="text-[11px] font-bold text-slate-600 leading-relaxed uppercase">{selectedClient?.address || 'No physical address registered.'}</p>
+                                                    <Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary mt-2 group">View More <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </TabsContent>
 
-                                <TabsContent value="milestones" className="mt-0 space-y-8">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
-                                            <DollarSign className="size-3.5 text-primary" /> Payment Ledger
-                                        </h4>
-                                    </div>
-                                    <div className="space-y-4">
-                                        {selectedClient?.payments?.map((p, i) => (
-                                            <div key={p.id} className="flex items-center justify-between p-6 bg-white rounded-2xl ring-1 ring-border shadow-sm hover:ring-primary/30 transition-all group">
-                                                <div className="flex items-center gap-5">
-                                                    <div className="size-10 rounded-xl bg-muted/20 flex items-center justify-center font-black text-[11px] text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all">{i+1}</div>
-                                                    <span className="font-black text-sm text-slate-800 tracking-tight uppercase leading-none">Milestone {i+1}</span>
-                                                </div>
-                                                <div className="flex items-center gap-6">
-                                                    <span className="font-black text-sm text-slate-900">₹{parseFloat(p.amount).toLocaleString()}</span>
-                                                    <Badge className={cn(
-                                                        "rounded-lg font-black text-[9px] uppercase tracking-widest border-none px-3 h-7",
-                                                        p.status === 'Paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                                                    )}>{p.status}</Badge>
-                                                </div>
+                                        {/* Right: Quick Stats */}
+                                        <div className="space-y-6">
+                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Quick Stats</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <StatBox label="Projects" value="4" icon={BriefcaseBusiness} color="bg-emerald-50 text-emerald-600" />
+                                                <StatBox label="Meetings" value="27" icon={Users} color="bg-blue-50 text-blue-600" />
+                                                <StatBox label="Invoices" value="18" icon={ReceiptIndianRupee} color="bg-purple-50 text-purple-600" />
+                                                <StatBox label="Pending" value="2" icon={Wallet} color="bg-amber-50 text-amber-600" />
                                             </div>
-                                        ))}
+                                        </div>
                                     </div>
-                                </TabsContent>
 
-                                <TabsContent value="invoices" className="mt-0 space-y-8">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
-                                        <ReceiptIndianRupee className="size-3.5 text-primary" /> Account Invoices
-                                    </h4>
-                                    <div className="space-y-4">
-                                        {clientInvoices.length > 0 ? clientInvoices.map((inv: any) => (
-                                            <Link href={inv.link} target="_blank" key={inv.id} className="flex items-center justify-between p-6 bg-white rounded-2xl ring-1 ring-border shadow-sm hover:shadow-md transition-all group">
-                                                <div className="flex items-center gap-5">
-                                                    <div className="size-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><ReceiptIndianRupee className="size-6" /></div>
-                                                    <div>
-                                                        <p className="font-black text-sm uppercase truncate max-w-[200px]">{inv.title}</p>
-                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase">{inv.uploadedAt ? format(inv.uploadedAt.toDate(), 'PP') : 'Audit Log'}</p>
-                                                    </div>
-                                                </div>
-                                                <ExternalLink className="size-5 opacity-20 group-hover:opacity-100" />
-                                            </Link>
-                                        )) : (
-                                            <div className="py-20 text-center opacity-20 italic text-sm font-bold uppercase tracking-widest">No audited invoices found.</div>
-                                        )}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                        {/* Recent Activities */}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Recent Activities</h4>
+                                                <Button variant="link" className="h-4 p-0 text-[10px] font-black uppercase text-primary">View All</Button>
+                                            </div>
+                                            <div className="space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                                                <ActivityItem icon={DollarSign} title="Invoice INV-018 has been paid" time="Today, 10:30 AM" color="bg-emerald-500" />
+                                                <ActivityItem icon={Users} title="Meeting completed - Project Review" time="Today, 09:15 AM" color="bg-blue-500" />
+                                                <ActivityItem icon={Plus} title="New document uploaded - Agreement.pdf" time="Yesterday, 04:45 PM" color="bg-purple-500" />
+                                                <ActivityItem icon={Zap} title="Project Website Revamp has been updated" time="Yesterday, 11:20 AM" color="bg-orange-500" />
+                                            </div>
+                                        </div>
+
+                                        {/* Upcoming */}
+                                        <div className="space-y-6">
+                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Upcoming</h4>
+                                            <div className="space-y-4">
+                                                <UpcomingItem day="16" month="MAY" title="Project Review Meeting" time="10:00 AM" />
+                                                <UpcomingItem day="20" month="MAY" title="Invoice INV-021 Due" time="02:00 PM" />
+                                                <UpcomingItem day="25" month="MAY" title="Contract Renewal" time="11:00 AM" />
+                                                <Button variant="link" className="w-full h-10 text-[10px] font-black uppercase text-primary border-2 border-dashed border-primary/20 rounded-2xl">View Calendar</Button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Mission Notes */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Notes</h4>
+                                            <Button variant="ghost" size="icon" className="size-8 rounded-full"><Edit className="size-3.5"/></Button>
+                                        </div>
+                                        <Card className="border-none shadow-sm rounded-3xl bg-white p-6 ring-1 ring-border/50">
+                                            <p className="text-[11px] font-bold text-slate-600 leading-relaxed uppercase italic">"{selectedClient?.notes || 'Client is happy with the progress. Next milestone delivery expected by end of May.'}"</p>
+                                            <div className="mt-4 pt-4 border-t border-dashed flex justify-between items-center">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase">- {selectedClient?.managerName} ({format(new Date(), 'dd MMM yyyy')})</p>
+                                            </div>
+                                        </Card>
                                     </div>
                                 </TabsContent>
                             </div>
@@ -761,25 +768,59 @@ function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     );
 }
 
-function DetailCol({ label, value }: { label: string, value: string }) {
+function DetailLine({ label, value, isLink }: { label: string, value: string, isLink?: boolean }) {
     return (
-        <div className="space-y-1.5">
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</p>
-            <p className="text-[11px] font-black text-slate-800 uppercase truncate">{value}</p>
-        </div>
-    );
-}
-
-function InfoLine({ label, value, isLink }: { label: string, value: string, isLink?: boolean }) {
-    return (
-        <div className="flex items-center justify-between py-4 border-b border-dashed border-border/50 last:border-none group gap-8">
-            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest shrink-0">{label}</span>
+        <div className="grid grid-cols-5 items-center gap-4">
+            <span className="col-span-2 text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</span>
             <span className={cn(
-                "text-[11px] font-black truncate uppercase text-right flex-1",
+                "col-span-3 text-[11px] font-black truncate uppercase text-right",
                 isLink ? "text-primary underline cursor-pointer" : "text-slate-800"
             )}>
                 {value}
             </span>
+        </div>
+    );
+}
+
+function StatBox({ label, value, icon: Icon, color }: { label: string, value: string, icon: any, color: string }) {
+    return (
+        <div className="p-4 bg-white rounded-2xl ring-1 ring-border shadow-sm space-y-3 transition-transform hover:scale-105">
+            <div className={cn("p-2 rounded-xl inline-block shadow-sm", color)}>
+                <Icon className="size-4" />
+            </div>
+            <div>
+                <p className="text-xl font-black text-slate-900 leading-none">{value}</p>
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">{label}</p>
+            </div>
+        </div>
+    );
+}
+
+function ActivityItem({ icon: Icon, title, time, color }: { icon: any, title: string, time: string, color: string }) {
+    return (
+        <div className="flex items-start gap-5 group">
+            <div className={cn("size-5 rounded-full flex items-center justify-center shrink-0 z-10 shadow-md ring-4 ring-white", color)}>
+                <Icon className="size-2.5 text-white" />
+            </div>
+            <div className="min-w-0">
+                <p className="text-[10px] font-black text-slate-800 leading-tight uppercase group-hover:text-primary transition-colors">{title}</p>
+                <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">{time}</p>
+            </div>
+        </div>
+    );
+}
+
+function UpcomingItem({ day, month, title, time }: { day: string, month: string, title: string, time: string }) {
+    return (
+        <div className="flex items-center gap-5 p-4 bg-white rounded-2xl ring-1 ring-border shadow-sm hover:shadow-md transition-all group">
+            <div className="size-14 rounded-xl bg-blue-50 flex flex-col items-center justify-center shrink-0 border border-blue-100 shadow-inner group-hover:bg-primary group-hover:text-white transition-colors">
+                <span className="text-sm font-black leading-none">{day}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest mt-1">{month}</span>
+            </div>
+            <div className="min-w-0">
+                <p className="text-[11px] font-black text-slate-800 leading-tight uppercase truncate">{title}</p>
+                <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">{time}</p>
+            </div>
         </div>
     );
 }
