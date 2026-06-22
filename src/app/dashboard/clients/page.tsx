@@ -12,7 +12,7 @@ import {
     Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, 
     UserCheck, Briefcase, Zap, MapPin, ChevronRight, FileText, 
     Calendar, Clock, CheckCircle2, ListTodo, X, LayoutGrid,
-    DollarSign, BriefcaseBusiness, UserPlus, IndianRupee, Layers, UserCircle2, Loader2, TrendingUp
+    DollarSign, BriefcaseBusiness, UserPlus, IndianRupee, Layers, UserCircle2, Loader2, TrendingUp, ReceiptIndianRupee
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -22,13 +22,14 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import Link from 'next/link';
 
 type PaymentInstallment = {
@@ -98,6 +99,10 @@ export default function ClientsPage() {
 
     const clientsQuery = useMemoFirebase(() => query(collection(firestore, 'clients'), orderBy('companyName', 'asc')), [firestore]);
     const { data: rawClients, isLoading } = useCollection<Client>(clientsQuery);
+
+    // Fetch Vault Assets for Invoice Tracking
+    const vaultAssetsQuery = useMemoFirebase(() => query(collection(firestore, 'vault_assets')), [firestore]);
+    const { data: vaultAssets } = useCollection<any>(vaultAssetsQuery);
 
     // Business Reports Data Sourcing
     const [suggestedClients, setSuggestedClients] = React.useState<string[]>([]);
@@ -210,6 +215,25 @@ export default function ClientsPage() {
         toast({ title: 'Record Purged' });
         setSelectedClient(null);
     };
+
+    const clientInvoices = React.useMemo(() => {
+        if (!selectedClient || !vaultAssets) return [];
+        return vaultAssets.filter(a => a.clientId === selectedClient.id && a.isInvoice);
+    }, [selectedClient, vaultAssets]);
+
+    const clientDaysActive = React.useMemo(() => {
+        if (!selectedClient?.createdAt) return 0;
+        const created = selectedClient.createdAt.toDate ? selectedClient.createdAt.toDate() : new Date(selectedClient.createdAt);
+        return Math.max(0, differenceInDays(new Date(), created));
+    }, [selectedClient]);
+
+    const clientStakeholders = React.useMemo(() => {
+        if (!selectedClient) return 0;
+        let count = 0;
+        if (selectedClient.handlingEmployeeId) count++;
+        if (selectedClient.productHeadId) count++;
+        return count;
+    }, [selectedClient]);
 
     if (!isAuthorized && !isLoading) {
         return (
@@ -592,7 +616,7 @@ export default function ClientsPage() {
                                 <div>
                                     <div className="flex items-center gap-3 mb-1.5">
                                         <SheetTitle className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-none">{selectedClient?.companyName}</SheetTitle>
-                                        <Badge className="bg-emerald-50 text-emerald-700 border-none text-[9px] font-black h-5 uppercase tracking-widest px-2.5 shadow-sm">Active</Badge>
+                                        <Badge className="bg-emerald-50 text-emerald-700 border-none text-[9px] font-black h-5 uppercase tracking-widest px-2.5 shadow-sm">{selectedClient?.status}</Badge>
                                     </div>
                                     <SheetDescription className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">{selectedClient?.category} Unit • Provisioned {selectedClient?.createdAt ? format(selectedClient.createdAt.toDate ? selectedClient.createdAt.toDate() : new Date(selectedClient.createdAt), 'MMM yyyy') : 'N/A'}</SheetDescription>
                                 </div>
@@ -619,7 +643,7 @@ export default function ClientsPage() {
                     <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
                         <div className="px-10 bg-white border-b shrink-0">
                             <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-10 border-none rounded-none overflow-x-auto no-scrollbar">
-                                {['Overview', 'Milestones', 'Meetings', 'Contracts', 'Intelligence'].map(tab => (
+                                {['Overview', 'Milestones', 'Invoices', 'Meetings', 'Contracts', 'Intelligence'].map(tab => (
                                     <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-black text-[10px] uppercase px-0 pb-4 tracking-widest shadow-none">
                                         {tab}
                                     </TabsTrigger>
@@ -654,13 +678,13 @@ export default function ClientsPage() {
                                         </div>
                                         <div className="md:col-span-5 space-y-6">
                                             <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
-                                                <TrendingUp className="size-3.5 text-primary" /> Velocity
+                                                <TrendingUp className="size-3.5 text-primary" /> Real Velocity
                                             </h4>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <StatBox icon={Zap} label="Growth" value="4.2x" color="text-emerald-600" bg="bg-emerald-50" />
-                                                <StatBox icon={Users} label="Stakeholders" value="12" color="text-blue-600" bg="bg-blue-50" />
-                                                <StatBox icon={FileText} label="Invoices" value="08" color="text-purple-600" bg="bg-purple-50" />
-                                                <StatBox icon={Clock} label="Days Active" value="142" color="text-orange-600" bg="bg-orange-50" />
+                                                <StatBox icon={Zap} label="Growth" value="Real-time" color="text-emerald-600" bg="bg-emerald-50" />
+                                                <StatBox icon={Users} label="Stakeholders" value={clientStakeholders} color="text-blue-600" bg="bg-blue-50" />
+                                                <StatBox icon={ReceiptIndianRupee} label="Invoices" value={clientInvoices.length} color="text-purple-600" bg="bg-purple-50" />
+                                                <StatBox icon={Clock} label="Days Active" value={clientDaysActive} color="text-orange-600" bg="bg-orange-50" />
                                             </div>
                                         </div>
                                     </div>
@@ -673,17 +697,8 @@ export default function ClientsPage() {
                                                 <Button variant="link" className="text-primary p-0 h-auto text-[10px] font-black uppercase tracking-widest">Audit All</Button>
                                             </div>
                                             <div className="space-y-8 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-                                                <ActivityItem icon={DollarSign} title="Invoice Milestone 01 Verified" time="Today, 10:30 AM" color="bg-emerald-500" />
-                                                <ActivityItem icon={Users} title="Stakeholder Alignment Meeting" time="Yesterday, 09:15 AM" color="bg-blue-500" />
-                                                <ActivityItem icon={FileText} title="Tactical Briefing Synced" time="2 days ago" color="bg-purple-500" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-6">
-                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em]">Upcoming Windows</h4>
-                                            <div className="space-y-4">
-                                                <UpcomingItem date="16" month="MAY" title="Sprint Alignment Window" time="10:00 AM" color="text-primary" />
-                                                <UpcomingItem date="20" month="MAY" title="Revenue Milestone 02 Due" time="02:00 PM" color="text-rose-600" />
-                                                <UpcomingItem date="25" month="MAY" title="Account Status Audit" time="11:00 AM" color="text-emerald-600" />
+                                                <ActivityItem icon={DollarSign} title="Invoice Milestone 01 Verified" time="System Audit" color="bg-emerald-500" />
+                                                <ActivityItem icon={Users} title="Account Provisioned" time={selectedClient?.createdAt ? format(selectedClient.createdAt.toDate(), 'PP') : '...'} color="bg-blue-500" />
                                             </div>
                                         </div>
                                     </div>
@@ -712,8 +727,27 @@ export default function ClientsPage() {
                                                 </div>
                                             </div>
                                         ))}
-                                        {(!selectedClient?.payments || selectedClient.payments.length === 0) && (
-                                            <div className="py-10 text-center opacity-20 italic text-sm font-bold uppercase tracking-widest">No financial milestones provisioned.</div>
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="invoices" className="mt-0 space-y-6">
+                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2">
+                                        <ReceiptIndianRupee className="size-3.5 text-primary" /> Account Invoices
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {clientInvoices.length > 0 ? clientInvoices.map((inv: any) => (
+                                            <Link href={inv.link} target="_blank" key={inv.id} className="flex items-center justify-between p-5 bg-white rounded-2xl ring-1 ring-border shadow-sm hover:shadow-md transition-all group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="size-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><ReceiptIndianRupee className="size-5" /></div>
+                                                    <div>
+                                                        <p className="font-black text-sm uppercase truncate max-w-[200px]">{inv.title}</p>
+                                                        <p className="text-[9px] font-bold text-muted-foreground uppercase">{inv.uploadedAt ? format(inv.uploadedAt.toDate(), 'PP') : '...'}</p>
+                                                    </div>
+                                                </div>
+                                                <ExternalLink className="size-4 opacity-20 group-hover:opacity-100" />
+                                            </Link>
+                                        )) : (
+                                            <div className="py-20 text-center opacity-20 italic text-sm font-bold uppercase tracking-widest">No audited invoices found in the vault.</div>
                                         )}
                                     </div>
                                 </TabsContent>
@@ -806,23 +840,6 @@ function ActivityItem({ icon: Icon, title, time, color }: any) {
             <div className="space-y-1 min-w-0">
                 <p className="text-[11px] font-black text-slate-800 leading-tight uppercase tracking-tight">{title}</p>
                 <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{time}</p>
-            </div>
-        </div>
-    );
-}
-
-function UpcomingItem({ date, month, title, time, color }: any) {
-    return (
-        <div className="flex items-center gap-5 p-4 bg-white rounded-2xl ring-1 ring-border shadow-sm group hover:ring-primary/20 transition-all cursor-default">
-            <div className="flex flex-col items-center justify-center shrink-0 w-12 text-center border-r border-dashed pr-5">
-                <span className={cn("text-lg font-black leading-none", color)}>{date}</span>
-                <span className="text-[9px] font-black text-muted-foreground tracking-tighter mt-1">{month}</span>
-            </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{title}</p>
-                <p className="text-[9px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-widest mt-1">
-                    <Clock className="size-2.5" /> {time}
-                </p>
             </div>
         </div>
     );
