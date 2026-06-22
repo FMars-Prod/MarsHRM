@@ -13,7 +13,7 @@ import {
     Briefcase, Zap, MapPin, X, 
     DollarSign, BriefcaseBusiness, IndianRupee, Loader2, TrendingUp, ReceiptIndianRupee,
     Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal, Mail, Phone, Calendar, FileText, CheckCircle, AlertCircle, LayoutGrid, Globe, Map, UserCircle,
-    Info, CalendarDays, Receipt, BadgeIndianRupee, HandCoins, UserPlus, Video, Trophy, ListChecks
+    Info, CalendarDays, Receipt, BadgeIndianRupee, HandCoins, UserPlus, Video, Trophy, ListChecks, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -106,7 +106,7 @@ export default function ClientsPage() {
     const [editingClient, setEditingClient] = React.useState<Client | null>(null);
     const [selectedClient, setSelectedClient] = React.useState<Client | null>(null);
     const [searchQuery, setSearchQuery] = React.useState("");
-    const [suggestedNames, setSuggestedNames] = React.useState<string[]>([]);
+    const [statusFilter, setStatusFilter] = React.useState<string>("all");
     const [tableFilter, setTableFilter] = React.useState<string>("all");
 
     const [clientForm, setClientForm] = React.useState<Partial<Client>>({
@@ -175,6 +175,10 @@ export default function ClientsPage() {
             );
         }
 
+        if (statusFilter !== 'all') {
+            filtered = filtered.filter(c => c.status === statusFilter);
+        }
+
         if (tableFilter === 'revenue') {
             filtered = filtered.filter(c => (c.payments?.some(p => p.status === 'Paid')));
         } else if (tableFilter === 'pipeline') {
@@ -193,7 +197,7 @@ export default function ClientsPage() {
                 managerAvatar: manager?.avatar || '',
             };
         });
-    }, [rawClients, allUsers, searchQuery, dateRange, tableFilter]);
+    }, [rawClients, allUsers, searchQuery, statusFilter, dateRange, tableFilter]);
 
     const stats = React.useMemo(() => {
         let collected = 0;
@@ -270,6 +274,36 @@ export default function ClientsPage() {
         });
     };
 
+    const handleExportCsv = () => {
+        if (filteredClients.length === 0) {
+            toast({ variant: 'destructive', title: 'No Data', description: 'No client records found to export.' });
+            return;
+        }
+        const headers = ["Organization", "Client Name", "Email", "Phone", "Status", "Priority", "Project Value", "Service Type", "Joined At"];
+        const rows = filteredClients.map(c => [
+            `"${c.companyName}"`,
+            `"${c.clientName || ''}"`,
+            c.email,
+            c.phone,
+            c.status,
+            c.priority || 'Medium',
+            `${c.currencyType}${c.projectTotalCost || 0}`,
+            c.projectType || 'N/A',
+            c.createdAt ? format(c.createdAt.toDate(), 'PPP') : 'N/A'
+        ]);
+        
+        const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `MarsHRM_Clients_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({ title: 'Export Complete', description: 'CSV file has been generated.' });
+    };
+
     const clientInvoices = React.useMemo(() => {
         if (!selectedClient || !vaultAssets) return [];
         return vaultAssets.filter((a: any) => a.clientId === selectedClient.id && a.isInvoice);
@@ -290,7 +324,7 @@ export default function ClientsPage() {
                 
                 <div className="flex flex-wrap gap-2 items-center">
                     <Select value={dateFilter} onValueChange={setDateFilter}>
-                        <SelectTrigger className="w-[180px] rounded-full h-11 bg-white shadow-sm border-none ring-1 ring-border/50">
+                        <SelectTrigger className="w-[160px] rounded-full h-11 bg-white shadow-sm border-none ring-1 ring-border/50">
                             <div className="flex items-center gap-2">
                                 <Filter className="size-3.5 opacity-50" />
                                 <SelectValue placeholder="Timeline" />
@@ -303,35 +337,49 @@ export default function ClientsPage() {
                             <SelectItem value="this-month">This Month</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button variant="outline" className="h-11 px-6 gap-2 rounded-full bg-white shadow-sm border-none ring-1 ring-border/50 font-bold uppercase text-[10px] tracking-widest">
+                    <Button variant="outline" onClick={handleExportCsv} className="h-11 px-6 gap-2 rounded-full bg-white shadow-sm border-none ring-1 ring-border/50 font-bold uppercase text-[10px] tracking-widest">
                         <Download className="size-4" /> Export CSV
                     </Button>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <MetricCard label="Total Clients" value={filteredClients.length} sub="Filtered Fleet" icon={Users} color="text-blue-600" bg="bg-blue-50" onClick={() => setTableFilter('all')} active={tableFilter === 'all'} />
-                <MetricCard label="Revenue Got" value={`₹${stats.collected.toLocaleString()}`} sub="Paid Invoices" icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" valueColor="text-emerald-600" onClick={() => setTableFilter('revenue')} active={tableFilter === 'revenue'} />
-                <MetricCard label="In Pipeline" value={`₹${stats.pending.toLocaleString()}`} sub="Pending Dues" icon={Clock} color="text-amber-600" bg="bg-amber-50" onClick={() => setTableFilter('pipeline')} active={tableFilter === 'pipeline'} />
-                <MetricCard label="Technical Val" value={`₹${stats.technicalVal.toLocaleString()}`} sub="Engineering" icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" onClick={() => setTableFilter('technical')} active={tableFilter === 'technical'} />
-                <MetricCard label="Marketing Val" value={`₹${stats.marketingVal.toLocaleString()}`} sub="Growth Strategy" icon={Zap} color="text-purple-600" bg="bg-purple-50" onClick={() => setTableFilter('marketing')} active={tableFilter === 'marketing'} />
+                <MetricCard label="Total Clients" value={filteredClients.length} trend="+12%" up={true} icon={Users} color="text-blue-600" bg="bg-blue-50" onClick={() => setTableFilter('all')} active={tableFilter === 'all'} />
+                <MetricCard label="Revenue Got" value={`₹${stats.collected.toLocaleString()}`} trend="+8.4%" up={true} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" valueColor="text-emerald-600" onClick={() => setTableFilter('revenue')} active={tableFilter === 'revenue'} />
+                <MetricCard label="In Pipeline" value={`₹${stats.pending.toLocaleString()}`} trend="-2.1%" up={false} icon={Clock} color="text-amber-600" bg="bg-amber-50" onClick={() => setTableFilter('pipeline')} active={tableFilter === 'pipeline'} />
+                <MetricCard label="Technical Val" value={`₹${stats.technicalVal.toLocaleString()}`} trend="+5.0%" up={true} icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" onClick={() => setTableFilter('technical')} active={tableFilter === 'technical'} />
+                <MetricCard label="Marketing Val" value={`₹${stats.marketingVal.toLocaleString()}`} trend="+1.5%" up={true} icon={Zap} color="text-purple-600" bg="bg-purple-50" onClick={() => setTableFilter('marketing')} active={tableFilter === 'marketing'} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-8 bg-white rounded-3xl border shadow-sm overflow-hidden ring-1 ring-border/50">
-                    <div className="p-8 flex flex-col md:flex-row items-center justify-between gap-6 border-b">
-                        <div className="relative flex-1 w-full max-w-md">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
-                            <Input 
-                                placeholder="Search clients..." 
-                                value={searchQuery} 
-                                onChange={e => setSearchQuery(e.target.value)}
-                                className="pl-12 h-12 bg-muted/20 border-none ring-1 ring-border/50 rounded-2xl"
-                            />
+                    <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4 border-b">
+                        <div className="flex flex-1 w-full gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
+                                <Input 
+                                    placeholder="Search clients..." 
+                                    value={searchQuery} 
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="pl-12 h-11 bg-muted/20 border-none ring-1 ring-border/50 rounded-2xl"
+                                />
+                            </div>
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger className="w-[140px] h-11 rounded-2xl bg-muted/20 border-none ring-1 ring-border/50">
+                                    <SelectValue placeholder="All Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Status</SelectItem>
+                                    <SelectItem value="Active">Active</SelectItem>
+                                    <SelectItem value="Prospect">Prospect</SelectItem>
+                                    <SelectItem value="On Hold">On Hold</SelectItem>
+                                    <SelectItem value="Inactive">Inactive</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                             <DialogTrigger asChild>
-                                <Button className="h-12 px-8 rounded-2xl font-black uppercase text-[11px] tracking-widest gap-2 shadow-xl shadow-primary/20">
+                                <Button className="h-11 px-8 rounded-2xl font-black uppercase text-[11px] tracking-widest gap-2 shadow-xl shadow-primary/20">
                                     <Plus className="size-4" /> Add a Client!
                                 </Button>
                             </DialogTrigger>
@@ -341,12 +389,10 @@ export default function ClientsPage() {
                                 </DialogHeader>
                                 <ScrollArea className="flex-1 bg-muted/5 p-10">
                                     <div className="space-y-10">
-                                        {/* Simplified Add Form content for brevity */}
                                         <div className="grid grid-cols-2 gap-8">
                                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Organization Name</Label><Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} className="h-12 rounded-xl" /></div>
                                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Email</Label><Input value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className="h-12 rounded-xl" /></div>
                                         </div>
-                                        {/* Financial Section */}
                                         <div className="p-8 bg-white border-2 border-dashed border-primary/20 rounded-3xl space-y-6">
                                             <h4 className="text-xs font-black uppercase text-primary tracking-widest">Financial Structure</h4>
                                             <div className="grid grid-cols-2 gap-6">
@@ -571,17 +617,23 @@ export default function ClientsPage() {
     );
 }
 
-function MetricCard({ label, value, sub, icon: Icon, color, bg, valueColor, onClick, active }: any) {
+function MetricCard({ label, value, trend, up, icon: Icon, color, bg, valueColor, onClick, active }: any) {
     return (
         <Card className={cn("border shadow-sm rounded-3xl bg-white p-5 space-y-4 group transition-all hover:shadow-xl ring-1 ring-border/50 cursor-pointer", active && "ring-2 ring-primary")} onClick={onClick}>
             <div className="flex items-center gap-4">
                 <div className={cn("p-3 rounded-2xl shadow-sm transition-transform group-hover:scale-105", bg, color)}><Icon className="size-4" /></div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
                     <h3 className={cn("text-lg font-black tracking-tight truncate leading-none", valueColor || "text-slate-900")}>{value}</h3>
                 </div>
             </div>
-            <div className="pt-3 border-t border-dashed border-border/50"><p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em]">{sub}</p></div>
+            <div className="pt-3 border-t border-dashed border-border/50 flex items-center justify-between">
+                <div className={cn("flex items-center gap-1 text-[10px] font-black", up ? "text-emerald-600" : "text-rose-600")}>
+                    {up ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
+                    {trend}
+                </div>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em]">Performance</p>
+            </div>
         </Card>
     );
 }
