@@ -143,12 +143,12 @@ export default function DashboardPage() {
           <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Founder & CEO, Cognithorz</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center bg-white rounded-2xl ring-1 ring-slate-200 p-1 shadow-sm h-12">
-            <Button variant="ghost" size="sm" className="h-10 rounded-xl px-6 text-[11px] font-black uppercase text-slate-500">2 Jun – 8 Jun 2025</Button>
+          <div className="flex items-center bg-white rounded-none ring-1 ring-slate-200 p-1 shadow-sm h-12">
+            <Button variant="ghost" size="sm" className="h-10 rounded-none px-6 text-[11px] font-black uppercase text-slate-500">2 Jun – 8 Jun 2025</Button>
             <div className="w-px h-6 bg-slate-200 mx-1" />
-            <Button variant="ghost" size="sm" className="h-10 rounded-xl px-6 text-[11px] font-black uppercase bg-slate-50 text-slate-900 shadow-inner">This Week</Button>
+            <Button variant="ghost" size="sm" className="h-10 rounded-none px-6 text-[11px] font-black uppercase bg-slate-50 text-slate-900 shadow-inner">This Week</Button>
           </div>
-          <Button variant="outline" size="icon" className="rounded-2xl h-12 w-12 relative bg-white border-slate-200 hover:border-primary transition-colors">
+          <Button variant="outline" size="icon" className="rounded-none h-12 w-12 relative bg-white border-slate-200 hover:border-primary transition-colors">
             <Bell className="size-6 text-slate-600" />
             <span className="absolute top-3 right-3 size-2.5 bg-rose-500 rounded-full ring-2 ring-white" />
           </Button>
@@ -158,13 +158,13 @@ export default function DashboardPage() {
       {/* Row 1: KPI Matrix */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         {kpiData.map((kpi, i) => (
-          <Card key={i} className="border-none shadow-sm rounded-2xl bg-white group hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
+          <Card key={i} className="border-none shadow-sm rounded-none bg-white group hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
             <CardContent className="p-6 flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <div className={cn("p-3 rounded-2xl shadow-sm", kpi.bg, kpi.color)}>
+                <div className={cn("p-3 rounded-none shadow-sm", kpi.bg, kpi.color)}>
                   <kpi.icon className="size-5" />
                 </div>
-                <div className={cn("flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full", kpi.up ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
+                <div className={cn("flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-none", kpi.up ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
                   {kpi.up ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
                   {kpi.trend}
                 </div>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
       {/* Row 2: Visual Intelligence */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
         {/* Revenue Trend */}
-        <Card className="lg:col-span-2 border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+        <Card className="lg:col-span-2 border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
           <CardHeader className="p-8 pb-0 flex flex-row items-center justify-between">
             <div className="space-y-1">
               <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue Trend (This Week)</CardTitle>
@@ -216,14 +216,14 @@ export default function DashboardPage() {
                   <XAxis dataKey="name" axisLine={false} tickLine={false} className="text-[10px] font-black uppercase fill-slate-400" tickMargin={15} />
                   <YAxis axisLine={false} tickLine={false} className="text-[10px] font-black fill-slate-400" tickFormatter={(v) => `₹${v}L`} />
                   <Tooltip 
-                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '11px', fontWeight: '900' }}
+                      contentStyle={{ borderRadius: '0px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '11px', fontWeight: '900' }}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="#6D28D9" strokeWidth={4} fill="url(#colorRev)" dot={{ r: 5, fill: '#6D28D9', strokeWidth: 3, stroke: '#FFF' }} activeDot={{ r: 8, strokeWidth: 0 }} />
                   <Line type="monotone" dataKey="lastWeek" stroke="#E2E8F0" strokeWidth={3} strokeDasharray="6 6" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-8 p-6 bg-slate-50 rounded-2xl flex items-center justify-between">
+            <div className="mt-8 p-6 bg-slate-50 rounded-none flex items-center justify-between ring-1 ring-slate-100">
                 <div className="flex gap-10">
                     <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">This Week</p><p className="text-lg font-black text-slate-900">₹18.45L</p></div>
                     <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Last Week</p><p className="text-lg font-black text-slate-900">₹15.08L</p></div>
@@ -234,7 +234,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Revenue by BU */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col">
           <CardHeader className="p-8 pb-0">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue by BU</CardTitle>
           </CardHeader>
@@ -266,7 +266,7 @@ export default function DashboardPage() {
 
         {/* Project Health & Alerts */}
         <div className="flex flex-col gap-6">
-            <Card className="flex-1 border-none shadow-sm rounded-2xl bg-white p-6 flex flex-col justify-center">
+            <Card className="flex-1 border-none shadow-sm rounded-none bg-white p-6 flex flex-col justify-center">
                 <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800 mb-6">Mission Health</CardTitle>
                 <div className="flex items-center gap-6">
                     <div className="relative size-24 shrink-0">
@@ -293,7 +293,7 @@ export default function DashboardPage() {
                 <Button variant="link" className="h-8 p-0 text-[10px] font-black uppercase text-primary mt-4 self-end group">View Projects <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button>
             </Card>
 
-            <Card className="flex-[1.5] border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+            <Card className="flex-[1.5] border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
                 <div className="p-4 border-b border-slate-50 flex items-center justify-between">
                     <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-800">Critical Signals</CardTitle>
                     <Badge className="bg-rose-500 text-white border-none text-[10px] font-black h-5 px-2.5 shadow-lg shadow-rose-500/20">{alerts.length}</Badge>
@@ -301,8 +301,8 @@ export default function DashboardPage() {
                 <ScrollArea className="flex-1 max-h-[160px]">
                     <div className="p-3 space-y-2">
                         {alerts.map((alert, i) => (
-                            <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-slate-200 hover:shadow-md transition-all cursor-pointer">
-                                <div className={cn("p-2 rounded-xl shrink-0 shadow-sm", alert.bg, alert.color)}><alert.icon className="size-4"/></div>
+                            <div key={i} className="p-3 rounded-none bg-slate-50 border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-slate-200 hover:shadow-md transition-all cursor-pointer">
+                                <div className={cn("p-2 rounded-none shrink-0 shadow-sm", alert.bg, alert.color)}><alert.icon className="size-4"/></div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-[10px] font-black uppercase text-slate-800 truncate">{alert.title}</p>
                                     <p className="text-[9px] font-bold text-slate-400 uppercase truncate mt-0.5">{alert.desc}</p>
@@ -322,7 +322,7 @@ export default function DashboardPage() {
       {/* Row 3: Tactical Progress */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
         {/* Sales Funnel */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-8 flex flex-col">
+        <Card className="border-none shadow-sm rounded-none bg-white p-8 flex flex-col">
           <div className="flex items-center justify-between mb-8">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Sales Funnel</CardTitle>
             <div className="text-right"><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Conversion</p><p className="text-lg font-black text-primary">12.28%</p></div>
@@ -332,7 +332,7 @@ export default function DashboardPage() {
                <div key={i} className="flex items-center gap-4">
                  <div className="w-32 text-[10px] font-black uppercase text-slate-400 truncate">{f.name}</div>
                  <div 
-                   className={cn("h-7 rounded-xl border-r-4 border-black/10 transition-all duration-1000 flex items-center px-4 shadow-sm", f.color)} 
+                   className={cn("h-7 rounded-none border-r-4 border-black/10 transition-all duration-1000 flex items-center px-4 shadow-sm", f.color)} 
                    style={{ width: `${(f.value / salesFunnel[0].value) * 100}%`, opacity: 1 - (i * 0.1) }}
                  >
                     <span className="text-xs font-black text-white">{f.value}</span>
@@ -343,7 +343,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Marketing Performance */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
             <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Marketing ROI</CardTitle>
             </CardHeader>
@@ -356,7 +356,7 @@ export default function DashboardPage() {
                     { l: 'ROI', v: '4.35x', t: '+16.8%', up: true },
                     { l: 'Efficiency', v: '94%', t: 'Verified', up: true }
                 ].map((s, i) => (
-                    <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-center shadow-sm">
+                    <div key={i} className="p-4 rounded-none bg-slate-50 border border-slate-100 flex flex-col justify-center shadow-sm">
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">{s.l}</p>
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-black text-slate-800 tracking-tight">{s.v}</span>
@@ -371,13 +371,13 @@ export default function DashboardPage() {
         </Card>
 
         {/* Team Overview */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
             <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Fleet Deployment</CardTitle>
             </CardHeader>
             <CardContent className="p-8 pt-0 space-y-6">
-                <div className="flex justify-between items-center bg-primary/5 p-6 rounded-3xl ring-1 ring-primary/10">
-                    <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Staff</p><div className="flex items-center gap-3 mt-1"><p className="text-4xl font-black text-primary tracking-tighter">84</p><Badge className="bg-emerald-100 text-emerald-600 border-none text-[10px] font-black shadow-sm">+2</Badge></div></div>
+                <div className="flex justify-between items-center bg-primary/5 p-6 rounded-none ring-1 ring-primary/10">
+                    <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Staff</p><div className="flex items-center gap-3 mt-1"><p className="text-4xl font-black text-primary tracking-tighter">84</p><Badge className="bg-emerald-100 text-emerald-700 border-none text-[10px] font-black shadow-sm">+2</Badge></div></div>
                     <div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Attendance</p><p className="text-2xl font-black text-slate-800 mt-1">71 <span className="text-sm text-slate-400 font-bold ml-1">(84%)</span></p></div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
@@ -386,7 +386,7 @@ export default function DashboardPage() {
                         { l: 'New Joins', v: '2', c: 'text-emerald-600' },
                         { l: 'Openings', v: '6', c: 'text-sky-600' }
                     ].map((m, i) => (
-                        <div key={i} className="text-center p-4 rounded-2xl border border-slate-100 shadow-sm">
+                        <div key={i} className="text-center p-4 rounded-none border border-slate-100 shadow-sm">
                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">{m.l}</p>
                             <p className={cn("text-sm font-black", m.c)}>{m.v}</p>
                         </div>
@@ -399,7 +399,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Weekly Goals */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-8 flex flex-col gap-6">
+        <Card className="border-none shadow-sm rounded-none bg-white p-8 flex flex-col gap-6">
           <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Mission Benchmarks</CardTitle>
           <div className="flex-1 flex flex-col gap-6 justify-center">
             {[
@@ -411,20 +411,20 @@ export default function DashboardPage() {
               <div key={i} className="space-y-2">
                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>{g.l}</span><span className="text-slate-900">{g.val}</span></div>
                 <div className="flex items-center gap-4">
-                    <Progress value={g.v} className="h-2 rounded-full bg-slate-100 flex-1" indicatorClassName={g.c} />
+                    <Progress value={g.v} className="h-2 rounded-none bg-slate-100 flex-1" indicatorClassName={g.c} />
                     <span className="text-[10px] font-black text-slate-900 w-8">{g.v}%</span>
                 </div>
               </div>
             ))}
           </div>
-          <Button variant="outline" className="h-12 w-full rounded-2xl text-[10px] font-black uppercase border-slate-200 shadow-sm tracking-widest">Audit All Targets</Button>
+          <Button variant="outline" className="h-12 w-full rounded-none text-[10px] font-black uppercase border-slate-200 shadow-sm tracking-widest">Audit All Targets</Button>
         </Card>
       </div>
 
       {/* Row 4: Financial & Tactical */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
         {/* Financial Snapshot */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
             <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Financial Ledger</CardTitle></div>
             <CardContent className="p-6 grid grid-cols-2 gap-4">
                 {[
@@ -433,7 +433,7 @@ export default function DashboardPage() {
                     { l: 'Net Profit', v: '₹4.32L', t: '+18.7%', c: 'text-emerald-600' },
                     { l: 'Margin', v: '23.4%', t: '+2.1pp', c: 'text-emerald-600' }
                 ].map((s, i) => (
-                    <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm">
+                    <div key={i} className="p-4 rounded-none bg-slate-50 border border-slate-100 shadow-sm">
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">{s.l}</p>
                         <div className="flex flex-col"><span className="text-sm font-black text-slate-900 tracking-tight">{s.v}</span><span className={cn("text-[9px] font-black mt-1", s.c)}>{s.t}</span></div>
                     </div>
@@ -443,7 +443,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Top Clients */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
             <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Principal Contributors</CardTitle></div>
             <ScrollArea className="h-[280px]">
                 <div className="p-6 space-y-6">
@@ -453,7 +453,7 @@ export default function DashboardPage() {
                                 <span className="text-slate-600 truncate max-w-[150px]">{client.name}</span>
                                 <span className="text-slate-900">₹{client.value.toFixed(2)}L</span>
                             </div>
-                            <Progress value={(client.value / client.max) * 100} className="h-2 rounded-full bg-slate-100" indicatorClassName="bg-primary" />
+                            <Progress value={(client.value / client.max) * 100} className="h-2 rounded-none bg-slate-100" indicatorClassName="bg-primary" />
                         </div>
                     ))}
                 </div>
@@ -461,14 +461,14 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Activities */}
-        <Card className="border-none shadow-sm rounded-2xl bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
             <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Operational Log</CardTitle></div>
             <ScrollArea className="h-[280px]">
                 <div className="p-6 space-y-8">
                     {recentActivities.map((act, i) => (
                         <div key={i} className="flex gap-4 items-start relative">
                             {i < recentActivities.length - 1 && <div className="absolute left-2.5 top-6 bottom-[-32px] w-[2px] bg-slate-100" />}
-                            <div className={cn("size-5 rounded-full flex items-center justify-center shrink-0 z-10 bg-white ring-4 ring-slate-50 shadow-sm")}>
+                            <div className={cn("size-5 rounded-none flex items-center justify-center shrink-0 z-10 bg-white ring-4 ring-slate-50 shadow-sm")}>
                                 <act.icon className={cn("size-3", act.color)} />
                             </div>
                             <div className="min-w-0 flex-1">
@@ -491,8 +491,8 @@ export default function DashboardPage() {
              { l: 'Deep Dive', i: BarChart3, c: 'bg-sky-600' },
              { l: 'Terminal', i: Settings, c: 'bg-slate-800' }
            ].map((btn, i) => (
-             <Button key={i} variant="outline" className="h-full rounded-2xl border-none ring-1 ring-slate-200 bg-white hover:bg-slate-50 flex flex-col gap-3 p-4 shadow-sm group active:scale-95 transition-all">
-               <div className={cn("p-2.5 rounded-xl text-white group-hover:scale-110 transition-transform shadow-md", btn.c)}><btn.i className="size-5" /></div>
+             <Button key={i} variant="outline" className="h-full rounded-none border-none ring-1 ring-slate-200 bg-white hover:bg-slate-50 flex flex-col gap-3 p-4 shadow-sm group active:scale-95 transition-all">
+               <div className={cn("p-2.5 rounded-none text-white group-hover:scale-110 transition-transform shadow-md", btn.c)}><btn.i className="size-5" /></div>
                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 leading-none">{btn.l}</span>
              </Button>
            ))}

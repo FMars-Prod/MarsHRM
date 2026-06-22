@@ -13,7 +13,7 @@ import {
     Briefcase, Zap, MapPin, X, 
     DollarSign, BriefcaseBusiness, IndianRupee, Loader2, TrendingUp, ReceiptIndianRupee,
     Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal, Mail, Phone, Calendar, FileText, CheckCircle, AlertCircle, LayoutGrid, Globe, Map, UserCircle,
-    Info, CalendarDays, Receipt, BadgeIndianRupee, HandCoins, UserPlus, Video, Trophy, ListChecks, ArrowUpRight, ArrowDownRight
+    Info, CalendarDays, Receipt, BadgeIndianRupee, HandCoins, UserPlus, Video, Trophy, ListChecks, ArrowUpRight, ArrowDownRight, Handshake
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -50,47 +50,46 @@ type Client = {
     companyName: string;
     clientName: string;
     legalBusinessName?: string;
+    industryType: string;
+    serviceType: 'Technical' | 'Digital Marketing';
     email: string;
     phone: string;
-    pocPosition?: string;
-    productNeeded?: string;
-    handlingEmployeeId?: string;
-    projectType?: 'Technical' | 'Digital Marketing';
-    assignedTeamId?: string;
-    productHeadId?: string;
-    fullPaymentPrice?: number;
-    currencyType: string;
-    expectedAnnualRevenue?: number;
-    discountOffered?: number;
-    projectTotalCost?: number;
-    contractStartDate?: string;
-    payments?: PaymentInstallment[];
+    country: string;
+    state: string;
+    city: string;
+    address: string;
     status: 'Active' | 'Prospect' | 'On Hold' | 'Inactive' | 'Archived';
-    category: string;
-    companySize?: string;
-    priority?: 'Strategic' | 'High' | 'Medium' | 'Low';
-    representativeName?: string;
-    logoUrl?: string;
-    address?: string;
-    website?: string;
-    hqLocation?: string;
-    country?: string;
-    state?: string;
-    city?: string;
-    createdAt?: any;
+    priority: 'Strategic' | 'High' | 'Medium' | 'Low';
+    totalProjectValue: number;
+    currencyType: string;
+    expectedAnnualRevenue: number;
+    discountOffered: number;
+    projectTotalCost: number;
+    contractStartDate: string;
+    handlingEmployeeId: string;
+    assignedTeamId: string;
+    productHeadId: string;
+    payments: PaymentInstallment[];
+    createdAt: any;
     gstNumber?: string;
+    website?: string;
+    companySize?: string;
     notes?: string;
     managerName?: string;
     managerAvatar?: string;
-    projectsCount?: number;
-    lastActivity?: string;
 };
 
-const INDUSTRY_SECTORS = [
+const INDUSTRY_TYPES = [
     "Manufacturing", "IT & Software", "Finance", "Healthcare", "Education", "Retail", "Real Estate", "Automotive", "Logistics", "Energy", "Other"
 ];
 
 const CURRENCIES = ["₹", "$", "€", "£", "AED", "SGD"];
+
+const COMPANY_SIZES = [
+    "1-10 Employees", "11-50 Employees", "51-200 Employees", "201-500 Employees", "501-1000 Employees", "1000+ Employees"
+];
+
+const COUNTRIES = ["India", "United States", "United Kingdom", "United Arab Emirates", "Singapore", "Australia", "Canada", "Germany"];
 
 export default function ClientsPage() {
     const { user } = useUser();
@@ -110,15 +109,14 @@ export default function ClientsPage() {
     const [tableFilter, setTableFilter] = React.useState<string>("all");
 
     const [clientForm, setClientForm] = React.useState<Partial<Client>>({
-        companyName: '', clientName: '', legalBusinessName: '', email: '', phone: '', status: 'Active', category: 'Manufacturing', 
-        companySize: '1-10 Employees', priority: 'Medium', representativeName: '',
-        address: '', website: '', hqLocation: '', country: 'India', state: '', city: '',
-        pocPosition: '', productNeeded: '', projectType: 'Technical',
-        handlingEmployeeId: '', assignedTeamId: '', productHeadId: '', fullPaymentPrice: 0,
-        currencyType: '₹', expectedAnnualRevenue: 0, discountOffered: 0, projectTotalCost: 0,
+        companyName: '', clientName: '', legalBusinessName: '', industryType: 'Manufacturing', serviceType: 'Technical',
+        email: '', phone: '', country: 'India', state: '', city: '', address: '', 
+        status: 'Active', priority: 'Medium', companySize: '1-10 Employees',
+        totalProjectValue: 0, currencyType: '₹', expectedAnnualRevenue: 0, discountOffered: 0, projectTotalCost: 0,
         contractStartDate: format(new Date(), 'yyyy-MM-dd'),
-        gstNumber: '', notes: '',
-        payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }]
+        handlingEmployeeId: '', assignedTeamId: '', productHeadId: '',
+        gstNumber: '', website: '', notes: '',
+        payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '0', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }]
     });
 
     const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
@@ -171,7 +169,7 @@ export default function ClientsPage() {
             filtered = filtered.filter(c => 
                 c.companyName.toLowerCase().includes(searchQuery.toLowerCase()) || 
                 (c.clientName && c.clientName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                c.category.toLowerCase().includes(searchQuery.toLowerCase())
+                c.industryType?.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
 
@@ -183,10 +181,6 @@ export default function ClientsPage() {
             filtered = filtered.filter(c => (c.payments?.some(p => p.status === 'Paid')));
         } else if (tableFilter === 'pipeline') {
             filtered = filtered.filter(c => (c.payments?.some(p => p.status !== 'Paid')));
-        } else if (tableFilter === 'technical') {
-            filtered = filtered.filter(c => c.projectType === 'Technical');
-        } else if (tableFilter === 'marketing') {
-            filtered = filtered.filter(c => c.projectType === 'Digital Marketing');
         }
 
         return filtered.map(c => {
@@ -206,9 +200,9 @@ export default function ClientsPage() {
         let marketingVal = 0;
 
         filteredClients.forEach(c => {
-            const clientTotal = c.projectTotalCost || c.fullPaymentPrice || 0;
-            if (c.projectType === 'Technical') technicalVal += clientTotal;
-            if (c.projectType === 'Digital Marketing') marketingVal += clientTotal;
+            const clientTotal = c.projectTotalCost || c.totalProjectValue || 0;
+            if (c.serviceType === 'Technical') technicalVal += clientTotal;
+            if (c.serviceType === 'Digital Marketing') marketingVal += clientTotal;
 
             if (c.payments) {
                 c.payments.forEach(p => {
@@ -226,12 +220,8 @@ export default function ClientsPage() {
     const topRankedClients = React.useMemo(() => {
         if (!filteredClients) return [];
         return [...filteredClients].sort((a, b) => {
-            if (rankBy === 'price') {
-                return (b.projectTotalCost || 0) - (a.projectTotalCost || 0);
-            }
-            const aServices = a.projectType ? 1 : 0; 
-            const bServices = b.projectType ? 1 : 0;
-            return bServices - aServices;
+            if (rankBy === 'price') return (b.projectTotalCost || 0) - (a.projectTotalCost || 0);
+            return (b.payments?.length || 0) - (a.payments?.length || 0);
         }).slice(0, 5);
     }, [filteredClients, rankBy]);
 
@@ -243,7 +233,7 @@ export default function ClientsPage() {
 
         const payload = {
             ...clientForm,
-            fullPaymentPrice: Number(clientForm.fullPaymentPrice) || 0,
+            totalProjectValue: Number(clientForm.totalProjectValue) || 0,
             projectTotalCost: Number(clientForm.projectTotalCost) || 0,
             createdAt: editingClient ? editingClient.createdAt : serverTimestamp(),
         };
@@ -262,36 +252,47 @@ export default function ClientsPage() {
 
     const resetForm = () => {
         setClientForm({
-            companyName: '', clientName: '', legalBusinessName: '', email: '', phone: '', status: 'Active', category: 'Manufacturing', 
-            companySize: '1-10 Employees', priority: 'Medium', representativeName: '',
-            address: '', website: '', hqLocation: '', country: 'India', state: '', city: '',
-            pocPosition: '', productNeeded: '', projectType: 'Technical',
-            handlingEmployeeId: '', assignedTeamId: '', productHeadId: '', fullPaymentPrice: 0,
-            currencyType: '₹', expectedAnnualRevenue: 0, discountOffered: 0, projectTotalCost: 0,
+            companyName: '', clientName: '', legalBusinessName: '', industryType: 'Manufacturing', serviceType: 'Technical',
+            email: '', phone: '', country: 'India', state: '', city: '', address: '', 
+            status: 'Active', priority: 'Medium', companySize: '1-10 Employees',
+            totalProjectValue: 0, currencyType: '₹', expectedAnnualRevenue: 0, discountOffered: 0, projectTotalCost: 0,
             contractStartDate: format(new Date(), 'yyyy-MM-dd'),
-            gstNumber: '', notes: '',
-            payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }]
+            handlingEmployeeId: '', assignedTeamId: '', productHeadId: '',
+            gstNumber: '', website: '', notes: '',
+            payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '0', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }]
         });
+    };
+
+    const handleAddMilestone = () => {
+        const current = clientForm.payments || [];
+        setClientForm({
+            ...clientForm,
+            payments: [...current, { id: Math.random().toString(36).substr(2, 9), amount: '0', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }]
+        });
+    };
+
+    const updateMilestone = (id: string, updates: Partial<PaymentInstallment>) => {
+        const current = clientForm.payments || [];
+        const updated = current.map(p => p.id === id ? { ...p, ...updates } : p);
+        setClientForm({ ...clientForm, payments: updated });
+    };
+
+    const removeMilestone = (id: string) => {
+        const current = clientForm.payments || [];
+        setClientForm({ ...clientForm, payments: current.filter(p => p.id !== id) });
     };
 
     const handleExportCsv = () => {
         if (filteredClients.length === 0) {
-            toast({ variant: 'destructive', title: 'No Data', description: 'No client records found to export.' });
+            toast({ variant: 'destructive', title: 'No Data' });
             return;
         }
         const headers = ["Organization", "Client Name", "Email", "Phone", "Status", "Priority", "Project Value", "Service Type", "Joined At"];
         const rows = filteredClients.map(c => [
-            `"${c.companyName}"`,
-            `"${c.clientName || ''}"`,
-            c.email,
-            c.phone,
-            c.status,
-            c.priority || 'Medium',
-            `${c.currencyType}${c.projectTotalCost || 0}`,
-            c.projectType || 'N/A',
+            `"${c.companyName}"`, `"${c.clientName || ''}"`, c.email, c.phone, c.status, c.priority || 'Medium',
+            `${c.currencyType}${c.projectTotalCost || 0}`, c.serviceType || 'N/A',
             c.createdAt ? format(c.createdAt.toDate(), 'PPP') : 'N/A'
         ]);
-        
         const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -301,7 +302,7 @@ export default function ClientsPage() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast({ title: 'Export Complete', description: 'CSV file has been generated.' });
+        toast({ title: 'Export Complete' });
     };
 
     const clientInvoices = React.useMemo(() => {
@@ -313,6 +314,14 @@ export default function ClientsPage() {
         if (!selectedClient || !allMeetings) return [];
         return allMeetings.filter((m: any) => m.clientId === selectedClient.id);
     }, [selectedClient, allMeetings]);
+
+    const scheduledTotal = (clientForm.payments || []).reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0);
+    const discountFactor = (1 - (Number(clientForm.discountOffered) || 0) / 100);
+    const calculatedTotalCost = (Number(clientForm.totalProjectValue) || 0) * discountFactor;
+
+    React.useEffect(() => {
+        setClientForm(prev => ({ ...prev, projectTotalCost: calculatedTotalCost }));
+    }, [calculatedTotalCost]);
 
     return (
         <div className="space-y-8 animate-fade-in-up pb-20 font-jakarta">
@@ -347,8 +356,8 @@ export default function ClientsPage() {
                 <MetricCard label="Total Clients" value={filteredClients.length} trend="+12%" up={true} icon={Users} color="text-blue-600" bg="bg-blue-50" onClick={() => setTableFilter('all')} active={tableFilter === 'all'} />
                 <MetricCard label="Revenue Got" value={`₹${stats.collected.toLocaleString()}`} trend="+8.4%" up={true} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" valueColor="text-emerald-600" onClick={() => setTableFilter('revenue')} active={tableFilter === 'revenue'} />
                 <MetricCard label="In Pipeline" value={`₹${stats.pending.toLocaleString()}`} trend="-2.1%" up={false} icon={Clock} color="text-amber-600" bg="bg-amber-50" onClick={() => setTableFilter('pipeline')} active={tableFilter === 'pipeline'} />
-                <MetricCard label="Technical Val" value={`₹${stats.technicalVal.toLocaleString()}`} trend="+5.0%" up={true} icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" onClick={() => setTableFilter('technical')} active={tableFilter === 'technical'} />
-                <MetricCard label="Marketing Val" value={`₹${stats.marketingVal.toLocaleString()}`} trend="+1.5%" up={true} icon={Zap} color="text-purple-600" bg="bg-purple-50" onClick={() => setTableFilter('marketing')} active={tableFilter === 'marketing'} />
+                <MetricCard label="Technical Val" value={`₹${stats.technicalVal.toLocaleString()}`} trend="+5.0%" up={true} icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" />
+                <MetricCard label="Marketing Val" value={`₹${stats.marketingVal.toLocaleString()}`} trend="+1.5%" up={true} icon={Zap} color="text-purple-600" bg="bg-purple-50" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -357,17 +366,10 @@ export default function ClientsPage() {
                         <div className="flex flex-1 w-full gap-2">
                             <div className="relative flex-1">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
-                                <Input 
-                                    placeholder="Search clients..." 
-                                    value={searchQuery} 
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    className="pl-12 h-11 bg-muted/20 border-none ring-1 ring-border/50 rounded-none"
-                                />
+                                <Input placeholder="Search clients..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12 h-11 bg-muted/20 border-none ring-1 ring-border/50 rounded-none" />
                             </div>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[140px] h-11 rounded-none bg-muted/20 border-none ring-1 ring-border/50">
-                                    <SelectValue placeholder="All Status" />
-                                </SelectTrigger>
+                                <SelectTrigger className="w-[140px] h-11 rounded-none bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="All Status" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Status</SelectItem>
                                     <SelectItem value="Active">Active</SelectItem>
@@ -385,24 +387,145 @@ export default function ClientsPage() {
                             </DialogTrigger>
                             <DialogContent className="max-w-4xl rounded-none p-0 overflow-hidden border-none shadow-3xl h-[90vh] flex flex-col">
                                 <DialogHeader className="p-10 border-b bg-white">
-                                    <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Add New Client</DialogTitle>
+                                    <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Client Provisioning Form</DialogTitle>
+                                    <DialogDescription className="text-[10px] font-bold uppercase tracking-widest">Register new strategic account and financial milestones</DialogDescription>
                                 </DialogHeader>
                                 <ScrollArea className="flex-1 bg-muted/5 p-10">
-                                    <div className="space-y-10">
-                                        <div className="grid grid-cols-2 gap-8">
-                                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Organization Name</Label><Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} className="h-12 rounded-none" /></div>
-                                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Email</Label><Input value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className="h-12 rounded-none" /></div>
+                                    <div className="space-y-12">
+                                        {/* Client Info */}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-3 text-primary"><UserCircle className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Client Information</h4></div>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Organization Name</Label><Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Client Name</Label><Input value={clientForm.clientName} onChange={e => setClientForm({...clientForm, clientName: e.target.value})} className="h-11 rounded-none" /></div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Industry Type</Label>
+                                                    <Select value={clientForm.industryType} onValueChange={v => setClientForm({...clientForm, industryType: v})}>
+                                                        <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>{INDUSTRY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Service Type</Label>
+                                                    <Select value={clientForm.serviceType} onValueChange={v => setClientForm({...clientForm, serviceType: v as any})}>
+                                                        <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
+                                                        <SelectContent><SelectItem value="Technical">Technical</SelectItem><SelectItem value="Digital Marketing">Digital Marketing</SelectItem></SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Phone Number</Label><Input value={clientForm.phone} onChange={e => setClientForm({...clientForm, phone: e.target.value})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Email Address</Label><Input value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className="h-11 rounded-none" /></div>
+                                            </div>
                                         </div>
-                                        <div className="p-8 bg-white border-2 border-dashed border-primary/20 rounded-none space-y-6">
-                                            <h4 className="text-xs font-black uppercase text-primary tracking-widest">Financial Structure</h4>
-                                            <div className="grid grid-cols-2 gap-6">
-                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Project Value</Label><Input type="number" value={clientForm.fullPaymentPrice} onChange={e => setClientForm({...clientForm, fullPaymentPrice: parseFloat(e.target.value)})} className="h-12 rounded-none" /></div>
+
+                                        {/* Location & Status */}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-3 text-indigo-600"><MapPin className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Location & Status</h4></div>
+                                            <div className="grid grid-cols-3 gap-6">
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Country</Label>
+                                                    <Select value={clientForm.country} onValueChange={v => setClientForm({...clientForm, country: v})}>
+                                                        <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>{COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">State/Province</Label><Input value={clientForm.state} onChange={e => setClientForm({...clientForm, state: e.target.value})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">City</Label><Input value={clientForm.city} onChange={e => setClientForm({...clientForm, city: e.target.value})} className="h-11 rounded-none" /></div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Organization Address</Label><Textarea value={clientForm.address} onChange={e => setClientForm({...clientForm, address: e.target.value})} className="rounded-none min-h-[80px]" /></div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Account Status</Label>
+                                                    <Select value={clientForm.status} onValueChange={v => setClientForm({...clientForm, status: v as any})}>
+                                                        <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
+                                                        <SelectContent><SelectItem value="Active">Active</SelectItem><SelectItem value="Prospect">Prospect</SelectItem><SelectItem value="On Hold">On Hold</SelectItem><SelectItem value="Inactive">Inactive</SelectItem></SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Financial Details */}
+                                        <div className="p-8 bg-white border-2 border-dashed border-primary/20 rounded-none space-y-8">
+                                            <div className="flex items-center gap-3 text-emerald-600"><DollarSign className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Financial Matrix</h4></div>
+                                            <div className="grid grid-cols-3 gap-6">
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Total Project Value</Label><Input type="number" value={clientForm.totalProjectValue} onChange={e => setClientForm({...clientForm, totalProjectValue: parseFloat(e.target.value) || 0})} className="h-11 rounded-none font-bold text-emerald-600" /></div>
                                                 <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Currency</Label>
                                                     <Select value={clientForm.currencyType} onValueChange={v => setClientForm({...clientForm, currencyType: v})}>
-                                                        <SelectTrigger className="h-12 rounded-none"><SelectValue /></SelectTrigger>
+                                                        <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
                                                         <SelectContent>{CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                                                     </Select>
                                                 </div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Expected Revenue</Label><Input type="number" value={clientForm.expectedAnnualRevenue} onChange={e => setClientForm({...clientForm, expectedAnnualRevenue: parseFloat(e.target.value) || 0})} className="h-11 rounded-none" /></div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-6">
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Discount Offered (%)</Label><Input type="number" value={clientForm.discountOffered} onChange={e => setClientForm({...clientForm, discountOffered: parseFloat(e.target.value) || 0})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Final Cost (Calculated)</Label><div className="h-11 bg-muted/20 border flex items-center px-3 font-black text-emerald-700">{clientForm.currencyType}{clientForm.projectTotalCost?.toLocaleString()}</div></div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Contract Start Date</Label><Input type="date" value={clientForm.contractStartDate} onChange={e => setClientForm({...clientForm, contractStartDate: e.target.value})} className="h-11 rounded-none" /></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Team Assignment */}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center gap-3 text-purple-600"><Users className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Team Assignment</h4></div>
+                                            <div className="grid grid-cols-3 gap-6">
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Handled By</Label>
+                                                    <Select value={clientForm.handlingEmployeeId} onValueChange={v => setClientForm({...clientForm, handlingEmployeeId: v})}>
+                                                        <SelectTrigger className="h-11 rounded-none"><SelectValue placeholder="Select Staff" /></SelectTrigger>
+                                                        <SelectContent>{allUsers?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Assign to Team</Label>
+                                                    <Select value={clientForm.assignedTeamId} onValueChange={v => setClientForm({...clientForm, assignedTeamId: v})}>
+                                                        <SelectTrigger className="h-11 rounded-none"><SelectValue placeholder="Select Team" /></SelectTrigger>
+                                                        <SelectContent>{allTeams?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Product Head</Label>
+                                                    <Select value={clientForm.productHeadId} onValueChange={v => setClientForm({...clientForm, productHeadId: v})}>
+                                                        <SelectTrigger className="h-11 rounded-none"><SelectValue placeholder="Select Head" /></SelectTrigger>
+                                                        <SelectContent>{allUsers?.filter((u:any) => u.role !== 'Member').map((u:any) => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Payment Milestones */}
+                                        <div className="space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3 text-primary"><ListChecks className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Payment Milestones</h4></div>
+                                                <Button type="button" onClick={handleAddMilestone} size="sm" variant="outline" className="rounded-none h-8 font-black uppercase text-[8px] tracking-widest gap-2"><Plus className="size-3"/> Add Milestone</Button>
+                                            </div>
+                                            <div className="space-y-4">
+                                                {(clientForm.payments || []).map((p, i) => (
+                                                    <Card key={p.id} className="p-6 rounded-none border-2 border-dashed border-border/50 bg-white relative space-y-6">
+                                                        <Button type="button" onClick={() => removeMilestone(p.id)} variant="ghost" size="icon" className="absolute top-2 right-2 text-rose-500 h-6 w-6"><X className="size-4" /></Button>
+                                                        <div className="grid grid-cols-4 gap-4">
+                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Amount</Label><Input type="number" value={p.amount} onChange={e => updateMilestone(p.id, { amount: e.target.value })} className="h-9 rounded-none font-bold" /></div>
+                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Due Date</Label><Input type="date" value={p.dueDate} onChange={e => updateMilestone(p.id, { dueDate: e.target.value })} className="h-9 rounded-none" /></div>
+                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Status</Label>
+                                                                <Select value={p.status} onValueChange={v => updateMilestone(p.id, { status: v as any })}>
+                                                                    <SelectTrigger className="h-9 rounded-none text-xs"><SelectValue /></SelectTrigger>
+                                                                    <SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Partially Paid">Partially Paid</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Overdue">Overdue</SelectItem></SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Amount Received</Label><Input type="number" value={p.amountReceived} onChange={e => updateMilestone(p.id, { amountReceived: e.target.value })} className="h-9 rounded-none font-bold text-emerald-600" /></div>
+                                                        </div>
+                                                        <div className="grid grid-cols-3 gap-4">
+                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Invoice #</Label><Input value={p.invoiceNumber} onChange={e => updateMilestone(p.id, { invoiceNumber: e.target.value })} className="h-9 rounded-none" /></div>
+                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Invoice Date</Label><Input type="date" value={p.invoiceDate} onChange={e => updateMilestone(p.id, { invoiceDate: e.target.value })} className="h-9 rounded-none" /></div>
+                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Remaining</Label><div className="h-9 border flex items-center px-3 text-xs font-black bg-muted/20">{(parseFloat(p.amount) || 0) - (parseFloat(p.amountReceived || '0') || 0)}</div></div>
+                                                        </div>
+                                                        <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Remarks</Label><Input value={p.remarks} onChange={e => updateMilestone(p.id, { remarks: e.target.value })} className="h-9 rounded-none" /></div>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                            <div className="p-4 bg-muted/30 border-t border-b flex justify-between items-center">
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[8px] font-black uppercase text-muted-foreground">Audit Synchronization</p>
+                                                    <p className={cn("text-xs font-black", scheduledTotal === calculatedTotalCost ? "text-emerald-600" : "text-rose-600")}>
+                                                        Scheduled: {clientForm.currencyType}{scheduledTotal.toLocaleString()} / Final Cost: {clientForm.currencyType}{calculatedTotalCost.toLocaleString()}
+                                                    </p>
+                                                </div>
+                                                {scheduledTotal !== calculatedTotalCost && <Badge className="bg-rose-500 text-white border-none rounded-none text-[8px] font-black px-2 h-5">AUDIT MISMATCH</Badge>}
                                             </div>
                                         </div>
                                     </div>
@@ -434,7 +557,7 @@ export default function ClientsPage() {
                                                 <div className="size-12 rounded-none bg-primary/10 flex items-center justify-center text-primary font-black text-sm">{client.companyName.slice(0,2).toUpperCase()}</div>
                                                 <div className="space-y-1">
                                                     <span className="font-black text-[15px] uppercase tracking-tight block">{client.companyName}</span>
-                                                    <span className="text-[10px] font-bold text-muted-foreground uppercase">{client.category}</span>
+                                                    <span className="text-[10px] font-bold text-muted-foreground uppercase">{client.industryType}</span>
                                                 </div>
                                             </div>
                                         </TableCell>
@@ -488,7 +611,7 @@ export default function ClientsPage() {
                                         <div className="size-9 rounded-none bg-muted/20 flex items-center justify-center font-black text-[10px]">{c.companyName[0]}</div>
                                         <p className="font-bold text-xs uppercase truncate max-w-[120px]">{c.companyName}</p>
                                     </div>
-                                    <span className="text-[10px] font-black text-emerald-600">{rankBy === 'price' ? `${c.currencyType}${c.projectTotalCost?.toLocaleString()}` : "1 Service"}</span>
+                                    <span className="text-[10px] font-black text-emerald-600">{rankBy === 'price' ? `${c.currencyType}${c.projectTotalCost?.toLocaleString()}` : `${c.payments?.length || 0} Milestones`}</span>
                                 </div>
                             ))}
                         </CardContent>
@@ -524,7 +647,7 @@ export default function ClientsPage() {
                                         <Badge className="bg-emerald-50 text-emerald-700 border-none text-[9px] font-black h-5 uppercase px-2.5 shadow-sm">{selectedClient?.status}</Badge>
                                     </div>
                                     <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                        <span>{selectedClient?.category}</span>
+                                        <span>{selectedClient?.industryType}</span>
                                         <span>•</span>
                                         <span>Since {selectedClient?.createdAt ? format(selectedClient.createdAt.toDate(), 'MMM yyyy') : 'Jan 2025'}</span>
                                     </div>
