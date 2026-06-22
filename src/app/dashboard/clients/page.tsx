@@ -6,14 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp, where, collectionGroup, getDocs, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, where, getDocs, limit, Timestamp } from 'firebase/firestore';
 import { 
     Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, 
-    Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, 
-    UserCheck, Briefcase, Zap, MapPin, ChevronRight, FileText, 
-    Calendar, Clock, CheckCircle2, ListTodo, X, LayoutGrid,
-    DollarSign, BriefcaseBusiness, UserPlus, IndianRupee, Layers, UserCircle2, Loader2, TrendingUp, ReceiptIndianRupee,
-    Wallet
+    Building2, Filter, Download, 
+    Briefcase, Zap, MapPin, X, 
+    DollarSign, BriefcaseBusiness, IndianRupee, Loader2, TrendingUp, ReceiptIndianRupee,
+    Wallet, CheckCircle2, Clock
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { format, differenceInDays, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth, subMonths, endOfMonth, isAfter, isBefore } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth, subMonths, endOfMonth, isAfter, isBefore } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -125,7 +124,7 @@ export default function ClientsPage() {
                 break;
             case 'prev-week':
                 start = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
-                end = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+                end = endOfDay(now);
                 break;
             case 'this-month':
                 start = startOfMonth(now);
@@ -631,7 +630,7 @@ export default function ClientsPage() {
                                         <SheetTitle className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-none">{selectedClient?.companyName}</SheetTitle>
                                         <Badge className="bg-emerald-50 text-emerald-700 border-none text-[9px] font-black h-5 uppercase tracking-widest px-2.5 shadow-sm">{selectedClient?.status}</Badge>
                                     </div>
-                                    <SheetDescription className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">{selectedClient?.category} Unit • Audit Lock Enabled</SheetDescription>
+                                    <SheetDescription className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">{selectedClient?.category} Unit • Strategic Account</SheetDescription>
                                 </div>
                             </div>
                             <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted" onClick={() => setSelectedClient(null)}><X className="size-6"/></Button>
