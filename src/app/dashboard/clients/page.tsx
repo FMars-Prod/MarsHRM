@@ -34,6 +34,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Progress } from '@/components/ui/progress';
 
 type PaymentInstallment = {
     id: string;
@@ -342,7 +343,7 @@ export default function ClientsPage() {
             events.push({
                 date: selectedClient.createdAt.toDate ? selectedClient.createdAt.toDate() : new Date(selectedClient.createdAt),
                 type: 'INITIATED',
-                label: 'Partnership Protocol Initiated',
+                label: 'Partnership Started',
                 color: 'bg-slate-900'
             });
         }
@@ -352,7 +353,7 @@ export default function ClientsPage() {
             events.push({
                 date: new Date(selectedClient.contractStartDate),
                 type: 'PROJECT',
-                label: 'Mission Execution Commenced',
+                label: 'Project Started',
                 color: 'bg-amber-500'
             });
         }
@@ -362,7 +363,7 @@ export default function ClientsPage() {
             events.push({
                 date: m.date.toDate(),
                 type: 'MEETING',
-                label: `Engagement: ${m.title}`,
+                label: `Meeting: ${m.title}`,
                 color: 'bg-sky-500'
             });
         });
@@ -372,19 +373,19 @@ export default function ClientsPage() {
             events.push({
                 date: inv.uploadedAt.toDate(),
                 type: 'INVOICE',
-                label: `Invoice Logged: ${inv.title}`,
+                label: `Invoice: ${inv.title}`,
                 color: 'bg-purple-500'
             });
         });
 
         // Payments
         selectedClient.payments?.forEach((p: any) => {
-            if (p.status === 'Paid') {
+            if (p.status === 'Paid' || (parseFloat(p.amountReceived || '0') > 0)) {
                 const pDate = p.invoiceDate ? new Date(p.invoiceDate) : (p.dueDate ? new Date(p.dueDate) : (selectedClient.createdAt?.toDate?.() || new Date()));
                 events.push({
                     date: pDate,
                     type: 'PAYMENT',
-                    label: `Revenue Captured: ${selectedClient.currencyType}${p.amountReceived || p.amount}`,
+                    label: `Payment Received: ${selectedClient.currencyType}${parseFloat(p.amountReceived || '0').toLocaleString()}`,
                     color: 'bg-emerald-500'
                 });
             }
@@ -400,6 +401,14 @@ export default function ClientsPage() {
     React.useEffect(() => {
         setClientForm(prev => ({ ...prev, projectTotalCost: calculatedTotalCost }));
     }, [calculatedTotalCost]);
+
+    const moneyCollected = React.useMemo(() => {
+        if (!selectedClient?.payments) return 0;
+        return selectedClient.payments.reduce((acc, p) => acc + (parseFloat(p.amountReceived || '0') || 0), 0);
+    }, [selectedClient]);
+
+    const totalProjectValue = selectedClient?.projectTotalCost || 0;
+    const progressPercent = totalProjectValue > 0 ? (moneyCollected / totalProjectValue) * 100 : 0;
 
     return (
         <div className="space-y-8 animate-fade-in-up pb-20 font-jakarta">
@@ -731,8 +740,25 @@ export default function ClientsPage() {
                                     </div>
                                 </div>
                             </div>
-                            <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted" onClick={() => setSelectedClient(null)}><X className="size-6"/></Button>
                         </div>
+
+                        {/* Revenue Progress Terminal */}
+                        <div className="p-6 bg-emerald-50/50 rounded-none ring-1 ring-emerald-100/50 space-y-4">
+                            <div className="flex justify-between items-end">
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-black uppercase text-emerald-700 opacity-60 tracking-widest">Collection Pulse</p>
+                                    <p className="text-lg font-black text-emerald-900">
+                                        {selectedClient?.currencyType}{moneyCollected.toLocaleString()} <span className="text-[10px] font-bold text-emerald-600/50 mx-2">/</span> {selectedClient?.currencyType}{totalProjectValue.toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[9px] font-black uppercase text-rose-600 tracking-widest">Pending</p>
+                                    <p className="text-sm font-black text-rose-700">{selectedClient?.currencyType}{(totalProjectValue - moneyCollected).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <Progress value={progressPercent} className="h-1.5 rounded-none bg-emerald-200/30" indicatorClassName="bg-emerald-600" />
+                        </div>
+
                         <div className="grid grid-cols-3 gap-6 pt-6 border-t border-dashed">
                             <div className="space-y-1.5"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Account Manager</p><div className="flex items-center gap-2.5"><Avatar className="size-7"><AvatarFallback className="text-[8px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback></Avatar><p className="text-[11px] font-black text-slate-800 uppercase truncate">{selectedClient?.managerName}</p></div></div>
                             <div className="space-y-1.5"><p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Email</p><p className="text-[11px] font-black text-slate-800 uppercase truncate">{selectedClient?.email}</p></div>
