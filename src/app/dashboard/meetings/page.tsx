@@ -11,7 +11,8 @@ import {
     Video, Plus, Clock, Users, ExternalLink, Calendar, 
     Trash2, Search, Link as LinkIcon, ShieldCheck, 
     Loader2, CheckCircle2, UserCheck, Timer, Building2, MapPin,
-    Eye, BellRing, Info, MoreHorizontal, UserPlus, X, FileText
+    Eye, BellRing, Info, MoreHorizontal, UserPlus, X, FileText,
+    ChevronRight
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 
 type Meeting = {
     id: string;
