@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp, where, collectionGroup, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, where, collectionGroup, getDocs, limit } from 'firebase/firestore';
 import { 
     Users, Plus, Trash2, Edit, Search, ExternalLink, ShieldCheck, 
     Globe, Building2, Mail, Phone, MoreHorizontal, Filter, Download, 
     UserCheck, Briefcase, Zap, MapPin, ChevronRight, FileText, 
     Calendar, Clock, CheckCircle2, MessageSquare, ListTodo, X, LayoutGrid,
-    DollarSign, BriefcaseBusiness, UserPlus, IndianRupee, Layers, UserCircle2, Loader2
+    DollarSign, BriefcaseBusiness, UserPlus, IndianRupee, Layers, UserCircle2, Loader2, TrendingUp
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 
 type PaymentInstallment = {
@@ -670,7 +671,7 @@ export default function ClientsPage() {
                                                 <Badge className={cn(
                                                     "rounded-lg font-black text-[8px] uppercase tracking-widest border-none px-3 h-6",
                                                     p.status === 'Paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                                                )}>{p.status}</span>
+                                                )}>{p.status}</Badge>
                                             </div>
                                         </div>
                                     ))}
