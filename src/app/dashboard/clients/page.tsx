@@ -12,7 +12,7 @@ import {
     Building2, Filter, Download, 
     Briefcase, Zap, MapPin, X, 
     DollarSign, BriefcaseBusiness, IndianRupee, Loader2, TrendingUp, ReceiptIndianRupee,
-    Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal, Mail, Phone, Calendar, FileText, CheckCircle, AlertCircle, LayoutGrid, Globe, Map
+    Wallet, CheckCircle2, Clock, ChevronRight, MoreHorizontal, Mail, Phone, Calendar, FileText, CheckCircle, AlertCircle, LayoutGrid, Globe, Map, UserCircle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -325,7 +325,7 @@ export default function ClientsPage() {
 
     const clientInvoices = React.useMemo(() => {
         if (!selectedClient || !vaultAssets) return [];
-        return vaultAssets.filter(a => a.clientId === selectedClient.id && a.isInvoice);
+        return vaultAssets.filter((a: any) => a.clientId === selectedClient.id && a.isInvoice);
     }, [selectedClient, vaultAssets]);
 
     if (!isAuthorized && !isLoading) {
@@ -631,7 +631,7 @@ export default function ClientsPage() {
                                         </div>
                                         
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Total Project Value (Required)</Label>
+                                            <Label className="text-[10px] font-black uppercase text-primary">Total Project Value (Required)</Label>
                                             <div className="relative">
                                                 <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-primary" />
                                                 <Input 
