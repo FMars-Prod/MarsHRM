@@ -720,11 +720,11 @@ export default function ClientsPage() {
             </div>
 
             <Sheet open={!!selectedClient} onOpenChange={o => !o && setSelectedClient(null)}>
-                <SheetContent className="w-full sm:max-w-[540px] p-0 border-none shadow-3xl flex flex-col bg-[#F8FAFC]">
-                    <SheetHeader className="p-6 bg-white border-b shadow-sm">
-                        <div className="flex items-start justify-between mb-6">
+                <SheetContent className="w-full sm:max-w-[480px] p-0 border-none shadow-3xl flex flex-col bg-[#F8FAFC]">
+                    <SheetHeader className="p-6 bg-white border-b shadow-sm shrink-0">
+                        <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-4">
-                                <div className="size-16 rounded-none bg-primary/5 flex items-center justify-center text-primary font-black text-xl border-2 border-primary/10 shadow-inner">
+                                <div className="size-14 rounded-none bg-primary/5 flex items-center justify-center text-primary font-black text-lg border-2 border-primary/10 shadow-inner">
                                     {selectedClient?.companyName.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
@@ -745,7 +745,7 @@ export default function ClientsPage() {
                         <div className="p-4 bg-emerald-50/50 rounded-none ring-1 ring-emerald-100/50 space-y-3">
                             <div className="flex justify-between items-end">
                                 <div className="space-y-0.5">
-                                    <p className="text-[8px] font-black uppercase text-emerald-700 opacity-60 tracking-widest">Payment Progress</p>
+                                    <p className="text-[8px] font-black uppercase text-emerald-700 opacity-60 tracking-widest">Collection Pulse</p>
                                     <p className="text-base font-black text-emerald-900">
                                         {selectedClient?.currencyType}{moneyCollected.toLocaleString()} <span className="text-[9px] font-bold text-emerald-600/50 mx-1">/</span> {selectedClient?.currencyType}{totalProjectValue.toLocaleString()}
                                     </p>
@@ -759,7 +759,7 @@ export default function ClientsPage() {
                         </div>
 
                         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-dashed">
-                            <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Manager</p><div className="flex items-center gap-2"><Avatar className="size-6"><AvatarFallback className="text-[7px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback></Avatar><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.managerName}</p></div></div>
+                            <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Account Manager</p><div className="flex items-center gap-2"><Avatar className="size-6"><AvatarFallback className="text-[7px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback></Avatar><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.managerName}</p></div></div>
                             <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Email</p><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.email}</p></div>
                             <div className="space-y-1"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Phone</p><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.phone}</p></div>
                         </div>
@@ -829,9 +829,9 @@ export default function ClientsPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Executive Intelligence</h4>
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Account Executive Intelligence</h4>
                                         <Card className="border-none shadow-sm rounded-none bg-white p-4 ring-1 ring-border/50">
-                                            <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase italic">"{selectedClient?.notes || 'Strategic partnership protocol initiated.'}"</p>
+                                            <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase italic">"{selectedClient?.notes || 'Partnership started.'}"</p>
                                         </Card>
                                     </div>
                                 </TabsContent>
@@ -917,4 +917,5 @@ function StatBox({ label, value, icon: Icon, color }: { label: string, value: st
             <div className={cn("p-1.5 rounded-lg inline-block shadow-sm", color)}><Icon className="size-3.5" /></div>
             <div><p className="text-base font-black text-slate-900 leading-none">{value}</p><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{label}</p></div>
         </div>
+    );
 }
