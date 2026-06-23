@@ -97,14 +97,6 @@ const DEFAULT_BRANDS: Brand[] = [
     { id: 'campusconnect', name: 'Campus Connect', gradient: 'from-purple-500 to-indigo-600', channels: ['Instagram', 'LinkedIn', 'Facebook'] }
 ];
 
-const DEFAULT_AD_PLATFORMS: AdPlatform[] = [
-    { id: 'meta', name: 'Meta Ads', color: '#0181F5', category: 'Social' },
-    { id: 'google', name: 'Google Ads', color: '#F4B400', category: 'Search' },
-    { id: 'linkedin', name: 'LinkedIn Ads', color: '#0077B5', category: 'Professional' },
-    { id: 'youtube', name: 'YouTube Ads', color: '#FF0000', category: 'Video' },
-    { id: 'naukri', name: 'Naukri', color: '#FF7F0E', category: 'Job Board' }
-];
-
 const performanceChartConfig = {
   reach: { label: "Followers", color: "hsl(var(--primary))" },
   spend: { label: "Spend", color: "#f43f5e" },
@@ -130,7 +122,6 @@ export default function MarketingManagementPage() {
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [isTopupOpen, setIsTopupOpen] = React.useState(false);
     const [isBudgetWarningOpen, setIsBudgetWarningOpen] = React.useState(false);
-    const [setSelectedAuditEntry] = React.useState<MarketingSession | null>(null);
     const [formData, setFormData] = React.useState<any>({ socialLogs: [], adSpends: [] });
     const [topupValue, setTopupValue] = React.useState<string>("");
 
@@ -144,7 +135,7 @@ export default function MarketingManagementPage() {
         return Array.from(ids).sort();
     }, [brands]);
 
-    const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'marketing_sessions'), orderBy('date', 'desc'), limit(500)), [firestore]);
+    const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'marketing_sessions'), orderBy('date', 'desc'), limit(1000)), [firestore]);
     const { data: rawSessions, isLoading: sessionsLoading } = useCollection<MarketingSession>(sessionsQuery);
 
     const dateRange = React.useMemo(() => {
@@ -215,8 +206,22 @@ export default function MarketingManagementPage() {
         });
     }, [sessions, dateRange]);
 
+    // Financial Intelligence Calculations
     const currentBalance = React.useMemo(() => sessions[0]?.runningBalance || 0, [sessions]);
     
+    const lastUpdateDate = React.useMemo(() => sessions[0]?.date, [sessions]);
+    const lastSpentDate = React.useMemo(() => sessions.find(s => s.type === 'spend')?.date, [sessions]);
+
+    const totalEverAdded = React.useMemo(() => 
+        sessions.filter(s => s.type === 'topup').reduce((acc, curr) => acc + (curr.topupAmount || 0), 0),
+    [sessions]);
+
+    const totalEverSpent = React.useMemo(() => 
+        sessions.filter(s => s.type === 'spend').reduce((acc, curr) => 
+            acc + (curr.adSpends?.reduce((a, c) => a + (c.amount || 0), 0) || 0)
+        , 0),
+    [sessions]);
+
     const periodSpend = React.useMemo(() => {
         return filteredSessions
             .filter(s => s.type === 'spend')
@@ -293,6 +298,8 @@ export default function MarketingManagementPage() {
         setTopupValue("");
     };
 
+    const formatShortDate = (ts: any) => ts ? format(ts.toDate(), 'MMM dd, p') : 'N/A';
+
     if (!isAuthorized) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6 space-y-6">
@@ -307,13 +314,13 @@ export default function MarketingManagementPage() {
     }
 
     return (
-        <div className="space-y-8 animate-fade-in-up pb-20 max-w-[1600px] mx-auto font-jakarta text-slate-900">
-            <PageHeader title="Marketing Manager" description="Track your company growth and advertising spend.">
+        <div className="space-y-6 animate-fade-in-up pb-20 max-w-[1600px] mx-auto font-jakarta text-slate-900 px-4">
+            <PageHeader title="Marketing Manager" description="Track company growth and budget.">
                 <div className="flex flex-wrap gap-2 items-center">
                     <Select value={dateFilter} onValueChange={setDateFilter}>
-                        <SelectTrigger className="w-[180px] rounded-full h-11 bg-white shadow-sm border-none ring-1 ring-border/50">
+                        <SelectTrigger className="w-[160px] rounded-full h-10 bg-white shadow-sm border-none ring-1 ring-border/50 text-xs">
                             <div className="flex items-center gap-2">
-                                <Filter className="size-3.5 opacity-50" />
+                                <Filter className="size-3 opacity-50" />
                                 <SelectValue placeholder="Timeline" />
                             </div>
                         </SelectTrigger>
@@ -323,87 +330,57 @@ export default function MarketingManagementPage() {
                                 <SelectItem value="all-time">All Time</SelectItem>
                                 <SelectItem value="today">Today</SelectItem>
                                 <SelectItem value="this-week">This Week</SelectItem>
-                                <SelectItem value="prev-week">Previous Week</SelectItem>
                                 <SelectItem value="this-month">This Month</SelectItem>
-                                <SelectItem value="prev-month">Previous Month</SelectItem>
-                            </SelectGroup>
-                            <SelectGroup>
-                                <SelectLabel>Custom</SelectLabel>
-                                <SelectItem value="custom-date">Select Date</SelectItem>
-                                <SelectItem value="custom-range">Select Range</SelectItem>
                             </SelectGroup>
                         </SelectContent>
                     </Select>
 
-                    {(dateFilter === 'custom-date' || dateFilter === 'custom-range') && (
-                        <div className="flex gap-2 items-center animate-fade-in-up">
-                            <Input 
-                                type="date" 
-                                value={customStartDate} 
-                                onChange={e => setCustomStartDate(e.target.value)} 
-                                className="h-11 rounded-full w-40 bg-white shadow-sm border-none ring-1 ring-border/50" 
-                            />
-                            {dateFilter === 'custom-range' && (
-                                <>
-                                    <span className="text-[10px] font-black uppercase text-muted-foreground">to</span>
-                                    <Input 
-                                        type="date" 
-                                        value={customEndDate} 
-                                        onChange={e => setCustomEndDate(e.target.value)} 
-                                        className="h-11 rounded-full w-40 bg-white shadow-sm border-none ring-1 ring-border/50" 
-                                    />
-                                </>
-                            )}
-                        </div>
-                    )}
-
-                    <Separator orientation="vertical" className="h-8 mx-2" />
-
-                    <Button onClick={() => setIsTopupOpen(true)} variant="outline" className="rounded-full h-11 font-bold uppercase text-[10px] tracking-widest px-6 shadow-sm border-none ring-1 ring-border/50 bg-emerald-50 text-emerald-700">
-                        <IndianRupee className="size-3.5 mr-2" /> Add Budget
+                    <Button onClick={() => setIsTopupOpen(true)} variant="outline" className="rounded-full h-10 font-bold uppercase text-[9px] tracking-widest px-4 shadow-sm border-none ring-1 ring-border/50 bg-emerald-50 text-emerald-700">
+                        <IndianRupee className="size-3 mr-1.5" /> Add Budget
                     </Button>
                     
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
-                            <Button className="rounded-full h-11 shadow-lg font-black uppercase text-[10px] tracking-widest px-8 shadow-primary/20">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Update Marketing Data
+                            <Button className="rounded-full h-10 shadow-lg font-black uppercase text-[9px] tracking-widest px-6 shadow-primary/20">
+                                <PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Update Data
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl rounded-none border-none shadow-3xl p-0 overflow-hidden h-[90vh] flex flex-col">
-                            <DialogHeader className="p-10 border-b shrink-0 bg-white">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily Marketing Snapshot</DialogTitle>
-                                <DialogDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60">Add activity tracking and ad spend</DialogDescription>
+                            <DialogHeader className="p-8 border-b shrink-0 bg-white">
+                                <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Marketing Updates</DialogTitle>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
-                                <div className="p-10 space-y-12">
-                                    <div className="space-y-8">
-                                        <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4"/> Social Media Performance</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="p-8 space-y-10">
+                                    <div className="space-y-6">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-3.5"/> Brand Growth</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {brands.map(brand => (
-                                                <div key={brand.id} className="space-y-6 p-8 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm">
-                                                    <p className="font-black text-sm uppercase tracking-tight border-b border-dashed pb-4">{brand.name}</p>
-                                                    <div className="space-y-6">
+                                                <div key={brand.id} className="p-6 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm space-y-4">
+                                                    <p className="font-black text-xs uppercase tracking-tight border-b border-dashed pb-3">{brand.name}</p>
+                                                    <div className="space-y-4">
                                                         {brand.channels.map(channel => {
                                                             const log = formData.socialLogs?.find((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                             return (
-                                                                <div key={channel} className="space-y-4 p-4 bg-muted/10 rounded-none">
-                                                                    <Label className="text-[10px] font-black uppercase text-muted-foreground">{channel}</Label>
-                                                                    <div className="grid grid-cols-2 gap-4">
-                                                                        <div className="space-y-1.5">
-                                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-40">Followers</p>
-                                                                            <Input type="number" min="0" value={log?.count || 0} className="h-10 rounded-none font-black" onChange={e => {
+                                                                <div key={channel} className="space-y-3 p-3 bg-muted/10 rounded-none">
+                                                                    <Label className="text-[9px] font-black uppercase text-muted-foreground">{channel}</Label>
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        <div className="space-y-1">
+                                                                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Followers</p>
+                                                                            <Input type="number" min="0" value={log?.count || 0} className="h-9 rounded-none font-black text-xs" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                                                 if (idx > -1) logs[idx].count = Math.max(0, parseInt(e.target.value) || 0);
+                                                                                else logs.push({ brandId: brand.id, platformId: channel, count: Math.max(0, parseInt(e.target.value) || 0), newPosts: 0 });
                                                                                 setFormData({ ...formData, socialLogs: logs });
                                                                             }} />
                                                                         </div>
-                                                                        <div className="space-y-1.5">
-                                                                            <p className="text-[9px] font-bold text-emerald-600 uppercase opacity-60">New Posts</p>
-                                                                            <Input type="number" min="0" value={log?.newPosts || 0} className="h-10 rounded-none font-black border-emerald-100" onChange={e => {
+                                                                        <div className="space-y-1">
+                                                                            <p className="text-[8px] font-bold text-emerald-600 uppercase opacity-60">New Posts</p>
+                                                                            <Input type="number" min="0" value={log?.newPosts || 0} className="h-9 rounded-none font-black text-xs border-emerald-100" onChange={e => {
                                                                                 const logs = [...(formData.socialLogs || [])];
                                                                                 const idx = logs.findIndex((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                                                 if (idx > -1) logs[idx].newPosts = Math.max(0, parseInt(e.target.value) || 0);
+                                                                                else logs.push({ brandId: brand.id, platformId: channel, count: 0, newPosts: Math.max(0, parseInt(e.target.value) || 0) });
                                                                                 setFormData({ ...formData, socialLogs: logs });
                                                                             }} />
                                                                         </div>
@@ -418,51 +395,81 @@ export default function MarketingManagementPage() {
                                     </div>
                                 </div>
                             </ScrollArea>
-                            <div className="p-10 border-t bg-white shrink-0">
-                                <Button onClick={handleSaveSession} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl shadow-primary/20">Finalize Snapshot</Button>
+                            <div className="p-8 border-t bg-white shrink-0">
+                                <Button onClick={handleSaveSession} className="w-full h-12 rounded-none font-black uppercase tracking-widest shadow-2xl">Finalize Updates</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
                 </div>
             </PageHeader>
 
-            {/* Metric Matrix */}
+            {/* Matrix Matrix */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <MetricCard label="Campaign Active" value={deadlines.filter(d => d.status === 'Active').length} sub="Upcoming Ends" icon={Timer} color="text-amber-600" bg="bg-amber-50" />
-                <MetricCard label="Current Budget" value={`₹${currentBalance.toLocaleString()}`} sub="Ledger Balance" icon={Wallet} color="text-indigo-600" bg="bg-indigo-50" />
-                <MetricCard label="Period Spend" value={`₹${periodSpend.toLocaleString()}`} sub="Filtered Investment" icon={PieChart} color="text-rose-600" bg="bg-rose-50" />
-                <MetricCard label="Total Growth" value="Real-time" sub="Reach Pulse" icon={TrendingUp} color="text-emerald-600" bg="bg-emerald-50" />
+                
+                <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-none bg-indigo-50 text-indigo-600 shadow-sm group-hover:scale-105 transition-transform"><Wallet className="size-5" /></div>
+                        <div className="min-w-0">
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">Current Budget</p>
+                            <h3 className="text-xl font-black tracking-tight text-slate-900">₹{currentBalance.toLocaleString()}</h3>
+                        </div>
+                    </div>
+                    <div className="pt-3 border-t border-dashed border-border/50 space-y-1">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Last Update: {formatShortDate(lastUpdateDate)}</p>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Last Spend: {formatShortDate(lastSpentDate)}</p>
+                    </div>
+                </Card>
+
+                <MetricCard label="Period Spend" value={`₹${periodSpend.toLocaleString()}`} sub="Current Filter" icon={PieChart} color="text-rose-600" bg="bg-rose-50" />
+                
+                <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-none bg-emerald-50 text-emerald-600 shadow-sm group-hover:scale-105 transition-transform"><TrendingUp className="size-5" /></div>
+                        <div className="min-w-0">
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">Budget Overview</p>
+                            <h3 className="text-lg font-black tracking-tight text-slate-900">Overview</h3>
+                        </div>
+                    </div>
+                    <div className="pt-3 border-t border-dashed border-border/50 flex justify-between gap-4">
+                        <div>
+                            <p className="text-[8px] font-black text-muted-foreground uppercase">Total Added</p>
+                            <p className="text-xs font-black text-emerald-600">₹{totalEverAdded.toLocaleString()}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[8px] font-black text-muted-foreground uppercase">Total Spent</p>
+                            <p className="text-xs font-black text-rose-600">₹{totalEverSpent.toLocaleString()}</p>
+                        </div>
+                    </div>
+                </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-8 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-8 space-y-4">
                     <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white overflow-hidden">
-                        <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
-                            <div className="space-y-1">
-                                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-3"><Users className="size-5" /> Follower Stats</CardTitle>
-                                <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Brand reach audit for selected period</CardDescription>
-                            </div>
+                        <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between">
+                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4" /> Follower Stats</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
                             <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader className="bg-muted/10 border-b">
                                         <TableRow className="hover:bg-transparent">
-                                            <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 px-8">Brand Identity</TableHead>
+                                            <TableHead className="font-black uppercase tracking-widest text-[8px] py-4 px-6">Brand Identity</TableHead>
                                             {allPlatformIds.map(platform => (
-                                                <TableHead key={platform} className="font-black uppercase tracking-widest text-[9px] py-6 text-center">{platform}</TableHead>
+                                                <TableHead key={platform} className="font-black uppercase tracking-widest text-[8px] py-4 text-center">{platform}</TableHead>
                                             ))}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {brands.map(brand => (
                                             <TableRow key={brand.id} className="border-border/50 hover:bg-primary/5 transition-colors">
-                                                <TableCell className="py-6 px-8">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={cn("size-10 rounded-none flex items-center justify-center text-xs text-white font-black bg-gradient-to-br shadow-sm", brand.gradient)}>
+                                                <TableCell className="py-4 px-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={cn("size-8 rounded-none flex items-center justify-center text-[10px] text-white font-black bg-gradient-to-br shadow-sm", brand.gradient)}>
                                                             {brand.name[0]}
                                                         </div>
-                                                        <span className="font-black text-sm uppercase tracking-tighter">{brand.name}</span>
+                                                        <span className="font-black text-xs uppercase tracking-tighter">{brand.name}</span>
                                                     </div>
                                                 </TableCell>
                                                 {allPlatformIds.map(platform => {
@@ -474,11 +481,11 @@ export default function MarketingManagementPage() {
                                                     if (!hasChannel) return <TableCell key={platform} className="text-center opacity-10">—</TableCell>;
 
                                                     return (
-                                                        <TableCell key={platform} className="py-6 text-center">
-                                                            <div className="space-y-1">
-                                                                <span className="text-sm font-black tabular-nums">{formatCompact(log?.count || 0)}</span>
+                                                        <TableCell key={platform} className="py-4 text-center">
+                                                            <div className="space-y-0.5">
+                                                                <span className="text-xs font-black tabular-nums">{formatCompact(log?.count || 0)}</span>
                                                                 {followerDiff !== 0 && (
-                                                                    <p className={cn("text-[9px] font-black uppercase", followerDiff > 0 ? "text-emerald-600" : "text-rose-600")}>
+                                                                    <p className={cn("text-[8px] font-black uppercase", followerDiff > 0 ? "text-emerald-600" : "text-rose-600")}>
                                                                         {followerDiff > 0 ? `+${followerDiff}` : followerDiff}
                                                                     </p>
                                                                 )}
@@ -495,16 +502,15 @@ export default function MarketingManagementPage() {
                     </Card>
 
                     <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white overflow-hidden flex flex-col">
-                        <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
-                            <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-3"><History className="size-5" /> History Log</CardTitle>
-                            <Badge className="bg-emerald-100 text-emerald-700 rounded-none font-black text-[8px] border-none px-3 h-6 uppercase tracking-widest">Audited Log</Badge>
+                        <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between">
+                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2"><History className="size-4" /> Activity Log</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0 flex-1">
-                            <ScrollArea className="h-[500px]">
+                            <ScrollArea className="h-[400px]">
                                 {sessionsLoading ? (
-                                    <div className="p-20 text-center animate-pulse uppercase font-black text-[10px] text-muted-foreground tracking-widest">Scanning records...</div>
+                                    <div className="p-20 text-center animate-pulse uppercase font-black text-[9px] text-muted-foreground tracking-widest">Scanning records...</div>
                                 ) : filteredSessions.length === 0 ? (
-                                    <div className="p-24 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No records found.</div>
+                                    <div className="p-24 text-center text-muted-foreground italic uppercase font-black text-[9px] tracking-widest opacity-30">No records found.</div>
                                 ) : (
                                     <div className="divide-y divide-border/50">
                                         {filteredSessions.map((session) => {
@@ -512,24 +518,24 @@ export default function MarketingManagementPage() {
                                             const amount = isTopup ? (session.topupAmount || 0) : (session.adSpends?.reduce((a, c) => a + (c.amount || 0), 0) || 0);
 
                                             return (
-                                                <div key={session.id} className="px-8 py-6 hover:bg-muted/5 transition-all group flex items-center justify-between cursor-pointer" onClick={() => setSelectedAuditEntry(session)}>
-                                                    <div className="flex items-center gap-5">
-                                                        <div className={cn("size-12 rounded-none flex items-center justify-center shadow-sm", isTopup ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
-                                                            {isTopup ? <Wallet className="size-6" /> : <Activity className="size-6" />}
+                                                <div key={session.id} className="px-6 py-4 hover:bg-muted/5 transition-all group flex items-center justify-between cursor-pointer">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={cn("size-10 rounded-none flex items-center justify-center shadow-sm", isTopup ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
+                                                            {isTopup ? <Wallet className="size-5" /> : <Activity className="size-5" />}
                                                         </div>
-                                                        <div className="space-y-1">
+                                                        <div className="space-y-0.5">
                                                             <div className="flex items-center gap-3">
-                                                                <span className="font-black text-sm uppercase tracking-tight">{isTopup ? "Budget Injection" : "Tactical Spend"}</span>
-                                                                <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-40">{format(session.date?.toDate?.() || new Date(), 'MMM dd, p')}</span>
+                                                                <span className="font-black text-xs uppercase tracking-tight">{isTopup ? "Deposit" : "Spend"}</span>
+                                                                <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-40">{format(session.date?.toDate?.() || new Date(), 'MMM dd, p')}</span>
                                                             </div>
-                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Operator: {session.auditedByName}</p>
+                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">By: {session.auditedByName}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right space-y-1">
-                                                        <p className={cn("text-lg font-black tabular-nums", isTopup ? "text-emerald-600" : "text-rose-600")}>
+                                                    <div className="text-right space-y-0.5">
+                                                        <p className={cn("text-base font-black tabular-nums", isTopup ? "text-emerald-600" : "text-rose-600")}>
                                                             {isTopup ? `+₹${amount.toLocaleString()}` : `-₹${amount.toLocaleString()}`}
                                                         </p>
-                                                        <p className="text-[9px] font-black uppercase text-muted-foreground/30 tracking-tight">Balance: ₹{(session.runningBalance || 0).toLocaleString()}</p>
+                                                        <p className="text-[8px] font-black uppercase text-muted-foreground/30 tracking-tight">Bal: ₹{(session.runningBalance || 0).toLocaleString()}</p>
                                                     </div>
                                                 </div>
                                             );
@@ -541,12 +547,10 @@ export default function MarketingManagementPage() {
                     </Card>
                 </div>
 
-                <div className="lg:col-span-4 space-y-6">
-                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white overflow-hidden p-8 space-y-8">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-3"><TrendingUp className="size-4" /> Reach Pulse</CardTitle>
-                        </div>
-                        <div className="h-[220px]">
+                <div className="lg:col-span-4 space-y-4">
+                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white overflow-hidden p-6 space-y-6">
+                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><TrendingUp className="size-3.5" /> Reach Pulse</CardTitle>
+                        <div className="h-[200px]">
                             <ChartContainer config={performanceChartConfig} className="h-full w-full">
                                 <AreaChart data={chartData}>
                                     <defs>
@@ -555,37 +559,37 @@ export default function MarketingManagementPage() {
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid vertical={false} stroke="#F1F5F9" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-[8px] font-black uppercase fill-muted-foreground/40" tickMargin={10} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-[7px] font-black uppercase fill-muted-foreground/40" tickMargin={10} />
                                     <YAxis hide />
                                     <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Area type="monotone" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={3} fill="url(#colorReach)" />
+                                    <Area type="monotone" dataKey="reach" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#colorReach)" />
                                 </AreaChart>
                             </ChartContainer>
                         </div>
                     </Card>
 
-                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white p-8 overflow-hidden flex flex-col space-y-6">
+                    <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white p-6 overflow-hidden flex flex-col space-y-4">
                         <div className="flex items-center justify-between">
-                            <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-3"><Timer className="size-4" /> Ending Soon</CardTitle>
-                            <Badge className="bg-rose-500 text-white rounded-none font-black text-[9px] px-2 h-5 shadow-sm">{deadlines.filter(d => d.status === 'Overdue').length} ALERTS</Badge>
+                            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Timer className="size-3.5" /> Ending Soon</CardTitle>
+                            <Badge className="bg-rose-500 text-white rounded-none font-black text-[8px] px-2 h-4 shadow-sm">{deadlines.filter(d => d.status === 'Overdue').length} ALERTS</Badge>
                         </div>
-                        <ScrollArea className="h-[280px]">
-                            <div className="space-y-3">
+                        <ScrollArea className="h-[250px]">
+                            <div className="space-y-2">
                                 {deadlines.length > 0 ? deadlines.map((d, i) => (
-                                    <div key={i} className="p-4 rounded-none bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white transition-all flex items-center justify-between group">
-                                        <div className="flex items-center gap-4">
-                                            <div className={cn("p-2 rounded-none text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
-                                                <Calendar className="size-4" />
+                                    <div key={i} className="p-3 rounded-none bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white transition-all flex items-center justify-between group">
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn("p-1.5 rounded-none text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
+                                                <Calendar className="size-3.5" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-xs font-black uppercase truncate max-w-[120px]">{d.title}</p>
-                                                <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(d.end, 'MMM dd, yyyy')}</p>
+                                                <p className="text-[10px] font-black uppercase truncate max-w-[100px]">{d.title}</p>
+                                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">{format(d.end, 'MMM dd')}</p>
                                             </div>
                                         </div>
-                                        <ChevronRight className="size-4 opacity-0 group-hover:opacity-40 transition-opacity" />
+                                        <ChevronRight className="size-3 opacity-0 group-hover:opacity-40 transition-opacity" />
                                     </div>
                                 )) : (
-                                    <div className="py-20 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No active deadlines</div>
+                                    <div className="py-20 text-center opacity-20 uppercase font-black text-[8px] tracking-widest">No active deadlines</div>
                                 )}
                             </div>
                         </ScrollArea>
@@ -595,49 +599,45 @@ export default function MarketingManagementPage() {
             
             {/* Top-up Dialog */}
             <Dialog open={isTopupOpen} onOpenChange={setIsTopupOpen}>
-                <DialogContent className="rounded-none border-none shadow-3xl p-10 sm:max-w-md">
+                <DialogContent className="rounded-none border-none shadow-3xl p-8 sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Budget Injection</DialogTitle>
-                        <DialogDescription className="text-[11px] font-bold uppercase opacity-60">Provision capital for marketing operations</DialogDescription>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Add Budget</DialogTitle>
                     </DialogHeader>
-                    <div className="py-10 space-y-6 text-center">
-                        <div className="p-6 bg-emerald-50 rounded-none inline-block mb-4"><IndianRupee className="size-10 text-emerald-600" /></div>
-                        <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Injection Amount (₹)</Label>
+                    <div className="py-6 space-y-4 text-center">
+                        <div className="p-4 bg-emerald-50 rounded-none inline-block"><IndianRupee className="size-8 text-emerald-600" /></div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Amount (₹)</Label>
                             <Input 
                                 type="number" 
                                 value={topupValue}
                                 onChange={e => setTopupValue(e.target.value)}
                                 placeholder="0.00" 
-                                className="h-16 rounded-none font-black text-3xl text-center border-none ring-2 ring-emerald-100 bg-white shadow-inner focus:ring-emerald-300"
+                                className="h-14 rounded-none font-black text-2xl text-center border-none ring-1 ring-emerald-100 bg-white"
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={handleAddBudget} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl shadow-emerald-200 bg-emerald-600 hover:bg-emerald-700">Finalize Deposit</Button>
+                        <Button onClick={handleAddBudget} className="w-full h-12 rounded-none font-black uppercase tracking-widest shadow-2xl bg-emerald-600 hover:bg-emerald-700">Add Funds</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Budget Warning */}
             <Dialog open={isBudgetWarningOpen} onOpenChange={setIsBudgetWarningOpen}>
-                <DialogContent className="rounded-none border-none shadow-3xl p-10 sm:max-w-md">
+                <DialogContent className="rounded-none border-none shadow-3xl p-8 sm:max-w-md">
                     <DialogHeader>
-                        <div className="size-16 rounded-none bg-rose-50 flex items-center justify-center mb-6 ring-8 ring-rose-50/50 mx-auto">
-                            <AlertCircle className="size-8 text-rose-600" />
-                        </div>
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900 text-center">Insufficient Balance</DialogTitle>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-center">Insufficient Balance</DialogTitle>
                     </DialogHeader>
-                    <div className="py-8 space-y-6 text-center">
-                        <p className="text-sm font-medium leading-relaxed text-slate-600">The requested expenditure exceeds the current marketing wallet balance.</p>
-                        <div className="p-6 bg-muted/30 rounded-none border-2 border-dashed border-border/50">
-                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Available Budget</p>
-                            <p className="text-3xl font-black text-emerald-600">₹{currentBalance.toLocaleString()}</p>
+                    <div className="py-6 space-y-4 text-center">
+                        <p className="text-xs font-medium leading-relaxed text-slate-600">The requested expenditure exceeds the available balance.</p>
+                        <div className="p-4 bg-muted/30 rounded-none border border-dashed border-border/50">
+                            <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Available</p>
+                            <p className="text-2xl font-black text-emerald-600">₹{currentBalance.toLocaleString()}</p>
                         </div>
                     </div>
-                    <DialogFooter className="flex flex-col gap-4 sm:flex-row">
-                        <Button variant="outline" className="flex-1 rounded-none h-14 font-black uppercase text-[11px]" onClick={() => setIsBudgetWarningOpen(false)}>Discard</Button>
-                        <Button className="flex-1 rounded-none h-14 font-black uppercase text-[11px] bg-emerald-600 hover:bg-emerald-700" onClick={() => { setIsBudgetWarningOpen(false); setIsTopupOpen(true); }}>Add Budget</Button>
+                    <DialogFooter className="flex flex-row gap-3">
+                        <Button variant="outline" className="flex-1 rounded-none h-12 font-black uppercase text-[10px]" onClick={() => setIsBudgetWarningOpen(false)}>Discard</Button>
+                        <Button className="flex-1 rounded-none h-12 font-black uppercase text-[10px] bg-emerald-600 hover:bg-emerald-700" onClick={() => { setIsBudgetWarningOpen(false); setIsTopupOpen(true); }}>Add Funds</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -647,18 +647,18 @@ export default function MarketingManagementPage() {
 
 function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
     return (
-        <Card className="border-none shadow-sm rounded-none bg-white p-6 space-y-5 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
-            <div className="flex items-center gap-5">
-                <div className={cn("p-3.5 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}>
+        <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
+            <div className="flex items-center gap-4">
+                <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}>
                     <Icon className="size-5" />
                 </div>
                 <div className="min-w-0">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-2">{label}</p>
-                    <h3 className="text-2xl font-black tracking-tight text-slate-900 truncate">{value}</h3>
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
+                    <h3 className="text-xl font-black tracking-tight text-slate-900 truncate">{value}</h3>
                 </div>
             </div>
-            <div className="pt-4 border-t border-dashed border-border/50">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{sub}</p>
+            <div className="pt-3 border-t border-dashed border-border/50">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">{sub}</p>
             </div>
         </Card>
     );
