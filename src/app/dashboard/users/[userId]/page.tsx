@@ -3,13 +3,13 @@
 import * as React from 'react';
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useMemoFirebase, useCollection, useDoc, useUser, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useMemoFirebase, useCollection, useDoc, useUser, updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs, serverTimestamp } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink } from 'lucide-react';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +38,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 type AttendanceRecord = {
   id: string;
@@ -50,6 +51,94 @@ type AttendanceRecord = {
   isOutOfRange?: boolean;
 };
 
+const formatIST = (date: any) => {
+    if (!date) return "N/A";
+    const d = date instanceof Timestamp ? date.toDate() : new Date(date);
+    return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(d) + " IST";
+};
+
+const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
+    const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0);
+    const potential = Number(report.potentialClients || 0);
+    const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
+    
+    return (
+        <div className="space-y-8">
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Results</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-6 bg-primary text-white rounded-3xl shadow-xl flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span><span className="text-4xl font-black">{efficiency.toFixed(2)}%</span></div>
+                    <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients</span><span className="text-3xl font-black">{potential}</span></div>
+                    <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups</span><span className="text-3xl font-black">{report.followUps || 0}</span></div>
+                </div>
+            </div>
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-green-600 font-black uppercase text-[10px] tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue & Impact</div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Revenue Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
+                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed Revenue</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
+                </div>
+            </div>
+            <div className="p-4 bg-primary/5 rounded-2xl space-y-4">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence</p>
+                <div className="grid gap-4">
+                    {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> View Recordings</Link></Button>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[['Best Call', report.bestCallRecording, 'text-green-600'], ['Worst Call', report.worstCallRecording, 'text-red-600']].map(([l, v, c], i) => v && (
+                            <div key={i} className="p-3 bg-white rounded-xl ring-1 ring-border/50 space-y-2"><p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", c)}><Mic className="size-3"/> {l}</p><audio controls className="w-full h-8 scale-90 -ml-2"><source src={v as string} /></audio></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const MarketingAuditDetail = ({ report }: { report: any }) => {
+    const deliverables = [{ label: 'Content', key: 'dmContent' }, { label: 'Poster', key: 'dmPoster' }, { label: 'Reel', key: 'dmReel' }, { label: 'Shoot', key: 'dmShoot' }];
+    return (
+        <div className="space-y-6">
+            <BusinessAuditDetail report={report} isNested />
+            <div className="border rounded-2xl overflow-hidden bg-white shadow-sm">
+                <Table>
+                    <TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[10px] font-black uppercase">Status</TableHead>{deliverables.map(d => <TableHead key={d.key} className="text-[10px] font-black uppercase text-center">{d.label}</TableHead>)}</TableRow></TableHeader>
+                    <TableBody>
+                        {['Approved', 'Pending', 'Rejected'].map(status => (
+                            <TableRow key={status}><TableCell className="text-xs font-black uppercase py-4">{status}</TableCell>{deliverables.map(d => (<TableCell key={d.key} className="text-center font-bold">{report[`${d.key}${status}`] || 0}</TableCell>))}</TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
+    );
+};
+
+const TechnicalAuditDetail = ({ report }: { report: any }) => (
+    <div className="space-y-8">
+        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4"/> Client Engagements</p>
+            <div className="grid grid-cols-1 gap-3">{report.technicalMeetings?.map((m: any, i: number) => (
+                <div key={i} className="p-3 bg-white rounded-xl border flex items-center justify-between"><div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div><Badge variant="outline" className="text-[8px] uppercase font-black">{m.status}</Badge></div>
+            )) || <p className="text-xs italic text-muted-foreground">No engagements logged.</p>}</div>
+        </div>
+        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Briefcase className="size-4"/> Task Progress</p>
+            <div className="grid grid-cols-1 gap-4">{report.technicalProjects?.map((p: any, i: number) => (
+                <Card key={i} className="p-4 border-none ring-1 ring-border/50 bg-white"><div className="flex justify-between items-start mb-3"><div><p className="font-bold text-sm">{p.projectName}</p><p className="text-[10px] uppercase text-muted-foreground">{p.type}</p></div><div className="text-right"><p className="text-lg font-black text-primary">{p.statusPercent}%</p><p className="text-[8px] uppercase font-bold text-muted-foreground">Progress</p></div></div><p className="text-xs italic text-muted-foreground mb-3">"{p.description}"</p>{p.isCompleted && p.liveLink && <Button variant="ghost" size="sm" className="w-full h-8 text-[9px] font-bold uppercase gap-2 bg-primary/5 text-primary" asChild><Link href={p.liveLink} target="_blank"><ExternalLink className="size-3"/> View Project</Link></Button>}</Card>
+            )) || <p className="text-xs italic text-muted-foreground">No projects logged.</p>}</div>
+        </div>
+        <div className="space-y-3"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Brain className="size-4"/> Notes & Learnings</p>
+            <div className="flex flex-wrap gap-2">{report.learnedToday?.map((l: string, i: number) => <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-full text-[10px] font-bold">{l}</Badge>) || <p className="text-xs italic text-muted-foreground">No learnings recorded.</p>}</div>
+        </div>
+    </div>
+);
+
 export default function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
@@ -59,6 +148,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const userId = resolvedParams.userId;
   
   const [userReports, setUserReports] = React.useState<any[]>([]);
+  const [isReportsLoading, setIsReportsLoading] = React.useState(false);
+  const [selectedReportForReview, setSelectedReportForReview] = React.useState<any | null>(null);
 
   const userDocRef = useMemoFirebase(() => (userId ? doc(firestore, 'users', userId) : null), [firestore, userId]);
   const { data: user, isLoading: isUserLoading } = useDoc<any>(userDocRef);
@@ -137,12 +228,54 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
     toast({ title: "Performance Updated", description: `Rating set to ${newRating}.` });
   };
 
+  const handleDownloadPdfReport = (report: any) => {
+    const pdfDoc = new jsPDF();
+    pdfDoc.setFontSize(16);
+    pdfDoc.setFont('helvetica', 'bold');
+    pdfDoc.text("FortuMars AI Technologies & Business Solutions.", pdfDoc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+    pdfDoc.setFontSize(12);
+    pdfDoc.setTextColor(100);
+    pdfDoc.text(`${report.reportType} Daily Report`, pdfDoc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+    pdfDoc.setFontSize(10);
+    pdfDoc.setTextColor(0);
+    pdfDoc.text(`Employee: ${report.employeeName}`, 14, 45);
+    pdfDoc.text(`Designation: ${report.employeeJobTitle} | Dept: ${report.employeeDepartment}`, 14, 50);
+    pdfDoc.text(`Submission Time: ${formatIST(report.date)}`, 14, 55);
+    pdfDoc.text(`Shift Hours: ${report.logInTime || '--:--'} to ${report.logOutTime || '--:--'}`, 14, 60);
+
+    const tableData: any[] = [];
+    if (report.reportType === 'Business' || report.reportType === 'Digital Marketing') {
+        tableData.push(['Cold Calls', report.coldCalls], ['LinkedIn', report.linkedinOutreach], ['Emails', report.emailsSent], ['Follow-ups', report.followUps], ['Potential Clients', report.potentialClients], ['Revenue Collected', `$${report.revenueCollected}`]);
+    }
+    autoTable(pdfDoc, { startY: 70, head: [['Metric', 'Value']], body: tableData, theme: 'striped', headStyles: { fillColor: [107, 33, 168] } });
+    const finalY = (pdfDoc as any).lastAutoTable.finalY + 15;
+    pdfDoc.setFontSize(11);
+    pdfDoc.text("Planning for Tomorrow:", 14, finalY);
+    pdfDoc.setFontSize(9);
+    pdfDoc.text(`Main Goal: ${report.criticalPathTomorrow || 'NIL'}`, 14, finalY + 10);
+    pdfDoc.save(`${report.employeeName}_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  };
+
+  const handleDeleteReport = (report: any) => {
+    if (!isAdmin) return;
+    const reportRef = doc(firestore, `users/${report.employeeId}/reports`, report.id);
+    deleteDocumentNonBlocking(reportRef);
+    toast({ title: "Report Deleted" });
+    setSelectedReportForReview(null);
+    setUserReports(prev => prev.filter(r => r.id !== report.id));
+  };
+
   React.useEffect(() => {
       const fetchReports = async () => {
           if (!userId) return;
-          const q = query(collection(firestore, `users/${userId}/reports`), orderBy('date', 'desc'), limit(10));
-          const snap = await getDocs(q);
-          setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          setIsReportsLoading(true);
+          try {
+              const q = query(collection(firestore, `users/${userId}/reports`), orderBy('date', 'desc'), limit(10));
+              const snap = await getDocs(q);
+              setUserReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          } finally {
+              setIsReportsLoading(false);
+          }
       };
       fetchReports();
   }, [userId, firestore]);
@@ -271,19 +404,19 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         {/* Data Feed Module */}
         <Tabs defaultValue="activity" className="space-y-4">
             <TabsList className="w-full justify-start bg-white/50 backdrop-blur-sm rounded-none p-1.5 h-auto gap-2">
-                {["Activity", "Attendance", "Hierarchy", "Documents", "Assets"].map(tab => (
+                {["Activity", "Attendance", "Hierarchy", "Documents", "Assets", "Bio Data"].map(tab => (
                     <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-white px-10 py-3 font-black uppercase text-[10px] tracking-[0.2em] transition-all">
                         {tab}
                     </TabsTrigger>
                 ))}
             </TabsList>
             <TabsContent value="activity" className="mt-0">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                    <Card className="lg:col-span-8 border-none shadow-sm rounded-none bg-white p-8 space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-1 gap-3">
+                    <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-8">
                         <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Activity History</h3>
                         <div className="space-y-6">
                             {userReports.length > 0 ? userReports.map(r => (
-                                <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd, yyyy')} desc={`Finalized for ${r.employeeDepartment}.`} color="bg-primary/10 text-primary" />
+                                <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd, yyyy')} desc={`Finalized for ${r.employeeDepartment}.`} color="bg-primary/10 text-primary" onClick={() => setSelectedReportForReview(r)} />
                             )) : (
                                 <div className="py-24 flex flex-col items-center justify-center opacity-30 text-center space-y-5">
                                     <div className="p-5 bg-muted/20 rounded-full"><SearchSlash className="size-12 text-primary/40" /></div>
@@ -295,66 +428,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             )}
                         </div>
                     </Card>
-                    <div className="lg:col-span-4 space-y-3">
-                        <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Personal Information</h3>
-                            <div className="space-y-4">
-                                <InfoRow label="Date of Birth" value={user.dob ? format(new Date(user.dob), 'dd MMM yyyy') : 'N/A'} />
-                                <InfoRow label="Gender" value={user.gender || 'N/A'} />
-                                <InfoRow label="Nationality" value={user.nationality || 'N/A'} />
-                                <InfoRow label="Marital Status" value={user.maritalStatus || 'N/A'} />
-                                <InfoRow label="Blood Group" value={user.bloodGroup || 'N/A'} />
-                                <div className="pt-4 flex flex-wrap gap-2">
-                                    {user.languages?.map((lang: string) => (
-                                        <Badge key={lang} variant="secondary" className="text-[10px] font-bold px-3 py-1 uppercase rounded-none">{lang}</Badge>
-                                    )) || <span className="text-[10px] opacity-30">No languages registered</span>}
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Assigned Assets</h3>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Assigned Items</span>
-                                    <Badge className="bg-primary/10 text-primary rounded-none font-black text-[10px]">{assignedAssets?.length || 0}</Badge>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Documents</span>
-                                    <Badge className="bg-emerald-500/10 text-emerald-600 rounded-none font-black text-[10px]">{documents?.length || 0}</Badge>
-                                </div>
-                            </div>
-                        </Card>
-                        
-                        <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Hierarchy</h3>
-                            <div className="space-y-6">
-                                <InfoRow label="Reporting Type" value={user.teamId ? "Team Member" : "Individual"} />
-                                <div className="p-5 bg-muted/20 rounded-none border border-dashed border-border/50">
-                                    <p className="text-[10px] font-black uppercase text-muted-foreground/60 mb-5">Reporting To</p>
-                                    {reportingHeads.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {reportingHeads.map(head => (
-                                                <Link key={head.id} href={`/dashboard/users/${head.id}`} className="flex items-center gap-5 group">
-                                                    <Avatar className="size-12 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
-                                                        <AvatarImage src={head.avatar} className="object-cover rounded-none" />
-                                                        <AvatarFallback className="font-bold rounded-none">{head.firstName[0]}</AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="font-black text-sm uppercase truncate group-hover:text-primary transition-colors">{head.firstName} {head.lastName}</p>
-                                                        <p className="text-[10px] font-black uppercase text-primary truncate tracking-tight">{head.jobTitle}</p>
-                                                    </div>
-                                                    <ShieldCheck className="size-5 text-primary opacity-40 group-hover:opacity-100 transition-opacity" />
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm font-bold text-muted-foreground uppercase opacity-40 italic">Direct reporting to Admin</p>
-                                    )}
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
                 </div>
             </TabsContent>
             <TabsContent value="attendance">
@@ -501,7 +574,111 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     )}
                 </Card>
             </TabsContent>
+            <TabsContent value="bio data">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Mission Bio Data</h3>
+                        <div className="space-y-4">
+                            <InfoRow label="Date of Birth" value={user.dob ? format(new Date(user.dob), 'dd MMM yyyy') : 'N/A'} />
+                            <InfoRow label="Gender" value={user.gender || 'N/A'} />
+                            <InfoRow label="Nationality" value={user.nationality || 'N/A'} />
+                            <InfoRow label="Marital Status" value={user.maritalStatus || 'N/A'} />
+                            <InfoRow label="Blood Group" value={user.bloodGroup || 'N/A'} />
+                            <div className="pt-4 flex flex-wrap gap-2">
+                                {user.languages?.map((lang: string) => (
+                                    <Badge key={lang} variant="secondary" className="text-[10px] font-bold px-3 py-1 uppercase rounded-none">{lang}</Badge>
+                                )) || <span className="text-[10px] opacity-30">No languages registered</span>}
+                            </div>
+                        </div>
+                    </Card>
+                    <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Employment Context</h3>
+                        <div className="space-y-4">
+                            <InfoRow label="Employment Type" value={user.employmentType || 'Intern'} />
+                            <InfoRow label="Shift Profile" value={user.shiftType || 'General Shift'} />
+                            <InfoRow label="Role Tier" value={user.role || 'Member'} />
+                            <InfoRow label="Office Bound" value={user.isWfhAllowed ? "Remote Allowed" : "Branch Primary"} />
+                        </div>
+                    </Card>
+                </div>
+            </TabsContent>
         </Tabs>
+
+        {/* Report Review Dialog */}
+        <Dialog open={!!selectedReportForReview} onOpenChange={o => !o && setSelectedReportForReview(null)}>
+            <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+                <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center">
+                    <div>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Mission Audit Log</DialogTitle>
+                        <p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary" onClick={() => handleDownloadPdfReport(selectedReportForReview)}><FileDown className="size-3 mr-1.5" /> Download Audit</Button>
+                        {isAdmin && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest"><Trash2 className="size-3 mr-1.5"/> Delete</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="rounded-3xl">
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Purge Report Record?</AlertDialogTitle>
+                                        <AlertDialogDescription>This will permanently remove this tactical submission from the identity log.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteReport(selectedReportForReview)} className="rounded-full font-bold uppercase text-[10px] bg-red-600">Confirm Purge</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                        <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest h-8">{selectedReportForReview?.reportType}</Badge>
+                    </div>
+                </DialogHeader>
+                <ScrollArea className="flex-1 p-8 bg-secondary/10">
+                    <div className="space-y-8 pb-10">
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personnel</p><p className="font-bold text-lg">{selectedReportForReview?.employeeName}</p></div>
+                            <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sector</p><p className="font-bold text-lg">{selectedReportForReview?.employeeDepartment}</p></div>
+                        </div>
+                        <Separator />
+                        {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
+                        {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
+                        {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetail report={selectedReportForReview} />}
+                        
+                        <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm">
+                            <CardHeader className="bg-muted/10 py-3">
+                                <CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> Planning (T+1)</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div><p className="text-[9px] font-bold text-muted-foreground uppercase">Target Meets</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div>
+                                    <div><p className="text-[9px] font-bold text-muted-foreground uppercase">Priority Trigger</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div>
+                                </div>
+                                <div className="p-4 bg-muted/10 border-l-4 border-primary">
+                                    <p className="text-[8px] font-black uppercase text-primary mb-1">Primary Objective</p>
+                                    <p className="text-sm font-medium italic">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        
+                        <div className="pt-10 flex flex-col items-center text-center space-y-6">
+                            <div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">
+                                {selectedReportForReview?.signatureUrl ? (
+                                    <img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />
+                                ) : (
+                                    <span className="font-mono text-[10px] italic opacity-60">Verified Digitally</span>
+                                )}
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle}</p>
+                                <p className="text-[8px] font-mono text-muted-foreground italic mt-2">Audit Timestamp: {formatIST(selectedReportForReview?.date)}</p>
+                            </div>
+                        </div>
+                    </div>
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
@@ -538,12 +715,12 @@ function MetricStat({ label, val, color }: any) {
     return <div className="text-center"><p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-tighter">{label}</p><p className={cn("text-sm font-black", color)}>{val}</p></div>;
 }
 
-function TimelineItem({ icon: Icon, title, time, desc, color }: any) {
+function TimelineItem({ icon: Icon, title, time, desc, color, onClick }: any) {
     return (
-        <div className="flex gap-8 items-start relative group">
+        <div className="flex gap-8 items-start relative group cursor-pointer" onClick={onClick}>
             <div className={cn("h-12 w-12 rounded-none flex items-center justify-center shrink-0 z-10 shadow-lg transition-transform group-hover:scale-110", color)}><Icon className="size-6" /></div>
             <div className="space-y-2 flex-1 pt-1">
-                <p className="font-black text-lg uppercase tracking-tight text-foreground/90 leading-none">{title}</p>
+                <p className="font-black text-lg uppercase tracking-tight text-foreground/90 leading-none group-hover:text-primary transition-colors">{title}</p>
                 <div className="flex items-center gap-4">
                     <span className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">{time}</span>
                     <Badge variant="outline" className="h-6 px-4 text-[10px] font-black uppercase border-none bg-muted/40 tracking-widest rounded-none">{desc}</Badge>
