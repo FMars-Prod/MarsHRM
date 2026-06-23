@@ -1,9 +1,9 @@
-
 'use client';
 
 import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, where } from 'firebase/firestore';
@@ -343,15 +343,6 @@ export default function ProjectsPage() {
                     </div>
                 </CardContent>
             </Card>
-        </div>
-    );
-}
-
-function MetricStat({ label, val, color }: any) {
-    return (
-        <div className="text-center">
-            <p className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-tighter">{label}</p>
-            <p className={cn("text-xs font-black", color)}>{val}</p>
         </div>
     );
 }
