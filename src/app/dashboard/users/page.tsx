@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -120,7 +121,7 @@ export default function UsersPage() {
         (position) => {
           form.setValue("homeLatitude", position.coords.latitude);
           form.setValue("homeLongitude", position.coords.longitude);
-          toast({ title: "Signal Captured" });
+          toast({ title: "Location Captured" });
         },
         (error) => {
           toast({ variant: "destructive", title: "GPS Error", description: error.message });
@@ -247,9 +248,9 @@ export default function UsersPage() {
         });
 
         await batch.commit();
-        toast({ title: "Identity Wiped" });
+        toast({ title: "Account Deleted" });
     } catch (err: any) {
-        toast({ variant: 'destructive', title: "Purge Failed", description: err.message });
+        toast({ variant: 'destructive', title: "Delete Failed", description: err.message });
     } finally {
         setIsPurging(false);
         setUserToDelete(null);
@@ -276,14 +277,14 @@ export default function UsersPage() {
   return (
     <TooltipProvider delayDuration={0}>
     <div className="space-y-8 animate-fade-in-up">
-      <PageHeader title="Staff Registry" description="Global directory of team members with industrial table alignment.">
+      <PageHeader title="Employees" description="Manage all team members and their roles.">
         <div className="flex gap-2">
             <Dialog open={isDialogOpen} onOpenChange={(open) => { if(!open) { setEditingUser(null); setManagerSearchQuery(""); } setIsDialogOpen(open); }}>
                 <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button></DialogTrigger>
                 <DialogContent className="sm:max-w-2xl rounded-none p-8 border-none shadow-2xl">
                     <DialogHeader className="text-left">
                         <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Profile' : 'Register New Member'}</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Provision tactical identity access</DialogDescription>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Provide system access and details</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-8 px-8">
                         <Form {...form}>
@@ -320,7 +321,7 @@ export default function UsersPage() {
                                         <div className="p-4 border-b bg-muted/20 flex items-center gap-4">
                                             <Search className="size-4 text-muted-foreground/50" />
                                             <Input 
-                                                placeholder="Search Fleet Roster..." 
+                                                placeholder="Search members..." 
                                                 className="h-8 border-none ring-0 focus-visible:ring-0 bg-transparent text-xs font-bold uppercase tracking-tight p-0"
                                                 onChange={(e) => setManagerSearchQuery(e.target.value)}
                                             />
@@ -371,16 +372,16 @@ export default function UsersPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className={cn("text-[10px] font-black uppercase text-primary tracking-widest", isWfhAllowedValue && "opacity-20")}>Office Assignment</FormLabel>
+                                            <FormLabel className={cn("text-[10px] font-black uppercase text-primary tracking-widest", isWfhAllowedValue && "opacity-20")}>Office Branch</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ""} disabled={isWfhAllowedValue}>
-                                                <FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder={isWfhAllowedValue ? "REMOTE OPS" : "Select Branch"} /></SelectTrigger></FormControl>
+                                                <FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder={isWfhAllowedValue ? "REMOTE" : "Select Branch"} /></SelectTrigger></FormControl>
                                                 <SelectContent className="rounded-none">
                                                     {branches?.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                         </FormItem>
                                     )} />
-                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Profile</FormLabel><FormControl><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Type</FormLabel><FormControl><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -389,7 +390,7 @@ export default function UsersPage() {
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="role" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Account Tier</FormLabel>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">User Role</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/MD">CEO/MD</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                 </div>
@@ -414,8 +415,8 @@ export default function UsersPage() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
                                         <div className="space-y-0.5">
-                                            <Label className="text-sm font-black uppercase tracking-tight">Allow WFH Mode</Label>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Authorize remote logging</p>
+                                            <Label className="text-sm font-black uppercase tracking-tight">Allow Work From Home</Label>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Enable remote attendance tracking</p>
                                         </div>
                                         <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} className="rounded-none" />)} />
                                     </div>
@@ -433,7 +434,7 @@ export default function UsersPage() {
                                                     className="h-8 rounded-none text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5"
                                                     onClick={handleGetCurrentLocation}
                                                 >
-                                                    <LocateFixed className="size-3 mr-1.5" /> Capture Signal
+                                                    <LocateFixed className="size-3 mr-1.5" /> Get Location
                                                 </Button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
@@ -460,8 +461,8 @@ export default function UsersPage() {
                                     )}
                                 </div>
                                 
-                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
-                                <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Register Staff Member</Button>
+                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Account Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
+                                <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Finalize Profile</Button>
                             </form>
                         </Form>
                     </ScrollArea>
@@ -477,19 +478,19 @@ export default function UsersPage() {
               <TableHead className="w-[60px] py-6 px-6">
                   <Checkbox checked={selectedUserIds.length === (users?.length || 0) && (users?.length || 0) > 0} onCheckedChange={toggleSelectAll} className="rounded-none" />
               </TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Identity</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Staff Member</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Sector</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Shift Profile</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">System Tier</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-8">Control</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Avatar</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Name & Title</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Location</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Shift</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Role</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-8">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Synchronizing Registry...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Loading employees...</TableCell></TableRow>
             ) : users?.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No units registered.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No employees found.</TableCell></TableRow>
             ) : users?.map(u => {
               const userBranch = branches?.find((b: any) => b.id === u.branchId);
               const isRemote = u.isWfhAllowed;
@@ -522,7 +523,7 @@ export default function UsersPage() {
                                 </Link>
                                 {isExecutive && complianceCount > 0 && (
                                     <Badge className="bg-red-600 text-white animate-pulse rounded-none font-black text-[7px] h-4 px-1.5 border-none">
-                                        {complianceCount} PROTOCOL ALERTS
+                                        {complianceCount} ALERTS
                                     </Badge>
                                 )}
                             </div>
@@ -532,7 +533,7 @@ export default function UsersPage() {
                     <TableCell className="py-6 align-middle">
                         {isRemote ? (
                             <Badge className="bg-sky-100 text-sky-700 text-[8px] font-black uppercase border-none px-2 h-6 rounded-none flex gap-1.5 items-center w-fit shadow-sm">
-                                <Home className="size-3"/> REMOTE SECTOR
+                                <Home className="size-3"/> REMOTE
                             </Badge>
                         ) : (
                             <div className="flex items-center gap-2.5 text-xs font-bold uppercase text-foreground/70">
@@ -556,7 +557,7 @@ export default function UsersPage() {
                                 <Button variant="ghost" size="icon" className="rounded-none h-9 w-9 hover:bg-muted/50"><MoreHorizontal className="size-4.5" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-56">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2">Mission Control</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2">Profile Actions</DropdownMenuLabel>
                                 <DropdownMenuItem asChild className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
                                     <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-4 text-primary" /> View Profile</Link>
                                 </DropdownMenuItem>
@@ -568,7 +569,7 @@ export default function UsersPage() {
                                         </DropdownMenuItem>
                                         
                                         <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToReset(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-amber-50 text-amber-600">
-                                            <RotateCcw className="size-4" /> Reset Today's Attendance
+                                            <RotateCcw className="size-4" /> Reset Attendance
                                         </DropdownMenuItem>
 
                                         <DropdownMenuSeparator />
@@ -615,7 +616,7 @@ export default function UsersPage() {
                       <Trash2 className="size-5" /> Delete User?
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                      Are you sure you want to delete <span className="font-bold text-foreground">{userToDelete?.firstName}</span>? This will permanently remove all their data.
+                      Are you sure you want to delete <span className="font-bold text-foreground">{userToDelete?.firstName}</span>? This will permanently remove all their records.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="mt-8 gap-3">

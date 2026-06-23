@@ -98,12 +98,7 @@ export default function TeamsPage() {
                 supervisorId: finalSupervisorId,
                 memberIds: allMemberIdsForTeam 
             });
-            
-            // We no longer exclusively assign teamId to user because they can be in multiple teams
-            // But we can keep it as a 'primary' team for legacy if needed. 
-            // For now, we rely on the Team entity's memberIds as the source of truth.
-            
-            toast({ title: 'Team Configuration Updated' });
+            toast({ title: 'Team Updated' });
         } else {
             const newTeamRef = doc(collection(firestore, 'teams'));
             batch.set(newTeamRef, { 
@@ -113,7 +108,7 @@ export default function TeamsPage() {
                 supervisorId: finalSupervisorId, 
                 memberIds: allMemberIdsForTeam 
             });
-            toast({ title: 'New Team Unit Dispatched' });
+            toast({ title: 'New Team Created' });
         }
         await batch.commit();
         setIsDialogOpen(false);
@@ -127,7 +122,7 @@ export default function TeamsPage() {
 
     const handleDeleteTeam = async (teamId: string) => {
         deleteDocumentNonBlocking(doc(firestore, 'teams', teamId));
-        toast({ title: "Team Deleted", description: "The team has been removed from the registry." });
+        toast({ title: "Team Deleted", description: "The team has been removed." });
     }
 
     const isUrl = (str?: string) => str && str.startsWith('http');
@@ -147,7 +142,7 @@ export default function TeamsPage() {
     return (
         <TooltipProvider delayDuration={0}>
         <>
-            <PageHeader title="Organizational Units" description="Manage tactical team associations and leadership hierarchies.">
+            <PageHeader title="Teams" description="Manage team associations and internal structure.">
                 {canManageAllTeams && (
                     <Button onClick={() => setIsDialogOpen(true)} className="rounded-none h-11 shadow-lg bg-primary text-white font-black uppercase text-[10px] tracking-widest px-6">
                       <PlusCircle className="mr-2" /> Add Team
@@ -158,22 +153,22 @@ export default function TeamsPage() {
                 <Table>
                     <TableHeader className="bg-muted/10 border-b">
                         <TableRow className="hover:bg-transparent">
-                            <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 px-6">Team Unit</TableHead>
-                            <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Lead Strategist</TableHead>
-                            <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Primary Supervisor</TableHead>
-                            <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Fleet Size</TableHead>
-                            <TableHead className="text-right font-black uppercase tracking-widest text-[10px] py-6 px-8">Control</TableHead>
+                            <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 px-6">Team Name</TableHead>
+                            <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Team Lead</TableHead>
+                            <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Supervisor</TableHead>
+                            <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Team Size</TableHead>
+                            <TableHead className="text-right font-black uppercase tracking-widest text-[10px] py-6 px-8">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {teamsLoading ? (<TableRow><TableCell colSpan={5} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Syncing Units...</TableCell></TableRow>) : teams?.length === 0 ? (
-                             <TableRow><TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No tactical teams currently deployed.</TableCell></TableRow>
+                        {teamsLoading ? (<TableRow><TableCell colSpan={5} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Loading Teams...</TableCell></TableRow>) : teams?.length === 0 ? (
+                             <TableRow><TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No teams found.</TableCell></TableRow>
                         ) : teams?.map(team => (
                             <TableRow key={team.id} className="border-border/50 hover:bg-primary/5 transition-colors">
                                 <TableCell className="font-black text-base uppercase tracking-tight py-6 px-6">{team.name}</TableCell>
                                 <TableCell className="font-bold text-xs text-primary uppercase">{getTeamLeadName(team.teamLeadId)}</TableCell>
                                 <TableCell className="font-bold text-[10px] uppercase text-muted-foreground opacity-60">{getSupervisorName(team.supervisorId)}</TableCell>
-                                <TableCell><Badge variant="secondary" className="rounded-none font-black text-[10px] px-3">{team.memberIds?.length || 0} Units</Badge></TableCell>
+                                <TableCell><Badge variant="secondary" className="rounded-none font-black text-[10px] px-3">{team.memberIds?.length || 0} Members</Badge></TableCell>
                                 <TableCell className="text-right px-8">
                                     <div className="flex justify-end items-center gap-2">
                                         <Tooltip>
@@ -182,7 +177,7 @@ export default function TeamsPage() {
                                                     <Users className="size-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Review Fleet</TooltipContent>
+                                            <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Review Members</TooltipContent>
                                         </Tooltip>
 
                                         {canManageAllTeams && (
@@ -200,7 +195,7 @@ export default function TeamsPage() {
                                                             <Edit className="size-4" />
                                                         </Button>
                                                     </TooltipTrigger>
-                                                    <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Reconfigure Unit</TooltipContent>
+                                                    <TooltipContent className="bg-sidebar text-white text-[10px] font-black uppercase rounded-none">Edit Team</TooltipContent>
                                                 </Tooltip>
 
                                                 <AlertDialog>
@@ -212,7 +207,7 @@ export default function TeamsPage() {
                                                     <AlertDialogContent className="rounded-none border-none shadow-2xl">
                                                         <AlertDialogHeader>
                                                             <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Delete Team?</AlertDialogTitle>
-                                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed">Are you sure you want to delete this team? All members will be removed from the team registry.</AlertDialogDescription>
+                                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed">Are you sure you want to delete this team? All member associations for this team will be removed.</AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter className="mt-8 gap-3">
                                                             <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
@@ -233,7 +228,7 @@ export default function TeamsPage() {
             <Sheet open={!!selectedTeamForSheet} onOpenChange={o => !o && setSelectedTeamForSheet(null)}>
                 <SheetContent className="rounded-none border-none shadow-2xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col">
                     <SheetHeader className="p-6 border-b bg-white shrink-0">
-                      <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">{selectedTeamForSheet?.name} Fleet</SheetTitle>
+                      <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">{selectedTeamForSheet?.name} Members</SheetTitle>
                     </SheetHeader>
                     <ScrollArea className="flex-1">
                         <div className="p-6 space-y-3 pb-20">
@@ -267,17 +262,17 @@ export default function TeamsPage() {
             <Dialog open={isDialogOpen} onOpenChange={(o) => { if(!o) { setEditingTeam(null); setTeamName(""); setTeamLeadId("unassigned"); setSupervisorId("unassigned"); setSelectedMemberIds([]); setMemberSearchQuery(""); } setIsDialogOpen(o); }}>
                 <DialogContent className="rounded-none sm:max-w-lg p-8 border-none shadow-2xl">
                     <DialogHeader className="text-left">
-                      <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingTeam ? 'Reconfigure Unit' : 'Dispatch New Team'}</DialogTitle>
+                      <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingTeam ? 'Edit Team' : 'Create Team'}</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-6 py-6">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Unit Designation</Label>
-                          <Input value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g., Tactical Growth Division" className="rounded-none h-12 font-bold text-sm" />
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Team Name</Label>
+                          <Input value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g., Development Team" className="rounded-none h-12 font-bold text-sm" />
                         </div>
                         
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                <ShieldCheck className="size-3" /> Primary Supervisor (Level 1/2)
+                                <ShieldCheck className="size-3" /> Assigned Supervisor
                             </Label>
                             <Select value={supervisorId} onValueChange={setSupervisorId}>
                                 <SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Supervisor" /></SelectTrigger>
@@ -289,11 +284,11 @@ export default function TeamsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Lead Strategist (Optional)</Label>
+                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Team Lead (Optional)</Label>
                             <Select value={teamLeadId} onValueChange={setTeamLeadId}>
                                 <SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select leader" /></SelectTrigger>
                                 <SelectContent className="rounded-none">
-                                    <SelectItem value="unassigned">No Lead (Self-Managed)</SelectItem>
+                                    <SelectItem value="unassigned">No Lead assigned</SelectItem>
                                     {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                                 </SelectContent>
                             </Select>
@@ -301,14 +296,14 @@ export default function TeamsPage() {
 
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Fleet Roster</Label>
+                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Members</Label>
                                 <Badge variant="outline" className="rounded-none text-[8px] font-black uppercase px-2">{selectedMemberIds.length} Selected</Badge>
                             </div>
                             
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
                                 <Input 
-                                    placeholder="Search Fleet members..." 
+                                    placeholder="Search members..." 
                                     value={memberSearchQuery}
                                     onChange={e => setMemberSearchQuery(e.target.value)}
                                     className="pl-10 h-10 rounded-none bg-muted/20 border-none ring-1 ring-border/50 text-xs font-bold uppercase"
@@ -342,14 +337,14 @@ export default function TeamsPage() {
                                         </div>
                                     ))}
                                     {filteredMembers.length === 0 && (
-                                        <div className="py-10 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No matching personnel</div>
+                                        <div className="py-10 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No results</div>
                                     )}
                                 </div>
                             </ScrollArea>
                         </div>
                     </div>
                     <DialogFooter>
-                      <Button onClick={handleCreateOrUpdateTeam} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-xl shadow-primary/20">Finalize Deployment</Button>
+                      <Button onClick={handleCreateOrUpdateTeam} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-xl shadow-primary/20">Save Team</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

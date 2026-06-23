@@ -72,7 +72,7 @@ const ExecutionPlanFields = () => {
         <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden mt-8">
             <CardHeader className="bg-muted/10 py-3">
                 <CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest">
-                    <Target className="size-4" /> 5️⃣ Planning (T+1)
+                    <Target className="size-4" /> 5️⃣ Tomorrow's Plan
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
@@ -106,7 +106,7 @@ const ExecutionPlanFields = () => {
                 )} />
                 <FormField control={control} name="criticalPathTomorrow" render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Tomorrow's Main Goal</FormLabel>
+                        <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Main Goal</FormLabel>
                         <FormControl><Textarea {...field} placeholder="The single most important objective for tomorrow." className="rounded-xl min-h-[80px]" /></FormControl>
                     </FormItem>
                 )} />
@@ -215,7 +215,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue & Financial Impact</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue Impact</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField control={control} name="revenueCollected" render={({ field }) => (
@@ -228,7 +228,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                             <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Pipeline Value</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
                         <FormField control={control} name="revenueVariance" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Revenue Notes</FormLabel><FormControl><Input {...field} placeholder="Reason for variance, if any" className="rounded-xl h-11" /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Revenue Notes</FormLabel><FormControl><Input {...field} placeholder="Notes..." className="rounded-xl h-11" /></FormControl></FormItem>
                         )} />
                     </div>
                 </CardContent>
@@ -246,7 +246,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                         )} />
                     </div>
                     <FormField control={control} name="clientWin" render={({ field }) => (
-                        <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Client Win Highlight</FormLabel><FormControl><Textarea {...field} placeholder="Details of any successful deal" className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
+                        <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Success Highlight</FormLabel><FormControl><Textarea {...field} placeholder="Details of any successful deal..." className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
                     )} />
                     <FormField control={control} name="strategicLearning" render={({ field }) => (
                         <FormItem><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Key Learnings</FormLabel><FormControl><Textarea {...field} placeholder="What did you learn today?" className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
@@ -259,8 +259,8 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                 <CardContent className="space-y-6 pt-6">
                     <FormField control={control} name="totalCallRecordings" render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-[9px] uppercase font-bold text-primary">Call Recording Folder Link</FormLabel>
-                            <FormControl><Input {...field} placeholder="Paste shared drive link here..." className="rounded-xl h-11" /></FormControl>
+                            <FormLabel className="text-[9px] uppercase font-bold text-primary">Call Recordings Folder</FormLabel>
+                            <FormControl><Input {...field} placeholder="Paste shared link here..." className="rounded-xl h-11" /></FormControl>
                         </FormItem>
                     )} />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -301,7 +301,7 @@ const MarketingMatrixTable = () => {
 
     return (
         <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden">
-            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest">Marketing Matrix</CardTitle></CardHeader>
+            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-xs font-bold flex items-center gap-2 text-purple-700 uppercase tracking-widest">Deliverable Matrix</CardTitle></CardHeader>
             <CardContent className="pt-6">
                 <div className="border rounded-2xl overflow-hidden bg-white/50">
                     <Table>
@@ -356,7 +356,7 @@ const TechnicalProjectItem = ({ index, control }: { index: number, control: any 
                     <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Project Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
                 )} />
                 <FormField control={control} name={`technicalProjects.${index}.type`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Type</FormLabel>
+                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Category</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent><SelectItem value="Client">Client</SelectItem><SelectItem value="In House">In House</SelectItem><SelectItem value="Demo">Demo</SelectItem></SelectContent>
@@ -368,18 +368,18 @@ const TechnicalProjectItem = ({ index, control }: { index: number, control: any 
                 )} />
             </div>
             <FormField control={control} name={`technicalProjects.${index}.description`} render={({ field }) => (
-                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Work Details</FormLabel><FormControl><Textarea {...field} className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
+                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Task Details</FormLabel><FormControl><Textarea {...field} className="rounded-xl min-h-[60px]" /></FormControl></FormItem>
             )} />
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
                 <FormField control={control} name={`technicalProjects.${index}.isCompleted`} render={({ field }) => (
                     <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                         <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        <FormLabel className="text-[10px] font-black uppercase">Task Completed</FormLabel>
+                        <FormLabel className="text-xs font-bold">TASK COMPLETED</FormLabel>
                     </FormItem>
                 )} />
                 {isCompleted && (
                     <FormField control={control} name={`technicalProjects.${index}.liveLink`} render={({ field }) => (
-                        <FormItem className="flex-1"><FormControl><Input {...field} placeholder="Project or demo link" className="rounded-xl h-9" /></FormControl></FormItem>
+                        <FormItem className="flex-1"><FormControl><Input {...field} placeholder="Project or Demo Link" className="rounded-xl h-9" /></FormControl></FormItem>
                     )} />
                 )}
             </div>
@@ -391,9 +391,9 @@ const TechnicalMeetingItem = ({ index, control }: { index: number, control: any 
     return (
         <div className="p-4 rounded-2xl border bg-white grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField control={control} name={`technicalMeetings.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Client Name</FormLabel><FormControl><Input {...field} className="rounded-lg h-9" /></FormControl></FormItem>)} />
-            <FormField control={control} name={`technicalMeetings.${index}.productName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Product Name</FormLabel><FormControl><Input {...field} className="rounded-lg h-9" /></FormControl></FormItem>)} />
+            <FormField control={control} name={`technicalMeetings.${index}.productName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Product</FormLabel><FormControl><Input {...field} className="rounded-lg h-9" /></FormControl></FormItem>)} />
             <FormField control={control} name={`technicalMeetings.${index}.status`} render={({ field }) => (
-                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-lg h-9"><SelectValue /></SelectTrigger></FormControl><SelectContent>{["Won", "Close", "Pending", "In Review", "Followup", "New"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Outcome</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-lg h-9"><SelectValue /></SelectTrigger></FormControl><SelectContent>{["Won", "Close", "Pending", "In Review", "Followup", "New"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
             )} />
         </div>
     );
@@ -439,7 +439,7 @@ const TechnicalFields = () => {
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><PhoneCall className="size-4"/> 1️⃣ Client Engagements</CardTitle></CardHeader>
                 <CardContent className="pt-6 space-y-6">
                     <FormField control={control} name="clientMeetingsCount" render={({ field }) => (
-                        <FormItem className="max-w-[200px]"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Number of Meetings</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                        <FormItem className="max-w-[200px]"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Meetings Today</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                     )} />
                     <div className="space-y-4">
                         {meetingFields.map((field, index) => (
@@ -453,7 +453,7 @@ const TechnicalFields = () => {
                 <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Briefcase className="size-4"/> 2️⃣ Task Progress</CardTitle></CardHeader>
                 <CardContent className="pt-6 space-y-6">
                     <FormField control={control} name="projectsWorkedCount" render={({ field }) => (
-                        <FormItem className="max-w-[200px]"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Total Projects Worked</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
+                        <FormItem className="max-w-[200px]"><FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Active Projects</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-xl h-11" /></FormControl></FormItem>
                     )} />
                     <div className="space-y-6">
                         {projectFields.map((field, index) => (
@@ -464,10 +464,10 @@ const TechnicalFields = () => {
             </Card>
 
             <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Brain className="size-4"/> 3️⃣ Learnings & Notes</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Brain className="size-4"/> 3️⃣ Notes & Learnings</CardTitle></CardHeader>
                 <CardContent className="pt-6 space-y-6">
                     <div className="flex gap-2">
-                        <Input value={learningInput} onChange={e => setLearningRegistryInput(e.target.value)} placeholder="What did you learn today?" className="rounded-xl h-11" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addLearning())} />
+                        <Input value={learningInput} onChange={e => setLearningRegistryInput(e.target.value)} placeholder="Add a note or learning..." className="rounded-xl h-11" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addLearning())} />
                         <Button type="button" size="icon" className="h-11 w-11 rounded-xl" onClick={addLearning}><Plus className="size-5" /></Button>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -504,7 +504,7 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
                 </div>
             </div>
             <div className="space-y-4">
-                <div className="flex items-center gap-2 text-green-600 font-black uppercase text-[10px] tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue & Impact</div>
+                <div className="flex items-center gap-2 text-green-600 font-black uppercase text-[10px] tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue Impact</div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Revenue Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
                     <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed Revenue</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
@@ -513,14 +513,14 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><CheckCircle2 className="size-4" /> 3️⃣ Key Engagements</div>
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50"><p className="text-[9px] font-black uppercase text-muted-foreground">Quotations Released</p><p className="text-xl font-black">{report.quotationsReleased || 0}</p></div>
-                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50"><p className="text-[9px] font-black uppercase text-muted-foreground">Meetings Secured</p><p className="text-xl font-black">{report.meetingsSecured || 0}</p></div>
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50"><p className="text-[9px] font-black uppercase text-muted-foreground">Quotations</p><p className="text-xl font-black">{report.quotationsReleased || 0}</p></div>
+                    <div className="p-4 bg-white rounded-2xl ring-1 ring-border/50"><p className="text-[9px] font-black uppercase text-muted-foreground">Meetings</p><p className="text-xl font-black">{report.meetingsSecured || 0}</p></div>
                 </div>
             </div>
             <div className="p-4 bg-primary/5 rounded-2xl space-y-4">
-                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence</p>
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Logs</p>
                 <div className="grid gap-4">
-                    {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> View Call Recordings Folder</Link></Button>}
+                    {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> View Recordings</Link></Button>}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[['Best Call', report.bestCallRecording, 'text-green-600'], ['Worst Call', report.worstCallRecording, 'text-red-600']].map(([l, v, c], i) => v && (
                             <div key={i} className="p-3 bg-white rounded-xl ring-1 ring-border/50 space-y-2"><p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", c)}><Mic className="size-3"/> {l}</p><audio controls className="w-full h-8 scale-90 -ml-2"><source src={v} /></audio></div>
@@ -558,15 +558,15 @@ const TechnicalAuditDetail = ({ report }: { report: any }) => (
         <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4"/> Client Engagements</p>
             <div className="grid grid-cols-1 gap-3">{report.technicalMeetings?.map((m: any, i: number) => (
                 <div key={i} className="p-3 bg-white rounded-xl border flex items-center justify-between"><div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div><Badge variant="outline" className="text-[8px] uppercase font-black">{m.status}</Badge></div>
-            )) || <p className="text-xs italic text-muted-foreground">No engagements logged.</p>}</div>
+            )) || <p className="text-xs italic text-muted-foreground">No engagements found.</p>}</div>
         </div>
         <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Briefcase className="size-4"/> Task Progress</p>
             <div className="grid grid-cols-1 gap-4">{report.technicalProjects?.map((p: any, i: number) => (
                 <Card key={i} className="p-4 border-none ring-1 ring-border/50 bg-white"><div className="flex justify-between items-start mb-3"><div><p className="font-bold text-sm">{p.projectName}</p><p className="text-[10px] uppercase text-muted-foreground">{p.type}</p></div><div className="text-right"><p className="text-lg font-black text-primary">{p.statusPercent}%</p><p className="text-[8px] uppercase font-bold text-muted-foreground">Progress</p></div></div><p className="text-xs italic text-muted-foreground mb-3">"{p.description}"</p>{p.isCompleted && p.liveLink && <Button variant="ghost" size="sm" className="w-full h-8 text-[9px] font-bold uppercase gap-2 bg-primary/5 text-primary" asChild><Link href={p.liveLink} target="_blank"><LinkIcon className="size-3"/> View Project</Link></Button>}</Card>
-            )) || <p className="text-xs italic text-muted-foreground">No projects logged.</p>}</div>
+            )) || <p className="text-xs italic text-muted-foreground">No projects found.</p>}</div>
         </div>
         <div className="space-y-3"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Brain className="size-4"/> Notes & Learnings</p>
-            <div className="flex flex-wrap gap-2">{report.learnedToday?.map((l: string, i: number) => <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-full text-[10px] font-bold">{l}</Badge>) || <p className="text-xs italic text-muted-foreground">No learnings recorded.</p>}</div>
+            <div className="flex flex-wrap gap-2">{report.learnedToday?.map((l: string, i: number) => <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-full text-[10px] font-bold">{l}</Badge>) || <p className="text-xs italic text-muted-foreground">No notes found.</p>}</div>
         </div>
     </div>
 );
@@ -623,7 +623,6 @@ export default function ReportsPage() {
         const weekStart = startOfWeek(now, { weekStartsOn: 1 });
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
-        // Fetch all attendances for the week
         const attQuery = query(
             collectionGroup(firestore, 'attendances'),
             where('checkInTime', '>=', Timestamp.fromDate(weekStart)),
@@ -632,7 +631,6 @@ export default function ReportsPage() {
         const attSnap = await getDocs(attQuery);
         const attData = attSnap.docs.map(d => d.data());
 
-        // Fetch all reports for the week
         const reportsQuery = query(
             collectionGroup(firestore, 'reports'),
             where('date', '>=', Timestamp.fromDate(weekStart)),
@@ -652,7 +650,6 @@ export default function ReportsPage() {
                 }
             });
 
-            // Aggregate Report Data
             const aggregates = {
                 coldCalls: 0,
                 linkedin: 0,
@@ -694,7 +691,7 @@ export default function ReportsPage() {
 
         setWeeklySummaryData(results);
     } catch (err) {
-        toast({ variant: 'destructive', title: 'Weekly Sync Failed' });
+        toast({ variant: 'destructive', title: 'Summary Sync Failed' });
     } finally {
         setIsWeeklyLoading(false);
     }
@@ -745,7 +742,7 @@ export default function ReportsPage() {
     await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
     setDocumentNonBlocking(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
 
-    toast({ title: "Report Submitted", description: "Your daily report has been saved." });
+    toast({ title: "Report Submitted", description: "Saved successfully." });
     setIsAddDialogOpen(false);
   };
 
@@ -782,9 +779,9 @@ export default function ReportsPage() {
       autoTable(pdfDoc, { startY: 70, head: [['Metric', 'Value']], body: tableData, theme: 'striped', headStyles: { fillColor: [107, 33, 168] } });
       const finalY = (pdfDoc as any).lastAutoTable.finalY + 15;
       pdfDoc.setFontSize(11);
-      pdfDoc.text("Planning for Tomorrow:", 14, finalY);
+      pdfDoc.text("Tomorrow's Plan:", 14, finalY);
       pdfDoc.setFontSize(9);
-      pdfDoc.text(`Main Goal: ${report.criticalPathTomorrow || 'NIL'}`, 14, finalY + 10);
+      pdfDoc.text(`Goal: ${report.criticalPathTomorrow || 'NIL'}`, 14, finalY + 10);
       pdfDoc.save(`${report.employeeName}_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
   };
 
@@ -805,7 +802,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={isLeadOrHigher ? "Team Reports" : "My Reports"} description="View and submit daily work reports.">
+      <PageHeader title={isLeadOrHigher ? "Reports" : "My Reports"} description="Submit and review work activity logs.">
           {!hasReportedToday ? (
             <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-full h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4"/> New Report</Button>
           ) : (
@@ -828,21 +825,21 @@ export default function ReportsPage() {
                     <History className="size-3.5"/> Individual Logs
                 </TabsTrigger>
                 <TabsTrigger value="weekly" className="rounded-lg font-black uppercase text-[10px] tracking-widest gap-2">
-                    <TrendingUp className="size-3.5"/> Weekly Fleet Audit
+                    <TrendingUp className="size-3.5"/> Weekly Summary
                 </TabsTrigger>
             </TabsList>
 
             <TabsContent value="daily" className="mt-0">
                 <div className="relative mb-6">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground opacity-50" />
-                    <Input placeholder="Search employees..." className="pl-10 h-11 rounded-xl bg-white/50 border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                    <Input placeholder="Search staff..." className="pl-10 h-11 rounded-xl bg-white/50 border-none ring-1 ring-border/50" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                 </div>
                 <div className="border rounded-2xl overflow-hidden bg-white/50 shadow-sm ring-1 ring-border/50">
                     <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4 px-6">Employee</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Job Title</TableHead>
+                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Title</TableHead>
                                 <TableHead className="text-right text-[10px] font-black uppercase tracking-tighter py-4 px-6">Action</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -856,7 +853,7 @@ export default function ReportsPage() {
                                     </TableCell>
                                     <TableCell className="text-[10px] font-black uppercase text-muted-foreground">{u.jobTitle}</TableCell>
                                     <TableCell className="text-right py-4 px-6">
-                                        <Button variant="outline" size="sm" className="rounded-full font-bold text-[10px] uppercase tracking-widest h-8" onClick={() => handleReviewUser(u)}>View Reports</Button>
+                                        <Button variant="outline" size="sm" className="rounded-full font-bold text-[10px] uppercase tracking-widest h-8" onClick={() => handleReviewUser(u)}>View Logs</Button>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -871,18 +868,18 @@ export default function ReportsPage() {
                         <Table>
                             <TableHeader className="bg-muted/10 border-b">
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 px-8 min-w-[200px]">Fleet Member</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 px-8 min-w-[200px]">Employee</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Attendance</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Efficiency</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Total Outreach</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Potentials</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px] py-6 text-center">Revenue</TableHead>
-                                    <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-6 px-8">Audit Assets</TableHead>
+                                    <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-6 px-8">Recordings</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isWeeklyLoading ? (
-                                    <TableRow><TableCell colSpan={7} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Syncing Fleet Intelligence...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={7} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Loading summary...</TableCell></TableRow>
                                 ) : weeklySummaryData.length > 0 ? (
                                     weeklySummaryData.map(row => (
                                         <TableRow key={row.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
@@ -895,7 +892,7 @@ export default function ReportsPage() {
                                             <TableCell className="text-center">
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-xs font-black">{row.present} / 7</span>
-                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">Shifts Logged</span>
+                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">Shifts</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-center">
@@ -909,7 +906,7 @@ export default function ReportsPage() {
                                             <TableCell className="text-center">
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-xs font-black">{row.totalOutreach}</span>
-                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">Calls/Mail/LI</span>
+                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">Outreach</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-center">
@@ -921,7 +918,7 @@ export default function ReportsPage() {
                                             <TableCell className="text-center">
                                                 <div className="flex flex-col items-center">
                                                     <span className="text-xs font-black text-emerald-600">${row.aggregates.revenue.toLocaleString()}</span>
-                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">Collected</span>
+                                                    <span className="text-[7px] font-bold text-muted-foreground uppercase">Revenue</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right px-8">
@@ -935,8 +932,8 @@ export default function ReportsPage() {
                                                             </DialogTrigger>
                                                             <DialogContent className="rounded-3xl">
                                                                 <DialogHeader>
-                                                                    <DialogTitle className="text-lg font-black uppercase tracking-tighter">Call Intelligence Hub</DialogTitle>
-                                                                    <DialogDescription className="text-xs font-bold uppercase">{row.name}'s Weekly Links</DialogDescription>
+                                                                    <DialogTitle className="text-lg font-black uppercase tracking-tighter">Call Recordings</DialogTitle>
+                                                                    <DialogDescription className="text-xs font-bold uppercase">{row.name}'s recent recordings</DialogDescription>
                                                                 </DialogHeader>
                                                                 <ScrollArea className="max-h-[300px] py-4">
                                                                     <div className="space-y-2">
@@ -944,7 +941,7 @@ export default function ReportsPage() {
                                                                             <Link href={link} key={i} target="_blank" className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-primary/20">
                                                                                 <div className="flex items-center gap-3">
                                                                                     <div className="p-2 bg-primary/10 text-primary rounded-lg"><LinkIcon className="size-3.5" /></div>
-                                                                                    <span className="text-[10px] font-black uppercase truncate max-w-[200px]">Recording Asset {i+1}</span>
+                                                                                    <span className="text-[10px] font-black uppercase truncate max-w-[200px]">Recording {i+1}</span>
                                                                                 </div>
                                                                                 <ExternalLink className="size-3 opacity-30" />
                                                                             </Link>
@@ -961,7 +958,7 @@ export default function ReportsPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No fleet activity detected this week.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No activity detected this week.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -977,12 +974,12 @@ export default function ReportsPage() {
         ) : userReports.length > 0 ? userReports.map(r => (
             <Card key={r.id} className="p-4 hover:bg-muted/50 cursor-pointer flex items-center justify-between border-none ring-1 ring-border/10" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4"><div className="p-2 rounded-xl bg-primary/10 text-primary"><Clock className="size-4" /></div><div><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Report</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
         )) : (
-            <div className="py-10 text-center text-muted-foreground italic text-sm">No reports found for this employee.</div>
+            <div className="py-10 text-center text-muted-foreground italic text-sm">No reports found.</div>
         )}</div></ScrollArea></DialogContent></Dialog>
 
       <Dialog open={!!selectedReportForReview} onOpenChange={o => !o && setSelectedReportForReview(null)}>
           <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-              <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center"><div><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Report Details</DialogTitle><p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p></div><div className="flex items-center gap-2">
+              <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center"><div><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Report Audit</DialogTitle><p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p></div><div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary" onClick={() => handleDownloadPdf(selectedReportForReview)}><FileDown className="size-3 mr-1.5" /> Download PDF</Button>
                   {isPrivileged && (
                       <AlertDialog>
@@ -996,7 +993,7 @@ export default function ReportsPage() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                   <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteReport(selectedReportForReview)} className="rounded-full font-bold uppercase text-[10px] bg-red-600">Confirm Delete</AlertDialogAction>
+                                  <AlertDialogAction onClick={() => handleDeleteReport(selectedReportForReview)} className="rounded-full font-bold uppercase text-[10px] bg-red-600">Delete</AlertDialogAction>
                               </AlertDialogFooter>
                           </AlertDialogContent>
                       </AlertDialog>
@@ -1006,14 +1003,14 @@ export default function ReportsPage() {
                       {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetail report={selectedReportForReview} />}
-                      <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> 5️⃣ Planning (T+1)</CardTitle></CardHeader><CardContent className="pt-6 space-y-4"><div className="grid grid-cols-2 gap-4"><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Meetings Tomorrow</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Support</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div></div><div><p className="text-sm italic">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p></div></CardContent></Card>
-                      <div className="pt-10 flex flex-col items-center text-center space-y-6"><div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">{selectedReportForReview?.signatureUrl ? (<img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />) : (<span className="font-mono text-[10px] italic opacity-60">Digital Signature Verified</span>)}</div><div className="space-y-1"><p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p><Separator className="w-10 mx-auto my-2" /><p className="text-[8px] font-mono text-muted-foreground italic">Submitted {formatIST(selectedReportForReview?.date)}</p></div></div></div></ScrollArea></DialogContent>
+                      <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> Tomorrow's Plan</CardTitle></CardHeader><CardContent className="pt-6 space-y-4"><div className="grid grid-cols-2 gap-4"><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Meetings Tomorrow</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div><div><p className="text-[9px] font-bold text-muted-foreground uppercase">Support</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div></div><div><p className="text-sm italic">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p></div></CardContent></Card>
+                      <div className="pt-10 flex flex-col items-center text-center space-y-6"><div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">{selectedReportForReview?.signatureUrl ? (<img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />) : (<span className="font-mono text-[10px] italic opacity-60">Verified Digitally</span>)}</div><div className="space-y-1"><p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p><Separator className="w-10 mx-auto my-2" /><p className="text-[8px] font-mono text-muted-foreground italic">Submitted {formatIST(selectedReportForReview?.date)}</p></div></div></div></ScrollArea></DialogContent>
       </Dialog>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}><DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl"><FormProvider {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 bg-secondary/30">
                     <DialogHeader className="p-8 pb-6 border-b bg-white/80 backdrop-blur-md"><div className="flex items-center gap-3"><div className="p-3 rounded-2xl bg-primary/10 text-primary"><Briefcase className="size-6" /></div><div><DialogTitle className="text-2xl font-black uppercase tracking-tighter">Daily {currentTemplateId} Report</DialogTitle><DialogDescription className="text-xs font-bold">{formatIST(new Date())}</DialogDescription></div></div></DialogHeader>
-                    <ScrollArea className="flex-1"><div className="p-8 space-y-8"><div className="space-y-6"><Label className="text-[10px] font-black uppercase tracking-widest text-primary">Report Form</Label>{currentTemplateId === 'Technical' ? <TechnicalFields /> : currentTemplateId === 'Digital Marketing' ? <DigitalMarketingFields /> : <BusinessFields />}</div><Separator /><div className="space-y-6"><Label className="text-[10px] font-black uppercase text-primary">Confirmation</Label><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl><FormLabel className="text-sm font-bold">I certify that the information provided in this report is accurate and reflects my work for the day.</FormLabel></FormItem>)} /></div></div></ScrollArea>
-                    <div className="p-6 border-t bg-white/80 backdrop-blur-md"><DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col"><Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Discard</Button><Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px] shadow-lg shadow-primary/20">Submit Report</Button></DialogFooter></div>
+                    <ScrollArea className="flex-1"><div className="p-8 space-y-8"><div className="space-y-6"><Label className="text-[10px] font-black uppercase tracking-widest text-primary">Work Details</Label>{currentTemplateId === 'Technical' ? <TechnicalFields /> : currentTemplateId === 'Digital Marketing' ? <DigitalMarketingFields /> : <BusinessFields />}</div><Separator /><div className="space-y-6"><Label className="text-[10px] font-black uppercase text-primary">Confirmation</Label><FormField control={form.control} name="declaration" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-2xl border p-6 bg-primary/5 border-primary/20"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="size-5" /></FormControl><FormLabel className="text-sm font-bold">I certify that the information provided in this report is accurate.</FormLabel></FormItem>)} /></div></div></ScrollArea>
+                    <div className="p-6 border-t bg-white/80 backdrop-blur-md"><DialogFooter className="gap-3 max-w-lg mx-auto flex sm:flex-row flex-col"><Button type="button" variant="outline" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px]" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button><Button type="submit" className="rounded-full h-12 flex-1 font-bold uppercase text-[10px] shadow-lg shadow-primary/20">Submit Report</Button></DialogFooter></div>
                 </form></FormProvider></DialogContent></Dialog>
     </div>
   );

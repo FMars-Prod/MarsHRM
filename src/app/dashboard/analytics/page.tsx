@@ -234,7 +234,7 @@ export default function AnalyticsPage() {
       const att = attendanceData.find(a => a.employeeId === user.id && isSameDay(a.checkInTime?.toDate() || new Date(0), day));
       if (att) {
           if (att.checkInTime && !att.checkOutTime && isBefore(day, today)) {
-              return { status: 'non-compliance', label: 'Non-Compliance', color: 'bg-orange-100 text-orange-700 border-orange-200' };
+              return { status: 'non-compliance', label: 'No Logout', color: 'bg-orange-100 text-orange-700 border-orange-200' };
           }
           
           let label = att.status.toUpperCase();
@@ -246,7 +246,7 @@ export default function AnalyticsPage() {
               color = "bg-blue-100 text-blue-700 border-blue-200";
               icon = <Home className="size-2 mr-1" />;
           } else if (att.isOutOfRange) {
-              label = "OUT OF RANGE";
+              label = "REMOTE";
               color = "bg-orange-100 text-orange-700 border-orange-200";
               icon = <AlertTriangle className="size-2 mr-1" />;
           }
@@ -354,7 +354,7 @@ export default function AnalyticsPage() {
 
   const handleExportPdf = () => {
     if (selectedUserId === 'all' || !users) {
-        toast({ variant: 'destructive', title: 'Export Restricted', description: 'Please select an individual employee to generate a performance audit PDF.' });
+        toast({ variant: 'destructive', title: 'Action Denied', description: 'Select an employee to export a performance audit.' });
         return;
     }
 
@@ -370,26 +370,23 @@ export default function AnalyticsPage() {
     
     pdfDoc.setFontSize(12);
     pdfDoc.setTextColor(100);
-    pdfDoc.text("Individual Performance Audit Report", pdfDoc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+    pdfDoc.text("Performance Audit Report", pdfDoc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
     
     pdfDoc.setFontSize(10);
     pdfDoc.setTextColor(0);
     pdfDoc.text(`Employee: ${user.firstName} ${user.lastName}`, 14, 45);
     pdfDoc.text(`Designation: ${user.jobTitle}`, 14, 50);
     pdfDoc.text(`Department: ${user.department}`, 14, 55);
-    pdfDoc.text(`Audit Period: ${dateRangeStr}`, 14, 60);
-    pdfDoc.text(`Generated On: ${format(new Date(), 'PP p')}`, 14, 65);
+    pdfDoc.text(`Period: ${dateRangeStr}`, 14, 60);
 
     pdfDoc.setFontSize(11);
-    pdfDoc.text("Strategic Metrics Summary:", 14, 75);
+    pdfDoc.text("Metrics Summary:", 14, 75);
     
     const summaryData = [
-        ["Total Work Hours (Net)", `${userStats.workHours} h`],
-        ["Total Break Volume", `${userStats.breakHours} h`],
+        ["Total Work Hours", `${userStats.workHours} h`],
+        ["Total Break Time", `${userStats.breakHours} h`],
         ["Leaves Taken", `${userStats.leaves}`],
-        ["Non-Compliance Days", `${userStats.nonCompliance}`],
-        ["Holidays", `${userStats.holidays}`],
-        ["Sundays", `${userStats.sundays}`]
+        ["Non-Compliance Days", `${userStats.nonCompliance}`]
     ];
 
     autoTable(pdfDoc, {
@@ -402,21 +399,20 @@ export default function AnalyticsPage() {
     });
 
     const logStartY = (pdfDoc as any).lastAutoTable.finalY + 15;
-    pdfDoc.text("Granular Attendance Log:", 14, logStartY);
+    pdfDoc.text("Attendance Log:", 14, logStartY);
 
     const logBody = gridData.map(row => {
         const dateStr = format(row.date, 'MMM d, yyyy');
         const status = row.status.label;
         const checkIn = row.att?.checkInTime ? format(row.att.checkInTime.toDate(), 'p') : '-';
-        const breakTotal = row.att?.totalBreakDuration ? formatSecondsToHours(row.att.totalBreakDuration) : '-';
         const checkOut = row.att?.checkOutTime ? format(row.att.checkOutTime.toDate(), 'p') : '-';
         
-        return [dateStr, status, checkIn, breakTotal, checkOut];
+        return [dateStr, status, checkIn, checkOut];
     });
 
     autoTable(pdfDoc, {
         startY: logStartY + 5,
-        head: [['Date', 'Status', 'Log In', 'Total Break', 'Log Out']],
+        head: [['Date', 'Status', 'In', 'Out']],
         body: logBody,
         theme: 'grid',
         headStyles: { fillColor: [39, 55, 70] },
@@ -424,31 +420,23 @@ export default function AnalyticsPage() {
         margin: { left: 14, right: 14 }
     });
 
-    const pageCount = pdfDoc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        pdfDoc.setPage(i);
-        pdfDoc.setFontSize(8);
-        pdfDoc.setTextColor(150);
-        pdfDoc.text(`Page ${i} of ${pageCount} - MarsHRM Proprietary Performance Data`, 14, pdfDoc.internal.pageSize.height - 10);
-    }
-
-    pdfDoc.save(`Performance_Audit_${user.firstName}_${user.lastName}_${format(new Date(), 'yyyyMMdd')}.pdf`);
+    pdfDoc.save(`Audit_${user.firstName}_${format(new Date(), 'yyyyMMdd')}.pdf`);
   };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Organizational Analytics" description="High-fidelity performance metrics with absentee identification and geofenced verification.">
+      <PageHeader title="Performance Analytics" description="Operational metrics and staff attendance tracking.">
         <div className="flex flex-wrap gap-2">
             {selectedUserId !== 'all' && (
                 <Button variant="outline" className="rounded-full h-11 bg-white/50" onClick={handleExportPdf}>
                     <FileDown className="size-4 mr-2" />
-                    Download PDF
+                    Export PDF
                 </Button>
             )}
             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger className="w-[200px] rounded-full h-11"><SelectValue placeholder="Scope" /></SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="all">Organization Overview</SelectItem>
+                    <SelectItem value="all">Full Team</SelectItem>
                     {users?.filter(u => u.firstName && u.lastName).map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                 </SelectContent>
             </Select>
@@ -471,7 +459,7 @@ export default function AnalyticsPage() {
                     </SelectGroup>
                     <SelectGroup>
                         <SelectLabel>Custom</SelectLabel>
-                        <SelectItem value="custom-date">Select Date</SelectItem>
+                        <SelectItem value="custom-date">Specific Date</SelectItem>
                         <SelectItem value="custom-range">Select Range</SelectItem>
                     </SelectGroup>
                 </SelectContent>
@@ -506,10 +494,10 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <StatCard label="Leaves" value={userStats.leaves} icon={CalendarOff} color="text-blue-600" />
                 <StatCard label="Work Hours" value={userStats.workHours} icon={Clock} color="text-green-600" />
-                <StatCard label="Break Volume" value={userStats.breakHours} icon={Coffee} color="text-yellow-600" />
+                <StatCard label="Break Time" value={userStats.breakHours} icon={Coffee} color="text-yellow-600" />
                 <StatCard label="Holidays" value={userStats.holidays} icon={Briefcase} color="text-slate-600" />
                 <StatCard label="Sundays" value={userStats.sundays} icon={CalendarIcon} color="text-muted-foreground" />
-                <StatCard label="Non-Compliance" value={userStats.nonCompliance} icon={AlertTriangle} color="text-orange-600" />
+                <StatCard label="Alerts" value={userStats.nonCompliance} icon={AlertTriangle} color="text-orange-600" />
             </div>
         )}
 
@@ -517,11 +505,8 @@ export default function AnalyticsPage() {
             <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-headline flex items-center gap-2">
                     {selectedUserId === 'all' ? <AreaChartIcon className="size-5 text-primary" /> : <Activity className="size-5 text-primary" />}
-                    {selectedUserId === 'all' ? 'Tactical Trend Analysis' : 'Individual Productivity Analysis'}
+                    {selectedUserId === 'all' ? 'Team Trends' : 'Productivity Analysis'}
                 </CardTitle>
-                <CardDescription>
-                    {selectedUserId === 'all' ? 'Sundays are excluded from trend calculations.' : 'Visualization of daily work vs break hours.'}
-                </CardDescription>
             </CardHeader>
             <CardContent className="h-[300px]">
                 {selectedUserId === 'all' ? (
@@ -561,25 +546,25 @@ export default function AnalyticsPage() {
             <CardHeader className="bg-muted/10 border-b">
                 <CardTitle className="text-lg font-headline flex items-center gap-2">
                     <Info className="size-5 text-primary" />
-                    Granular Analytics Grid
+                    Attendance Data Log
                 </CardTitle>
-                <CardDescription>Verified log with time-stamped geolocation pins and absentee tracking.</CardDescription>
+                <CardDescription>Verified logs with time-stamps and location tracking.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow className="hover:bg-transparent border-none">
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Date & Employee</TableHead>
+                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Date & Name</TableHead>
                                 <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Status</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Log In</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Total Break</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Log Out</TableHead>
+                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Clock In</TableHead>
+                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Break Total</TableHead>
+                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Clock Out</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={5} className="h-32 text-center animate-pulse font-medium text-muted-foreground">Syncing data log...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="h-32 text-center animate-pulse font-medium text-muted-foreground">Loading data...</TableCell></TableRow>
                             ) : gridData.length > 0 ? (
                                 gridData.map((row, i) => (
                                     <TableRow key={i} className="border-border/50">
@@ -626,7 +611,7 @@ export default function AnalyticsPage() {
                                     </TableRow>
                                 ))
                             ) : (
-                                <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No tactical data found for this period.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground">No data found for this period.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>

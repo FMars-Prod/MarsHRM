@@ -121,11 +121,9 @@ export default function ProjectsPage() {
         
         clients?.forEach(client => {
             const team = teams?.find(t => t.id === client.assignedTeamId);
-            // authoritative lead is the team lead
             const leadId = team?.teamLeadId;
             const leader = users?.find(u => u.id === leadId);
             
-            // Completion is now taken from a manual field if available, otherwise fallback
             const completion = client.completionPercent !== undefined ? Number(client.completionPercent) : 0;
 
             let status: Project['status'] = 'In Progress';
@@ -145,13 +143,11 @@ export default function ProjectsPage() {
                 leaderId: leadId,
                 completion,
                 memberIds: team?.memberIds || [],
-                description: client.notes || "Client project under tactical oversight."
+                description: client.notes || "Project details."
             });
         });
 
-        // Track internal projects encountered in reports to avoid duplicates
         const internalProjects = new Set<string>();
-        // Also skip projects already present in client matrix (linked client projects)
         const clientProjectNames = new Set(matrix.map(m => m.name.toLowerCase()));
 
         allReports.forEach(r => {
@@ -160,7 +156,6 @@ export default function ProjectsPage() {
                 if (p.type !== 'Client' && !internalProjects.has(pNameLower) && !clientProjectNames.has(pNameLower)) {
                     internalProjects.add(pNameLower);
                     const team = teams?.find(t => t.memberIds.includes(r.employeeId));
-                    // For internal/RD, the authoritative lead is still the team lead if they belong to a team
                     const leader = users?.find(u => u.id === team?.teamLeadId) || users?.find(u => u.id === r.employeeId);
                     
                     const completion = Number(p.statusPercent);
@@ -171,16 +166,16 @@ export default function ProjectsPage() {
                     matrix.push({
                         id: `internal-${p.projectName}`,
                         name: p.projectName,
-                        team: team?.name || 'Internal R&D',
+                        team: team?.name || 'Internal Team',
                         teamId: team?.id,
                         type: p.type === 'In House' ? 'In-House/R&D' : 'CSR',
                         phase: 'Development',
                         status,
-                        leader: leader ? `${leader.firstName} ${leader.lastName}` : (r.employeeName || 'System'),
+                        leader: leader ? `${leader.firstName} ${leader.lastName}` : (r.employeeName || 'Staff'),
                         leaderId: leader?.id,
                         completion,
                         memberIds: team?.memberIds || [r.employeeId],
-                        description: "Internal developmental sprint."
+                        description: "Internal project development."
                     });
                 }
             });
@@ -230,7 +225,7 @@ export default function ProjectsPage() {
         if (!selectedProject || selectedProject.type !== 'Client Project') return;
         const clientRef = doc(firestore, 'clients', selectedProject.id);
         updateDocumentNonBlocking(clientRef, { completionPercent: manualProgress });
-        toast({ title: "Progress Updated", description: "Audit trail synchronized." });
+        toast({ title: "Progress Updated", description: "Project completion synchronized." });
         setSelectedProject({ ...selectedProject, completion: manualProgress });
     };
 
@@ -248,7 +243,7 @@ export default function ProjectsPage() {
                         status: 'Active',
                         industryType: 'Other',
                         assignedTeamId: newProjectTeamId,
-                        handlingEmployeeId: newProjectLeadId, // This sets the manager, lead is team based
+                        handlingEmployeeId: newProjectLeadId,
                         completionPercent: 0,
                         createdAt: serverTimestamp()
                     });
@@ -266,10 +261,10 @@ export default function ProjectsPage() {
                     });
                 }
             } else {
-                toast({ title: "Internal Project Initialized", description: "Project will appear in matrix upon reporting." });
+                toast({ title: "Internal Project Created", description: "Project added to registry." });
             }
 
-            toast({ title: "Mission Synchronized" });
+            toast({ title: "Project Created" });
             setIsCreateOpen(false);
             resetCreateForm();
         } catch (err: any) {
@@ -291,7 +286,7 @@ export default function ProjectsPage() {
         if (!selectedProject || selectedProject.type !== 'Client Project') return;
         const clientRef = doc(firestore, 'clients', selectedProject.id);
         updateDocumentNonBlocking(clientRef, { assignedTeamId: newTeamId });
-        toast({ title: "Reassignment Confirmed" });
+        toast({ title: "Team Reassigned" });
         setIsAssignOpen(false);
         setSelectedProject(null);
     };
@@ -305,7 +300,7 @@ export default function ProjectsPage() {
 
         const payload = {
             title: meetingTitle,
-            description: `Mission Sync: ${selectedProject.name}`,
+            description: `Project Meeting: ${selectedProject.name}`,
             date: Timestamp.fromDate(new Date(meetingDate)),
             link: "https://meet.google.com/new",
             type: selectedProject.type === 'Client Project' ? 'Client Meet' : 'Internal',
@@ -319,14 +314,14 @@ export default function ProjectsPage() {
         };
 
         await addDocumentNonBlocking(collection(firestore, 'meetings'), payload);
-        toast({ title: "Fleet Notification Dispatched" });
+        toast({ title: "Meeting Scheduled" });
         setIsMeetingOpen(false);
         setMeetingTitle("");
     };
 
     return (
         <div className="space-y-8 animate-fade-in-up font-jakarta pb-20">
-            <PageHeader title="Project Portfolio" description="Authorized oversight of active missions and technical development.">
+            <PageHeader title="Projects" description="Manage active projects and team progress.">
                 <div className="flex gap-2">
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
                         <SelectTrigger className="w-[180px] h-11 rounded-none bg-white border-none ring-1 ring-border/50">
@@ -351,14 +346,14 @@ export default function ProjectsPage() {
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl rounded-none border-none shadow-3xl p-0 overflow-hidden h-[85vh] flex flex-col">
                             <DialogHeader className="p-10 border-b bg-white">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Mission Protocol</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Register project and allocate technical unit</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Project</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Create project and assign team</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
                                 <div className="p-10 space-y-8">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Unit Name</Label>
-                                        <Input value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="e.g., Tactical Core v2" className="h-12 rounded-none" />
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Project Name</Label>
+                                        <Input value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="e.g., Marketing Website" className="h-12 rounded-none" />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Classification</Label>
@@ -375,7 +370,7 @@ export default function ProjectsPage() {
                                     {newProjectType === 'Client Project' && (
                                         <div className="space-y-6 p-6 bg-white border-2 border-dashed border-border/50 rounded-none">
                                             <div className="flex items-center justify-between">
-                                                <Label className="text-[10px] font-black uppercase text-primary">Identity Linking</Label>
+                                                <Label className="text-[10px] font-black uppercase text-primary">Client Assignment</Label>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] font-bold uppercase text-muted-foreground">New Client?</span>
                                                     <Switch checked={isNewClient} onCheckedChange={setIsNewClient} />
@@ -385,7 +380,7 @@ export default function ProjectsPage() {
                                                 <Input value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="Organization Name..." className="h-12 rounded-none" />
                                             ) : (
                                                 <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                                                    <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Record" /></SelectTrigger>
+                                                    <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Client" /></SelectTrigger>
                                                     <SelectContent>
                                                         {clients?.map(c => <SelectItem key={c.id} value={c.id}>{c.companyName}</SelectItem>)}
                                                     </SelectContent>
@@ -396,7 +391,7 @@ export default function ProjectsPage() {
 
                                     <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Assign Fleet Unit</Label>
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Assign Team</Label>
                                             <Select value={newProjectTeamId} onValueChange={setNewProjectTeamId}>
                                                 <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Team" /></SelectTrigger>
                                                 <SelectContent>
@@ -405,9 +400,9 @@ export default function ProjectsPage() {
                                             </Select>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Executive Oversight</Label>
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Lead Manager</Label>
                                             <Select value={newProjectLeadId} onValueChange={setNewProjectLeadId}>
-                                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Manager" /></SelectTrigger>
+                                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Manager" /></SelectTrigger>
                                                 <SelectContent>
                                                     {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                                                 </SelectContent>
@@ -417,7 +412,7 @@ export default function ProjectsPage() {
                                 </div>
                             </ScrollArea>
                             <div className="p-10 border-t bg-white shrink-0">
-                                <Button onClick={handleCreateProject} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Finalize Initiation</Button>
+                                <Button onClick={handleCreateProject} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Create Project</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
@@ -425,10 +420,10 @@ export default function ProjectsPage() {
             </PageHeader>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <MetricCard label="Active Projects" value={stats.total} icon={Briefcase} color="text-primary" bg="bg-primary/5" />
+                <MetricCard label="Total Projects" value={stats.total} icon={Briefcase} color="text-primary" bg="bg-primary/5" />
                 <MetricCard label="In Progress" value={stats.inProgress} icon={Activity} color="text-indigo-600" bg="bg-indigo-50" />
-                <MetricCard label="Finalized" value={stats.completed} icon={CheckCircle} color="text-emerald-600" bg="bg-emerald-50" />
-                <MetricCard label="Terminated" value={stats.cancelled} icon={Ban} color="text-rose-600" bg="bg-rose-50" />
+                <MetricCard label="Completed" value={stats.completed} icon={CheckCircle} color="text-emerald-600" bg="bg-emerald-50" />
+                <MetricCard label="Cancelled" value={stats.cancelled} icon={Ban} color="text-rose-600" bg="bg-rose-50" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -436,7 +431,7 @@ export default function ProjectsPage() {
                     <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
                         <div className="space-y-1">
                             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                <Layers className="size-4" /> Operational Grid
+                                <Layers className="size-4" /> Project Registry
                             </CardTitle>
                         </div>
                     </CardHeader>
@@ -445,16 +440,16 @@ export default function ProjectsPage() {
                             <TableHeader className="bg-muted/10 border-b">
                                 <TableRow className="hover:bg-transparent">
                                     <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Project Name</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Classification</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Progress Audit</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Unit Leader</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Category</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Progress</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Project Lead</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
                                     <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Syncing Records...</TableCell></TableRow>
                                 ) : projectMatrix.length === 0 ? (
-                                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No matching projects found.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No projects found.</TableCell></TableRow>
                                 ) : projectMatrix.map(project => (
                                     <TableRow key={project.id} className="border-b group hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setSelectedProject(project); setManualProgress(project.completion); }}>
                                         <TableCell className="py-6 px-8">
@@ -541,12 +536,12 @@ export default function ProjectsPage() {
                         </div>
                         <div className="relative z-10 space-y-4">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Deployment Integrity</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">System Performance</p>
                                 <h3 className="text-4xl font-black tracking-tighter">94.2%</h3>
                             </div>
-                            <p className="text-xs font-medium opacity-60 uppercase leading-relaxed">System performance is audited against real-time fleet activity logs.</p>
+                            <p className="text-xs font-medium opacity-60 uppercase leading-relaxed">Performance is audited against real-time member activity logs.</p>
                             <Button variant="outline" className="w-full h-11 rounded-none border-white/20 bg-white/10 hover:bg-white/20 text-white font-black uppercase text-[10px] tracking-widest relative z-10" asChild>
-                                <Link href="/dashboard/analytics">Audit Matrix</Link>
+                                <Link href="/dashboard/analytics">View Analytics</Link>
                             </Button>
                         </div>
                     </Card>
@@ -557,9 +552,9 @@ export default function ProjectsPage() {
                 <CardHeader className="p-8 border-b bg-muted/5 flex flex-row items-center justify-between">
                     <div className="space-y-1">
                         <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                            <Activity className="size-4" /> Tactical Activity Feed
+                            <Activity className="size-4" /> Member Activity Feed
                         </CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Verified development activity from shift reports</CardDescription>
+                        <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Recent activity from daily member reports</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -567,15 +562,15 @@ export default function ProjectsPage() {
                         <Table>
                             <TableHeader className="bg-muted/10 border-b">
                                 <TableRow>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Fleet Member</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Target Project</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Specific Task</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Member</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Project</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Task Detail</TableHead>
                                     <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Submission</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {activityFeed.length === 0 ? (
-                                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No reported activity detected.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No activity logs found.</TableCell></TableRow>
                                 ) : activityFeed.map(feed => (
                                     <TableRow key={feed.id} className="border-b hover:bg-slate-50 transition-colors">
                                         <TableCell className="py-6 px-8">
@@ -623,7 +618,7 @@ export default function ProjectsPage() {
                             </Badge>
                         </div>
                         <SheetTitle className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-tight">{selectedProject?.name}</SheetTitle>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">{selectedProject?.team} Division</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">{selectedProject?.team} Team</p>
                     </SheetHeader>
 
                     <ScrollArea className="flex-1">
@@ -631,19 +626,19 @@ export default function ProjectsPage() {
                             {selectedProject?.type === 'Client Project' && (
                                 <div className="space-y-6 bg-white p-8 ring-1 ring-border/50 rounded-none shadow-sm animate-fade-in-up">
                                     <div className="flex items-center justify-between">
-                                        <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Audit Progress</h4>
+                                        <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Project Progress</h4>
                                         <span className="text-2xl font-black text-primary">{manualProgress}%</span>
                                     </div>
                                     <Slider value={[manualProgress]} min={0} max={100} step={5} onValueChange={v => setManualProgress(v[0])} />
                                     <div className="flex justify-between items-center pt-2">
-                                        <p className="text-[8px] font-bold text-muted-foreground uppercase italic tracking-widest leading-relaxed">Authorized update only. Adjust mission percentage.</p>
+                                        <p className="text-[8px] font-bold text-muted-foreground uppercase italic tracking-widest leading-relaxed">Adjust project completion percentage.</p>
                                         <Button variant="outline" size="sm" className="rounded-none h-8 font-black uppercase text-[8px] px-4" onClick={handleUpdateProgress}>Lock Progress</Button>
                                     </div>
                                 </div>
                             )}
 
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Mission Brief</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Description</h4>
                                 <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50">
                                     <p className="text-xs font-medium text-slate-600 leading-relaxed uppercase italic">"{selectedProject?.description}"</p>
                                 </Card>
@@ -651,19 +646,19 @@ export default function ProjectsPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <Button className="h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl shadow-primary/20" onClick={() => setIsMeetingOpen(true)}>
-                                    <Video className="size-4" /> Team Meeting
+                                    <Video className="size-4" /> Schedule Meeting
                                 </Button>
                                 <Button variant="outline" className="h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2 bg-white" asChild>
                                     <Link href={`/dashboard/documents`}>
-                                        <FileBox className="size-4" /> Mission Vault
+                                        <FileBox className="size-4" /> Project Vault
                                     </Link>
                                 </Button>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Deployment Roster</h4>
-                                    <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none border-none bg-primary/5 text-primary px-2">{selectedProject?.memberIds.length} Assets</Badge>
+                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Team Members</h4>
+                                    <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none border-none bg-primary/5 text-primary px-2">{selectedProject?.memberIds.length} Members</Badge>
                                 </div>
                                 <div className="space-y-2">
                                     {selectedProject?.memberIds.map(id => {
@@ -679,7 +674,7 @@ export default function ProjectsPage() {
                                                     <p className="font-black text-xs uppercase truncate group-hover:text-primary transition-colors">{member.firstName} {member.lastName}</p>
                                                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{member.jobTitle}</p>
                                                 </div>
-                                                {id === selectedProject.leaderId && <Badge className="bg-primary text-white text-[7px] font-black uppercase rounded-none h-4">Unit Leader</Badge>}
+                                                {id === selectedProject.leaderId && <Badge className="bg-primary text-white text-[7px] font-black uppercase rounded-none h-4">Lead</Badge>}
                                             </Link>
                                         );
                                     })}
@@ -687,9 +682,9 @@ export default function ProjectsPage() {
                             </div>
 
                             <div className="space-y-4 pt-6 border-t border-dashed">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Oversight Actions</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Management Actions</h4>
                                 <Button variant="outline" className="w-full h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2 bg-white" onClick={() => setIsAssignOpen(true)}>
-                                    <Settings2 className="size-4" /> Reallocate Technical Unit
+                                    <Settings2 className="size-4" /> Change Team
                                 </Button>
                             </div>
                         </div>
@@ -700,12 +695,12 @@ export default function ProjectsPage() {
             <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
                 <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                     <DialogHeader className="text-left">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Reallocate Unit</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Redirect mission management to a different fleet unit</DialogDescription>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Assign Team</DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Assign project to a different team</DialogDescription>
                     </DialogHeader>
                     <div className="py-8 space-y-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">New Tactical Unit</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Select Team</Label>
                             <Select onValueChange={handleAssignTeam}>
                                 <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Target Team" /></SelectTrigger>
                                 <SelectContent className="rounded-none">
@@ -715,11 +710,11 @@ export default function ProjectsPage() {
                         </div>
                         <div className="p-4 bg-muted/20 border border-dashed rounded-none flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <p className="text-[9px] font-black uppercase">Fleet empty?</p>
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Provision a new unit</p>
+                                <p className="text-[9px] font-black uppercase">No teams?</p>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Create a new unit</p>
                             </div>
                             <Button size="sm" variant="ghost" asChild className="text-[9px] font-black uppercase text-primary hover:bg-primary/5">
-                                <Link href="/dashboard/teams"><Plus className="size-3 mr-1" /> Dispatch Team</Link>
+                                <Link href="/dashboard/teams"><Plus className="size-3 mr-1" /> Create Team</Link>
                             </Button>
                         </div>
                     </div>
@@ -729,20 +724,20 @@ export default function ProjectsPage() {
             <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
                 <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                     <DialogHeader className="text-left">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Team Synchronization</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Schedule call with all assigned unit assets</DialogDescription>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Schedule Meeting</DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Set up a meeting with all team members</DialogDescription>
                     </DialogHeader>
                     <div className="py-6 space-y-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Call Subject</Label>
-                            <Input value={meetingTitle} onChange={e => setMeetingTitle(e.target.value)} placeholder="e.g., Progress Audit" className="h-12 rounded-none" />
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Subject</Label>
+                            <Input value={meetingTitle} onChange={e => setMeetingTitle(e.target.value)} placeholder="e.g., Progress Review" className="h-12 rounded-none" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Mission Time</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Time</Label>
                             <Input type="datetime-local" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} className="h-12 rounded-none" />
                         </div>
                         <div className="p-5 bg-primary/5 rounded-none ring-1 ring-primary/10">
-                            <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-3">Auto-Selected Personnel</p>
+                            <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-3">Participants</p>
                             <div className="flex -space-x-2">
                                 {selectedProject?.memberIds.slice(0, 5).map(id => (
                                     <Avatar key={id} className="size-8 rounded-none border-2 border-white ring-1 ring-border/50">
@@ -756,7 +751,7 @@ export default function ProjectsPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={handleScheduleMeeting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Confirm Briefing</Button>
+                        <Button onClick={handleScheduleMeeting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Schedule Meeting</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
