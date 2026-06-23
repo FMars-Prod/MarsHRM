@@ -37,6 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 
 type Project = {
     id: string;
@@ -70,6 +71,7 @@ export default function ProjectsPage() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [typeFilter, setTypeFilter] = React.useState<string>("all");
     const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
+    const [manualProgress, setManualProgress] = React.useState<number>(0);
     
     // Dialog States
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
@@ -119,14 +121,12 @@ export default function ProjectsPage() {
         
         clients?.forEach(client => {
             const team = teams?.find(t => t.id === client.assignedTeamId);
-            const leader = users?.find(u => u.id === client.handlingEmployeeId);
+            // authoritative lead is the team lead
+            const leadId = team?.teamLeadId;
+            const leader = users?.find(u => u.id === leadId);
             
-            const relevantReports = allReports.filter(r => 
-                r.reportType === 'Technical' && 
-                r.technicalProjects?.some((p: any) => p.projectName === client.companyName)
-            );
-            const lastUpdate = relevantReports[0]?.technicalProjects?.find((p: any) => p.projectName === client.companyName);
-            const completion = lastUpdate ? Number(lastUpdate.statusPercent) : 0;
+            // Completion is now taken from a manual field if available, otherwise fallback
+            const completion = client.completionPercent !== undefined ? Number(client.completionPercent) : 0;
 
             let status: Project['status'] = 'In Progress';
             if (client.status === 'Archived') status = 'Cancelled';
@@ -142,19 +142,27 @@ export default function ProjectsPage() {
                 phase: client.status === 'Active' ? 'Execution' : 'Initiation',
                 status,
                 leader: leader ? `${leader.firstName} ${leader.lastName}` : 'TBD',
-                leaderId: leader?.id,
+                leaderId: leadId,
                 completion,
                 memberIds: team?.memberIds || [],
-                description: client.notes || "Standard client engagement mission."
+                description: client.notes || "Client project under tactical oversight."
             });
         });
 
+        // Track internal projects encountered in reports to avoid duplicates
         const internalProjects = new Set<string>();
+        // Also skip projects already present in client matrix (linked client projects)
+        const clientProjectNames = new Set(matrix.map(m => m.name.toLowerCase()));
+
         allReports.forEach(r => {
             r.technicalProjects?.forEach((p: any) => {
-                if (p.type !== 'Client' && !internalProjects.has(p.projectName)) {
-                    internalProjects.add(p.projectName);
+                const pNameLower = p.projectName.toLowerCase();
+                if (p.type !== 'Client' && !internalProjects.has(pNameLower) && !clientProjectNames.has(pNameLower)) {
+                    internalProjects.add(pNameLower);
                     const team = teams?.find(t => t.memberIds.includes(r.employeeId));
+                    // For internal/RD, the authoritative lead is still the team lead if they belong to a team
+                    const leader = users?.find(u => u.id === team?.teamLeadId) || users?.find(u => u.id === r.employeeId);
+                    
                     const completion = Number(p.statusPercent);
                     let status: Project['status'] = 'In Progress';
                     if (completion === 100) status = 'Completed';
@@ -168,8 +176,8 @@ export default function ProjectsPage() {
                         type: p.type === 'In House' ? 'In-House/R&D' : 'CSR',
                         phase: 'Development',
                         status,
-                        leader: r.employeeName || 'System',
-                        leaderId: r.employeeId,
+                        leader: leader ? `${leader.firstName} ${leader.lastName}` : (r.employeeName || 'System'),
+                        leaderId: leader?.id,
                         completion,
                         memberIds: team?.memberIds || [r.employeeId],
                         description: "Internal developmental sprint."
@@ -218,6 +226,14 @@ export default function ProjectsPage() {
         ];
     }, [projectMatrix]);
 
+    const handleUpdateProgress = () => {
+        if (!selectedProject || selectedProject.type !== 'Client Project') return;
+        const clientRef = doc(firestore, 'clients', selectedProject.id);
+        updateDocumentNonBlocking(clientRef, { completionPercent: manualProgress });
+        toast({ title: "Progress Updated", description: "Audit trail synchronized." });
+        setSelectedProject({ ...selectedProject, completion: manualProgress });
+    };
+
     const handleCreateProject = async () => {
         if (!newProjectName || !user) return;
 
@@ -232,7 +248,8 @@ export default function ProjectsPage() {
                         status: 'Active',
                         industryType: 'Other',
                         assignedTeamId: newProjectTeamId,
-                        handlingEmployeeId: newProjectLeadId,
+                        handlingEmployeeId: newProjectLeadId, // This sets the manager, lead is team based
+                        completionPercent: 0,
                         createdAt: serverTimestamp()
                     });
                     clientId = clientRef!.id;
@@ -241,7 +258,6 @@ export default function ProjectsPage() {
                     return;
                 }
 
-                // If updating existing client assignment
                 if (!isNewClient && clientId) {
                     const clientRef = doc(firestore, 'clients', clientId);
                     updateDocumentNonBlocking(clientRef, {
@@ -250,14 +266,14 @@ export default function ProjectsPage() {
                     });
                 }
             } else {
-                toast({ title: "Internal Project Initialized", description: "This will appear in the portfolio once members log work against it." });
+                toast({ title: "Internal Project Initialized", description: "Project will appear in matrix upon reporting." });
             }
 
-            toast({ title: "Project Synchronized", description: "Registry has been updated." });
+            toast({ title: "Mission Synchronized" });
             setIsCreateOpen(false);
             resetCreateForm();
         } catch (err: any) {
-            toast({ variant: 'destructive', title: 'Provisioning Failed', description: err.message });
+            toast({ variant: 'destructive', title: 'Action Failed' });
         }
     };
 
@@ -275,7 +291,7 @@ export default function ProjectsPage() {
         if (!selectedProject || selectedProject.type !== 'Client Project') return;
         const clientRef = doc(firestore, 'clients', selectedProject.id);
         updateDocumentNonBlocking(clientRef, { assignedTeamId: newTeamId });
-        toast({ title: "Assignment Updated", description: "Project has been allocated to a new team." });
+        toast({ title: "Reassignment Confirmed" });
         setIsAssignOpen(false);
         setSelectedProject(null);
     };
@@ -289,7 +305,7 @@ export default function ProjectsPage() {
 
         const payload = {
             title: meetingTitle,
-            description: `Project Synchronization: ${selectedProject.name}`,
+            description: `Mission Sync: ${selectedProject.name}`,
             date: Timestamp.fromDate(new Date(meetingDate)),
             link: "https://meet.google.com/new",
             type: selectedProject.type === 'Client Project' ? 'Client Meet' : 'Internal',
@@ -303,24 +319,24 @@ export default function ProjectsPage() {
         };
 
         await addDocumentNonBlocking(collection(firestore, 'meetings'), payload);
-        toast({ title: "Meeting Scheduled", description: "Team members notified." });
+        toast({ title: "Fleet Notification Dispatched" });
         setIsMeetingOpen(false);
         setMeetingTitle("");
     };
 
     return (
         <div className="space-y-8 animate-fade-in-up font-jakarta pb-20">
-            <PageHeader title="Project Portfolio" description="Operational status of all active missions.">
+            <PageHeader title="Project Portfolio" description="Authorized oversight of active missions and technical development.">
                 <div className="flex gap-2">
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
                         <SelectTrigger className="w-[180px] h-11 rounded-none bg-white border-none ring-1 ring-border/50">
                             <div className="flex items-center gap-2">
                                 <Filter className="size-3.5 opacity-50" />
-                                <SelectValue placeholder="All Projects" />
+                                <SelectValue placeholder="All Categories" />
                             </div>
                         </SelectTrigger>
                         <SelectContent className="rounded-none">
-                            <SelectItem value="all">All Projects</SelectItem>
+                            <SelectItem value="all">All Categories</SelectItem>
                             <SelectItem value="Client Project">Client Projects</SelectItem>
                             <SelectItem value="In-House/R&D">Internal R&D</SelectItem>
                             <SelectItem value="CSR">CSR Initiatives</SelectItem>
@@ -335,17 +351,17 @@ export default function ProjectsPage() {
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl rounded-none border-none shadow-3xl p-0 overflow-hidden h-[85vh] flex flex-col">
                             <DialogHeader className="p-10 border-b bg-white">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Project Provisioning</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Initialize a new mission or client engagement</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Mission Protocol</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Register project and allocate technical unit</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
                                 <div className="p-10 space-y-8">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Project Name</Label>
-                                        <Input value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="e.g., E-Commerce App Refactor" className="h-12 rounded-none" />
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Unit Name</Label>
+                                        <Input value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="e.g., Tactical Core v2" className="h-12 rounded-none" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Project Classification</Label>
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Classification</Label>
                                         <Select value={newProjectType} onValueChange={setNewProjectType}>
                                             <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue /></SelectTrigger>
                                             <SelectContent>
@@ -359,17 +375,17 @@ export default function ProjectsPage() {
                                     {newProjectType === 'Client Project' && (
                                         <div className="space-y-6 p-6 bg-white border-2 border-dashed border-border/50 rounded-none">
                                             <div className="flex items-center justify-between">
-                                                <Label className="text-[10px] font-black uppercase text-primary">Client Assignment</Label>
+                                                <Label className="text-[10px] font-black uppercase text-primary">Identity Linking</Label>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] font-bold uppercase text-muted-foreground">New Client?</span>
                                                     <Switch checked={isNewClient} onCheckedChange={setIsNewClient} />
                                                 </div>
                                             </div>
                                             {isNewClient ? (
-                                                <Input value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="New Company Name..." className="h-12 rounded-none" />
+                                                <Input value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="Organization Name..." className="h-12 rounded-none" />
                                             ) : (
                                                 <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                                                    <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Existing Client" /></SelectTrigger>
+                                                    <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Record" /></SelectTrigger>
                                                     <SelectContent>
                                                         {clients?.map(c => <SelectItem key={c.id} value={c.id}>{c.companyName}</SelectItem>)}
                                                     </SelectContent>
@@ -380,18 +396,18 @@ export default function ProjectsPage() {
 
                                     <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Assign Team</Label>
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Assign Fleet Unit</Label>
                                             <Select value={newProjectTeamId} onValueChange={setNewProjectTeamId}>
-                                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Choose Unit" /></SelectTrigger>
+                                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Team" /></SelectTrigger>
                                                 <SelectContent>
                                                     {teams?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Project Lead</Label>
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Executive Oversight</Label>
                                             <Select value={newProjectLeadId} onValueChange={setNewProjectLeadId}>
-                                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Choose Official" /></SelectTrigger>
+                                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Manager" /></SelectTrigger>
                                                 <SelectContent>
                                                     {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                                                 </SelectContent>
@@ -401,7 +417,7 @@ export default function ProjectsPage() {
                                 </div>
                             </ScrollArea>
                             <div className="p-10 border-t bg-white shrink-0">
-                                <Button onClick={handleCreateProject} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Initialize Mission</Button>
+                                <Button onClick={handleCreateProject} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Finalize Initiation</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
@@ -409,13 +425,80 @@ export default function ProjectsPage() {
             </PageHeader>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <MetricCard label="Total Projects" value={stats.total} icon={Briefcase} color="text-primary" bg="bg-primary/5" />
+                <MetricCard label="Active Projects" value={stats.total} icon={Briefcase} color="text-primary" bg="bg-primary/5" />
                 <MetricCard label="In Progress" value={stats.inProgress} icon={Activity} color="text-indigo-600" bg="bg-indigo-50" />
-                <MetricCard label="Completed" value={stats.completed} icon={CheckCircle} color="text-emerald-600" bg="bg-emerald-50" />
-                <MetricCard label="Cancelled" value={stats.cancelled} icon={Ban} color="text-rose-600" bg="bg-rose-50" />
+                <MetricCard label="Finalized" value={stats.completed} icon={CheckCircle} color="text-emerald-600" bg="bg-emerald-50" />
+                <MetricCard label="Terminated" value={stats.cancelled} icon={Ban} color="text-rose-600" bg="bg-rose-50" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-8 bg-white border-none shadow-xl ring-1 ring-border/50 rounded-none overflow-hidden flex flex-col">
+                    <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
+                        <div className="space-y-1">
+                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                <Layers className="size-4" /> Operational Grid
+                            </CardTitle>
+                        </div>
+                    </CardHeader>
+                    <div className="flex-1 overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-muted/10 border-b">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Project Name</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Classification</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Progress Audit</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Unit Leader</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading ? (
+                                    <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Syncing Records...</TableCell></TableRow>
+                                ) : projectMatrix.length === 0 ? (
+                                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No matching projects found.</TableCell></TableRow>
+                                ) : projectMatrix.map(project => (
+                                    <TableRow key={project.id} className="border-b group hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setSelectedProject(project); setManualProgress(project.completion); }}>
+                                        <TableCell className="py-6 px-8">
+                                            <div className="flex flex-col">
+                                                <span className="font-black text-sm uppercase tracking-tight text-slate-800">{project.name}</span>
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase mt-1">{project.team}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <Badge className={cn(
+                                                "rounded-none font-black text-[8px] px-2 h-5 border-none uppercase tracking-widest",
+                                                project.type === 'Client Project' ? "bg-purple-100 text-purple-700" :
+                                                project.type === 'In-House/R&D' ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
+                                            )}>
+                                                {project.type}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="min-w-[140px] px-6 text-center">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex justify-between text-[9px] font-black uppercase">
+                                                    <span className="text-muted-foreground/40">{project.phase}</span>
+                                                    <span className="text-primary">{project.completion}%</span>
+                                                </div>
+                                                <Progress value={project.completion} className="h-1.5 rounded-none bg-muted/30" indicatorClassName="bg-primary" />
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right px-8">
+                                            <div className="flex items-center justify-end gap-3 text-right">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase text-slate-800">{project.leader}</p>
+                                                    <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">Lead</p>
+                                                </div>
+                                                <div className="size-8 rounded-none bg-muted/20 flex items-center justify-center text-[10px] font-black text-muted-foreground border">
+                                                    {project.leader[0]}
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+
                 <div className="lg:col-span-4 space-y-6">
                     <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden ring-1 ring-border/50">
                         <CardHeader className="p-8 pb-4">
@@ -425,7 +508,6 @@ export default function ProjectsPage() {
                         </CardHeader>
                         <CardContent className="p-8 pt-0 space-y-8">
                             <div className="space-y-4">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Resource Distribution</p>
                                 <div className="h-[240px] w-full relative">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
@@ -459,81 +541,15 @@ export default function ProjectsPage() {
                         </div>
                         <div className="relative z-10 space-y-4">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">System Integrity</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Deployment Integrity</p>
                                 <h3 className="text-4xl font-black tracking-tighter">94.2%</h3>
                             </div>
-                            <p className="text-xs font-medium opacity-60 uppercase leading-relaxed">Fleet operation is running at peak capacity for current mission cycle.</p>
+                            <p className="text-xs font-medium opacity-60 uppercase leading-relaxed">System performance is audited against real-time fleet activity logs.</p>
                             <Button variant="outline" className="w-full h-11 rounded-none border-white/20 bg-white/10 hover:bg-white/20 text-white font-black uppercase text-[10px] tracking-widest relative z-10" asChild>
-                                <Link href="/dashboard/analytics">Audit Performance</Link>
+                                <Link href="/dashboard/analytics">Audit Matrix</Link>
                             </Button>
                         </div>
                     </Card>
-                </div>
-
-                <div className="lg:col-span-8 bg-white border-none shadow-xl ring-1 ring-border/50 rounded-none overflow-hidden flex flex-col">
-                    <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
-                        <div className="space-y-1">
-                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                <Layers className="size-4" /> Project Status Grid
-                            </CardTitle>
-                            <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Consolidated progress registry</CardDescription>
-                        </div>
-                    </CardHeader>
-                    <div className="flex-1 overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-muted/10 border-b">
-                                <TableRow className="hover:bg-transparent">
-                                    <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Project Name</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Type</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Progress</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Project Lead</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {isLoading ? (
-                                    <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Scanning Records...</TableCell></TableRow>
-                                ) : projectMatrix.map(project => (
-                                    <TableRow key={project.id} className="border-b group hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setSelectedProject(project)}>
-                                        <TableCell className="py-6 px-8">
-                                            <div className="flex flex-col">
-                                                <span className="font-black text-sm uppercase tracking-tight text-slate-800">{project.name}</span>
-                                                <span className="text-[9px] font-bold text-muted-foreground uppercase mt-1">{project.team}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <Badge className={cn(
-                                                "rounded-none font-black text-[8px] px-2 h-5 border-none uppercase tracking-widest",
-                                                project.type === 'Client Project' ? "bg-purple-100 text-purple-700" :
-                                                project.type === 'In-House/R&D' ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
-                                            )}>
-                                                {project.type}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="min-w-[140px] px-6 text-center">
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex justify-between text-[9px] font-black uppercase">
-                                                    <span className="text-muted-foreground/40">{project.phase}</span>
-                                                    <span className="text-primary">{project.completion}%</span>
-                                                </div>
-                                                <Progress value={project.completion} className="h-1.5 rounded-none bg-muted/30" indicatorClassName="bg-primary" />
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right px-8">
-                                            <div className="flex items-center justify-end gap-3">
-                                                <div className="text-right">
-                                                    <p className="text-[10px] font-black uppercase text-slate-800">{project.leader}</p>
-                                                    <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">Lead</p>
-                                                </div>
-                                                <div className="size-8 rounded-none bg-muted/20 flex items-center justify-center text-[10px] font-black text-muted-foreground border">
-                                                    {project.leader[0]}
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
                 </div>
             </div>
 
@@ -541,9 +557,9 @@ export default function ProjectsPage() {
                 <CardHeader className="p-8 border-b bg-muted/5 flex flex-row items-center justify-between">
                     <div className="space-y-1">
                         <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                            <Activity className="size-4" /> Member Activity Feed
+                            <Activity className="size-4" /> Tactical Activity Feed
                         </CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Real-time development log from daily reports</CardDescription>
+                        <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Verified development activity from shift reports</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -551,15 +567,15 @@ export default function ProjectsPage() {
                         <Table>
                             <TableHeader className="bg-muted/10 border-b">
                                 <TableRow>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Team Member</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Assignment</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Current Module</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Submitted</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Fleet Member</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Target Project</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Specific Task</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Submission</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {activityFeed.length === 0 ? (
-                                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No activity logs found.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No reported activity detected.</TableCell></TableRow>
                                 ) : activityFeed.map(feed => (
                                     <TableRow key={feed.id} className="border-b hover:bg-slate-50 transition-colors">
                                         <TableCell className="py-6 px-8">
@@ -612,19 +628,24 @@ export default function ProjectsPage() {
 
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10 pb-32">
+                            {selectedProject?.type === 'Client Project' && (
+                                <div className="space-y-6 bg-white p-8 ring-1 ring-border/50 rounded-none shadow-sm animate-fade-in-up">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Audit Progress</h4>
+                                        <span className="text-2xl font-black text-primary">{manualProgress}%</span>
+                                    </div>
+                                    <Slider value={[manualProgress]} min={0} max={100} step={5} onValueChange={v => setManualProgress(v[0])} />
+                                    <div className="flex justify-between items-center pt-2">
+                                        <p className="text-[8px] font-bold text-muted-foreground uppercase italic tracking-widest leading-relaxed">Authorized update only. Adjust mission percentage.</p>
+                                        <Button variant="outline" size="sm" className="rounded-none h-8 font-black uppercase text-[8px] px-4" onClick={handleUpdateProgress}>Lock Progress</Button>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Project Overview</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Mission Brief</h4>
                                 <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50">
                                     <p className="text-xs font-medium text-slate-600 leading-relaxed uppercase italic">"{selectedProject?.description}"</p>
-                                    <div className="mt-6 flex justify-between items-end">
-                                        <div className="space-y-1">
-                                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Completion</p>
-                                            <p className="text-3xl font-black text-primary tracking-tighter">{selectedProject?.completion}%</p>
-                                        </div>
-                                        <div className="w-48">
-                                            <Progress value={selectedProject?.completion} className="h-1.5 rounded-none bg-muted/30" indicatorClassName="bg-primary" />
-                                        </div>
-                                    </div>
                                 </Card>
                             </div>
 
@@ -634,22 +655,22 @@ export default function ProjectsPage() {
                                 </Button>
                                 <Button variant="outline" className="h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2 bg-white" asChild>
                                     <Link href={`/dashboard/documents`}>
-                                        <FileBox className="size-4" /> Project Vault
+                                        <FileBox className="size-4" /> Mission Vault
                                     </Link>
                                 </Button>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Project Team</h4>
-                                    <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none border-none bg-primary/5 text-primary px-2">{selectedProject?.memberIds.length} Members</Badge>
+                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Deployment Roster</h4>
+                                    <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none border-none bg-primary/5 text-primary px-2">{selectedProject?.memberIds.length} Assets</Badge>
                                 </div>
                                 <div className="space-y-2">
                                     {selectedProject?.memberIds.map(id => {
                                         const member = users?.find(u => u.id === id);
                                         if (!member) return null;
                                         return (
-                                            <Link key={id} href={`/dashboard/users/${id}`} className="flex items-center gap-4 p-4 bg-white border border-border/50 hover:bg-primary/5 transition-all group">
+                                            <Link key={id} href={`/dashboard/users/${id}`} className="flex items-center gap-4 p-4 bg-white border border-border/50 hover:bg-primary/5 transition-all group shadow-sm">
                                                 <Avatar className="size-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
                                                     <AvatarImage src={member.avatar} className="object-cover" />
                                                     <AvatarFallback className="text-[10px] font-black bg-muted">{member.firstName[0]}</AvatarFallback>
@@ -658,7 +679,7 @@ export default function ProjectsPage() {
                                                     <p className="font-black text-xs uppercase truncate group-hover:text-primary transition-colors">{member.firstName} {member.lastName}</p>
                                                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{member.jobTitle}</p>
                                                 </div>
-                                                {id === selectedProject.leaderId && <Badge className="bg-primary text-white text-[7px] font-black uppercase rounded-none h-4">Project Lead</Badge>}
+                                                {id === selectedProject.leaderId && <Badge className="bg-primary text-white text-[7px] font-black uppercase rounded-none h-4">Unit Leader</Badge>}
                                             </Link>
                                         );
                                     })}
@@ -666,9 +687,9 @@ export default function ProjectsPage() {
                             </div>
 
                             <div className="space-y-4 pt-6 border-t border-dashed">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Management Actions</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Oversight Actions</h4>
                                 <Button variant="outline" className="w-full h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2 bg-white" onClick={() => setIsAssignOpen(true)}>
-                                    <Settings2 className="size-4" /> Change Team Assignment
+                                    <Settings2 className="size-4" /> Reallocate Technical Unit
                                 </Button>
                             </div>
                         </div>
@@ -676,18 +697,17 @@ export default function ProjectsPage() {
                 </SheetContent>
             </Sheet>
 
-            {/* Team Assignment Dialog */}
             <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
                 <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                     <DialogHeader className="text-left">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Assign to Team</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Redirect project management to a different unit</DialogDescription>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Reallocate Unit</DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Redirect mission management to a different fleet unit</DialogDescription>
                     </DialogHeader>
                     <div className="py-8 space-y-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Target Unit</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">New Tactical Unit</Label>
                             <Select onValueChange={handleAssignTeam}>
-                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Fleet Unit" /></SelectTrigger>
+                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Target Team" /></SelectTrigger>
                                 <SelectContent className="rounded-none">
                                     {teams?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                                 </SelectContent>
@@ -695,35 +715,34 @@ export default function ProjectsPage() {
                         </div>
                         <div className="p-4 bg-muted/20 border border-dashed rounded-none flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <p className="text-[9px] font-black uppercase">Team not found?</p>
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Initialize a new division</p>
+                                <p className="text-[9px] font-black uppercase">Fleet empty?</p>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Provision a new unit</p>
                             </div>
                             <Button size="sm" variant="ghost" asChild className="text-[9px] font-black uppercase text-primary hover:bg-primary/5">
-                                <Link href="/dashboard/teams"><Plus className="size-3 mr-1" /> Create Team</Link>
+                                <Link href="/dashboard/teams"><Plus className="size-3 mr-1" /> Dispatch Team</Link>
                             </Button>
                         </div>
                     </div>
                 </DialogContent>
             </Dialog>
 
-            {/* Meeting Schedule Dialog */}
             <Dialog open={isMeetingOpen} onOpenChange={setIsMeetingOpen}>
                 <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                     <DialogHeader className="text-left">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Schedule Team Meet</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Synchronize all assigned project members</DialogDescription>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Team Synchronization</DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Schedule call with all assigned unit assets</DialogDescription>
                     </DialogHeader>
                     <div className="py-6 space-y-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Subject</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Call Subject</Label>
                             <Input value={meetingTitle} onChange={e => setMeetingTitle(e.target.value)} placeholder="e.g., Progress Audit" className="h-12 rounded-none" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Scheduled Time</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Mission Time</Label>
                             <Input type="datetime-local" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} className="h-12 rounded-none" />
                         </div>
                         <div className="p-5 bg-primary/5 rounded-none ring-1 ring-primary/10">
-                            <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-3">Auto-Selected Participants</p>
+                            <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-3">Auto-Selected Personnel</p>
                             <div className="flex -space-x-2">
                                 {selectedProject?.memberIds.slice(0, 5).map(id => (
                                     <Avatar key={id} className="size-8 rounded-none border-2 border-white ring-1 ring-border/50">
@@ -737,7 +756,7 @@ export default function ProjectsPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={handleScheduleMeeting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Confirm Meeting</Button>
+                        <Button onClick={handleScheduleMeeting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Confirm Briefing</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
