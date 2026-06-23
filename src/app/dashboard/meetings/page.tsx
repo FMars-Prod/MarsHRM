@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -301,7 +300,6 @@ export default function MeetingsPage() {
                                     <Badge className="bg-slate-100 text-slate-500 border-none rounded-none text-[9px] font-black uppercase tracking-widest px-2 h-5">Finished</Badge>
                                 )}
                             </div>
-                            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setSelectedMeeting(null)}><X className="size-5"/></Button>
                         </div>
                         <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary leading-tight">{selectedMeeting?.title}</SheetTitle>
                     </SheetHeader>
