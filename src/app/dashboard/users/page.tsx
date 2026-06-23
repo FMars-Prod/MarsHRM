@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, CheckCircle2, Check, X, LocateFixed, Building2, RotateCcw, Home, Search, Loader2, MapPin } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, CheckCircle2, Check, X, LocateFixed, Building2, RotateCcw, Home, Search, Loader2, MapPin, ShieldAlert } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { doc, collection, query, writeBatch, serverTimestamp, getDocs, where, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -77,9 +77,18 @@ export default function UsersPage() {
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
   const { data: branches } = useCollection<any>(branchesQuery);
 
+  const complianceQuery = useMemoFirebase(() => query(collection(firestore, 'compliance_reports')), [firestore]);
+  const { data: complianceReports } = useCollection<any>(complianceQuery);
+
+  const nonCompliantUserIds = React.useMemo(() => {
+    if (!complianceReports) return new Set<string>();
+    return new Set(complianceReports.map(r => r.employeeId));
+  }, [complianceReports]);
+
   const userDocRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD' || currentUserData?.role === 'Team Lead';
+  const isExecutive = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -480,6 +489,7 @@ export default function UsersPage() {
             ) : users?.map(u => {
               const userBranch = branches?.find((b: any) => b.id === u.branchId);
               const isRemote = u.isWfhAllowed;
+              const hasComplianceIssue = nonCompliantUserIds.has(u.id);
 
               return (
                 <TableRow key={u.id} className={cn("border-border/50 group hover:bg-primary/5 transition-colors", selectedUserIds.includes(u.id) && "bg-primary/5")}>
@@ -487,17 +497,31 @@ export default function UsersPage() {
                         <Checkbox checked={selectedUserIds.includes(u.id)} onCheckedChange={(c) => toggleSelectUser(u.id, !!c)} className="rounded-none" />
                     </TableCell>
                     <TableCell className="py-6 align-middle">
-                        <Avatar className="h-10 w-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
-                            <AvatarImage src={u.avatar} className="object-cover" />
-                            <AvatarFallback className="rounded-none font-black text-xs bg-muted">{u.firstName?.[0]}{u.lastName?.[0]}</AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                            <Avatar className="h-10 w-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
+                                <AvatarImage src={u.avatar} className="object-cover" />
+                                <AvatarFallback className="rounded-none font-black text-xs bg-muted">{u.firstName?.[0]}{u.lastName?.[0]}</AvatarFallback>
+                            </Avatar>
+                            {isExecutive && hasComplianceIssue && (
+                                <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5 border-2 border-white shadow-lg animate-pulse">
+                                    <ShieldAlert className="size-2.5 text-white" />
+                                </div>
+                            )}
+                        </div>
                     </TableCell>
                     <TableCell className="py-6 align-middle">
                         <div className="flex flex-col">
-                            <Link href={`/dashboard/users/${u.id}`} className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors flex items-center gap-2 leading-none">
-                                {u.firstName} {u.lastName} 
-                                {u.isDemoAccount && <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase border-none px-2 h-4 rounded-none">DEMO</Badge>}
-                            </Link>
+                            <div className="flex items-center gap-2">
+                                <Link href={`/dashboard/users/${u.id}`} className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors flex items-center gap-2 leading-none">
+                                    {u.firstName} {u.lastName} 
+                                    {u.isDemoAccount && <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase border-none px-2 h-4 rounded-none">DEMO</Badge>}
+                                </Link>
+                                {isExecutive && hasComplianceIssue && (
+                                    <Badge className="bg-red-600 text-white animate-pulse rounded-none font-black text-[7px] h-4 px-1.5 border-none">
+                                        PROTOCOL ALERT
+                                    </Badge>
+                                )}
+                            </div>
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{u.jobTitle}</span>
                         </div>
                     </TableCell>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown } from 'lucide-react';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -176,19 +177,22 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const assetsQuery = useMemoFirebase(() => userId ? query(collection(firestore, "assets"), where("assignedToId", "==", userId)) : null, [userId, firestore]);
   const { data: assignedAssets } = useCollection<any>(assetsQuery);
 
+  const complianceQuery = useMemoFirebase(() => userId ? query(collection(firestore, 'compliance_reports'), where('employeeId', '==', userId)) : null, [userId, firestore]);
+  const { data: complianceIssues } = useCollection<any>(complianceQuery);
+
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
-  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
+  const isExecutive = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
 
   React.useEffect(() => {
     if (!isUserLoading && currentUser && currentUserData) {
         const isSelf = currentUser.uid === userId;
-        if (!isSelf && !isAdmin) {
+        if (!isSelf && !isExecutive) {
             toast({ variant: 'destructive', title: 'Access Denied', description: 'Administrative authorization required.' });
             router.push('/dashboard');
         }
     }
-  }, [currentUser, currentUserData, userId, isUserLoading, router, toast, isAdmin]);
+  }, [currentUser, currentUserData, userId, isUserLoading, router, toast, isExecutive]);
 
   const monthStart = startOfMonth(new Date());
   const monthEnd = endOfMonth(new Date());
@@ -257,7 +261,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   };
 
   const handleDeleteReport = (report: any) => {
-    if (!isAdmin) return;
+    if (!isExecutive) return;
     const reportRef = doc(firestore, `users/${report.employeeId}/reports`, report.id);
     deleteDocumentNonBlocking(reportRef);
     toast({ title: "Report Deleted" });
@@ -297,6 +301,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
   const leaveBalValue = user.leaveBalance;
   const leaveEntValue = user.totalLeaveEntitlement || (isEmployeeType ? 12 : 0);
   const isLeaveConfigured = leaveBalValue !== undefined && isEmployeeType;
+  const hasComplianceIssue = (complianceIssues?.length || 0) > 0;
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in-up pb-10 space-y-4 font-jakarta">
@@ -305,14 +310,26 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <div className="flex flex-col lg:flex-row items-stretch">
                 {/* Avatar Vertical Terminal */}
                 <div className="relative shrink-0 lg:border-r border-dashed border-border/50 bg-muted/5 p-8 lg:p-10 flex flex-col items-center justify-center">
-                    <Avatar className="size-40 sm:size-48 rounded-none ring-8 ring-white shadow-2xl transition-transform duration-500 hover:scale-105">
-                        <AvatarImage src={user.avatar} className="object-cover" />
-                        <AvatarFallback className="text-5xl font-black rounded-none bg-primary/10 text-primary">{user.firstName?.[0]}</AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                        <Avatar className="size-40 sm:size-48 rounded-none ring-8 ring-white shadow-2xl transition-transform duration-500 hover:scale-105">
+                            <AvatarImage src={user.avatar} className="object-cover" />
+                            <AvatarFallback className="text-5xl font-black rounded-none bg-primary/10 text-primary">{user.firstName?.[0]}</AvatarFallback>
+                        </Avatar>
+                        {isExecutive && hasComplianceIssue && (
+                            <div className="absolute -top-4 -right-4 bg-red-600 rounded-full p-2 border-4 border-white shadow-2xl animate-pulse">
+                                <ShieldAlert className="size-8 text-white" />
+                            </div>
+                        )}
+                    </div>
                     <div className="mt-8 flex flex-col items-center gap-3">
                         <Badge className="bg-green-500 text-white rounded-none font-black text-[10px] px-4 py-1 uppercase tracking-widest shadow-md">
                            Status: Active
                         </Badge>
+                        {isExecutive && hasComplianceIssue && (
+                            <Badge className="bg-red-600 text-white animate-pulse rounded-none font-black text-[10px] px-4 py-1 uppercase tracking-widest shadow-lg border-none">
+                                PROTOCOL VIOLATION
+                            </Badge>
+                        )}
                         <p className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">Verified Profile</p>
                     </div>
                 </div>
@@ -321,11 +338,18 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 <div className="flex-1 p-8 lg:p-10 space-y-10 flex flex-col justify-center">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                         <div className="space-y-1.5">
-                            <h2 className="text-4xl lg:text-5xl font-black tracking-tighter leading-none">{user.firstName} {user.lastName}</h2>
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-4xl lg:text-5xl font-black tracking-tighter leading-none uppercase">{user.firstName} {user.lastName}</h2>
+                                {isExecutive && hasComplianceIssue && (
+                                    <div className="p-1.5 bg-red-50 rounded-none border border-red-200">
+                                        <ShieldAlert className="size-6 text-red-600 animate-pulse" />
+                                    </div>
+                                )}
+                            </div>
                             <p className="text-lg font-bold text-muted-foreground uppercase tracking-widest">{user.jobTitle}</p>
                         </div>
                         <div className="flex gap-3">
-                            {isAdmin && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest bg-white shadow-sm hover:shadow-md transition-all">Export Report</Button>}
+                            {isExecutive && <Button onClick={handleExportPdf} variant="outline" size="sm" className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest bg-white shadow-sm hover:shadow-md transition-all">Export Report</Button>}
                             <Button asChild size="sm" className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"><Link href="/dashboard/users"><Users className="size-4 mr-2" /> Employee List</Link></Button>
                         </div>
                     </div>
@@ -364,7 +388,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <MetricCard icon={Zap} title="Performance" ratio={user.performanceRating || "Good"} color="text-primary">
                 <div className="flex items-center justify-between mt-4">
                     <p className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-tight">Last Review: {user.lastReviewDate ? format(user.lastReviewDate.toDate(), 'dd MMM yy') : 'Pending'}</p>
-                    {isAdmin && (
+                    {isExecutive && (
                         <Dialog>
                             <DialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-5 w-5 -mr-1 hover:bg-primary/5 rounded-none">
@@ -614,7 +638,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary" onClick={() => handleDownloadPdfReport(selectedReportForReview)}><FileDown className="size-3 mr-1.5" /> Download Audit</Button>
-                        {isAdmin && (
+                        {isExecutive && (
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest"><Trash2 className="size-3 mr-1.5"/> Delete</Button>
@@ -638,7 +662,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     <div className="space-y-8 pb-10">
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personnel</p><p className="font-bold text-lg">{selectedReportForReview?.employeeName}</p></div>
-                            <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sector</p><p className="font-bold text-lg">{selectedReportForReview?.employeeDepartment}</p></div>
+                            <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Job Title</p><p className="font-bold text-lg">{selectedReportForReview?.employeeJobTitle}</p></div>
                         </div>
                         <Separator />
                         {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
@@ -671,7 +695,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p>
-                                <p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle}</p>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p>
                                 <p className="text-[8px] font-mono text-muted-foreground italic mt-2">Audit Timestamp: {formatIST(selectedReportForReview?.date)}</p>
                             </div>
                         </div>

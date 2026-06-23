@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -98,10 +99,10 @@ export default function DashboardPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
 
-  const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
-  const { data: currentUserData } = useDoc(currentUserDocRef);
+  const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
+  const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   
-  const userRole = (currentUserData as any)?.role;
+  const userRole = currentUserData?.role;
   const isExecutive = userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
   if (!isExecutive) {
@@ -153,6 +154,11 @@ export default function DashboardPage() {
             <span className="absolute top-3 right-3 size-2.5 bg-rose-500 rounded-full ring-2 ring-white" />
           </Button>
         </div>
+      </div>
+
+      {/* Row 0: Attendance Protocol (Kept for all tiers) */}
+      <div className="w-full animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+          <AttendanceWidget />
       </div>
 
       {/* Row 1: KPI Matrix */}
@@ -290,7 +296,7 @@ export default function DashboardPage() {
                         ))}
                     </div>
                 </div>
-                <Button variant="link" className="h-8 p-0 text-[10px] font-black uppercase text-primary mt-4 self-end group">View Projects <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button>
+                <Button variant="link" className="h-8 p-0 text-[10px] font-black uppercase text-primary mt-4 self-end group" asChild><Link href="/dashboard/projects">View Projects <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Link></Button>
             </Card>
 
             <Card className="flex-[1.5] border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
@@ -366,7 +372,7 @@ export default function DashboardPage() {
                 ))}
             </CardContent>
             <div className="px-8 py-4 bg-slate-50 border-t border-slate-100">
-                <Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full justify-center group">Marketing Intelligence Hub <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button>
+                <Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full justify-center group" asChild><Link href="/dashboard/marketing">Marketing Intelligence Hub <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Link></Button>
             </div>
         </Card>
 
@@ -394,7 +400,7 @@ export default function DashboardPage() {
                 </div>
             </CardContent>
             <div className="px-8 py-4 bg-slate-50 border-t border-slate-100">
-                <Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full justify-center group">People Analytics Portal <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button>
+                <Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full justify-center group" asChild><Link href="/dashboard/users">People Analytics Portal <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Link></Button>
             </div>
         </Card>
 
@@ -439,7 +445,7 @@ export default function DashboardPage() {
                     </div>
                 ))}
             </CardContent>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100"><Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full group">Finance Intelligence Portal <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Button></div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100"><Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full group" asChild><Link href="/dashboard/finance">Finance Intelligence Portal <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Link></Button></div>
         </Card>
 
         {/* Top Clients */}
