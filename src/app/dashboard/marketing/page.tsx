@@ -23,17 +23,17 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, isSameMonth, addDays, isAfter, isBefore, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth as startOfMonthFn, subMonths, endOfMonth as endOfMonthFn, startOfDay, endOfDay } from 'date-fns';
+import { format, isAfter, isBefore, startOfWeek, endOfWeek, subWeeks, startOfMonth as startOfMonthFn, subMonths, endOfMonth as endOfMonthFn, startOfDay, endOfDay } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
     Area, AreaChart, CartesianGrid, 
-    XAxis, YAxis, Tooltip, Line, LineChart, ResponsiveContainer
+    XAxis, YAxis, Tooltip
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { addDocumentNonBlocking } from '@/firebase';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import Link from 'next/link';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -46,19 +46,6 @@ function formatCompact(num: number) {
         maximumFractionDigits: 1
     }).format(num).toLowerCase();
 }
-
-const PLATFORM_ICONS: Record<string, any> = {
-    'Instagram': Instagram,
-    'LinkedIn': Linkedin,
-    'Facebook': Facebook,
-    'Twitter': Twitter,
-    'YouTube': Youtube,
-    'Meta Ads': Facebook,
-    'Google Ads': Globe,
-    'LinkedIn Ads': Linkedin,
-    'YouTube Ads': Youtube,
-    'Naukri': Briefcase
-};
 
 // --- DATA TYPES ---
 
@@ -135,23 +122,21 @@ export default function MarketingManagementPage() {
 
     // Access Control
     const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
-    const { data: userData, isLoading: isUserDocLoading } = useDoc<any>(userDocRef);
+    const { data: userData } = useDoc<any>(userDocRef);
     const userRole = userData?.role;
     const isAuthorized = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
     // UI States
-    const [isRegistryOpen, setIsRegistryOpen] = React.useState(false);
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [isTopupOpen, setIsTopupOpen] = React.useState(false);
     const [isBudgetWarningOpen, setIsBudgetWarningOpen] = React.useState(false);
-    const [selectedAuditEntry, setSelectedAuditEntry] = React.useState<MarketingSession | null>(null);
+    const [setSelectedAuditEntry] = React.useState<MarketingSession | null>(null);
     const [formData, setFormData] = React.useState<any>({ socialLogs: [], adSpends: [] });
     const [topupValue, setTopupValue] = React.useState<string>("");
 
     const registryRef = useMemoFirebase(() => doc(firestore, 'settings', 'marketing_registry'), [firestore]);
     const { data: registry } = useDoc<any>(registryRef);
     const brands = React.useMemo(() => registry?.brands || DEFAULT_BRANDS, [registry]);
-    const adPlatforms = React.useMemo(() => registry?.adPlatforms || DEFAULT_AD_PLATFORMS, [registry]);
 
     const allPlatformIds = React.useMemo(() => {
         const ids = new Set<string>();
@@ -381,7 +366,7 @@ export default function MarketingManagementPage() {
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
                             <Button className="rounded-full h-11 shadow-lg font-black uppercase text-[10px] tracking-widest px-8 shadow-primary/20">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Update Data
+                                <PlusCircle className="mr-2 h-4 w-4" /> Update Marketing Data
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl rounded-none border-none shadow-3xl p-0 overflow-hidden h-[90vh] flex flex-col">
@@ -454,7 +439,7 @@ export default function MarketingManagementPage() {
                     <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white overflow-hidden">
                         <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
                             <div className="space-y-1">
-                                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-3"><Users className="size-5" /> Social Growth Matrix</CardTitle>
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-3"><Users className="size-5" /> Follower Stats</CardTitle>
                                 <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Brand reach audit for selected period</CardDescription>
                             </div>
                         </CardHeader>
@@ -511,7 +496,7 @@ export default function MarketingManagementPage() {
 
                     <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white overflow-hidden flex flex-col">
                         <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
-                            <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-3"><History className="size-5" /> Operational Ledger</CardTitle>
+                            <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-3"><History className="size-5" /> History Log</CardTitle>
                             <Badge className="bg-emerald-100 text-emerald-700 rounded-none font-black text-[8px] border-none px-3 h-6 uppercase tracking-widest">Audited Log</Badge>
                         </CardHeader>
                         <CardContent className="p-0 flex-1">
@@ -519,7 +504,7 @@ export default function MarketingManagementPage() {
                                 {sessionsLoading ? (
                                     <div className="p-20 text-center animate-pulse uppercase font-black text-[10px] text-muted-foreground tracking-widest">Scanning records...</div>
                                 ) : filteredSessions.length === 0 ? (
-                                    <div className="p-24 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No activity in this period.</div>
+                                    <div className="p-24 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No records found.</div>
                                 ) : (
                                     <div className="divide-y divide-border/50">
                                         {filteredSessions.map((session) => {
@@ -581,12 +566,12 @@ export default function MarketingManagementPage() {
 
                     <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none bg-white p-8 overflow-hidden flex flex-col space-y-6">
                         <div className="flex items-center justify-between">
-                            <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-3"><Timer className="size-4" /> Mission Ends</CardTitle>
+                            <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-3"><Timer className="size-4" /> Ending Soon</CardTitle>
                             <Badge className="bg-rose-500 text-white rounded-none font-black text-[9px] px-2 h-5 shadow-sm">{deadlines.filter(d => d.status === 'Overdue').length} ALERTS</Badge>
                         </div>
                         <ScrollArea className="h-[280px]">
                             <div className="space-y-3">
-                                {deadlines.map((d, i) => (
+                                {deadlines.length > 0 ? deadlines.map((d, i) => (
                                     <div key={i} className="p-4 rounded-none bg-muted/20 border border-transparent hover:border-border/50 hover:bg-white transition-all flex items-center justify-between group">
                                         <div className="flex items-center gap-4">
                                             <div className={cn("p-2 rounded-none text-white", d.status === 'Overdue' ? "bg-rose-500" : "bg-sky-500")}>
@@ -599,7 +584,9 @@ export default function MarketingManagementPage() {
                                         </div>
                                         <ChevronRight className="size-4 opacity-0 group-hover:opacity-40 transition-opacity" />
                                     </div>
-                                ))}
+                                )) : (
+                                    <div className="py-20 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No active deadlines</div>
+                                )}
                             </div>
                         </ScrollArea>
                     </Card>
