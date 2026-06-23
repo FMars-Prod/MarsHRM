@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -173,7 +172,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const directReports = React.useMemo(() => {
       if (!user || !allUsers) return [];
-      return allUsers.filter((u: any) => u.reportingHeadIds?.includes(employee.id));
+      return allUsers.filter((u: any) => u.reportingHeadIds?.includes(user.id));
   }, [user?.id, allUsers]);
 
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
@@ -408,7 +407,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 <div className="py-6 space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Rating</Label>
                                     <Select onValueChange={handleUpdatePerformance} defaultValue={user.performanceRating || "Good"}>
-                                        <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectValue>
+                                        <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
                                         <SelectContent className="rounded-none">
                                             <SelectItem value="Excellent">Excellent</SelectItem>
                                             <SelectItem value="Good">Good</SelectItem>
@@ -686,10 +685,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
         {/* Report Review Dialog */}
         <Dialog open={!!selectedReportForReview} onOpenChange={o => !o && setSelectedReportForReview(null)}>
             <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-                <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center">
+                <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center shrink-0">
                     <div>
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Mission Audit Log</DialogTitle>
-                        <p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p>
+                        <p className="text-xs font-bold text-muted-foreground">{selectedReportForReview && formatIST(selectedReportForReview.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary" onClick={() => handleDownloadPdfReport(selectedReportForReview)}><FileDown className="size-3 mr-1.5" /> Download Audit</Button>
@@ -713,8 +712,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest h-8">{selectedReportForReview?.reportType}</Badge>
                     </div>
                 </DialogHeader>
-                <ScrollArea className="flex-1 p-8 bg-secondary/10">
-                    <div className="space-y-8 pb-10">
+                <ScrollArea className="flex-1 bg-secondary/10">
+                    <div className="p-8 space-y-8 pb-20">
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personnel</p><p className="font-bold text-lg">{selectedReportForReview?.employeeName}</p></div>
                             <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Job Title</p><p className="font-bold text-lg">{selectedReportForReview?.employeeJobTitle}</p></div>
@@ -751,7 +750,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <div className="space-y-1">
                                 <p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p>
                                 <p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p>
-                                <p className="text-[8px] font-mono text-muted-foreground italic mt-2">Audit Timestamp: {formatIST(selectedReportForReview?.date)}</p>
+                                <p className="text-[8px] font-mono text-muted-foreground italic mt-2">Audit Timestamp: {selectedReportForReview && formatIST(selectedReportForReview.date)}</p>
                             </div>
                         </div>
                     </div>
