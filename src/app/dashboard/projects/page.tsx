@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup, where, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, where, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { useDoc } from '@/firebase/firestore/use-doc';
 import { 
     Briefcase, Activity, Target, Users, 
     PieChart as PieChartIcon, CheckCircle2, 
@@ -18,7 +19,7 @@ import {
     UserCircle, Search, Filter, X,
     FileBox, CheckCircle, Ban, AlertCircle,
     PlusCircle, Building2, User as UserIcon,
-    ShieldCheck
+    ShieldCheck, Edit3
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -54,24 +55,15 @@ type Project = {
     description?: string;
 };
 
-type ActivityFeed = {
-    id: string;
-    member: string;
-    memberId: string;
-    assignment: string;
-    task: string;
-    date: Date;
-};
-
 export default function ProjectsPage() {
     const { user } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [allReports, setAllReports] = React.useState<any[]>([]);
-    const [isLoading, setIsLoading] = React.useState(true);
+    
     const [typeFilter, setTypeFilter] = React.useState<string>("all");
     const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
     const [manualProgress, setManualProgress] = React.useState<number>(0);
+    const [editedName, setEditedName] = React.useState("");
     
     // Dialog States
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
@@ -92,7 +84,7 @@ export default function ProjectsPage() {
     const [meetingDate, setMeetingDate] = React.useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
 
     const clientsQuery = useMemoFirebase(() => query(collection(firestore, 'clients')), [firestore]);
-    const { data: clients } = useCollection<any>(clientsQuery);
+    const { data: clients, isLoading: clientsLoading } = useCollection<any>(clientsQuery);
 
     const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
     const { data: teams } = useCollection<any>(teamsQuery);
@@ -100,21 +92,9 @@ export default function ProjectsPage() {
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
     const { data: users } = useCollection<any>(usersQuery);
 
-    React.useEffect(() => {
-        const fetchReports = async () => {
-            setIsLoading(true);
-            try {
-                const q = query(collectionGroup(firestore, 'reports'), orderBy('date', 'desc'));
-                const snap = await getDocs(q);
-                setAllReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            } catch (err) {
-                console.error("Audit error:", err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchReports();
-    }, [firestore]);
+    const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+    const { data: currentUserData } = useDoc<any>(userDocRef);
+    const isExecutive = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
 
     const projectMatrix = React.useMemo(() => {
         const matrix: Project[] = [];
@@ -136,7 +116,7 @@ export default function ProjectsPage() {
                 name: client.companyName,
                 team: team?.name || 'Unassigned',
                 teamId: team?.id,
-                type: 'Client Project',
+                type: (client.serviceType === 'In House' ? 'In-House/R&D' : (client.serviceType === 'CSR' ? 'CSR' : 'Client Project')) as Project['type'],
                 phase: client.status === 'Active' ? 'Execution' : 'Initiation',
                 status,
                 leader: leader ? `${leader.firstName} ${leader.lastName}` : 'TBD',
@@ -147,59 +127,8 @@ export default function ProjectsPage() {
             });
         });
 
-        const internalProjects = new Set<string>();
-        const clientProjectNames = new Set(matrix.map(m => m.name.toLowerCase()));
-
-        allReports.forEach(r => {
-            r.technicalProjects?.forEach((p: any) => {
-                const pNameLower = p.projectName.toLowerCase();
-                if (p.type !== 'Client' && !internalProjects.has(pNameLower) && !clientProjectNames.has(pNameLower)) {
-                    internalProjects.add(pNameLower);
-                    const team = teams?.find(t => t.memberIds.includes(r.employeeId));
-                    const leader = users?.find(u => u.id === team?.teamLeadId) || users?.find(u => u.id === r.employeeId);
-                    
-                    const completion = Number(p.statusPercent);
-                    let status: Project['status'] = 'In Progress';
-                    if (completion === 100) status = 'Completed';
-                    else if (completion === 0) status = 'Planning';
-
-                    matrix.push({
-                        id: `internal-${p.projectName}`,
-                        name: p.projectName,
-                        team: team?.name || 'Internal Team',
-                        teamId: team?.id,
-                        type: p.type === 'In House' ? 'In-House/R&D' : 'CSR',
-                        phase: 'Development',
-                        status,
-                        leader: leader ? `${leader.firstName} ${leader.lastName}` : (r.employeeName || 'Staff'),
-                        leaderId: leader?.id,
-                        completion,
-                        memberIds: team?.memberIds || [r.employeeId],
-                        description: "Internal project development."
-                    });
-                }
-            });
-        });
-
         return matrix.filter(p => typeFilter === 'all' || p.type === typeFilter);
-    }, [clients, teams, users, allReports, typeFilter]);
-
-    const activityFeed = React.useMemo(() => {
-        const feed: ActivityFeed[] = [];
-        allReports.forEach(r => {
-            r.technicalProjects?.forEach((p: any) => {
-                feed.push({
-                    id: `${r.id}-${p.projectName}`,
-                    member: r.employeeName,
-                    memberId: r.employeeId,
-                    assignment: p.projectName,
-                    task: p.description,
-                    date: r.date?.toDate() || new Date()
-                });
-            });
-        });
-        return feed.slice(0, 15);
-    }, [allReports]);
+    }, [clients, teams, users, typeFilter]);
 
     const stats = React.useMemo(() => {
         return {
@@ -221,12 +150,32 @@ export default function ProjectsPage() {
         ];
     }, [projectMatrix]);
 
+    const canManageProject = (p: Project) => {
+        return isExecutive || user?.uid === p.leaderId;
+    };
+
     const handleUpdateProgress = () => {
-        if (!selectedProject || selectedProject.type !== 'Client Project') return;
+        if (!selectedProject) return;
+        if (!canManageProject(selectedProject)) {
+            toast({ variant: 'destructive', title: "Access Denied", description: "Only the Project Lead can update progress." });
+            return;
+        }
         const clientRef = doc(firestore, 'clients', selectedProject.id);
         updateDocumentNonBlocking(clientRef, { completionPercent: manualProgress });
         toast({ title: "Progress Updated", description: "Project completion synchronized." });
         setSelectedProject({ ...selectedProject, completion: manualProgress });
+    };
+
+    const handleRenameProject = () => {
+        if (!selectedProject || !editedName.trim()) return;
+        if (!isExecutive && user?.uid !== selectedProject.leaderId) {
+            toast({ variant: 'destructive', title: "Access Denied" });
+            return;
+        }
+        const clientRef = doc(firestore, 'clients', selectedProject.id);
+        updateDocumentNonBlocking(clientRef, { companyName: editedName.trim() });
+        toast({ title: "Project Renamed" });
+        setSelectedProject({ ...selectedProject, name: editedName.trim() });
     };
 
     const handleCreateProject = async () => {
@@ -283,7 +232,7 @@ export default function ProjectsPage() {
     };
 
     const handleAssignTeam = (newTeamId: string) => {
-        if (!selectedProject || selectedProject.type !== 'Client Project') return;
+        if (!selectedProject) return;
         const clientRef = doc(firestore, 'clients', selectedProject.id);
         updateDocumentNonBlocking(clientRef, { assignedTeamId: newTeamId });
         toast({ title: "Team Reassigned" });
@@ -321,7 +270,7 @@ export default function ProjectsPage() {
 
     return (
         <div className="space-y-8 animate-fade-in-up font-jakarta pb-20">
-            <PageHeader title="Projects" description="Manage active projects and team progress.">
+            <PageHeader title="Project Portfolio" description="Operational status of all active missions.">
                 <div className="flex gap-2">
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
                         <SelectTrigger className="w-[180px] h-11 rounded-none bg-white border-none ring-1 ring-border/50">
@@ -446,12 +395,12 @@ export default function ProjectsPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading ? (
+                                {clientsLoading ? (
                                     <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Syncing Records...</TableCell></TableRow>
                                 ) : projectMatrix.length === 0 ? (
                                     <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No projects found.</TableCell></TableRow>
                                 ) : projectMatrix.map(project => (
-                                    <TableRow key={project.id} className="border-b group hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setSelectedProject(project); setManualProgress(project.completion); }}>
+                                    <TableRow key={project.id} className="border-b group hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setSelectedProject(project); setManualProgress(project.completion); setEditedName(project.name); }}>
                                         <TableCell className="py-6 px-8">
                                             <div className="flex flex-col">
                                                 <span className="font-black text-sm uppercase tracking-tight text-slate-800">{project.name}</span>
@@ -548,63 +497,6 @@ export default function ProjectsPage() {
                 </div>
             </div>
 
-            <Card className="border-none shadow-xl ring-1 ring-border/50 rounded-none overflow-hidden bg-white">
-                <CardHeader className="p-8 border-b bg-muted/5 flex flex-row items-center justify-between">
-                    <div className="space-y-1">
-                        <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                            <Activity className="size-4" /> Member Activity Feed
-                        </CardTitle>
-                        <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Recent activity from daily member reports</CardDescription>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-muted/10 border-b">
-                                <TableRow>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Member</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Project</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest">Task Detail</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Submission</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {activityFeed.length === 0 ? (
-                                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No activity logs found.</TableCell></TableRow>
-                                ) : activityFeed.map(feed => (
-                                    <TableRow key={feed.id} className="border-b hover:bg-slate-50 transition-colors">
-                                        <TableCell className="py-6 px-8">
-                                            <div className="flex items-center gap-3">
-                                                <div className="size-8 rounded-none bg-primary/10 text-primary flex items-center justify-center font-black text-[10px]">
-                                                    {feed.member[0]}
-                                                </div>
-                                                <span className="font-black text-xs uppercase text-slate-800">{feed.member}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className="rounded-none font-black text-[8px] px-2 h-5 border-primary/20 text-primary bg-primary/5 uppercase tracking-widest">
-                                                {feed.assignment}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <p className="text-xs font-medium text-slate-600 line-clamp-1 italic uppercase tracking-tight">"{feed.task}"</p>
-                                        </TableCell>
-                                        <TableCell className="text-right px-8">
-                                            <div className="flex flex-col items-end">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase">{format(feed.date, 'MMM dd, p')}</span>
-                                                <span className="text-[7px] font-bold text-muted-foreground uppercase tracking-widest mt-1 flex items-center gap-1">
-                                                    <CheckCircle2 className="size-2 text-emerald-500" /> E-Signed
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
-
             <Sheet open={!!selectedProject} onOpenChange={o => !o && setSelectedProject(null)}>
                 <SheetContent className="w-full sm:max-w-[500px] p-0 border-none shadow-3xl w-full flex flex-col bg-[#F8FAFC]">
                     <SheetHeader className="p-8 pb-4 bg-white border-b shadow-sm shrink-0">
@@ -623,16 +515,31 @@ export default function ProjectsPage() {
 
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10 pb-32">
-                            {selectedProject?.type === 'Client Project' && (
+                            {selectedProject && (isExecutive || user?.uid === selectedProject.leaderId) && (
                                 <div className="space-y-6 bg-white p-8 ring-1 ring-border/50 rounded-none shadow-sm animate-fade-in-up">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Project Progress</h4>
-                                        <span className="text-2xl font-black text-primary">{manualProgress}%</span>
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Project Control</h4>
+                                        <div className="space-y-2">
+                                            <Label className="text-[9px] font-bold text-muted-foreground uppercase">Rename Project</Label>
+                                            <div className="flex gap-2">
+                                                <Input value={editedName} onChange={e => setEditedName(e.target.value)} className="h-10 rounded-none bg-muted/20 border-none ring-1 ring-border/50" />
+                                                <Button size="icon" onClick={handleRenameProject} className="rounded-none h-10 w-10 shrink-0"><Edit3 className="size-4" /></Button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <Slider value={[manualProgress]} min={0} max={100} step={5} onValueChange={v => setManualProgress(v[0])} />
-                                    <div className="flex justify-between items-center pt-2">
-                                        <p className="text-[8px] font-bold text-muted-foreground uppercase italic tracking-widest leading-relaxed">Adjust project completion percentage.</p>
-                                        <Button variant="outline" size="sm" className="rounded-none h-8 font-black uppercase text-[8px] px-4" onClick={handleUpdateProgress}>Lock Progress</Button>
+                                    
+                                    <Separator className="opacity-50" />
+                                    
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Manual Progress</h4>
+                                            <span className="text-2xl font-black text-primary">{manualProgress}%</span>
+                                        </div>
+                                        <Slider value={[manualProgress]} min={0} max={100} step={5} onValueChange={v => setManualProgress(v[0])} />
+                                        <div className="flex justify-between items-center pt-2">
+                                            <p className="text-[8px] font-bold text-muted-foreground uppercase italic tracking-widest leading-relaxed">Only the Project Lead can update completion.</p>
+                                            <Button variant="outline" size="sm" className="rounded-none h-8 font-black uppercase text-[8px] px-4" onClick={handleUpdateProgress}>Lock Progress</Button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -774,3 +681,4 @@ function MetricCard({ label, value, icon: Icon, color, bg }: { label: string, va
         </Card>
     );
 }
+
