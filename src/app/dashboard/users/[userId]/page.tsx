@@ -323,8 +323,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <AvatarFallback className="text-5xl font-black rounded-none bg-primary/10 text-primary">{user.firstName?.[0]}</AvatarFallback>
                         </Avatar>
                         {isExecutive && hasComplianceIssue && (
-                            <div className="absolute -top-4 -right-4 bg-red-600 rounded-full p-2 border-4 border-white shadow-2xl animate-pulse">
-                                <ShieldAlert className="size-8 text-white" />
+                            <div className="absolute -top-4 -right-4 bg-red-600 rounded-full size-12 flex items-center justify-center border-4 border-white shadow-2xl animate-pulse">
+                                <span className="text-white font-black text-xl">{complianceIssues?.length || 0}</span>
                             </div>
                         )}
                     </div>
@@ -334,7 +334,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         </Badge>
                         {isExecutive && hasComplianceIssue && (
                             <Badge className="bg-red-600 text-white animate-pulse rounded-none font-black text-[10px] px-4 py-1 uppercase tracking-widest shadow-lg border-none">
-                                PROTOCOL VIOLATION
+                                {complianceIssues?.length} PROTOCOL VIOLATIONS
                             </Badge>
                         )}
                         <p className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">Verified Profile</p>
@@ -348,9 +348,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <div className="flex items-center gap-4">
                                 <h2 className="text-4xl lg:text-5xl font-black tracking-tighter leading-none uppercase">{user.firstName} {user.lastName}</h2>
                                 {isExecutive && hasComplianceIssue && (
-                                    <div className="p-1.5 bg-red-50 rounded-none border border-red-200">
-                                        <ShieldAlert className="size-6 text-red-600 animate-pulse" />
-                                    </div>
+                                    <Badge className="bg-red-600 text-white animate-pulse rounded-none font-black text-xs h-8 px-3 border-none flex gap-2 items-center">
+                                        <ShieldAlert className="size-4" /> {complianceIssues?.length || 0} VIOLATIONS
+                                    </Badge>
                                 )}
                             </div>
                             <p className="text-lg font-bold text-muted-foreground uppercase tracking-widest">{user.jobTitle}</p>
@@ -744,7 +744,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 {selectedReportForReview?.signatureUrl ? (
                                     <img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />
                                 ) : (
-                                    <span className="font-mono text-[10px] italic opacity-60">Verified Digitally</span>
+                                    <span className="font-mono text-[10px] italic opacity-60 uppercase">Verified Digitally</span>
                                 )}
                             </div>
                             <div className="space-y-1">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -6,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
-import { Activity, Download, Users, Clock, UserCheck as UserCheckIcon, UserRoundX, MapPin, ShieldAlert } from 'lucide-react';
+import { Activity, Download, Users, Clock, UserCheck as UserCheckIcon, UserRoundX, MapPin, ShieldAlert, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '../ui/button';
@@ -58,8 +57,8 @@ export function DailyMonitorWidget() {
   });
   const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[], color: string } | null>(null);
 
-  const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
-  const { data: currentUserData } = useDoc<any>(currentUserDocRef);
+  const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
+  const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   const isExecutive = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
   
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
@@ -68,9 +67,14 @@ export function DailyMonitorWidget() {
   const complianceQuery = useMemoFirebase(() => query(collection(firestore, 'compliance_reports')), [firestore]);
   const { data: complianceReports } = useCollection<any>(complianceQuery);
 
-  const nonCompliantUserIds = React.useMemo(() => {
-    if (!complianceReports) return new Set<string>();
-    return new Set(complianceReports.map(r => r.employeeId));
+  const complianceCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (complianceReports) {
+      complianceReports.forEach(r => {
+        counts[r.employeeId] = (counts[r.employeeId] || 0) + 1;
+      });
+    }
+    return counts;
   }, [complianceReports]);
 
   React.useEffect(() => {
@@ -285,37 +289,40 @@ export function DailyMonitorWidget() {
                 </SheetHeader>
                 <ScrollArea className="flex-1">
                   <div className="p-6 space-y-3">
-                     {sheetContent.users.map(member => (
-                        <Link key={member.id} href={`/dashboard/users/${member.id}`} className="block">
-                            <Card className="border-none ring-1 ring-border/50 rounded-none p-4 bg-white hover:bg-primary/5 transition-colors cursor-pointer group">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative">
-                                            <Avatar className="h-10 w-10 rounded-none">
-                                                <AvatarImage src={member.avatar} className="object-cover" />
-                                                <AvatarFallback className="font-bold rounded-none">{member.firstName?.[0]}</AvatarFallback>
-                                            </Avatar>
-                                            {isExecutive && nonCompliantUserIds.has(member.id) && (
-                                                <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5 border border-white animate-pulse">
-                                                    <ShieldAlert className="size-2 text-white" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-black text-sm group-hover:text-primary transition-colors">{member.firstName} {member.lastName}</p>
-                                                {isExecutive && nonCompliantUserIds.has(member.id) && (
-                                                    <ShieldAlert className="size-3 text-red-600 animate-pulse" />
+                     {sheetContent.users.map(member => {
+                        const complianceCount = complianceCounts[member.id] || 0;
+                        return (
+                            <Link key={member.id} href={`/dashboard/users/${member.id}`} className="block">
+                                <Card className="border-none ring-1 ring-border/50 rounded-none p-4 bg-white hover:bg-primary/5 transition-colors cursor-pointer group">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <Avatar className="h-10 w-10 rounded-none">
+                                                    <AvatarImage src={member.avatar} className="object-cover" />
+                                                    <AvatarFallback className="font-bold rounded-none">{member.firstName?.[0]}</AvatarFallback>
+                                                </Avatar>
+                                                {isExecutive && complianceCount > 0 && (
+                                                    <div className="absolute -top-2 -right-2 bg-red-600 rounded-full size-5 flex items-center justify-center border-2 border-white animate-pulse z-10">
+                                                        <span className="text-white font-black text-[9px]">{complianceCount}</span>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <p className="text-[10px] font-bold uppercase opacity-50">{member.jobTitle}</p>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">{member.firstName} {member.lastName}</p>
+                                                    {isExecutive && complianceCount > 0 && (
+                                                        <ShieldAlert className="size-3 text-red-600 animate-pulse" />
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] font-bold uppercase opacity-50">{member.jobTitle}</p>
+                                            </div>
                                         </div>
+                                        <ChevronRight className="size-4 text-muted-foreground opacity-20 group-hover:opacity-100 transition-opacity" />
                                     </div>
-                                    <ChevronRight className="size-4 text-muted-foreground opacity-20 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                            </Card>
-                        </Link>
-                     ))}
+                                </Card>
+                            </Link>
+                        );
+                     })}
                   </div>
                 </ScrollArea>
             </SheetContent>

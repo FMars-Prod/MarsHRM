@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -80,9 +79,14 @@ export default function UsersPage() {
   const complianceQuery = useMemoFirebase(() => query(collection(firestore, 'compliance_reports')), [firestore]);
   const { data: complianceReports } = useCollection<any>(complianceQuery);
 
-  const nonCompliantUserIds = React.useMemo(() => {
-    if (!complianceReports) return new Set<string>();
-    return new Set(complianceReports.map(r => r.employeeId));
+  const complianceCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (complianceReports) {
+      complianceReports.forEach(r => {
+        counts[r.employeeId] = (counts[r.employeeId] || 0) + 1;
+      });
+    }
+    return counts;
   }, [complianceReports]);
 
   const userDocRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
@@ -489,7 +493,7 @@ export default function UsersPage() {
             ) : users?.map(u => {
               const userBranch = branches?.find((b: any) => b.id === u.branchId);
               const isRemote = u.isWfhAllowed;
-              const hasComplianceIssue = nonCompliantUserIds.has(u.id);
+              const complianceCount = complianceCounts[u.id] || 0;
 
               return (
                 <TableRow key={u.id} className={cn("border-border/50 group hover:bg-primary/5 transition-colors", selectedUserIds.includes(u.id) && "bg-primary/5")}>
@@ -502,9 +506,9 @@ export default function UsersPage() {
                                 <AvatarImage src={u.avatar} className="object-cover" />
                                 <AvatarFallback className="rounded-none font-black text-xs bg-muted">{u.firstName?.[0]}{u.lastName?.[0]}</AvatarFallback>
                             </Avatar>
-                            {isExecutive && hasComplianceIssue && (
-                                <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5 border-2 border-white shadow-lg animate-pulse">
-                                    <ShieldAlert className="size-2.5 text-white" />
+                            {isExecutive && complianceCount > 0 && (
+                                <div className="absolute -top-2 -right-2 bg-red-600 rounded-full size-6 flex items-center justify-center border-2 border-white shadow-lg animate-pulse z-10">
+                                    <span className="text-white font-black text-[10px]">{complianceCount}</span>
                                 </div>
                             )}
                         </div>
@@ -516,9 +520,9 @@ export default function UsersPage() {
                                     {u.firstName} {u.lastName} 
                                     {u.isDemoAccount && <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase border-none px-2 h-4 rounded-none">DEMO</Badge>}
                                 </Link>
-                                {isExecutive && hasComplianceIssue && (
+                                {isExecutive && complianceCount > 0 && (
                                     <Badge className="bg-red-600 text-white animate-pulse rounded-none font-black text-[7px] h-4 px-1.5 border-none">
-                                        PROTOCOL ALERT
+                                        {complianceCount} PROTOCOL ALERTS
                                     </Badge>
                                 )}
                             </div>
