@@ -78,6 +78,7 @@ type Client = {
     notes?: string;
     managerName?: string;
     managerAvatar?: string;
+    logoUrl?: string;
 };
 
 const INDUSTRY_TYPES = [
@@ -117,6 +118,7 @@ export default function ClientsPage() {
         contractStartDate: format(new Date(), 'yyyy-MM-dd'),
         handlingEmployeeId: '', assignedTeamId: '', productHeadId: '',
         gstNumber: '', website: '', notes: '',
+        logoUrl: '',
         payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '0', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }]
     });
 
@@ -271,7 +273,7 @@ export default function ClientsPage() {
             totalProjectValue: 0, currencyType: '₹', expectedAnnualRevenue: 0, discountOffered: 0, projectTotalCost: 0,
             contractStartDate: format(new Date(), 'yyyy-MM-dd'),
             handlingEmployeeId: '', assignedTeamId: '', productHeadId: '',
-            gstNumber: '', website: '', notes: '',
+            gstNumber: '', website: '', notes: '', logoUrl: '',
             payments: [{ id: Math.random().toString(36).substr(2, 9), amount: '0', status: 'Pending', dueDate: '', invoiceNumber: '', invoiceDate: '', amountReceived: '0', remainingBalance: '0', remarks: '' }]
         });
     };
@@ -492,6 +494,7 @@ export default function ClientsPage() {
                                                 <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Phone Number</Label><Input value={clientForm.phone} onChange={e => setClientForm({...clientForm, phone: e.target.value})} className="h-11 rounded-none" /></div>
                                                 <div className="space-y-2"><Label className="text-[10px] font-black uppercase">Email Address</Label><Input value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className="h-11 rounded-none" /></div>
                                             </div>
+                                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Logo URL</Label><Input value={clientForm.logoUrl} onChange={e => setClientForm({...clientForm, logoUrl: e.target.value})} placeholder="https://..." className="h-11 rounded-none" /></div>
                                         </div>
 
                                         <div className="space-y-6">
@@ -618,7 +621,11 @@ export default function ClientsPage() {
                                     <TableRow key={client.id} className="border-b group hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedClient(client)}>
                                         <TableCell className="py-8 px-8">
                                             <div className="flex items-center gap-5">
-                                                <div className="size-12 rounded-none bg-primary/10 flex items-center justify-center text-primary font-black text-sm">{client.companyName.slice(0,2).toUpperCase()}</div>
+                                                <div className="size-12 rounded-none bg-primary/10 flex items-center justify-center text-primary font-black text-sm overflow-hidden">
+                                                    {client.logoUrl ? (
+                                                        <img src={client.logoUrl} className="size-full object-contain" alt={client.companyName} />
+                                                    ) : client.companyName.slice(0,2).toUpperCase()}
+                                                </div>
                                                 <div className="space-y-1">
                                                     <span className="font-black text-[15px] uppercase tracking-tight block">{client.companyName}</span>
                                                     <span className="text-[10px] font-bold text-muted-foreground uppercase">{client.industryType}</span>
@@ -661,7 +668,7 @@ export default function ClientsPage() {
                 <div className="lg:col-span-4 space-y-6">
                     <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden ring-1 ring-border/50">
                         <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between">
-                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">Top Clients</CardTitle>
+                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4" /> Top Clients</CardTitle>
                             <div className="flex bg-muted/30 p-1 rounded-none">
                                 <button onClick={() => setRankBy('price')} className={cn("px-3 py-1 rounded-none text-[9px] font-black uppercase transition-all", rankBy === 'price' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Price</button>
                                 <button onClick={() => setRankBy('services')} className={cn("px-3 py-1 rounded-none text-[9px] font-black uppercase transition-all", rankBy === 'services' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Services</button>
@@ -672,7 +679,9 @@ export default function ClientsPage() {
                                 <div key={c.id} className="flex items-center justify-between group">
                                     <div className="flex items-center gap-3">
                                         <span className="text-[10px] font-black text-muted-foreground/30 w-4">#0{i+1}</span>
-                                        <div className="size-9 rounded-none bg-muted/20 flex items-center justify-center font-black text-[10px]">{c.companyName[0]}</div>
+                                        <div className="size-9 rounded-none bg-muted/20 flex items-center justify-center font-black text-[10px] overflow-hidden">
+                                            {c.logoUrl ? <img src={c.logoUrl} className="size-full object-contain" /> : c.companyName[0]}
+                                        </div>
                                         <p className="font-bold text-xs uppercase truncate max-w-[120px]">{c.companyName}</p>
                                     </div>
                                     <span className="text-[10px] font-black text-emerald-600">{rankBy === 'price' ? `${c.currencyType}${c.projectTotalCost?.toLocaleString()}` : `${c.payments?.length || 0} Milestones`}</span>
@@ -688,8 +697,10 @@ export default function ClientsPage() {
                     <SheetHeader className="p-6 pb-2 bg-white border-b shadow-sm shrink-0">
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-4">
-                                <div className="size-14 rounded-none bg-primary/5 flex items-center justify-center text-primary font-black text-lg border-2 border-primary/10 shadow-inner">
-                                    {selectedClient?.companyName.slice(0, 2).toUpperCase()}
+                                <div className="size-14 rounded-none bg-primary/5 flex items-center justify-center text-primary font-black text-lg border-2 border-primary/10 shadow-inner overflow-hidden">
+                                    {selectedClient?.logoUrl ? (
+                                        <img src={selectedClient.logoUrl} className="size-full object-contain" />
+                                    ) : selectedClient?.companyName.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2 mb-0.5">

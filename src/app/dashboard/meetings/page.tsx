@@ -335,7 +335,11 @@ export default function MeetingsPage() {
                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Linked Client</Label>
                                     <Link href={`/dashboard/clients?clientId=${selectedMeeting.clientId}`} className="block group">
                                         <div className="flex items-center gap-4 p-5 bg-sky-50/50 border border-sky-100 rounded-none group-hover:bg-sky-50 transition-colors">
-                                            <Building2 className="size-5 text-sky-600" />
+                                            {(() => {
+                                                const client = allClients?.find(c => c.id === selectedMeeting.clientId);
+                                                if (client?.logoUrl) return <img src={client.logoUrl} className="size-10 object-contain" alt={client.companyName} />;
+                                                return <div className="size-10 bg-sky-600 text-white flex items-center justify-center font-black text-xs">{selectedMeeting.clientName?.slice(0, 2).toUpperCase()}</div>;
+                                            })()}
                                             <p className="text-sm font-black uppercase text-sky-900 flex-1">{selectedMeeting.clientName}</p>
                                             <ChevronRight className="size-4 text-sky-400 group-hover:translate-x-1 transition-transform" />
                                         </div>
@@ -348,10 +352,18 @@ export default function MeetingsPage() {
                                 <div className="space-y-3">
                                     {selectedMeeting?.participantIds.map((id, i) => {
                                         const name = selectedMeeting.participantNames[i];
+                                        const participantUser = allUsers?.find(u => u.id === id);
+                                        const avatar = participantUser?.avatar;
+                                        const isUrl = avatar && avatar.startsWith('http');
+
                                         return (
                                             <Link href={`/dashboard/users/${id}`} key={id} className="block group">
                                                 <div className="flex items-center gap-4 p-4 bg-white border border-border/50 rounded-none group-hover:bg-primary/5 transition-colors">
-                                                    <Avatar className="size-8 rounded-none ring-1 ring-border"><AvatarFallback className="text-[10px] font-black bg-muted">{name?.[0]}</AvatarFallback></Avatar>
+                                                    <Avatar className="size-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
+                                                        {avatar ? (
+                                                            isUrl ? <AvatarImage src={avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 font-black text-xs">{avatar}</div>
+                                                        ) : <AvatarFallback className="text-[10px] font-black bg-muted">{name?.[0]}</AvatarFallback>}
+                                                    </Avatar>
                                                     <span className="text-xs font-bold uppercase tracking-tight flex-1">{name}</span>
                                                     <ChevronRight className="size-3 text-muted-foreground opacity-0 group-hover:opacity-40 transition-all" />
                                                 </div>
@@ -363,7 +375,18 @@ export default function MeetingsPage() {
 
                             <div className="space-y-4">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Organizer</Label>
-                                <Link href={`/dashboard/users/${selectedMeeting?.createdBy}`} className="block group">
+                                <Link href={`/dashboard/users/${selectedMeeting?.createdBy}`} className="flex items-center gap-4 group">
+                                    <Avatar className="size-10 rounded-none ring-1 ring-border">
+                                        {(() => {
+                                            const organizerUser = allUsers?.find(u => u.id === selectedMeeting?.createdBy);
+                                            const avatar = organizerUser?.avatar;
+                                            const isUrl = avatar && avatar.startsWith('http');
+                                            if (avatar) {
+                                                return isUrl ? <AvatarImage src={avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 font-black text-xs">{avatar}</div>
+                                            }
+                                            return <AvatarFallback className="text-[10px] font-black bg-muted">{selectedMeeting?.createdByName?.[0]}</AvatarFallback>
+                                        })()}
+                                    </Avatar>
                                     <p className="text-sm font-black text-primary uppercase group-hover:underline">{selectedMeeting?.createdByName}</p>
                                 </Link>
                             </div>
