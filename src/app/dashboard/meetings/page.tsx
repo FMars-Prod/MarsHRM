@@ -134,7 +134,8 @@ export default function MeetingsPage() {
         m.clientName?.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
-    const upcomingCount = meetings?.filter(m => isAfter(m.date.toDate(), new Date())).length || 0;
+    const now = new Date();
+    const upcomingCount = meetings?.filter(m => isAfter(m.date.toDate(), now)).length || 0;
 
     return (
         <div className="space-y-8 animate-fade-in-up pb-20 font-jakarta">
@@ -227,24 +228,63 @@ export default function MeetingsPage() {
                             <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse text-xs font-black uppercase opacity-20">Syncing Schedule...</TableCell></TableRow>
                         ) : filteredMeetings.length === 0 ? (
                             <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No meetings found.</TableCell></TableRow>
-                        ) : filteredMeetings.map(m => (
-                            <TableRow key={m.id} className="border-b group hover:bg-slate-50/50 cursor-pointer" onClick={() => setSelectedMeeting(m)}>
-                                <TableCell className="py-8 px-8"><div className="flex items-center gap-5"><div className="p-3 bg-primary/5 text-primary rounded-none"><Video className="size-5" /></div><div><span className="font-black text-sm uppercase block">{m.title}</span><p className="text-[10px] font-bold text-muted-foreground uppercase">By: {m.createdByName}</p></div></div></TableCell>
-                                <TableCell><div className="flex flex-col gap-1.5">{m.type === 'Client Meet' ? <Badge className="bg-sky-100 text-sky-700 border-none w-fit text-[8px] font-black uppercase rounded-none">{m.clientName}</Badge> : <Badge className="bg-purple-100 text-purple-700 border-none w-fit text-[8px] font-black uppercase rounded-none">TEAM CALL</Badge>}</div></TableCell>
-                                <TableCell><div className="space-y-1"><p className="text-xs font-bold uppercase">{format(m.date.toDate(), 'PPP')}</p><p className="text-[10px] font-black text-primary uppercase">{format(m.date.toDate(), 'p')}</p></div></TableCell>
-                                <TableCell className="text-right px-8" onClick={e => e.stopPropagation()}>
-                                    <div className="flex justify-end gap-2">
-                                        {m.link && <Button variant="outline" size="sm" className="rounded-none h-9 bg-white font-bold uppercase text-[9px]" asChild><Link href={m.link} target="_blank"><ExternalLink className="size-3 mr-1.5"/> Join</Link></Button>}
-                                        {m.createdBy === user?.uid && (
-                                            <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/5" onClick={() => handleManualNudge(m)}>
-                                                <BellRing className="size-4" />
-                                            </Button>
-                                        )}
-                                        {isExecutive && <Button variant="ghost" size="icon" className="text-rose-500" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'meetings', m.id))}><Trash2 className="size-4" /></Button>}
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                        ) : filteredMeetings.map(m => {
+                            const isPast = isBefore(m.date.toDate(), now);
+                            return (
+                                <TableRow 
+                                    key={m.id} 
+                                    className={cn(
+                                        "border-b group transition-colors cursor-pointer",
+                                        isPast ? "opacity-40 grayscale-[0.8] bg-muted/10" : "hover:bg-slate-50/50"
+                                    )} 
+                                    onClick={() => setSelectedMeeting(m)}
+                                >
+                                    <TableCell className="py-8 px-8">
+                                        <div className="flex items-center gap-5">
+                                            <div className={cn("p-3 rounded-none shadow-sm", isPast ? "bg-slate-200 text-slate-400" : "bg-primary/5 text-primary")}>
+                                                <Video className="size-5" />
+                                            </div>
+                                            <div>
+                                                <span className={cn("font-black text-sm uppercase block", isPast && "line-through text-slate-500")}>{m.title}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">By: {m.createdByName}</p>
+                                                    {isPast && <Badge className="bg-slate-200 text-slate-500 border-none text-[7px] font-black uppercase rounded-none h-4 px-1.5">Finished</Badge>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1.5">
+                                            {m.type === 'Client Meet' ? 
+                                                <Badge className={cn("border-none w-fit text-[8px] font-black uppercase rounded-none px-2", isPast ? "bg-slate-100 text-slate-400" : "bg-sky-100 text-sky-700")}>{m.clientName}</Badge> : 
+                                                <Badge className={cn("border-none w-fit text-[8px] font-black uppercase rounded-none px-2", isPast ? "bg-slate-100 text-slate-400" : "bg-purple-100 text-purple-700")}>TEAM CALL</Badge>
+                                            }
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-bold uppercase">{format(m.date.toDate(), 'PPP')}</p>
+                                            <p className={cn("text-[10px] font-black uppercase", isPast ? "text-slate-400" : "text-primary")}>{format(m.date.toDate(), 'p')}</p>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right px-8" onClick={e => e.stopPropagation()}>
+                                        <div className="flex justify-end gap-2">
+                                            {!isPast && m.link && <Button variant="outline" size="sm" className="rounded-none h-9 bg-white font-bold uppercase text-[9px]" asChild><Link href={m.link} target="_blank"><ExternalLink className="size-3 mr-1.5"/> Join</Link></Button>}
+                                            {!isPast && m.createdBy === user?.uid && (
+                                                <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/5" onClick={() => handleManualNudge(m)}>
+                                                    <BellRing className="size-4" />
+                                                </Button>
+                                            )}
+                                            {(isExecutive || m.createdBy === user?.uid) && (
+                                                <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50 rounded-none h-9 w-9" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'meetings', m.id))}>
+                                                    <Trash2 className="size-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </div>
@@ -253,9 +293,14 @@ export default function MeetingsPage() {
                 <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col">
                     <SheetHeader className="p-8 border-b bg-white shrink-0">
                         <div className="flex items-center justify-between mb-2">
-                            <Badge className={cn("rounded-none font-black text-[9px] h-5 uppercase tracking-widest border-none px-2", selectedMeeting?.type === 'Client Meet' ? "bg-sky-100 text-sky-700" : "bg-purple-100 text-purple-700")}>
-                                {selectedMeeting?.type}
-                            </Badge>
+                            <div className="flex gap-2">
+                                <Badge className={cn("rounded-none font-black text-[9px] h-5 uppercase tracking-widest border-none px-2", selectedMeeting?.type === 'Client Meet' ? "bg-sky-100 text-sky-700" : "bg-purple-100 text-purple-700")}>
+                                    {selectedMeeting?.type}
+                                </Badge>
+                                {selectedMeeting && isBefore(selectedMeeting.date.toDate(), now) && (
+                                    <Badge className="bg-slate-100 text-slate-500 border-none rounded-none text-[9px] font-black uppercase tracking-widest px-2 h-5">Finished</Badge>
+                                )}
+                            </div>
                             <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setSelectedMeeting(null)}><X className="size-5"/></Button>
                         </div>
                         <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary leading-tight">{selectedMeeting?.title}</SheetTitle>
@@ -270,7 +315,7 @@ export default function MeetingsPage() {
                                         <div><p className="text-sm font-bold uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'PPPP')}</p><p className="text-xs font-black text-primary uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'p')}</p></div>
                                     </div>
                                     <Separator className="opacity-50" />
-                                    {selectedMeeting?.link && (
+                                    {selectedMeeting?.link && !isBefore(selectedMeeting.date.toDate(), now) && (
                                         <Button className="w-full h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2" asChild>
                                             <Link href={selectedMeeting.link} target="_blank"><ExternalLink className="size-4" /> Join Video Call</Link>
                                         </Button>
