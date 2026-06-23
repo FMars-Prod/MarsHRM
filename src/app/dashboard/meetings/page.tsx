@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -11,7 +12,7 @@ import {
     Trash2, Search, Link as LinkIcon, ShieldCheck, 
     Loader2, CheckCircle2, UserCheck, Timer, Building2, MapPin,
     Eye, BellRing, Info, MoreHorizontal, UserPlus, X, FileText,
-    ChevronRight
+    ChevronRight, Filter
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,8 @@ export default function MeetingsPage() {
 
     const [isAddOpen, setIsAddOpen] = React.useState(false);
     const [searchQuery, setSearchQuery] = React.useState("");
+    const [statusFilter, setStatusFilter] = React.useState<string>("all");
+    const [typeFilter, setTypeFilter] = React.useState<string>("all");
     const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(null);
     const [meetingForm, setMeetingForm] = React.useState<Partial<Meeting>>({
         title: '', description: '', link: '', type: 'Internal', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm")
@@ -128,12 +131,24 @@ export default function MeetingsPage() {
         toast({ title: "Reminders Sent", description: `Manual notification dispatched to ${m.participantIds.length} participants.` });
     };
 
-    const filteredMeetings = meetings?.filter(m => 
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        m.clientName?.toLowerCase().includes(searchQuery.toLowerCase())
-    ) || [];
-
     const now = new Date();
+    const filteredMeetings = React.useMemo(() => {
+        if (!meetings) return [];
+        return meetings.filter(m => {
+            const matchesSearch = m.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                 (m.clientName && m.clientName.toLowerCase().includes(searchQuery.toLowerCase()));
+            
+            const isPast = isBefore(m.date.toDate(), now);
+            const matchesStatus = statusFilter === 'all' || 
+                                 (statusFilter === 'upcoming' && !isPast) || 
+                                 (statusFilter === 'past' && isPast);
+                                 
+            const matchesType = typeFilter === 'all' || m.type === typeFilter;
+            
+            return matchesSearch && matchesStatus && matchesType;
+        });
+    }, [meetings, searchQuery, statusFilter, typeFilter, now]);
+
     const upcomingCount = meetings?.filter(m => isAfter(m.date.toDate(), now)).length || 0;
 
     return (
@@ -217,10 +232,37 @@ export default function MeetingsPage() {
             </div>
 
             <div className="bg-white rounded-none border shadow-sm overflow-hidden ring-1 ring-border/50">
-                <div className="p-8 border-b"><Input placeholder="Search meetings..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="h-12 bg-muted/20 border-none ring-1 ring-border/50 rounded-none pl-6" /></div>
+                <div className="p-8 border-b flex flex-col md:flex-row gap-4 items-center">
+                    <div className="relative flex-1 w-full">
+                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-30" />
+                        <Input placeholder="Search meetings..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="h-12 bg-muted/20 border-none ring-1 ring-border/50 rounded-none pl-14 font-bold uppercase text-xs" />
+                    </div>
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="h-12 rounded-none bg-muted/20 border-none ring-1 ring-border/50 w-[140px] font-black uppercase text-[10px] tracking-widest">
+                                <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-none">
+                                <SelectItem value="all">All Status</SelectItem>
+                                <SelectItem value="upcoming">Upcoming</SelectItem>
+                                <SelectItem value="past">Finished</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={typeFilter} onValueChange={setTypeFilter}>
+                            <SelectTrigger className="h-12 rounded-none bg-muted/20 border-none ring-1 ring-border/50 w-[140px] font-black uppercase text-[10px] tracking-widest">
+                                <SelectValue placeholder="Type" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-none">
+                                <SelectItem value="all">All Types</SelectItem>
+                                <SelectItem value="Internal">Team Call</SelectItem>
+                                <SelectItem value="Client Meet">Client Call</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
                 <Table>
                     <TableHeader className="bg-muted/10 border-b">
-                        <TableRow><TableHead className="font-black text-[10px] uppercase h-16 px-8">Meeting</TableHead><TableHead className="font-black text-[10px] uppercase h-16">Meeting Type</TableHead><TableHead className="font-black text-[10px] uppercase h-16">Time</TableHead><TableHead className="text-right px-8 font-black text-[10px] uppercase h-16">Action</TableHead></TableRow>
+                        <TableRow><TableHead className="font-black text-[10px] uppercase h-16 px-8 tracking-widest">Meeting</TableHead><TableHead className="font-black text-[10px] uppercase h-16 tracking-widest">Meeting Type</TableHead><TableHead className="font-black text-[10px] uppercase h-16 tracking-widest">Time</TableHead><TableHead className="text-right px-8 font-black text-[10px] uppercase h-16 tracking-widest">Action</TableHead></TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
