@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, ShieldAlert, Coffee } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +49,8 @@ type AttendanceRecord = {
   totalBreakDuration?: number;
   locationCheckInLatitude?: number;
   locationCheckInLongitude?: number;
+  locationCheckOutLatitude?: number;
+  locationCheckOutLongitude?: number;
   isOutOfRange?: boolean;
 };
 
@@ -64,6 +66,12 @@ const formatIST = (date: any) => {
         minute: '2-digit',
         hour12: false
     }).format(d) + " IST";
+};
+
+const formatSecondsToHours = (seconds: number) => {
+    const h = Math.floor(Math.max(0, seconds) / 3600);
+    const m = Math.floor((Math.max(0, seconds) % 3600) / 60);
+    return `${h}h ${m}m`;
 };
 
 const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
@@ -165,7 +173,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
   const directReports = React.useMemo(() => {
       if (!user || !allUsers) return [];
-      return allUsers.filter((u: any) => u.reportingHeadIds?.includes(user.id));
+      return allUsers.filter((u: any) => u.reportingHeadIds?.includes(employee.id));
   }, [user?.id, allUsers]);
 
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
@@ -400,7 +408,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 <div className="py-6 space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Rating</Label>
                                     <Select onValueChange={handleUpdatePerformance} defaultValue={user.performanceRating || "Good"}>
-                                        <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectValue>
                                         <SelectContent className="rounded-none">
                                             <SelectItem value="Excellent">Excellent</SelectItem>
                                             <SelectItem value="Good">Good</SelectItem>
@@ -458,13 +466,60 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                 <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden min-h-[400px]">
                     {attendanceData && attendanceData.length > 0 ? (
                         <Table>
-                            <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[11px] font-black px-8 py-5 uppercase tracking-widest">Date</TableHead><TableHead className="text-[11px] font-black uppercase tracking-widest py-5">Clock In</TableHead><TableHead className="text-right px-8 text-[11px] font-black uppercase tracking-widest py-5">Location</TableHead></TableRow></TableHeader>
+                            <TableHeader className="bg-muted/5">
+                                <TableRow>
+                                    <TableHead className="text-[11px] font-black px-8 py-5 uppercase tracking-widest">Date</TableHead>
+                                    <TableHead className="text-[11px] font-black uppercase tracking-widest py-5">Status</TableHead>
+                                    <TableHead className="text-[11px] font-black uppercase tracking-widest py-5">Clock In</TableHead>
+                                    <TableHead className="text-[11px] font-black uppercase tracking-widest py-5 text-center">Total Break</TableHead>
+                                    <TableHead className="text-[11px] font-black uppercase tracking-widest py-5">Clock Out</TableHead>
+                                    <TableHead className="text-right px-8 text-[11px] font-black uppercase tracking-widest py-5">Verification</TableHead>
+                                </TableRow>
+                            </TableHeader>
                             <TableBody>
                                 {attendanceData.map((rec, i) => (
                                     <TableRow key={i} className="border-border/50 hover:bg-primary/5 transition-colors">
-                                        <TableCell className="py-5 px-8 font-black text-sm uppercase">{format(rec.checkInTime?.toDate() || new Date(), 'dd MMM yyyy')}</TableCell>
-                                        <TableCell className="font-mono text-sm font-bold text-primary">{rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}</TableCell>
-                                        <TableCell className="text-right px-8">{rec.locationCheckInLatitude && <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank" className="p-2.5 rounded-none bg-primary/5 text-primary inline-block shadow-sm transition-transform hover:scale-110"><MapPin className="size-4" /></Link>}</TableCell>
+                                        <TableCell className="py-5 px-8 font-black text-sm uppercase">
+                                            {format(rec.checkInTime?.toDate() || new Date(), 'dd MMM yyyy')}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className={cn(
+                                                "rounded-none font-black text-[9px] uppercase border-none h-6 px-3 shadow-sm",
+                                                rec.status === 'present' ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"
+                                            )}>
+                                                {rec.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="font-mono text-sm font-bold text-primary">
+                                            {rec.checkInTime ? format(rec.checkInTime.toDate(), 'p') : '--:--'}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-muted-foreground">
+                                                <Coffee className="size-3 opacity-30" />
+                                                {rec.totalBreakDuration ? formatSecondsToHours(rec.totalBreakDuration) : '0m'}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="font-mono text-sm font-bold text-slate-900">
+                                            {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
+                                        </TableCell>
+                                        <TableCell className="text-right px-8">
+                                            <div className="flex justify-end gap-2">
+                                                {rec.locationCheckInLatitude && (
+                                                    <Button asChild variant="outline" size="icon" className="h-9 w-9 rounded-none bg-primary/5 border-none shadow-sm hover:scale-110">
+                                                        <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
+                                                            <MapPin className="size-3.5 text-primary" />
+                                                        </Link>
+                                                    </Button>
+                                                )}
+                                                {rec.locationCheckOutLatitude && (
+                                                    <Button asChild variant="outline" size="icon" className="h-9 w-9 rounded-none bg-slate-100 border-none shadow-sm hover:scale-110">
+                                                        <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckOutLatitude},${rec.locationCheckOutLongitude}`} target="_blank">
+                                                            <MapPin className="size-3.5 text-slate-600" />
+                                                        </Link>
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, Camera, UserPlus, X, Loader2, UserCheck as UserCheckIcon } from 'lucide-react';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, Camera, UserPlus, X, Loader2, UserCheck as UserCheckIcon, Coffee } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -63,9 +64,18 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-const MARITAL_STATUS_OPTIONS = [
-    "Single", "In a relationship", "Engaged", "Married", "In a civil union", "In a domestic partnership", "It's complicated", "In an open relationship", "Separated", "Divorced", "Widowed"
-];
+type AttendanceRecord = {
+    id: string;
+    checkInTime?: Timestamp;
+    checkOutTime?: Timestamp;
+    status: 'present' | 'late' | 'absent' | 'on_leave' | 'out_of_range';
+    totalBreakDuration?: number;
+    locationCheckInLatitude?: number;
+    locationCheckInLongitude?: number;
+    locationCheckOutLatitude?: number;
+    locationCheckOutLongitude?: number;
+    isOutOfRange?: boolean;
+};
 
 const formatIST = (date: any) => {
     if (!date) return "N/A";
@@ -79,6 +89,12 @@ const formatIST = (date: any) => {
         minute: '2-digit',
         hour12: false
     }).format(d) + " IST";
+};
+
+const formatSecondsToHours = (seconds: number) => {
+    const h = Math.floor(Math.max(0, seconds) / 3600);
+    const m = Math.floor((Math.max(0, seconds) % 3600) / 60);
+    return `${h}h ${m}m`;
 };
 
 const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
@@ -175,16 +191,6 @@ export default function ProfilePage() {
     const allUsersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
     const { data: allUsers } = useCollection<any>(allUsersQuery);
 
-    const reportingHeads = React.useMemo(() => {
-        if (!employee?.reportingHeadIds || !allUsers) return [];
-        return allUsers.filter((u: any) => employee.reportingHeadIds.includes(u.id));
-    }, [employee?.reportingHeadIds, allUsers]);
-
-    const directReports = React.useMemo(() => {
-        if (!employee || !allUsers) return [];
-        return allUsers.filter((u: any) => u.reportingHeadIds?.includes(employee.id));
-    }, [employee?.id, allUsers]);
-
     const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
     const { data: branches } = useCollection<any>(branchesQuery);
 
@@ -203,7 +209,7 @@ export default function ProfilePage() {
         where('checkInTime', '<=', Timestamp.fromDate(monthEnd)),
         orderBy('checkInTime', 'desc')
     ) : null, [user, firestore]);
-    const { data: attendanceData } = useCollection<any>(attendanceQuery);
+    const { data: attendanceData } = useCollection<AttendanceRecord>(attendanceQuery);
 
     const attendanceStats = React.useMemo(() => {
         const today = startOfDay(new Date());
@@ -294,28 +300,12 @@ export default function ProfilePage() {
         pdfDoc.save(`${report.employeeName}_Report_${format(new Date(), 'yyyyMMdd')}.pdf`);
     };
 
-    const addLanguage = (e: React.KeyboardEvent<HTMLInputElement>, currentLangs: string[]) => {
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            const val = langInput.trim().replace(',', '');
-            if (val && !currentLangs.includes(val)) {
-                form.setValue('languages', [...currentLangs, val]);
-            }
-            setLangInput('');
-        }
-    };
-
-    const removeLanguage = (lang: string, currentLangs: string[]) => {
-        form.setValue('languages', currentLangs.filter(l => l !== lang));
-    };
-
     if (isEmployeeLoading || !employee) return <div className="p-10 text-center animate-pulse uppercase font-black text-sm">Loading...</div>;
 
     const isEmployeeType = employee.employmentType === 'Employee';
     const leaveBalValue = employee.leaveBalance;
     const leaveEntValue = employee.totalLeaveEntitlement || (isEmployeeType ? 12 : 0);
     const isLeaveConfigured = leaveBalValue !== undefined && isEmployeeType;
-    const isAdmin = employee.role === 'HR Manager' || employee.role === 'CEO/Admin';
     const branchName = branches?.find((b: any) => b.id === employee.branchId)?.name || "Office Hub";
 
     return (
@@ -392,37 +382,78 @@ export default function ProfilePage() {
                     ))}
                 </TabsList>
                 <TabsContent value="activity" className="mt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-1 gap-4">
-                        <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-8">
-                            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Activity History</h3>
-                            <div className="space-y-6">
-                                {userReports.length > 0 ? userReports.slice(0, 10).map(r => (
-                                    <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd, yyyy')} desc={`Report Submitted`} color="bg-primary/10 text-primary" onClick={() => setSelectedReportForReview(r)} />
-                                )) : (
-                                    <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-5">
-                                        <div className="p-5 bg-muted/20 rounded-full"><SearchSlash className="size-12 text-primary/40" /></div>
-                                        <div>
-                                            <p className="text-sm font-bold uppercase tracking-widest">No Activity</p>
-                                            <p className="text-[11px] font-bold uppercase mt-1">No reports found in history.</p>
-                                        </div>
+                    <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-8">
+                        <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Activity History</h3>
+                        <div className="space-y-6">
+                            {userReports.length > 0 ? userReports.slice(0, 10).map(r => (
+                                <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd, yyyy')} desc={`Report Submitted`} color="bg-primary/10 text-primary" onClick={() => setSelectedReportForReview(r)} />
+                            )) : (
+                                <div className="py-20 flex flex-col items-center justify-center opacity-30 text-center space-y-5">
+                                    <div className="p-5 bg-muted/20 rounded-full"><SearchSlash className="size-12 text-primary/40" /></div>
+                                    <div>
+                                        <p className="text-sm font-bold uppercase tracking-widest">No Activity</p>
+                                        <p className="text-[11px] font-bold uppercase mt-1">No reports found in history.</p>
                                     </div>
-                                )}
-                            </div>
-                        </Card>
-                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
                 </TabsContent>
                 <TabsContent value="attendance">
                     <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden min-h-[400px]">
                         <ScrollArea className="h-full">
                             {attendanceData && attendanceData.length > 0 ? (
                                 <Table>
-                                    <TableHeader className="bg-muted/5"><TableRow><TableHead className="text-[11px] font-bold px-8 py-5 uppercase tracking-widest">Date</TableHead><TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest">Clock In</TableHead><TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest text-right pr-8">Status</TableHead></TableRow></TableHeader>
+                                    <TableHeader className="bg-muted/5">
+                                        <TableRow>
+                                            <TableHead className="text-[11px] font-bold px-8 py-5 uppercase tracking-widest">Date</TableHead>
+                                            <TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest">Status</TableHead>
+                                            <TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest">Clock In</TableHead>
+                                            <TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest text-center">Total Break</TableHead>
+                                            <TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest">Clock Out</TableHead>
+                                            <TableHead className="text-[11px] font-bold py-5 uppercase tracking-widest text-right pr-8">Location</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
                                     <TableBody>
-                                        {attendanceData.slice(0, 15).map((rec: any, i: number) => (
+                                        {attendanceData.slice(0, 30).map((rec: any, i: number) => (
                                             <TableRow key={i} className="border-border/50 hover:bg-primary/5 transition-colors">
                                                 <TableCell className="text-sm font-bold px-8 py-5 uppercase">{format(rec.checkInTime.toDate(), 'dd MMM yyyy')}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className={cn(
+                                                        "text-[9px] font-bold uppercase border-none rounded-none h-6 px-3 shadow-sm",
+                                                        rec.status === 'present' ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"
+                                                    )}>
+                                                        {rec.status}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell className="font-mono text-xs font-bold text-primary">{format(rec.checkInTime.toDate(), 'p')}</TableCell>
-                                                <TableCell className="text-right pr-8"><Badge variant="outline" className="text-[9px] font-bold uppercase border-none bg-green-50 text-green-600 rounded-none h-6 px-3">{rec.status}</Badge></TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-muted-foreground">
+                                                        <Coffee className="size-3 opacity-30" />
+                                                        {rec.totalBreakDuration ? formatSecondsToHours(rec.totalBreakDuration) : '0m'}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-xs font-bold text-slate-900">
+                                                    {rec.checkOutTime ? format(rec.checkOutTime.toDate(), 'p') : '--:--'}
+                                                </TableCell>
+                                                <TableCell className="text-right pr-8">
+                                                    <div className="flex justify-end gap-2">
+                                                        {rec.locationCheckInLatitude && (
+                                                            <Button asChild variant="outline" size="icon" className="h-9 w-9 rounded-none bg-primary/5 border-none shadow-sm hover:scale-110">
+                                                                <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckInLatitude},${rec.locationCheckInLongitude}`} target="_blank">
+                                                                    <MapPin className="size-3.5 text-primary" />
+                                                                </Link>
+                                                            </Button>
+                                                        )}
+                                                        {rec.locationCheckOutLatitude && (
+                                                            <Button asChild variant="outline" size="icon" className="h-9 w-9 rounded-none bg-slate-100 border-none shadow-sm hover:scale-110">
+                                                                <Link href={`https://www.google.com/maps/search/?api=1&query=${rec.locationCheckOutLatitude},${rec.locationCheckOutLongitude}`} target="_blank">
+                                                                    <MapPin className="size-3.5 text-slate-600" />
+                                                                </Link>
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
