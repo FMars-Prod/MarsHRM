@@ -260,92 +260,94 @@ export default function TeamsPage() {
             </Sheet>
 
             <Dialog open={isDialogOpen} onOpenChange={(o) => { if(!o) { setEditingTeam(null); setTeamName(""); setTeamLeadId("unassigned"); setSupervisorId("unassigned"); setSelectedMemberIds([]); setMemberSearchQuery(""); } setIsDialogOpen(o); }}>
-                <DialogContent className="rounded-none sm:max-w-lg p-8 border-none shadow-2xl">
-                    <DialogHeader className="text-left">
+                <DialogContent className="rounded-none sm:max-w-lg p-0 border-none shadow-3xl h-[85vh] flex flex-col">
+                    <DialogHeader className="p-8 border-b bg-white shrink-0 text-left">
                       <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingTeam ? 'Edit Team' : 'Create Team'}</DialogTitle>
                     </DialogHeader>
-                    <div className="grid gap-6 py-6">
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Team Name</Label>
-                          <Input value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g., Development Team" className="rounded-none h-12 font-bold text-sm" />
-                        </div>
-                        
-                        <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                <ShieldCheck className="size-3" /> Assigned Supervisor
-                            </Label>
-                            <Select value={supervisorId} onValueChange={setSupervisorId}>
-                                <SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Supervisor" /></SelectTrigger>
-                                <SelectContent className="rounded-none">
-                                    <SelectItem value="unassigned">General Oversight (Default)</SelectItem>
-                                    {potentialSupervisors.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Team Lead (Optional)</Label>
-                            <Select value={teamLeadId} onValueChange={setTeamLeadId}>
-                                <SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select leader" /></SelectTrigger>
-                                <SelectContent className="rounded-none">
-                                    <SelectItem value="unassigned">No Lead assigned</SelectItem>
-                                    {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Members</Label>
-                                <Badge variant="outline" className="rounded-none text-[8px] font-black uppercase px-2">{selectedMemberIds.length} Selected</Badge>
+                    <ScrollArea className="flex-1 bg-muted/5">
+                        <div className="p-8 space-y-8">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Team Name</Label>
+                              <Input value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g., Development Team" className="rounded-none h-12 font-bold text-sm bg-white" />
                             </div>
                             
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
-                                <Input 
-                                    placeholder="Search members..." 
-                                    value={memberSearchQuery}
-                                    onChange={e => setMemberSearchQuery(e.target.value)}
-                                    className="pl-10 h-10 rounded-none bg-muted/20 border-none ring-1 ring-border/50 text-xs font-bold uppercase"
-                                />
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                                    <ShieldCheck className="size-3" /> Assigned Supervisor
+                                </Label>
+                                <Select value={supervisorId} onValueChange={setSupervisorId}>
+                                    <SelectTrigger className="rounded-none h-12 font-bold text-sm bg-white border-none ring-1 ring-border/50"><SelectValue placeholder="Select Supervisor" /></SelectTrigger>
+                                    <SelectContent className="rounded-none">
+                                        <SelectItem value="unassigned">General Oversight (Default)</SelectItem>
+                                        {potentialSupervisors.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
-                            <ScrollArea className="h-56 rounded-none border p-2 bg-muted/10">
-                                <div className="space-y-1">
-                                    {filteredMembers.map(member => (
-                                        <div key={member.id} className={cn(
-                                            "flex items-center gap-3 p-3 transition-all border border-transparent",
-                                            selectedMemberIds.includes(member.id) ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-white hover:border-primary/20"
-                                        )}>
-                                            <Checkbox 
-                                                id={`m-${member.id}`} 
-                                                checked={selectedMemberIds.includes(member.id)} 
-                                                onCheckedChange={c => setSelectedMemberIds(p => c ? [...p, member.id] : p.filter(i => i !== member.id))} 
-                                                className="rounded-none" 
-                                            />
-                                            <Label htmlFor={`m-${member.id}`} className="font-bold text-xs uppercase cursor-pointer flex-1 flex items-center gap-3">
-                                                <Avatar className="size-6 rounded-none border">
-                                                    <AvatarImage src={member.avatar} />
-                                                    <AvatarFallback className="text-[8px] font-black">{member.firstName[0]}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex flex-col">
-                                                    <span className={cn(selectedMemberIds.includes(member.id) ? "text-primary" : "text-foreground")}>{member.firstName} {member.lastName}</span>
-                                                    <span className="text-[8px] opacity-40 leading-none">{member.jobTitle}</span>
-                                                </div>
-                                            </Label>
-                                            {selectedMemberIds.includes(member.id) && <Check className="size-3 text-primary" />}
-                                        </div>
-                                    ))}
-                                    {filteredMembers.length === 0 && (
-                                        <div className="py-10 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No results</div>
-                                    )}
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Team Lead (Optional)</Label>
+                                <Select value={teamLeadId} onValueChange={setTeamLeadId}>
+                                    <SelectTrigger className="rounded-none h-12 font-bold text-sm bg-white border-none ring-1 ring-border/50"><SelectValue placeholder="Select leader" /></SelectTrigger>
+                                    <SelectContent className="rounded-none">
+                                        <SelectItem value="unassigned">No Lead assigned</SelectItem>
+                                        {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Members</Label>
+                                    <Badge variant="outline" className="rounded-none text-[8px] font-black uppercase px-2">{selectedMemberIds.length} Selected</Badge>
                                 </div>
-                            </ScrollArea>
+                                
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
+                                    <Input 
+                                        placeholder="Search members..." 
+                                        value={memberSearchQuery}
+                                        onChange={e => setMemberSearchQuery(e.target.value)}
+                                        className="pl-10 h-10 rounded-none bg-white border-none ring-1 ring-border/50 text-xs font-bold uppercase"
+                                    />
+                                </div>
+
+                                <ScrollArea className="h-56 rounded-none border p-2 bg-muted/10">
+                                    <div className="space-y-1">
+                                        {filteredMembers.map(member => (
+                                            <div key={member.id} className={cn(
+                                                "flex items-center gap-3 p-3 transition-all border border-transparent",
+                                                selectedMemberIds.includes(member.id) ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-white hover:border-primary/20"
+                                            )}>
+                                                <Checkbox 
+                                                    id={`m-${member.id}`} 
+                                                    checked={selectedMemberIds.includes(member.id)} 
+                                                    onCheckedChange={c => setSelectedMemberIds(p => c ? [...p, member.id] : p.filter(i => i !== member.id))} 
+                                                    className="rounded-none" 
+                                                />
+                                                <Label htmlFor={`m-${member.id}`} className="font-bold text-xs uppercase cursor-pointer flex-1 flex items-center gap-3">
+                                                    <Avatar className="size-6 rounded-none border">
+                                                        <AvatarImage src={member.avatar} />
+                                                        <AvatarFallback className="text-[8px] font-black">{member.firstName[0]}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex flex-col">
+                                                        <span className={cn(selectedMemberIds.includes(member.id) ? "text-primary" : "text-foreground")}>{member.firstName} {member.lastName}</span>
+                                                        <span className="text-[8px] opacity-40 leading-none">{member.jobTitle}</span>
+                                                    </div>
+                                                </Label>
+                                                {selectedMemberIds.includes(member.id) && <Check className="size-3 text-primary" />}
+                                            </div>
+                                        ))}
+                                        {filteredMembers.length === 0 && (
+                                            <div className="py-10 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No results</div>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+                            </div>
                         </div>
-                    </div>
-                    <DialogFooter>
+                    </ScrollArea>
+                    <div className="p-8 border-t bg-white shrink-0">
                       <Button onClick={handleCreateOrUpdateTeam} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-xl shadow-primary/20">Save Team</Button>
-                    </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
         </>
