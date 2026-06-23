@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, isSameMonth, addDays, isAfter, isBefore, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth as startOfMonthFn, subMonths, endOfMonth as endOfMonthFn, startOfDay } from 'date-fns';
+import { format, startOfMonth, isSameMonth, addDays, isAfter, isBefore, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth as startOfMonthFn, subMonths, endOfMonth as endOfMonthFn, startOfDay, endOfDay } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -275,7 +275,7 @@ export default function MarketingManagementPage() {
 
     const handleSaveSession = async () => {
         if (!user || !userData) return;
-        const totalRequestedSpend = (formData.adSpends || []).reduce((acc: number, curr: any) => acc + (parseFloat(curr.amount) || 0), 0);
+        const totalRequested spend = (formData.adSpends || []).reduce((acc: number, curr: any) => acc + (parseFloat(curr.amount) || 0), 0);
         if (totalRequestedSpend > currentBalance) { setIsBudgetWarningOpen(true); return; }
 
         const processedLogs = (formData.socialLogs || []).map((log: any) => ({
