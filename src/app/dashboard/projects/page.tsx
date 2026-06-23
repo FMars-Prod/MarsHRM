@@ -12,12 +12,13 @@ import {
     Briefcase, Activity, Target, Users, 
     PieChart as PieChartIcon, CheckCircle2, 
     Clock, ExternalLink, ChevronRight, 
-    Layers, UserCheck, Timer, Box,
+    Layers, UserCheck, Timer, 
     UserPlus, Video, Settings2, Plus,
     Image as ImageIcon, Info, Calendar,
     UserCircle, Search, Filter, X,
     FileBox, CheckCircle, Ban, AlertCircle,
-    PlusCircle, Building2, UserIcon
+    PlusCircle, Building2, User as UserIcon,
+    ShieldCheck
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -249,9 +250,6 @@ export default function ProjectsPage() {
                     });
                 }
             } else {
-                // For internal projects, we'd typically have a separate projects collection
-                // but for this MVP we rely on Technical Reports to mention them.
-                // We'll show a message that it will appear after the first report is filed.
                 toast({ title: "Internal Project Initialized", description: "This will appear in the portfolio once members log work against it." });
             }
 
@@ -597,7 +595,7 @@ export default function ProjectsPage() {
             </Card>
 
             <Sheet open={!!selectedProject} onOpenChange={o => !o && setSelectedProject(null)}>
-                <SheetContent className="w-full sm:max-w-[500px] p-0 border-none shadow-3xl flex flex-col bg-[#F8FAFC]">
+                <SheetContent className="w-full sm:max-w-[500px] p-0 border-none shadow-3xl w-full flex flex-col bg-[#F8FAFC]">
                     <SheetHeader className="p-8 pb-4 bg-white border-b shadow-sm shrink-0">
                         <div className="flex items-start justify-between mb-4">
                             <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black h-5 uppercase px-2 shadow-sm">{selectedProject?.type}</Badge>
