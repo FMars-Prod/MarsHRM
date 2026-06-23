@@ -416,7 +416,7 @@ export default function MarketingManagementPage() {
                         </div>
                     </div>
                     <div className="pt-3 border-t border-dashed border-border/50">
-                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Available Liquidity</p>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Last Update: {formatShortDate(lastUpdateDate)}</p>
                     </div>
                 </Card>
 
@@ -429,7 +429,6 @@ export default function MarketingManagementPage() {
                         </div>
                     </div>
                     <div className="pt-3 border-t border-dashed border-border/50 space-y-1">
-                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Last Update: {formatShortDate(lastUpdateDate)}</p>
                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Last Spend: {formatShortDate(lastSpentDate)}</p>
                     </div>
                 </Card>
