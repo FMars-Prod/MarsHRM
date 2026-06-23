@@ -415,13 +415,24 @@ export default function MarketingManagementPage() {
                             <h3 className="text-xl font-black tracking-tight text-slate-900">₹{currentBalance.toLocaleString()}</h3>
                         </div>
                     </div>
+                    <div className="pt-3 border-t border-dashed border-border/50">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Available Liquidity</p>
+                    </div>
+                </Card>
+
+                <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-none bg-rose-50 text-rose-600 shadow-sm group-hover:scale-105 transition-transform"><PieChart className="size-5" /></div>
+                        <div className="min-w-0">
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">Period Spend</p>
+                            <h3 className="text-xl font-black tracking-tight text-slate-900">₹{periodSpend.toLocaleString()}</h3>
+                        </div>
+                    </div>
                     <div className="pt-3 border-t border-dashed border-border/50 space-y-1">
                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Last Update: {formatShortDate(lastUpdateDate)}</p>
                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Last Spend: {formatShortDate(lastSpentDate)}</p>
                     </div>
                 </Card>
-
-                <MetricCard label="Period Spend" value={`₹${periodSpend.toLocaleString()}`} sub="Current Filter" icon={PieChart} color="text-rose-600" bg="bg-rose-50" />
                 
                 <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
                     <div className="flex items-center gap-4">
