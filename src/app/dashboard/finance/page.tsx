@@ -345,7 +345,7 @@ export default function FinancePage() {
         <div className="space-y-4 animate-fade-in-up pb-20 font-jakarta max-w-[1600px] mx-auto">
             {/* Header Terminal */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-1">
-                <div className="space-y-0.5">
+                <div className="space-y-0.5 text-left w-full md:w-auto">
                     <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-slate-900">Money Ledger</h1>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
                         {dateFilter === 'custom-range' ? `${format(dateRange.start!, 'PP')} - ${format(dateRange.end, 'PP')}` : `Verified Audit • ${format(new Date(), 'MMMM yyyy')}`}
@@ -404,7 +404,7 @@ export default function FinancePage() {
             {/* Row 2: Portfolio & ROI Matrix */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <Card className="lg:col-span-8 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/5 border-b p-4">
+                    <CardHeader className="bg-muted/5 border-b p-4 text-left">
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
                                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
@@ -453,7 +453,7 @@ export default function FinancePage() {
                 </Card>
 
                 <Card className="lg:col-span-4 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm flex flex-col">
-                    <CardHeader className="bg-muted/5 border-b p-4">
+                    <CardHeader className="bg-muted/5 border-b p-4 text-left">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                             <Clock className="size-4" /> Upcoming Money
                         </CardTitle>
@@ -473,7 +473,7 @@ export default function FinancePage() {
                                     <div key={i} className="p-4 hover:bg-white transition-all flex items-center justify-between group">
                                         <div className="flex items-center gap-4">
                                             <div className="p-2 rounded-none bg-primary/5 text-primary"><ListChecks className="size-4" /></div>
-                                            <div className="space-y-0.5">
+                                            <div className="space-y-0.5 text-left">
                                                 <p className="text-[10px] font-black uppercase text-primary truncate max-w-[200px]">{p.clientName}</p>
                                                 <p className="text-[8px] font-bold text-muted-foreground uppercase">Next Installment</p>
                                             </div>
@@ -493,7 +493,7 @@ export default function FinancePage() {
             {/* Master History Terminal (GPay Style) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <Card className="lg:col-span-12 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between">
+                    <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between text-left">
                         <div className="space-y-1">
                             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                 <HistoryIcon className="size-4" /> Master Ledger History
@@ -516,7 +516,7 @@ export default function FinancePage() {
                                                     <item.icon className="size-5" />
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <div className="space-y-1">
+                                            <div className="space-y-1 text-left">
                                                 <p className="font-black text-sm uppercase tracking-tight text-slate-800">{item.title}</p>
                                                 <div className="flex items-center gap-3">
                                                     <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none px-2 h-4 border-muted-foreground/20 text-muted-foreground/60">{item.category}</Badge>
@@ -529,7 +529,10 @@ export default function FinancePage() {
                                             <p className={cn("text-lg font-black tabular-nums", item.type === 'income' ? "text-emerald-600" : "text-rose-600")}>
                                                 {item.type === 'income' ? '+' : '-'} ₹{item.amount.toLocaleString()}
                                             </p>
-                                            <p className="text-[8px] font-black uppercase text-slate-300 tracking-tighter">Verified Audit</p>
+                                            <div className="flex items-center justify-end gap-1 opacity-30">
+                                                <CheckCircle2 className="size-2.5" />
+                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-tighter">Verified Audit</p>
+                                            </div>
                                         </div>
                                     </div>
                                 )) : (
@@ -553,7 +556,7 @@ export default function FinancePage() {
                         </DialogTitle>
                         <DialogDescription className="text-[9px] font-bold uppercase tracking-widest opacity-60 text-left">Record miscellaneous income or expenses</DialogDescription>
                     </DialogHeader>
-                    <div className="p-8 space-y-6 bg-muted/5">
+                    <div className="p-8 space-y-6 bg-muted/5 text-left">
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground">Transaction Title</Label>
                             <Input value={manualForm.title} onChange={e => setManualForm({...manualForm, title: e.target.value})} placeholder="e.g., Office Rent, Laptop Buy..." className="h-11 rounded-none border-none ring-1 ring-border" />
@@ -599,11 +602,11 @@ export default function FinancePage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Graphs Section (Replacing Old Footer) */}
+            {/* Graphs Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
                 <Card className="bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm p-6">
-                    <CardHeader className="p-0 pb-6 flex flex-row items-center justify-between space-y-0">
-                        <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <CardHeader className="p-0 pb-6 flex flex-row items-center justify-between space-y-0 text-left">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 text-left">
                             <TrendingUp className="size-4" /> Team Revenue Performance
                         </CardTitle>
                         {topTeam && (
@@ -630,8 +633,8 @@ export default function FinancePage() {
                 </Card>
 
                 <Card className="bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm p-6">
-                    <CardHeader className="p-0 pb-6">
-                        <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <CardHeader className="p-0 pb-6 text-left">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 text-left">
                             <PieChartIcon className="size-4" /> Sector Distribution
                         </CardTitle>
                     </CardHeader>
@@ -666,17 +669,17 @@ export default function FinancePage() {
                         <div className="flex items-center justify-between mb-2">
                             <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Sector Detail</Badge>
                         </div>
-                        <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{selectedPortfolio?.name}</SheetTitle>
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Received Funds Analysis</p>
+                        <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary text-left">{selectedPortfolio?.name}</SheetTitle>
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest text-left">Received Funds Analysis</p>
                     </SheetHeader>
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10 pb-32">
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Transaction Log</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Transaction Log</h4>
                                 <div className="space-y-3">
                                     {selectedPortfolio?.transactions?.length > 0 ? selectedPortfolio.transactions.map((t: any, i: number) => (
                                         <div key={i} className="p-5 bg-white ring-1 ring-border shadow-sm space-y-3 hover:border-primary transition-all">
-                                            <div className="flex justify-between items-start">
+                                            <div className="flex justify-between items-start text-left">
                                                 <div className="space-y-1">
                                                     <p className="font-black text-xs uppercase tracking-tight">{t.clientName}</p>
                                                     <p className="text-[9px] font-bold text-muted-foreground uppercase">{t.team} Team</p>
@@ -685,7 +688,7 @@ export default function FinancePage() {
                                             </div>
                                             <div className="pt-2 border-t border-dashed flex items-center justify-between text-[8px] font-black uppercase text-muted-foreground/50">
                                                 <span>Updated on: {t.date}</span>
-                                                <ShieldCheck className="size-2.5" />
+                                                <CheckCircle2 className="size-2.5" />
                                             </div>
                                         </div>
                                     )) : <p className="py-10 text-center text-xs italic text-muted-foreground uppercase opacity-40">No confirmed payments in this window.</p>}
@@ -700,7 +703,7 @@ export default function FinancePage() {
             <Dialog open={!!selectedMetric} onOpenChange={o => !o && setSelectedMetric(null)}>
                 <DialogContent className="rounded-none border-none shadow-3xl sm:max-w-2xl p-0 overflow-hidden">
                     <DialogHeader className="p-8 border-b bg-white text-left">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Audit: {selectedMetric === 'revenue' ? 'Money Got' : selectedMetric === 'pipeline' ? 'In Pipeline' : selectedMetric?.toUpperCase()}</DialogTitle>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary text-left">Audit: {selectedMetric === 'revenue' ? 'Money Got' : selectedMetric === 'pipeline' ? 'In Pipeline' : selectedMetric?.toUpperCase()}</DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-40 text-left">Verified historical logs</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[60vh]">
@@ -710,7 +713,7 @@ export default function FinancePage() {
                                     {selectedMetric === 'revenue' && (
                                         <div className="space-y-4">
                                             {stats.masterHistory.filter(h => h.type === 'income').map((h, i) => (
-                                                <div key={i} className="flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100">
+                                                <div key={i} className="flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100 text-left">
                                                     <div>
                                                         <p className="font-bold text-xs uppercase">{h.title}</p>
                                                         <p className="text-[9px] text-emerald-600 font-bold uppercase">Confirmed: {format(h.date, 'PP')}</p>
@@ -725,7 +728,7 @@ export default function FinancePage() {
                                             {clients?.flatMap(c => (c.payments || []).map(p => ({ ...p, clientName: c.companyName })))
                                                 .filter(p => p && p.status !== 'Paid')
                                                 .map((h, i) => (
-                                                <div key={i} className="flex items-center justify-between p-4 bg-amber-50/50 border border-amber-100">
+                                                <div key={i} className="flex items-center justify-between p-4 bg-amber-50/50 border border-amber-100 text-left">
                                                     <div>
                                                         <p className="font-bold text-xs uppercase">{h.clientName}</p>
                                                         <p className="text-[9px] text-amber-600 font-bold uppercase">Due: {h.dueDate || 'N/A'}</p>
@@ -738,7 +741,7 @@ export default function FinancePage() {
                                     {selectedMetric === 'expenses' && (
                                         <div className="space-y-4">
                                             {stats.masterHistory.filter(h => h.type === 'expense').map((h, i) => (
-                                                <div key={i} className="flex items-center justify-between p-4 bg-rose-50/50 border border-rose-100">
+                                                <div key={i} className="flex items-center justify-between p-4 bg-rose-50/50 border border-rose-100 text-left">
                                                     <div>
                                                         <p className="font-bold text-xs uppercase">{h.title}</p>
                                                         <p className="text-[9px] text-rose-600 font-bold uppercase">Confirmed: {format(h.date, 'PP')}</p>
@@ -752,14 +755,14 @@ export default function FinancePage() {
                                 <TabsContent value="overview" className="mt-0">
                                     <div className="space-y-8">
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div onClick={() => setSelectedMetric('revenue')} className="p-6 bg-muted/20 border rounded-none cursor-pointer hover:bg-emerald-50 transition-all group">
+                                            <div onClick={() => setSelectedMetric('revenue')} className="p-6 bg-muted/20 border rounded-none cursor-pointer hover:bg-emerald-50 transition-all group text-left">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Inflow</p>
                                                     <ChevronRight className="size-3 opacity-0 group-hover:opacity-40" />
                                                 </div>
                                                 <p className="text-xl font-black text-emerald-600">₹{stats.totalRevenue.toLocaleString()}</p>
                                             </div>
-                                            <div onClick={() => setSelectedMetric('expenses')} className="p-6 bg-muted/20 border rounded-none cursor-pointer hover:bg-rose-50 transition-all group">
+                                            <div onClick={() => setSelectedMetric('expenses')} className="p-6 bg-muted/20 border rounded-none cursor-pointer hover:bg-rose-50 transition-all group text-left">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Outflow</p>
                                                     <ChevronRight className="size-3 opacity-0 group-hover:opacity-40" />
@@ -795,12 +798,12 @@ function KPICard({ title, value, trend, up, icon: Icon, color, bg, lastUpdate, o
                 <div className={cn("p-2.5 rounded-none shadow-sm group-hover:scale-105 transition-transform", bg, color)}>
                     <Icon className="size-4" />
                 </div>
-                <div className={cn("flex items-center gap-1 text-[10px] font-black", up ? "text-emerald-600" : "text-rose-600")}>
+                <div className={cn("flex items-center gap-1 text-[10px] font-black text-left", up ? "text-emerald-600" : "text-rose-600")}>
                     {up ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
                     {trend}
                 </div>
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 text-left">
                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{title}</p>
                 <h3 className="text-2xl font-black tracking-tighter text-slate-900 leading-none">{value}</h3>
             </div>
@@ -812,9 +815,12 @@ function KPICard({ title, value, trend, up, icon: Icon, color, bg, lastUpdate, o
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
-                <p className="text-[7px] font-black uppercase text-muted-foreground/30">
-                    {lastUpdate ? `Last Sync: ${format(lastUpdate.toDate(), 'HH:mm')}` : 'Live Audit'}
-                </p>
+                <div className="flex items-center gap-1 opacity-20">
+                    <CheckCircle2 className="size-2" />
+                    <p className="text-[7px] font-black uppercase text-muted-foreground/80 tracking-tight">
+                        {lastUpdate ? `Last Sync: ${format(lastUpdate.toDate(), 'HH:mm')}` : 'Live Audit'}
+                    </p>
+                </div>
             </div>
         </Card>
     );
