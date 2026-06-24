@@ -34,17 +34,15 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, doc, where, getDocs, Timestamp, collectionGroup } from 'firebase/firestore';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import Link from 'next/link';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, subMonths, isAfter, isBefore, isSameDay } from 'date-fns';
+import { format, isAfter, isBefore, startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 
 // --- DATA TYPES ---
 type PaymentInstallment = {
@@ -92,7 +90,7 @@ export default function FinancePage() {
 
     // Detail States
     const [selectedMetric, setSelectedMetric] = React.useState<string | null>(null);
-    const [selectedBrand, setSelectedBrand] = React.useState<any | null>(null);
+    const [selectedPortfolio, setSelectedPortfolio] = React.useState<any | null>(null);
 
     // Data Streams
     const clientsQuery = useMemoFirebase(() => query(collection(firestore, 'clients')), [firestore]);
@@ -104,7 +102,7 @@ export default function FinancePage() {
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
     const { data: users } = useCollection<UserData>(usersQuery);
 
-    const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
+    const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams'), orderBy('name', 'asc')), [firestore]);
     const { data: teams } = useCollection<any>(teamsQuery);
 
     const dateRange = React.useMemo(() => {
@@ -133,14 +131,7 @@ export default function FinancePage() {
         let marketingBudget = 0;
         let marketingSpent = 0;
 
-        let productData: Record<string, { revenue: number, pipeline: number, reach: number, count: number, transactions: any[] }> = {
-            "Cognithorz": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] },
-            "FortuMars": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] },
-            "Black Ticket": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] },
-            "Campus Connect": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] },
-            "Other": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] }
-        };
-
+        let portfolioData: Record<string, { revenue: number, pipeline: number, reach: number, count: number, transactions: any[] }> = {};
         let teamRevenue: Record<string, number> = {};
 
         // Process Clients
@@ -161,20 +152,18 @@ export default function FinancePage() {
                     if (p.status !== 'Paid') totalPipeline += (total - received);
                     teamRevenue[teamName] += received;
 
-                    // Map to product
-                    const name = c.companyName.toLowerCase();
-                    let key = "Other";
-                    if (name.includes('black ticket')) key = "Black Ticket";
-                    else if (name.includes('campus connect')) key = "Campus Connect";
-                    else if (name.includes('fortumars')) key = "FortuMars";
-                    else if (name.includes('cognithorz')) key = "Cognithorz";
+                    // Group by Service Type / Product Line found in Client records
+                    const key = c.serviceType || "Direct Services";
+                    if (!portfolioData[key]) {
+                        portfolioData[key] = { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] };
+                    }
 
-                    productData[key].revenue += received;
-                    if (p.status !== 'Paid') productData[key].pipeline += (total - received);
-                    productData[key].count += 1;
+                    portfolioData[key].revenue += received;
+                    if (p.status !== 'Paid') portfolioData[key].pipeline += (total - received);
+                    portfolioData[key].count += 1;
                     
                     if (received > 0) {
-                        productData[key].transactions.push({
+                        portfolioData[key].transactions.push({
                             clientName: c.companyName,
                             amount: received,
                             team: teamName,
@@ -198,16 +187,6 @@ export default function FinancePage() {
                 const spend = s.adSpends?.reduce((a, c) => a + (c.amount || 0), 0) || 0;
                 if (isRelevant) marketingSpent += spend;
             }
-
-            s.socialLogs?.forEach(log => {
-                let key = "Other";
-                const bId = log.brandId.toLowerCase();
-                if (bId.includes('blackticket')) key = "Black Ticket";
-                else if (bId.includes('campusconnect')) key = "Campus Connect";
-                else if (bId.includes('fortumars')) key = "FortuMars";
-                else if (bId.includes('cognithorz')) key = "Cognithorz";
-                if (isRelevant) productData[key].reach = Math.max(productData[key].reach, log.count);
-            });
         });
 
         const netProfitRaw = totalRevenue - workforceCost - marketingSpent;
@@ -220,7 +199,7 @@ export default function FinancePage() {
             netProfit,
             netProfitRaw,
             margin: totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0,
-            productData, 
+            portfolioData, 
             marketingBudget, 
             marketingSpent,
             marketingBalance: Math.max(0, marketingBudget - marketingSpent),
@@ -295,45 +274,45 @@ export default function FinancePage() {
                 <KPICard title="Margin" value={`${stats.margin.toFixed(1)}%`} trend="+2.1pp" up={true} icon={Target} color="text-indigo-600" bg="bg-indigo-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('margin')} />
             </div>
 
-            {/* Product Performance (Revenue Only, No Profits from Social) */}
+            {/* Portfolio Performance (Dynamic from Client/Project/Pipeline Hubs) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <Card className="lg:col-span-8 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/5 border-b p-4">
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
                                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                    <Package className="size-4" /> Proprietary Product Ledger
+                                    <Package className="size-4" /> Operational Service Portfolio
                                 </CardTitle>
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Money Got (Client) vs Brand Awareness (Social)</p>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Money Got (Collected) vs Potential (Pipeline)</p>
                             </div>
-                            <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase px-2">Verified Audit</Badge>
+                            <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase px-2">Live Data Audit</Badge>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader className="bg-muted/10">
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className="font-black text-[8px] uppercase py-3 px-6 tracking-widest">Brand Identity</TableHead>
+                                    <TableHead className="font-black text-[8px] uppercase py-3 px-6 tracking-widest">Service Category</TableHead>
                                     <TableHead className="font-black text-[8px] uppercase py-3 text-center">Money Got</TableHead>
                                     <TableHead className="font-black text-[8px] uppercase py-3 text-center">In Pipeline</TableHead>
-                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">Social Reach</TableHead>
+                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">Volume</TableHead>
                                     <TableHead className="text-right px-6 font-black text-[8px] uppercase py-3">Audit</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {Object.entries(stats.productData).map(([name, data]) => (
+                                {Object.entries(stats.portfolioData).map(([name, data]) => (
                                     <TableRow 
                                         key={name} 
                                         className="border-border/50 group hover:bg-primary/5 transition-colors cursor-pointer"
-                                        onClick={() => setSelectedBrand({ name, ...data })}
+                                        onClick={() => setSelectedPortfolio({ name, ...data })}
                                     >
                                         <TableCell className="py-4 px-6 font-black text-[11px] uppercase tracking-tight">{name}</TableCell>
                                         <TableCell className="text-center font-bold text-emerald-600 text-xs">₹{(data.revenue / 1000).toFixed(1)}K</TableCell>
                                         <TableCell className="text-center font-bold text-amber-600 text-xs">₹{(data.pipeline / 1000).toFixed(1)}K</TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex flex-col items-center">
-                                                <span className="text-xs font-black">{data.reach > 1000 ? `${(data.reach/1000).toFixed(1)}K` : data.reach}</span>
-                                                <span className="text-[7px] font-bold text-muted-foreground uppercase">Followers</span>
+                                                <span className="text-xs font-black">{data.count}</span>
+                                                <span className="text-[7px] font-bold text-muted-foreground uppercase">Accounts</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right px-6">
@@ -341,6 +320,9 @@ export default function FinancePage() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                                {Object.keys(stats.portfolioData).length === 0 && (
+                                    <TableRow><TableCell colSpan={5} className="py-10 text-center text-[10px] font-bold uppercase opacity-30">No active projects in this window</TableCell></TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </CardContent>
@@ -350,7 +332,7 @@ export default function FinancePage() {
                 <Card className="lg:col-span-4 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm flex flex-col">
                     <CardHeader className="bg-muted/5 border-b p-4">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                            <Users className="size-4" /> Team Revenue Performance
+                            <Users className="size-4" /> Team Revenue Attribution
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0 flex-1">
@@ -436,22 +418,22 @@ export default function FinancePage() {
                 </Card>
             </div>
 
-            {/* Brand Detail Sheet */}
-            <Sheet open={!!selectedBrand} onOpenChange={o => !o && setSelectedBrand(null)}>
+            {/* Portfolio Detail Sheet */}
+            <Sheet open={!!selectedPortfolio} onOpenChange={o => !o && setSelectedPortfolio(null)}>
                 <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
                     <SheetHeader className="p-8 border-b bg-white shrink-0">
                         <div className="flex items-center justify-between mb-2">
-                            <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Brand Audit</Badge>
+                            <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Portfolio Audit</Badge>
                         </div>
-                        <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{selectedBrand?.name}</SheetTitle>
+                        <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{selectedPortfolio?.name}</SheetTitle>
                         <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Revenue Source Analysis</p>
                     </SheetHeader>
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10 pb-32">
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Money Got Breakdown</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Money Received Breakdown</h4>
                                 <div className="space-y-3">
-                                    {selectedBrand?.transactions?.length > 0 ? selectedBrand.transactions.map((t: any, i: number) => (
+                                    {selectedPortfolio?.transactions?.length > 0 ? selectedPortfolio.transactions.map((t: any, i: number) => (
                                         <div key={i} className="p-5 bg-white ring-1 ring-border shadow-sm space-y-3 hover:border-primary transition-all">
                                             <div className="flex justify-between items-start">
                                                 <div className="space-y-1">
@@ -467,21 +449,6 @@ export default function FinancePage() {
                                         </div>
                                     )) : <p className="py-10 text-center text-xs italic text-muted-foreground uppercase opacity-40">No confirmed revenue in this window.</p>}
                                 </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Social Reach Audit</h4>
-                                <div className="p-6 bg-white border border-border shadow-sm rounded-none flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-primary/5 text-primary rounded-none"><Users className="size-6" /></div>
-                                        <div>
-                                            <p className="text-2xl font-black">{selectedBrand?.reach.toLocaleString()}</p>
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">Aggregated Followers</p>
-                                        </div>
-                                    </div>
-                                    <TrendingUp className="size-6 text-emerald-500 opacity-20" />
-                                </div>
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase italic text-center">Social data is used for awareness auditing and does not influence Net Profit.</p>
                             </div>
                         </div>
                     </ScrollArea>
