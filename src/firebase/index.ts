@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
@@ -34,10 +34,23 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  // We use initializeFirestore to enable experimentalForceLongPolling.
+  // This is a critical fix for Cloud Workstation environments where WebSockets might be unstable or blocked,
+  // preventing the "Could not reach Cloud Firestore backend" timeout error.
+  let firestore;
+  try {
+    firestore = initializeFirestore(firebaseApp, {
+      experimentalForceLongPolling: true,
+    });
+  } catch (e) {
+    // If firestore was already initialized elsewhere, fall back to the existing instance
+    firestore = getFirestore(firebaseApp);
+  }
+
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
+    firestore,
     storage: getStorage(firebaseApp)
   };
 }
