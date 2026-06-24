@@ -16,9 +16,9 @@ import {
 } from "lucide-react";
 import { 
     Area, AreaChart, ResponsiveContainer, 
-    XAxis, YAxis, Tooltip,
-    Progress 
+    XAxis, YAxis, Tooltip
 } from 'recharts';
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -170,7 +170,7 @@ export default function FinancePage() {
             <div className="flex h-[80vh] items-center justify-center">
                 <div className="flex flex-col items-center gap-4 text-primary opacity-20">
                     <Loader2 className="size-12 animate-spin" />
-                    <p className="font-black uppercase text-xs tracking-[0.3em]">Syncing Vertical Ledger...</p>
+                    <p className="font-black uppercase text-xs tracking-[0.3em]">Syncing Ledger...</p>
                 </div>
             </div>
         );
@@ -262,7 +262,7 @@ export default function FinancePage() {
                     </div>
                 </Card>
 
-                {/* Client Portfolio Value */}
+                {/* Client Project Value */}
                 <Card className="lg:col-span-4 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm p-6 flex flex-col justify-between">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black text-primary uppercase tracking-widest">Client Project Value</p>
