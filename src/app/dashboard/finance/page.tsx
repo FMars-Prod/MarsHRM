@@ -42,19 +42,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, limit, doc, where, getDocs, Timestamp, collectionGroup } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, where, getDocs, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import Link from 'next/link';
-import { format, isAfter, isBefore, startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, isToday } from 'date-fns';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { format, isAfter, isBefore, startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from 'date-fns';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 
 // --- DATA TYPES ---
 type PaymentInstallment = {
@@ -548,11 +547,11 @@ export default function FinancePage() {
             {/* Manual Entry Dialog */}
             <Dialog open={isManualEntryOpen} onOpenChange={setIsManualEntryOpen}>
                 <DialogContent className="rounded-none border-none shadow-3xl p-0 overflow-hidden sm:max-w-md">
-                    <DialogHeader className="p-8 bg-white border-b shrink-0">
+                    <DialogHeader className="p-8 bg-white border-b shrink-0 text-left">
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
                             <Plus className="size-5" /> New Transaction
                         </DialogTitle>
-                        <DialogDescription className="text-[9px] font-bold uppercase tracking-widest opacity-60">Record miscellaneous income or expenses</DialogDescription>
+                        <DialogDescription className="text-[9px] font-bold uppercase tracking-widest opacity-60 text-left">Record miscellaneous income or expenses</DialogDescription>
                     </DialogHeader>
                     <div className="p-8 space-y-6 bg-muted/5">
                         <div className="space-y-2">
@@ -663,7 +662,7 @@ export default function FinancePage() {
             {/* Portfolio Detail Sheet */}
             <Sheet open={!!selectedPortfolio} onOpenChange={o => !o && setSelectedPortfolio(null)}>
                 <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
-                    <SheetHeader className="p-8 border-b bg-white shrink-0">
+                    <SheetHeader className="p-8 border-b bg-white shrink-0 text-left">
                         <div className="flex items-center justify-between mb-2">
                             <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Sector Detail</Badge>
                         </div>
@@ -700,9 +699,9 @@ export default function FinancePage() {
             {/* KPI Audit Dialog */}
             <Dialog open={!!selectedMetric} onOpenChange={o => !o && setSelectedMetric(null)}>
                 <DialogContent className="rounded-none border-none shadow-3xl sm:max-w-2xl p-0 overflow-hidden">
-                    <DialogHeader className="p-8 border-b bg-white">
+                    <DialogHeader className="p-8 border-b bg-white text-left">
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Audit: {selectedMetric === 'revenue' ? 'Money Got' : selectedMetric === 'pipeline' ? 'In Pipeline' : selectedMetric?.toUpperCase()}</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-40">Verified historical logs</DialogDescription>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-40 text-left">Verified historical logs</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[60vh]">
                         <div className="p-8 space-y-6">
