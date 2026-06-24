@@ -4,7 +4,7 @@ import * as React from 'react';
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
-    DollarSign, TrendingUp, Activity, 
+    DollarSign, TrendingUp, TrendingDown, Activity, 
     PieChart as PieChartIcon, Target, Search, 
     Filter, LayoutGrid, ArrowUpRight, ArrowDownRight,
     Map as MapIcon, Wallet, Briefcase, Globe,
