@@ -7,7 +7,7 @@ import { collection, query, doc, orderBy } from 'firebase/firestore';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Network, Settings2, ShieldCheck, Check, ChevronDown, UserCircle, Search, X, Users } from 'lucide-react';
+import { Network, Settings2, CheckCircle2, Check, ChevronDown, UserCircle, Search, X, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -160,7 +160,7 @@ export default function OrgStructurePage() {
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="rounded-none sm:max-w-4xl p-0 border-none shadow-2xl overflow-hidden flex flex-col h-[85vh]">
-                            <DialogHeader className="p-10 border-b bg-white shrink-0">
+                            <DialogHeader className="p-10 border-b bg-white shrink-0 text-left">
                                 <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Command Mapping Matrix</DialogTitle>
                                 <DialogDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60 mt-1">
                                     Assign reporting heads to establish the vertical organization matrix
@@ -175,13 +175,13 @@ export default function OrgStructurePage() {
                                                     <AvatarImage src={u.avatar} className="object-cover rounded-none" />
                                                     <AvatarFallback className="rounded-none text-base font-black">{u.firstName[0]}{u.lastName[0]}</AvatarFallback>
                                                 </Avatar>
-                                                <div className="space-y-1">
+                                                <div className="space-y-1 text-left">
                                                     <p className="font-black text-lg uppercase tracking-tight leading-none">{u.firstName} {u.lastName}</p>
                                                     <p className="text-[11px] font-black text-primary uppercase tracking-widest">{u.jobTitle}</p>
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-4">
+                                            <div className="space-y-4 text-left">
                                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Fleet Command Assignment</Label>
                                                 
                                                 {/* Selected Summary Area */}
@@ -232,7 +232,7 @@ export default function OrgStructurePage() {
                                                                             <AvatarImage src={manager.avatar} className="object-cover rounded-none" />
                                                                             <AvatarFallback className="rounded-none text-xs font-black">{manager.firstName[0]}{manager.lastName[0]}</AvatarFallback>
                                                                         </Avatar>
-                                                                        <div className="min-w-0 flex-1">
+                                                                        <div className="min-w-0 flex-1 text-left">
                                                                             <p className="text-sm font-black uppercase truncate group-hover:text-primary transition-colors">{manager.firstName} {manager.lastName}</p>
                                                                             <p className="text-[10px] font-bold text-muted-foreground truncate uppercase">{manager.jobTitle}</p>
                                                                         </div>
@@ -263,7 +263,7 @@ export default function OrgStructurePage() {
 
             {userData && (
                 <Alert className="bg-primary/5 border-primary/20 shadow-md rounded-none p-8 mx-6">
-                    <ShieldCheck className="size-6 text-primary" />
+                    <CheckCircle2 className="size-6 text-primary" />
                     <AlertTitle className="text-primary font-black uppercase text-sm tracking-[0.2em] mb-2">Matrix Oversight Directive</AlertTitle>
                     <AlertDescription className="text-base font-medium leading-relaxed opacity-80">
                         Tactical matrix active: Employees may be displayed under multiple command lines representing cross-functional reporting assignments.

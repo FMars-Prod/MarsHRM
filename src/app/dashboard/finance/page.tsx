@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -23,7 +22,6 @@ import {
     Users,
     ShieldAlert,
     Briefcase,
-    ShieldCheck,
     Plus,
     History as HistoryIcon,
     Check,
@@ -406,7 +404,7 @@ export default function FinancePage() {
                 <Card className="lg:col-span-8 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/5 border-b p-4 text-left">
                         <div className="flex items-center justify-between">
-                            <div className="space-y-1">
+                            <div className="space-y-1 text-left">
                                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                     <Package className="size-4" /> Service Portfolio
                                 </CardTitle>
@@ -494,7 +492,7 @@ export default function FinancePage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <Card className="lg:col-span-12 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between text-left">
-                        <div className="space-y-1">
+                        <div className="space-y-1 text-left">
                             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                 <HistoryIcon className="size-4" /> Master Ledger History
                             </CardTitle>

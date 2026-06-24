@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, ShieldAlert, Coffee } from 'lucide-react';
+import { CheckCircle2, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle, Brain, Trash2, FileDown, ShieldAlert, Coffee } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -343,7 +343,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
                 {/* Identity Information Matrix */}
                 <div className="flex-1 p-8 lg:p-10 space-y-10 flex flex-col justify-center">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 text-left">
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-4">
                                 <h2 className="text-4xl lg:text-5xl font-black tracking-tighter leading-none uppercase">{user.firstName} {user.lastName}</h2>
@@ -361,8 +361,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12 pt-8 border-t border-dashed border-border/50">
-                        <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12 pt-8 border-t border-dashed border-border/50 text-left">
+                        <DetailItem icon={CheckCircle2} label="Employee ID" value={`MR-${user.id.slice(0, 8).toUpperCase()}`} />
                         <DetailItem icon={CalendarDays} label="Joined Date" value={user.hireDate ? format(new Date(user.hireDate), 'dd MMM yyyy') : 'N/A'} />
                         <DetailItem icon={Mail} label="Email Address" value={user.email} />
                         <DetailItem icon={Phone} label="Phone Number" value={user.phoneNumber || "N/A"} />
@@ -403,8 +403,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="rounded-none sm:max-w-sm border-none shadow-2xl">
-                                <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Update Rating</DialogTitle></DialogHeader>
-                                <div className="py-6 space-y-4">
+                                <DialogHeader className="text-left"><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Update Rating</DialogTitle></DialogHeader>
+                                <div className="py-6 space-y-4 text-left">
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Rating</Label>
                                     <Select onValueChange={handleUpdatePerformance} defaultValue={user.performanceRating || "Good"}>
                                         <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
@@ -444,7 +444,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <TabsContent value="activity" className="mt-0">
                 <div className="grid grid-cols-1 lg:grid-cols-1 gap-3">
                     <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-8">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Activity History</h3>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 text-left">Activity History</h3>
                         <div className="space-y-6">
                             {userReports.length > 0 ? userReports.map(r => (
                                 <TimelineItem key={r.id} icon={FileText} title={`${r.reportType} Report`} time={format(r.date.toDate(), 'MMM dd, yyyy')} desc={`Finalized for ${r.employeeDepartment}.`} color="bg-primary/10 text-primary" onClick={() => setSelectedReportForReview(r)} />
@@ -546,7 +546,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                          <Link href={`/dashboard/users/${head.id}`} className="p-6 bg-muted/20 border-2 border-dashed border-border/50 rounded-none w-56 text-center group hover:border-primary/40 transition-all cursor-pointer shadow-sm">
                                             <Avatar className="size-16 rounded-none mx-auto mb-4 shadow-md border border-white">
                                                 <AvatarImage src={head.avatar} className="object-cover rounded-none" />
-                                                <AvatarFallback className="font-black text-lg">{head.firstName[0]}</AvatarFallback>
+                                                <AvatarFallback className="font-black text-lg">{head.firstName?.[0]}</AvatarFallback>
                                             </Avatar>
                                             <p className="font-black text-sm uppercase tracking-tight truncate">{head.firstName} {head.lastName}</p>
                                             <p className="text-[10px] font-black text-primary uppercase truncate tracking-tight mt-1">{head.jobTitle}</p>
@@ -567,7 +567,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             <div className="p-10 bg-primary text-white shadow-2xl rounded-none w-72 text-center ring-8 ring-primary/10 transition-transform hover:scale-105 duration-500">
                                 <Avatar className="size-40 rounded-none mx-auto mb-6 border-4 border-white/20 shadow-xl">
                                     <AvatarImage src={user.avatar} className="object-cover" />
-                                    <AvatarFallback className="font-black text-4xl text-primary bg-white">{user.firstName[0]}</AvatarFallback>
+                                    <AvatarFallback className="font-black text-4xl text-primary bg-white">{user.firstName?.[0]}</AvatarFallback>
                                 </Avatar>
                                 <p className="font-black text-xl uppercase tracking-tighter leading-none">{user.firstName} {user.lastName}</p>
                                 <p className="text-[11px] font-bold text-white/70 uppercase tracking-[0.2em] mt-3">{user.jobTitle}</p>
@@ -587,7 +587,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                             <Link href={`/dashboard/users/${report.id}`} className="p-6 bg-white ring-1 ring-border/50 shadow-xl rounded-none w-56 text-center group hover:ring-primary/40 transition-all cursor-pointer">
                                                 <Avatar className="size-16 rounded-none mx-auto mb-4 border border-muted shadow-sm">
                                                     <AvatarImage src={report.avatar} className="object-cover rounded-none" />
-                                                    <AvatarFallback className="font-black text-lg">{report.firstName[0]}</AvatarFallback>
+                                                    <AvatarFallback className="font-black text-lg">{report.firstName?.[0]}</AvatarFallback>
                                                 </Avatar>
                                                 <p className="font-black text-sm uppercase tracking-tight truncate group-hover:text-primary transition-colors">{report.firstName} {report.lastName}</p>
                                                 <p className="text-[10px] font-black text-muted-foreground uppercase truncate tracking-tight mt-1">{report.jobTitle}</p>
@@ -603,7 +603,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <TabsContent value="documents">
                 <Card className="border-none shadow-sm rounded-none bg-white p-10">
                     {documents && documents.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
                             {documents.map((doc: any) => (
                                 <Link href={doc.link} target="_blank" key={doc.id} className="flex items-center justify-between p-6 rounded-none bg-muted/10 border-2 border-transparent hover:border-primary/20 hover:bg-white transition-all group shadow-sm">
                                     <div className="flex items-center gap-5">
@@ -631,7 +631,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <TabsContent value="assets">
                 <Card className="border-none shadow-sm rounded-none bg-white p-10">
                     {assignedAssets && assignedAssets.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 text-left">
                             {assignedAssets.map((asset: any) => (
                                 <div key={asset.id} className="p-8 rounded-none ring-1 ring-border/50 bg-muted/5 space-y-5 shadow-sm hover:shadow-md transition-all">
                                     <div className="aspect-square bg-white rounded-none flex items-center justify-center border-2 border-dashed border-border/50 p-4">
@@ -655,7 +655,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
             <TabsContent value="bio data">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Mission Bio Data</h3>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 text-left">Mission Bio Data</h3>
                         <div className="space-y-4">
                             <InfoRow label="Date of Birth" value={user.dob ? format(new Date(user.dob), 'dd MMM yyyy') : 'N/A'} />
                             <InfoRow label="Gender" value={user.gender || 'N/A'} />
@@ -670,7 +670,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         </div>
                     </Card>
                     <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">Employment Context</h3>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 text-left">Employment Context</h3>
                         <div className="space-y-4">
                             <InfoRow label="Employment Type" value={user.employmentType || 'Intern'} />
                             <InfoRow label="Shift Profile" value={user.shiftType || 'General Shift'} />
@@ -684,9 +684,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
 
         {/* Report Review Dialog */}
         <Dialog open={!!selectedReportForReview} onOpenChange={o => !o && setSelectedReportForReview(null)}>
-            <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-                <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center shrink-0">
-                    <div>
+            <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
+                <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center shrink-0 text-left">
+                    <div className="text-left">
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Mission Audit Log</DialogTitle>
                         <p className="text-xs font-bold text-muted-foreground">{selectedReportForReview && formatIST(selectedReportForReview.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p>
                     </div>
@@ -698,7 +698,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                                     <Button variant="destructive" size="sm" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest"><Trash2 className="size-3 mr-1.5"/> Delete</Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent className="rounded-3xl">
-                                    <AlertDialogHeader>
+                                    <AlertDialogHeader className="text-left">
                                         <AlertDialogTitle>Purge Report Record?</AlertDialogTitle>
                                         <AlertDialogDescription>This will permanently remove this tactical submission from the identity log.</AlertDialogDescription>
                                     </AlertDialogHeader>
@@ -713,10 +713,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                     </div>
                 </DialogHeader>
                 <ScrollArea className="flex-1 bg-secondary/10">
-                    <div className="p-8 space-y-8 pb-20">
+                    <div className="p-8 space-y-8 pb-20 text-left">
                         <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personnel</p><p className="font-bold text-lg">{selectedReportForReview?.employeeName}</p></div>
-                            <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Job Title</p><p className="font-bold text-lg">{selectedReportForReview?.employeeJobTitle}</p></div>
+                            <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personnel</p><p className="font-bold text-lg uppercase">{selectedReportForReview?.employeeName}</p></div>
+                            <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sector</p><p className="font-bold text-lg uppercase">{selectedReportForReview?.employeeDepartment}</p></div>
                         </div>
                         <Separator />
                         {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
@@ -724,15 +724,15 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                         {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetail report={selectedReportForReview} />}
                         
                         <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm">
-                            <CardHeader className="bg-muted/10 py-3">
+                            <CardHeader className="bg-muted/10 py-3 text-left">
                                 <CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> Planning (T+1)</CardTitle>
                             </CardHeader>
                             <CardContent className="pt-6 space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div><p className="text-[9px] font-bold text-muted-foreground uppercase">Target Meets</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div>
-                                    <div><p className="text-[9px] font-bold text-muted-foreground uppercase">Priority Trigger</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div>
+                                    <div className="text-left"><p className="text-[9px] font-bold text-muted-foreground uppercase">Target Meets</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div>
+                                    <div className="text-left"><p className="text-[9px] font-bold text-muted-foreground uppercase">Priority Trigger</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div>
                                 </div>
-                                <div className="p-4 bg-muted/10 border-l-4 border-primary">
+                                <div className="p-4 bg-muted/10 border-l-4 border-primary text-left">
                                     <p className="text-[8px] font-black uppercase text-primary mb-1">Primary Objective</p>
                                     <p className="text-sm font-medium italic">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p>
                                 </div>
@@ -780,7 +780,7 @@ function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any
                 <div className={cn("p-4 rounded-none shadow-md", color, "bg-muted/10")}><Icon className="size-6" /></div>
                 <Badge variant="outline" className="text-[10px] font-black uppercase bg-muted/20 border-none rounded-none px-3 h-6 tracking-widest">Active</Badge>
             </div>
-            <div>
+            <div className="text-left">
                 <div className="flex items-center justify-between mb-3.5"><p className="text-[12px] font-black uppercase text-muted-foreground/70 tracking-widest">{title}</p><span className={cn("text-xl font-black tracking-tighter", color)}>{ratio}</span></div>
                 {progress !== undefined && <Progress value={progress} className="h-2 rounded-none bg-muted/30" />}
                 {children}
@@ -797,7 +797,7 @@ function TimelineItem({ icon: Icon, title, time, desc, color, onClick }: any) {
     return (
         <div className="flex gap-8 items-start relative group cursor-pointer" onClick={onClick}>
             <div className={cn("h-12 w-12 rounded-none flex items-center justify-center shrink-0 z-10 shadow-lg transition-transform group-hover:scale-110", color)}><Icon className="size-6" /></div>
-            <div className="space-y-2 flex-1 pt-1">
+            <div className="space-y-2 flex-1 pt-1 text-left">
                 <p className="font-black text-lg uppercase tracking-tight text-foreground/90 leading-none group-hover:text-primary transition-colors">{title}</p>
                 <div className="flex items-center gap-4">
                     <span className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">{time}</span>

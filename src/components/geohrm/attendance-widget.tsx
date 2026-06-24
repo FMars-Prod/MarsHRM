@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -9,7 +8,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { LogOut, LogIn, Loader2, Utensils, AlertTriangle, ShieldCheck, MapPin, LocateFixed, Signal, Coffee, Timer, Home } from "lucide-react";
+import { LogOut, LogIn, Loader2, Utensils, AlertTriangle, CheckCircle2, MapPin, LocateFixed, Signal, Coffee, Timer, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -514,7 +513,7 @@ export function AttendanceWidget() {
                 ) : (
                     <div className="flex flex-col items-center gap-4 py-6">
                         <div className="p-4 bg-emerald-50 rounded-full border-2 border-dashed border-emerald-200">
-                            <ShieldCheck className="size-10 text-emerald-500" />
+                            <CheckCircle2 className="size-10 text-emerald-500" />
                         </div>
                         <p className="font-black uppercase tracking-[0.3em] text-emerald-700 text-sm">Duty Finished</p>
                     </div>
@@ -536,20 +535,20 @@ export function AttendanceWidget() {
 
                 <div className="py-4 space-y-4">
                     <div className="bg-muted/30 p-4 rounded-none border border-dashed border-border space-y-2">
-                        <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest">Location Details</p>
+                        <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest text-left">Location Details</p>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-0.5">
+                            <div className="space-y-0.5 text-left">
                                 <p className="text-[8px] font-bold text-muted-foreground uppercase">Your Lat</p>
                                 <p className="text-xs font-mono font-bold">{lastCapturedLoc?.latitude.toFixed(6)}</p>
                             </div>
-                            <div className="space-y-0.5">
+                            <div className="space-y-0.5 text-left">
                                 <p className="text-[8px] font-bold text-muted-foreground uppercase">Your Lng</p>
                                 <p className="text-xs font-mono font-bold">{lastCapturedLoc?.longitude.toFixed(6)}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Reason</Label>
                         <Textarea 
                             value={outOfRangeReason} 

@@ -1,16 +1,15 @@
-
 'use client';
 
 import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, setDocumentNonBlocking, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin, Clock, ShieldCheck, Globe, Save, Info, Key, Map as MapIcon, CalendarClock, LocateFixed } from 'lucide-react';
+import { MapPin, Clock, CheckCircle2, Globe, Save, Info, Key, Map as MapIcon, CalendarClock, LocateFixed } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 export default function SettingsPage() {
@@ -112,14 +111,14 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up pb-20">
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up pb-20 font-jakarta">
             <PageHeader title="Global Command Center" description="Configure core platform parameters, geofencing protocols, and external API integrations." />
 
             <div className="grid gap-8">
-                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/10 border-b">
+                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none">
+                    <CardHeader className="bg-muted/10 border-b p-8">
                         <div className="flex items-center justify-between">
-                            <div className="space-y-1">
+                            <div className="space-y-1 text-left">
                                 <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter"><MapPin className="size-5 text-primary" /> HQ Geofencing Matrix</CardTitle>
                                 <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Precision coordinates for the primary operational base.</CardDescription>
                             </div>
@@ -135,20 +134,20 @@ export default function SettingsPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="p-8 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Latitude</Label><Input type="number" step="any" value={form.latitude} onChange={e => setForm({...form, latitude: e.target.value})} placeholder="e.g., 28.6139" className="rounded-none h-12 font-mono" /></div>
                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Longitude</Label><Input type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: e.target.value})} placeholder="e.g., 77.2090" className="rounded-none h-12 font-mono" /></div>
                         </div>
-                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Verification Radius (KM)</Label><Input type="number" step="0.1" value={form.maxDistanceKm} onChange={e => setForm({...form, maxDistanceKm: e.target.value})} className="rounded-none h-12 w-full md:w-1/3" /></div>
+                        <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Verification Radius (KM)</Label><Input type="number" step="0.1" value={form.maxDistanceKm} onChange={e => setForm({...form, maxDistanceKm: e.target.value})} className="rounded-none h-12 w-full md:w-1/3" /></div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-primary/5 border-b border-primary/10">
+                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none">
+                    <CardHeader className="bg-primary/5 border-b border-primary/10 p-8">
                         <CardTitle className="text-lg font-headline flex items-center gap-2 text-primary font-black uppercase tracking-tighter"><MapIcon className="size-5" /> Intelligence Integrations</CardTitle>
                         <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Connect external services for high-fidelity geofencing visualization.</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-8 space-y-6">
+                    <CardContent className="p-8 space-y-6 text-left">
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2 tracking-widest"><Key className="size-3" /> Google Maps API Key</Label>
                             <Input 
@@ -163,12 +162,12 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/10 border-b">
+                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none">
+                    <CardHeader className="bg-muted/10 border-b p-8">
                         <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter"><CalendarClock className="size-5 text-primary" /> Personnel Protocols</CardTitle>
                         <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Establish global personnel standards and mission entitlements.</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-8 space-y-6">
+                    <CardContent className="p-8 space-y-6 text-left">
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Default Annual Leave Entitlement (Days)</Label>
                             <Input 
@@ -182,12 +181,12 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/10 border-b">
+                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none">
+                    <CardHeader className="bg-muted/10 border-b p-8">
                         <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter"><Clock className="size-5 text-primary" /> Tactical Timings</CardTitle>
                         <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Configure shift windows and automated intelligence triggers.</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-8 space-y-8">
+                    <CardContent className="p-8 space-y-8 text-left">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-In Start</Label><Input type="time" value={form.shiftStartTime} onChange={e => setForm({...form, shiftStartTime: e.target.value})} className="rounded-none h-12" /></div>
                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Log-Out Target</Label><Input type="time" value={form.shiftEndTime} onChange={e => setForm({...form, shiftEndTime: e.target.value})} className="rounded-none h-12" /></div>
