@@ -275,7 +275,7 @@ function KPICard({ title, value, trend, up, chart, description }: any) {
                 )}>
                     {up ? <ArrowUpRight className="size-2 mr-1" /> : <ArrowDownRight className="size-2 mr-1" />}
                     {trend}
-                </div>
+                </Badge>
             </div>
             <div className="h-12 w-full mt-4 flex items-center justify-center">
                 {chart}
