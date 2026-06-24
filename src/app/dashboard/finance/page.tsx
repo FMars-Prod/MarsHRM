@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -32,7 +33,7 @@ import {
 } from "lucide-react";
 import { 
     Area, AreaChart, ResponsiveContainer, 
-    XAxis, YAxis, Tooltip, Bar, BarChart, Cell, Pie, PieChart
+    XAxis, YAxis, Tooltip, Bar, BarChart, Cell, Pie, PieChart, Legend
 } from 'recharts';
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -299,6 +300,14 @@ export default function FinancePage() {
             masterHistory: masterHistory.sort((a, b) => b.date.getTime() - a.date.getTime())
         };
     }, [clients, marketing, users, teams, dateRange, manualTransactions]);
+
+    const topTeam = React.useMemo(() => {
+        const entries = Object.entries(stats.teamRevenue);
+        if (entries.length === 0) return null;
+        const valid = entries.filter(e => e[1] > 0);
+        if (valid.length === 0) return null;
+        return valid.reduce((prev, curr) => curr[1] > prev[1] ? curr : prev);
+    }, [stats.teamRevenue]);
 
     const handleSaveManualEntry = async () => {
         if (!manualForm.title || !manualForm.amount) return;
@@ -594,18 +603,28 @@ export default function FinancePage() {
             {/* Graphs Section (Replacing Old Footer) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
                 <Card className="bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm p-6">
-                    <CardHeader className="p-0 pb-6">
+                    <CardHeader className="p-0 pb-6 flex flex-row items-center justify-between space-y-0">
                         <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                             <TrendingUp className="size-4" /> Team Revenue Performance
                         </CardTitle>
+                        {topTeam && (
+                            <Badge className="bg-emerald-100 text-emerald-700 border-none text-[8px] font-black uppercase rounded-none px-2 h-5 flex items-center">
+                                Top: {topTeam[0]}
+                            </Badge>
+                        )}
                     </CardHeader>
                     <div className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={teamChartData}>
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} className="text-[9px] font-black uppercase" />
                                 <YAxis axisLine={false} tickLine={false} className="text-[9px] font-bold" tickFormatter={v => `₹${v/1000}k`} />
-                                <Tooltip cursor={{fill: 'rgba(0,0,0,0.02)'}} contentStyle={{borderRadius: '0px', border: '1px solid #eee', fontSize: '10px'}} />
-                                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                <Tooltip 
+                                    cursor={{fill: 'rgba(0,0,0,0.02)'}} 
+                                    contentStyle={{borderRadius: '0px', border: '1px solid #eee', fontSize: '10px'}} 
+                                    formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Revenue']}
+                                />
+                                <Bar dataKey="value" name="Revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                <Legend wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', paddingTop: '20px' }} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -626,13 +645,15 @@ export default function FinancePage() {
                                     innerRadius={60} outerRadius={100} 
                                     paddingAngle={5} 
                                     dataKey="value"
+                                    nameKey="name"
                                     stroke="none"
                                 >
                                     {portfolioBreakdown.map((_, index) => (
                                         <Cell key={index} fill={['#6D28D9', '#3B82F6', '#10B981', '#F59E0B', '#F43F5E'][index % 5]} />
                                     ))}
                                 </Pie>
-                                <Tooltip />
+                                <Tooltip formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Revenue']} />
+                                <Legend wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', paddingTop: '20px' }} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
