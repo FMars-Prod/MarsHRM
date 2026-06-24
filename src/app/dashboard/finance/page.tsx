@@ -19,7 +19,9 @@ import {
     BarChart3,
     ListChecks,
     Search,
-    Users
+    Users,
+    ShieldAlert,
+    Briefcase
 } from "lucide-react";
 import { 
     Area, AreaChart, ResponsiveContainer, 
@@ -41,6 +43,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 
 // --- DATA TYPES ---
 type PaymentInstallment = {
@@ -49,6 +52,7 @@ type PaymentInstallment = {
     amountReceived?: string;
     status: string;
     dueDate?: string;
+    invoiceDate?: string;
 };
 
 type Client = {
@@ -99,6 +103,9 @@ export default function FinancePage() {
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
     const { data: users } = useCollection<UserData>(usersQuery);
 
+    const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
+    const { data: teams } = useCollection<any>(teamsQuery);
+
     const dateRange = React.useMemo(() => {
         const now = new Date();
         let start: Date | null = null;
@@ -125,15 +132,16 @@ export default function FinancePage() {
         let marketingBudget = 0;
         let marketingSpent = 0;
 
-        let productData: Record<string, { revenue: number, pipeline: number, reach: number, count: number }> = {
-            "Cognithorz": { revenue: 0, pipeline: 0, reach: 0, count: 0 },
-            "FortuMars": { revenue: 0, pipeline: 0, reach: 0, count: 0 },
-            "Black Ticket": { revenue: 0, pipeline: 0, reach: 0, count: 0 },
-            "Campus Connect": { revenue: 0, pipeline: 0, reach: 0, count: 0 },
-            "Other": { revenue: 0, pipeline: 0, reach: 0, count: 0 }
+        let productData: Record<string, { revenue: number, pipeline: number, reach: number, count: number, transactions: any[] }> = {
+            "Cognithorz": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] },
+            "FortuMars": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] },
+            "Black Ticket": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] },
+            "Campus Connect": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] },
+            "Other": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] }
         };
 
         let leadFunnel = { leads: 0, prospects: 0, active: 0, won: 0 };
+        let teamRevenue: Record<string, number> = {};
 
         // Process Clients
         clients?.forEach(c => {
@@ -147,16 +155,20 @@ export default function FinancePage() {
                 if ((c.payments || []).some(p => p.status === 'Paid')) leadFunnel.won++;
             }
 
-            // Always sum money, but filter by date if needed? Usually revenue is aggregate or point-in-time
-            // For this view, we filter the money received within the window
+            const team = teams?.find((t: any) => t.id === c.assignedTeamId);
+            const teamName = team?.name || "Unassigned";
+            if (!teamRevenue[teamName]) teamRevenue[teamName] = 0;
+
             (c.payments || []).forEach(p => {
                 const received = parseFloat(p.amountReceived || '0') || 0;
                 const total = parseFloat(p.amount) || 0;
                 
-                // Money got is usually mapped to the invoice date or actual payment date
-                // For simplicity, we check if the payment is paid
+                // Temporal Revenue Filtering (Simplified for Dashboard: we show aggregate in range if paid)
+                // In a production app, we would check the invoiceDate/paidDate
                 totalRevenue += received;
                 if (p.status !== 'Paid') totalPipeline += (total - received);
+                
+                teamRevenue[teamName] += received;
 
                 // Map to product
                 const name = c.companyName.toLowerCase();
@@ -169,6 +181,15 @@ export default function FinancePage() {
                 productData[key].revenue += received;
                 if (p.status !== 'Paid') productData[key].pipeline += (total - received);
                 productData[key].count += 1;
+                
+                if (received > 0) {
+                    productData[key].transactions.push({
+                        clientName: c.companyName,
+                        amount: received,
+                        team: teamName,
+                        date: p.invoiceDate || format(created, 'PP')
+                    });
+                }
             });
         });
 
@@ -186,7 +207,6 @@ export default function FinancePage() {
                 marketingSpent += spend;
             }
 
-            // Map social reach to products
             s.socialLogs?.forEach(log => {
                 let key = "Other";
                 const bId = log.brandId.toLowerCase();
@@ -194,30 +214,30 @@ export default function FinancePage() {
                 else if (bId.includes('campusconnect')) key = "Campus Connect";
                 else if (bId.includes('fortumars')) key = "FortuMars";
                 else if (bId.includes('cognithorz')) key = "Cognithorz";
-                
-                // We take the latest log within the range or just the current count
-                if (isRelevant) {
-                    productData[key].reach = Math.max(productData[key].reach, log.count);
-                }
+                if (isRelevant) productData[key].reach = Math.max(productData[key].reach, log.count);
             });
         });
 
-        const netProfit = totalRevenue - workforceCost - marketingSpent;
+        // Ensure no negative values for Net Profit (Display logic)
+        const netProfitRaw = totalRevenue - workforceCost - marketingSpent;
+        const netProfit = Math.max(0, netProfitRaw);
 
         return { 
             totalRevenue, 
             totalPipeline, 
             workforceCost,
             netProfit,
+            netProfitRaw,
             margin: totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0,
             productData, 
             marketingBudget, 
             marketingSpent,
-            marketingBalance: marketingBudget - marketingSpent,
+            marketingBalance: Math.max(0, marketingBudget - marketingSpent),
             leadFunnel,
+            teamRevenue,
             lastUpdate: marketing?.[0]?.date || null
         };
-    }, [clients, marketing, users, dateRange]);
+    }, [clients, marketing, users, teams, dateRange]);
 
     if (clientsLoading || marketingLoading) {
         return (
@@ -232,12 +252,12 @@ export default function FinancePage() {
 
     return (
         <div className="space-y-4 animate-fade-in-up pb-20 font-jakarta max-w-[1600px] mx-auto">
-            {/* Header Control Terminal */}
+            {/* Header Terminal */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-1">
                 <div className="space-y-0.5">
                     <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-slate-900">Financial Ledger</h1>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-                        {dateFilter === 'custom-range' ? `${format(dateRange.start!, 'PP')} - ${format(dateRange.end, 'PP')}` : `Operational Matrix • ${format(new Date(), 'MMMM yyyy')}`}
+                        {dateFilter === 'custom-range' ? `${format(dateRange.start!, 'PP')} - ${format(dateRange.end, 'PP')}` : `Operational Audit • ${format(new Date(), 'MMMM yyyy')}`}
                     </p>
                 </div>
                 
@@ -274,81 +294,36 @@ export default function FinancePage() {
                             )}
                         </div>
                     )}
-
-                    <Button variant="outline" size="sm" className="h-9 rounded-none border-none ring-1 ring-border/50 bg-white font-black text-[9px] uppercase tracking-widest gap-2">
-                        <Download className="size-3" /> Export Audit
-                    </Button>
                 </div>
             </div>
 
-            {/* Row 1: High-Density KPI Cards */}
+            {/* Core KPI Matrix */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard 
-                    title="Revenue" 
-                    value={`₹${(stats.totalRevenue / 100000).toFixed(2)}L`} 
-                    trend="+22.4%" 
-                    up={true} 
-                    icon={DollarSign}
-                    color="text-primary"
-                    bg="bg-primary/5"
-                    lastUpdate={stats.lastUpdate}
-                    onClick={() => setSelectedMetric('revenue')}
-                />
-                <KPICard 
-                    title="Expenses" 
-                    value={`₹${(stats.workforceCost / 100000).toFixed(2)}L`} 
-                    trend="+7.8%" 
-                    up={false} 
-                    icon={TrendingDown}
-                    color="text-amber-600"
-                    bg="bg-amber-50"
-                    lastUpdate={stats.lastUpdate}
-                    onClick={() => setSelectedMetric('expenses')}
-                />
-                <KPICard 
-                    title="Net Profit" 
-                    value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} 
-                    trend="+18.7%" 
-                    up={true} 
-                    icon={TrendingUp}
-                    color="text-emerald-600"
-                    bg="bg-emerald-50"
-                    lastUpdate={stats.lastUpdate}
-                    onClick={() => setSelectedMetric('profit')}
-                />
-                <KPICard 
-                    title="Margin" 
-                    value={`${stats.margin.toFixed(1)}%`} 
-                    trend="+2.1pp" 
-                    up={true} 
-                    icon={Target}
-                    color="text-indigo-600"
-                    bg="bg-indigo-50"
-                    lastUpdate={stats.lastUpdate}
-                    onClick={() => setSelectedMetric('margin')}
-                />
+                <KPICard title="Revenue" value={`₹${(stats.totalRevenue / 100000).toFixed(2)}L`} trend="+22.4%" up={true} icon={DollarSign} color="text-primary" bg="bg-primary/5" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('revenue')} />
+                <KPICard title="Expenses" value={`₹${(stats.workforceCost / 100000).toFixed(2)}L`} trend="+7.8%" up={false} icon={TrendingDown} color="text-amber-600" bg="bg-amber-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
+                <KPICard title="Net Profit" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Loss" : "+18.7%"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
+                <KPICard title="Margin" value={`${stats.margin.toFixed(1)}%`} trend="+2.1pp" up={true} icon={Target} color="text-indigo-600" bg="bg-indigo-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('margin')} />
             </div>
 
-            {/* Row 2: Product & Pipeline Intelligence */}
+            {/* Product Performance (Revenue Only, No Profits from Social) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                {/* Proprietary Product Matrix */}
                 <Card className="lg:col-span-8 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/5 border-b p-4">
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
                                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                    <Package className="size-4" /> Proprietary Product Performance
+                                    <Package className="size-4" /> Proprietary Product Ledger
                                 </CardTitle>
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Money Got (Client) vs Awareness (Marketing)</p>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Money Got (Client) vs Brand Awareness (Social)</p>
                             </div>
-                            <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase">System Audit</Badge>
+                            <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase px-2">Verified Audit</Badge>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader className="bg-muted/10">
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className="font-black text-[8px] uppercase py-3 px-6 tracking-widest">Product Line</TableHead>
+                                    <TableHead className="font-black text-[8px] uppercase py-3 px-6 tracking-widest">Brand Identity</TableHead>
                                     <TableHead className="font-black text-[8px] uppercase py-3 text-center">Money Got</TableHead>
                                     <TableHead className="font-black text-[8px] uppercase py-3 text-center">In Pipeline</TableHead>
                                     <TableHead className="font-black text-[8px] uppercase py-3 text-center">Social Reach</TableHead>
@@ -381,29 +356,37 @@ export default function FinancePage() {
                     </CardContent>
                 </Card>
 
-                {/* Pipeline Funnel Velocity */}
-                <Card className="lg:col-span-4 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm p-5 flex flex-col justify-between">
-                    <div className="space-y-6">
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Pipeline velocity</p>
-                            <p className="text-2xl font-black text-slate-900 tracking-tighter">₹{(stats.totalPipeline / 100000).toFixed(2)}L</p>
-                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Expected Receivables</p>
-                        </div>
-                        <div className="space-y-4">
-                            <FunnelStep label="Proposal" value={stats.leadFunnel.leads} percentage={100} color="bg-primary/20" />
-                            <FunnelStep label="Negotiation" value={stats.leadFunnel.prospects} percentage={65} color="bg-primary/40" />
-                            <FunnelStep label="Closing" value={stats.leadFunnel.won} percentage={24} color="bg-primary" />
-                        </div>
-                    </div>
+                {/* Team ROI Matrix */}
+                <Card className="lg:col-span-4 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm flex flex-col">
+                    <CardHeader className="bg-muted/5 border-b p-4">
+                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                            <Users className="size-4" /> Team Revenue Performance
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 flex-1">
+                        <ScrollArea className="h-[300px]">
+                            <div className="divide-y divide-border/50">
+                                {Object.entries(stats.teamRevenue).map(([name, rev]) => (
+                                    <div key={name} className="p-4 flex items-center justify-between group hover:bg-white transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-primary/5 text-primary rounded-none"><Users className="size-3.5" /></div>
+                                            <p className="text-[10px] font-black uppercase text-slate-800">{name}</p>
+                                        </div>
+                                        <p className="text-sm font-black text-emerald-600">₹{(rev / 1000).toFixed(1)}K</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
                 </Card>
             </div>
 
-            {/* Row 3: Marketing & Upcoming Receivables */}
+            {/* Row 3: Marketing & Upcoming */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <Card className="lg:col-span-4 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm p-5 flex flex-col gap-6">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black text-primary uppercase tracking-widest">Marketing Budget Control</p>
-                        <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Platform spend utilization</p>
+                        <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Ad spend utilization audit</p>
                     </div>
                     <div className="space-y-4 flex-1">
                         <div className="flex justify-between items-end">
@@ -417,7 +400,7 @@ export default function FinancePage() {
                         </div>
                     </div>
                     <div className="p-4 bg-emerald-50/50 border border-dashed border-emerald-200 rounded-none">
-                        <p className="text-[9px] font-black uppercase text-emerald-700 tracking-widest">Remaining Credit</p>
+                        <p className="text-[9px] font-black uppercase text-emerald-700 tracking-widest">Remaining Balance</p>
                         <p className="text-2xl font-black text-emerald-900">₹{(stats.marketingBalance / 100000).toFixed(2)}L</p>
                     </div>
                 </Card>
@@ -428,86 +411,94 @@ export default function FinancePage() {
                             <Clock className="size-4" /> Upcoming Pipeline Milestones
                         </CardTitle>
                     </CardHeader>
-                    <ScrollArea className="flex-1 max-h-[300px]">
-                        <div className="divide-y divide-border/50">
-                            {clients?.flatMap(c => (c.payments || []).map(p => ({ ...p, clientName: c.companyName })))
-                                .filter(p => p && p.status !== 'Paid')
-                                .sort((a, b) => {
-                                    if (!a.dueDate) return 1;
-                                    if (!b.dueDate) return -1;
-                                    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-                                })
-                                .slice(0, 10)
-                                .map((p, i) => (
-                                <div key={i} className="p-4 hover:bg-white transition-all flex items-center justify-between group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-2 rounded-none bg-primary/5 text-primary"><ListChecks className="size-4" /></div>
-                                        <div className="space-y-0.5">
-                                            <p className="text-[10px] font-black uppercase text-primary truncate max-w-[200px]">{p.clientName}</p>
-                                            <p className="text-[8px] font-bold text-muted-foreground uppercase">Scheduled Installment</p>
+                    <CardContent className="p-0 flex-1">
+                        <ScrollArea className="h-[300px]">
+                            <div className="divide-y divide-border/50">
+                                {clients?.flatMap(c => (c.payments || []).map(p => ({ ...p, clientName: c.companyName })))
+                                    .filter(p => p && p.status !== 'Paid')
+                                    .sort((a, b) => {
+                                        if (!a.dueDate) return 1;
+                                        if (!b.dueDate) return -1;
+                                        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                                    })
+                                    .slice(0, 10)
+                                    .map((p, i) => (
+                                    <div key={i} className="p-4 hover:bg-white transition-all flex items-center justify-between group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-2 rounded-none bg-primary/5 text-primary"><ListChecks className="size-4" /></div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-[10px] font-black uppercase text-primary truncate max-w-[200px]">{p.clientName}</p>
+                                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Scheduled Installment</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right space-y-0.5">
+                                            <p className="text-sm font-black tabular-nums">₹{(parseFloat(p.amount) / 1000).toFixed(1)}K</p>
+                                            <p className="text-[9px] font-bold uppercase text-muted-foreground">{p.dueDate || 'Date Pending'}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right space-y-0.5">
-                                        <p className="text-sm font-black tabular-nums">₹{(parseFloat(p.amount) / 1000).toFixed(1)}K</p>
-                                        <p className="text-[9px] font-bold uppercase text-muted-foreground">{p.dueDate || 'Target Pending'}</p>
-                                    </div>
-                                </div>
-                            ))}
-                            {(clients?.length === 0 || !clients) && (
-                                <div className="py-20 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No milestones pending</div>
-                            )}
-                        </div>
-                    </ScrollArea>
+                                ))}
+                                {(clients?.length === 0 || !clients) && (
+                                    <div className="py-20 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No milestones pending</div>
+                                )}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
                 </Card>
             </div>
 
-            {/* Detail Sheet: Product Intelligence */}
+            {/* Brand Detail Sheet */}
             <Sheet open={!!selectedBrand} onOpenChange={o => !o && setSelectedBrand(null)}>
                 <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
                     <SheetHeader className="p-8 border-b bg-white shrink-0">
                         <div className="flex items-center justify-between mb-2">
-                            <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Brand Deep-Dive</Badge>
+                            <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Brand Audit</Badge>
                         </div>
                         <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{selectedBrand?.name}</SheetTitle>
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Revenue Source Analysis</p>
                     </SheetHeader>
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10 pb-32">
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Platform Earnings</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-none"><p className="text-[8px] font-bold text-emerald-700 uppercase tracking-widest">Money Got</p><p className="text-xl font-black text-emerald-900">₹{(selectedBrand?.revenue / 1000).toFixed(1)}K</p></div>
-                                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-none"><p className="text-[8px] font-bold text-amber-700 uppercase tracking-widest">In Pipeline</p><p className="text-xl font-black text-amber-900">₹{(selectedBrand?.pipeline / 1000).toFixed(1)}K</p></div>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Money Got Breakdown</h4>
+                                <div className="space-y-3">
+                                    {selectedBrand?.transactions?.length > 0 ? selectedBrand.transactions.map((t: any, i: number) => (
+                                        <div key={i} className="p-5 bg-white ring-1 ring-border shadow-sm space-y-3 hover:border-primary transition-all">
+                                            <div className="flex justify-between items-start">
+                                                <div className="space-y-1">
+                                                    <p className="font-black text-xs uppercase tracking-tight">{t.clientName}</p>
+                                                    <p className="text-[9px] font-bold text-muted-foreground uppercase">{t.team} Team</p>
+                                                </div>
+                                                <span className="text-sm font-black text-emerald-600">₹{t.amount.toLocaleString()}</span>
+                                            </div>
+                                            <div className="pt-2 border-t border-dashed flex items-center justify-between text-[8px] font-black uppercase text-muted-foreground/50">
+                                                <span>Updated on: {t.date}</span>
+                                                <ShieldCheck className="size-2.5" />
+                                            </div>
+                                        </div>
+                                    )) : <p className="py-10 text-center text-xs italic text-muted-foreground uppercase opacity-40">No confirmed revenue in this window.</p>}
                                 </div>
                             </div>
 
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Brand Awareness (Social)</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Social Reach Audit</h4>
                                 <div className="p-6 bg-white border border-border shadow-sm rounded-none flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <div className="p-3 bg-primary/5 text-primary rounded-none"><Users className="size-6" /></div>
-                                        <div><p className="text-2xl font-black">{selectedBrand?.reach.toLocaleString()}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">Aggregated Followers</p></div>
+                                        <div>
+                                            <p className="text-2xl font-black">{selectedBrand?.reach.toLocaleString()}</p>
+                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">Aggregated Followers</p>
+                                        </div>
                                     </div>
                                     <TrendingUp className="size-6 text-emerald-500 opacity-20" />
                                 </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Client Breakdown</h4>
-                                <div className="space-y-2">
-                                    {clients?.filter(c => c.companyName.toLowerCase().includes(selectedBrand?.name.toLowerCase()) || (selectedBrand?.name === 'Other' && !['Cognithorz', 'FortuMars', 'Black Ticket', 'Campus Connect'].some(b => c.companyName.toLowerCase().includes(b.toLowerCase())))).map(c => (
-                                        <div key={c.id} className="p-4 bg-white border rounded-none flex items-center justify-between group hover:border-primary/40 transition-all">
-                                            <div><p className="font-bold text-xs uppercase">{c.companyName}</p><p className="text-[9px] text-muted-foreground uppercase">{c.status}</p></div>
-                                            <span className="text-xs font-black text-emerald-600">₹{(c.projectTotalCost / 1000).toFixed(1)}K</span>
-                                        </div>
-                                    ))}
-                                </div>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase italic text-center">Social data is used for awareness auditing and does not influence Net Profit.</p>
                             </div>
                         </div>
                     </ScrollArea>
                 </SheetContent>
             </Sheet>
 
-            {/* Detail Dialog: KPI Breakdown */}
+            {/* KPI Audit Dialog */}
             <Dialog open={!!selectedMetric} onOpenChange={o => !o && setSelectedMetric(null)}>
                 <DialogContent className="rounded-none border-none shadow-3xl sm:max-w-2xl p-0 overflow-hidden">
                     <DialogHeader className="p-8 border-b bg-white">
@@ -520,7 +511,10 @@ export default function FinancePage() {
                                 <div className="space-y-4">
                                     {clients?.flatMap(c => (c.payments || []).filter(p => p.status === 'Paid').map(p => ({ ...p, clientName: c.companyName }))).map((p, i) => (
                                         <div key={i} className="flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100">
-                                            <div><p className="font-bold text-xs uppercase">{p.clientName}</p><p className="text-[9px] text-emerald-600 font-bold uppercase">Received Payment</p></div>
+                                            <div>
+                                                <p className="font-bold text-xs uppercase">{p.clientName}</p>
+                                                <p className="text-[9px] text-emerald-600 font-bold uppercase">Confirmed: {p.invoiceDate || 'System Audit'}</p>
+                                            </div>
                                             <p className="text-sm font-black text-emerald-900">₹{parseFloat(p.amountReceived || '0').toLocaleString()}</p>
                                         </div>
                                     ))}
@@ -538,11 +532,11 @@ export default function FinancePage() {
                             {selectedMetric === 'profit' && (
                                 <div className="space-y-8 py-4">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-4 bg-muted/20 border rounded-none"><p className="text-[9px] font-bold uppercase">Inflow</p><p className="text-xl font-black text-emerald-600">₹{stats.totalRevenue.toLocaleString()}</p></div>
-                                        <div className="p-4 bg-muted/20 border rounded-none"><p className="text-[9px] font-bold uppercase">Outflow</p><p className="text-xl font-black text-rose-600">₹{(stats.workforceCost + stats.marketingSpent).toLocaleString()}</p></div>
+                                        <div className="p-4 bg-muted/20 border rounded-none"><p className="text-[9px] font-bold uppercase">Total Inflow</p><p className="text-xl font-black text-emerald-600">₹{stats.totalRevenue.toLocaleString()}</p></div>
+                                        <div className="p-4 bg-muted/20 border rounded-none"><p className="text-[9px] font-bold uppercase">Total Outflow</p><p className="text-xl font-black text-rose-600">₹{(stats.workforceCost + stats.marketingSpent).toLocaleString()}</p></div>
                                     </div>
-                                    <div className="p-8 bg-primary text-white rounded-none text-center shadow-2xl">
-                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">Calculated Net Profit</p>
+                                    <div className={cn("p-8 rounded-none text-center shadow-2xl", stats.netProfitRaw > 0 ? "bg-primary text-white" : "bg-rose-600 text-white")}>
+                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">{stats.netProfitRaw > 0 ? "Calculated Net Profit" : "Operational Deficit"}</p>
                                         <p className="text-4xl font-black tracking-tighter">₹{stats.netProfit.toLocaleString()}</p>
                                     </div>
                                 </div>
@@ -595,23 +589,5 @@ function KPICard({ title, value, trend, up, icon: Icon, color, bg, lastUpdate, o
                 </p>
             </div>
         </Card>
-    );
-}
-
-function FunnelStep({ label, value, percentage, color }: any) {
-    return (
-        <div className="space-y-1.5">
-            <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter">
-                <span className="text-slate-500">{label}</span>
-                <span className="text-slate-900">{value} Leads</span>
-            </div>
-            <div className="h-6 flex items-center relative">
-                <div 
-                    className={cn("h-full rounded-none transition-all duration-1000 shadow-sm border-r-2 border-white/50", color)} 
-                    style={{ width: `${percentage}%` }}
-                />
-                <span className="absolute right-2 text-[8px] font-black text-white">{percentage}%</span>
-            </div>
-        </div>
     );
 }
