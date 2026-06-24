@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -139,7 +138,7 @@ export default function FinancePage() {
                             <Progress value={64} className="h-1.5 rounded-none bg-slate-800" indicatorClassName="bg-primary shadow-[0_0_10px_rgba(109,40,217,0.5)]" />
                             <div className="flex justify-between text-[8px] font-black uppercase text-slate-600 tracking-widest">
                                 <span>Utilization: 64%</span>
-                                <span>Target: <₹5.00L</span>
+                                <span>Target: {"<"}₹5.00L</span>
                             </div>
                         </div>
                         <div className="p-6 bg-[#2C2C2E] rounded-none border-l-4 border-emerald-500 shadow-xl">
@@ -276,7 +275,7 @@ function KPICard({ title, value, trend, up, chart, description }: any) {
                 )}>
                     {up ? <ArrowUpRight className="size-2 mr-1" /> : <ArrowDownRight className="size-2 mr-1" />}
                     {trend}
-                </Badge>
+                </div>
             </div>
             <div className="h-12 w-full mt-4 flex items-center justify-center">
                 {chart}
