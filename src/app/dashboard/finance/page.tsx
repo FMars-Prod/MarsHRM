@@ -385,9 +385,10 @@ export default function FinancePage() {
             </div>
 
             {/* Core KPI Matrix */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <KPICard title="Money Got" value={`₹${(stats.totalRevenue / 100000).toFixed(2)}L`} trend="+22.4%" up={true} icon={DollarSign} color="text-primary" bg="bg-primary/5" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('revenue')} />
-                <KPICard title="Money Spent" value={`₹${((stats.workforceCost + stats.marketingSpent) / 100000).toFixed(2)}L`} trend="+7.8%" up={false} icon={TrendingDown} color="text-amber-600" bg="bg-amber-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
+                <KPICard title="In Pipeline" value={`₹${(stats.totalPipeline / 100000).toFixed(2)}L`} trend="Pending" up={true} icon={Clock} color="text-amber-600" bg="bg-amber-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('pipeline')} />
+                <KPICard title="Money Spent" value={`₹${((stats.workforceCost + stats.marketingSpent) / 100000).toFixed(2)}L`} trend="+7.8%" up={false} icon={TrendingDown} color="text-rose-600" bg="bg-rose-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
                 <KPICard title="Leftover" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Deficit" : "+18.7%"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
                 <KPICard title="Profit %" value={`${stats.margin.toFixed(1)}%`} trend="+2.1pp" up={true} icon={Target} color="text-indigo-600" bg="bg-indigo-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('margin')} />
             </div>
@@ -679,7 +680,7 @@ export default function FinancePage() {
             <Dialog open={!!selectedMetric} onOpenChange={o => !o && setSelectedMetric(null)}>
                 <DialogContent className="rounded-none border-none shadow-3xl sm:max-w-2xl p-0 overflow-hidden">
                     <DialogHeader className="p-8 border-b bg-white">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Audit: {selectedMetric === 'revenue' ? 'Money Got' : selectedMetric?.toUpperCase()}</DialogTitle>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Audit: {selectedMetric === 'revenue' ? 'Money Got' : selectedMetric === 'pipeline' ? 'In Pipeline' : selectedMetric?.toUpperCase()}</DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-40">Verified historical logs</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[60vh]">
@@ -695,6 +696,21 @@ export default function FinancePage() {
                                                         <p className="text-[9px] text-emerald-600 font-bold uppercase">Confirmed: {format(h.date, 'PP')}</p>
                                                     </div>
                                                     <p className="text-sm font-black text-emerald-900">₹{h.amount.toLocaleString()}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {selectedMetric === 'pipeline' && (
+                                        <div className="space-y-4">
+                                            {clients?.flatMap(c => (c.payments || []).map(p => ({ ...p, clientName: c.companyName })))
+                                                .filter(p => p && p.status !== 'Paid')
+                                                .map((h, i) => (
+                                                <div key={i} className="flex items-center justify-between p-4 bg-amber-50/50 border border-amber-100">
+                                                    <div>
+                                                        <p className="font-bold text-xs uppercase">{h.clientName}</p>
+                                                        <p className="text-[9px] text-amber-600 font-bold uppercase">Due: {h.dueDate || 'N/A'}</p>
+                                                    </div>
+                                                    <p className="text-sm font-black text-amber-900">₹{parseFloat(h.amount).toLocaleString()}</p>
                                                 </div>
                                             ))}
                                         </div>
@@ -783,4 +799,3 @@ function KPICard({ title, value, trend, up, icon: Icon, color, bg, lastUpdate, o
         </Card>
     );
 }
-
