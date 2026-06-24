@@ -21,7 +21,8 @@ import {
     Search,
     Users,
     ShieldAlert,
-    Briefcase
+    Briefcase,
+    ShieldCheck
 } from "lucide-react";
 import { 
     Area, AreaChart, ResponsiveContainer, 
@@ -140,20 +141,12 @@ export default function FinancePage() {
             "Other": { revenue: 0, pipeline: 0, reach: 0, count: 0, transactions: [] }
         };
 
-        let leadFunnel = { leads: 0, prospects: 0, active: 0, won: 0 };
         let teamRevenue: Record<string, number> = {};
 
         // Process Clients
         clients?.forEach(c => {
             const created = c.createdAt?.toDate ? c.createdAt.toDate() : new Date(c.createdAt || Date.now());
             const isRelevant = !dateRange.start || (isAfter(created, dateRange.start) && isBefore(created, dateRange.end));
-
-            if (isRelevant) {
-                if (c.status === 'Lead') leadFunnel.leads++;
-                else if (c.status === 'Prospect') leadFunnel.prospects++;
-                else if (c.status === 'Active') leadFunnel.active++;
-                if ((c.payments || []).some(p => p.status === 'Paid')) leadFunnel.won++;
-            }
 
             const team = teams?.find((t: any) => t.id === c.assignedTeamId);
             const teamName = team?.name || "Unassigned";
@@ -163,32 +156,31 @@ export default function FinancePage() {
                 const received = parseFloat(p.amountReceived || '0') || 0;
                 const total = parseFloat(p.amount) || 0;
                 
-                // Temporal Revenue Filtering (Simplified for Dashboard: we show aggregate in range if paid)
-                // In a production app, we would check the invoiceDate/paidDate
-                totalRevenue += received;
-                if (p.status !== 'Paid') totalPipeline += (total - received);
-                
-                teamRevenue[teamName] += received;
+                if (isRelevant) {
+                    totalRevenue += received;
+                    if (p.status !== 'Paid') totalPipeline += (total - received);
+                    teamRevenue[teamName] += received;
 
-                // Map to product
-                const name = c.companyName.toLowerCase();
-                let key = "Other";
-                if (name.includes('black ticket')) key = "Black Ticket";
-                else if (name.includes('campus connect')) key = "Campus Connect";
-                else if (name.includes('fortumars')) key = "FortuMars";
-                else if (name.includes('cognithorz')) key = "Cognithorz";
+                    // Map to product
+                    const name = c.companyName.toLowerCase();
+                    let key = "Other";
+                    if (name.includes('black ticket')) key = "Black Ticket";
+                    else if (name.includes('campus connect')) key = "Campus Connect";
+                    else if (name.includes('fortumars')) key = "FortuMars";
+                    else if (name.includes('cognithorz')) key = "Cognithorz";
 
-                productData[key].revenue += received;
-                if (p.status !== 'Paid') productData[key].pipeline += (total - received);
-                productData[key].count += 1;
-                
-                if (received > 0) {
-                    productData[key].transactions.push({
-                        clientName: c.companyName,
-                        amount: received,
-                        team: teamName,
-                        date: p.invoiceDate || format(created, 'PP')
-                    });
+                    productData[key].revenue += received;
+                    if (p.status !== 'Paid') productData[key].pipeline += (total - received);
+                    productData[key].count += 1;
+                    
+                    if (received > 0) {
+                        productData[key].transactions.push({
+                            clientName: c.companyName,
+                            amount: received,
+                            team: teamName,
+                            date: p.invoiceDate || format(created, 'PP')
+                        });
+                    }
                 }
             });
         });
@@ -204,7 +196,7 @@ export default function FinancePage() {
             if (s.type === 'topup') marketingBudget += (s.topupAmount || 0);
             else {
                 const spend = s.adSpends?.reduce((a, c) => a + (c.amount || 0), 0) || 0;
-                marketingSpent += spend;
+                if (isRelevant) marketingSpent += spend;
             }
 
             s.socialLogs?.forEach(log => {
@@ -218,7 +210,6 @@ export default function FinancePage() {
             });
         });
 
-        // Ensure no negative values for Net Profit (Display logic)
         const netProfitRaw = totalRevenue - workforceCost - marketingSpent;
         const netProfit = Math.max(0, netProfitRaw);
 
@@ -233,7 +224,6 @@ export default function FinancePage() {
             marketingBudget, 
             marketingSpent,
             marketingBalance: Math.max(0, marketingBudget - marketingSpent),
-            leadFunnel,
             teamRevenue,
             lastUpdate: marketing?.[0]?.date || null
         };
@@ -300,8 +290,8 @@ export default function FinancePage() {
             {/* Core KPI Matrix */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KPICard title="Revenue" value={`₹${(stats.totalRevenue / 100000).toFixed(2)}L`} trend="+22.4%" up={true} icon={DollarSign} color="text-primary" bg="bg-primary/5" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('revenue')} />
-                <KPICard title="Expenses" value={`₹${(stats.workforceCost / 100000).toFixed(2)}L`} trend="+7.8%" up={false} icon={TrendingDown} color="text-amber-600" bg="bg-amber-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
-                <KPICard title="Net Profit" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Loss" : "+18.7%"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
+                <KPICard title="Expenses" value={`₹${((stats.workforceCost + stats.marketingSpent) / 100000).toFixed(2)}L`} trend="+7.8%" up={false} icon={TrendingDown} color="text-amber-600" bg="bg-amber-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
+                <KPICard title="Net Profit" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Deficit" : "+18.7%"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
                 <KPICard title="Margin" value={`${stats.margin.toFixed(1)}%`} trend="+2.1pp" up={true} icon={Target} color="text-indigo-600" bg="bg-indigo-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('margin')} />
             </div>
 
@@ -518,6 +508,7 @@ export default function FinancePage() {
                                             <p className="text-sm font-black text-emerald-900">₹{parseFloat(p.amountReceived || '0').toLocaleString()}</p>
                                         </div>
                                     ))}
+                                    {(!clients || clients.length === 0) && <p className="py-10 text-center opacity-30 uppercase font-black text-[10px]">No confirmed revenue</p>}
                                 </div>
                             )}
                             {selectedMetric === 'expenses' && (
@@ -526,14 +517,36 @@ export default function FinancePage() {
                                         <p className="text-[10px] font-black text-rose-700 uppercase tracking-widest">Total Monthly Payroll</p>
                                         <p className="text-3xl font-black text-rose-900">₹{stats.workforceCost.toLocaleString()}</p>
                                     </div>
-                                    <p className="text-[9px] font-bold text-center text-muted-foreground uppercase italic">Calculated from verified employee roster payroll data.</p>
+                                    <div className="p-6 bg-muted/20 border rounded-none text-center space-y-1">
+                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Marketing Spend</p>
+                                        <p className="text-2xl font-black">₹{stats.marketingSpent.toLocaleString()}</p>
+                                    </div>
+                                    <p className="text-[9px] font-bold text-center text-muted-foreground uppercase italic">Expense audit derived from verified payroll and marketing ad-spend logs.</p>
                                 </div>
                             )}
                             {selectedMetric === 'profit' && (
                                 <div className="space-y-8 py-4">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-4 bg-muted/20 border rounded-none"><p className="text-[9px] font-bold uppercase">Total Inflow</p><p className="text-xl font-black text-emerald-600">₹{stats.totalRevenue.toLocaleString()}</p></div>
-                                        <div className="p-4 bg-muted/20 border rounded-none"><p className="text-[9px] font-bold uppercase">Total Outflow</p><p className="text-xl font-black text-rose-600">₹{(stats.workforceCost + stats.marketingSpent).toLocaleString()}</p></div>
+                                        <div 
+                                            className="p-4 bg-muted/20 border rounded-none cursor-pointer hover:bg-emerald-50 transition-all group"
+                                            onClick={() => setSelectedMetric('revenue')}
+                                        >
+                                            <div className="flex justify-between items-start mb-2">
+                                                <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Inflow</p>
+                                                <ChevronRight className="size-3 opacity-0 group-hover:opacity-40" />
+                                            </div>
+                                            <p className="text-xl font-black text-emerald-600">₹{stats.totalRevenue.toLocaleString()}</p>
+                                        </div>
+                                        <div 
+                                            className="p-4 bg-muted/20 border rounded-none cursor-pointer hover:bg-rose-50 transition-all group"
+                                            onClick={() => setSelectedMetric('expenses')}
+                                        >
+                                            <div className="flex justify-between items-start mb-2">
+                                                <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Outflow</p>
+                                                <ChevronRight className="size-3 opacity-0 group-hover:opacity-40" />
+                                            </div>
+                                            <p className="text-xl font-black text-rose-600">₹{(stats.workforceCost + stats.marketingSpent).toLocaleString()}</p>
+                                        </div>
                                     </div>
                                     <div className={cn("p-8 rounded-none text-center shadow-2xl", stats.netProfitRaw > 0 ? "bg-primary text-white" : "bg-rose-600 text-white")}>
                                         <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">{stats.netProfitRaw > 0 ? "Calculated Net Profit" : "Operational Deficit"}</p>
