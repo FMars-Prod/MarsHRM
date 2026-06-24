@@ -1,28 +1,26 @@
-
 'use client';
 
 import * as React from 'react';
 import { PageHeader } from "@/components/geohrm/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
-    DollarSign, TrendingUp, TrendingDown, Activity, 
-    PieChart as PieChartIcon, Target, Search, 
-    Filter, LayoutGrid, ArrowUpRight, ArrowDownRight,
-    Map as MapIcon, Wallet, Briefcase, Globe,
-    ChevronRight, MoreHorizontal, MousePointer2,
-    CheckCircle2, Clock, Zap, Building2, Users,
-    Package, BarChart3, AlertCircle, Loader2,
-    ListTodo, FileText, Download, TrendingDown as TrendingDownIcon
+    DollarSign, TrendingUp, Activity, 
+    Target, Download, 
+    ArrowUpRight, ArrowDownRight,
+    Globe, Wallet,
+    ChevronRight,
+    CheckCircle2, Clock,
+    Package, Loader2,
+    TrendingDown as TrendingDownIcon,
+    Mic, ExternalLink
 } from "lucide-react";
 import { 
     Area, AreaChart, ResponsiveContainer, 
-    XAxis, YAxis, Tooltip, PieChart, Pie, Cell,
-    Bar, BarChart, CartesianGrid, Line, LineChart
+    XAxis, YAxis, Tooltip,
+    Progress 
 } from 'recharts';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -30,9 +28,12 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
 // --- DATA TYPES ---
 type PaymentInstallment = {
+    id: string;
     amount: string;
     amountReceived?: string;
     status: string;
@@ -104,7 +105,7 @@ export default function FinancePage() {
             let clientRevenue = 0;
             let clientPipeline = 0;
 
-            c.payments?.forEach(p => {
+            (c.payments || []).forEach(p => {
                 const received = parseFloat(p.amountReceived || '0') || 0;
                 const total = parseFloat(p.amount) || 0;
                 clientRevenue += received;
@@ -134,7 +135,7 @@ export default function FinancePage() {
             else if (c.status === 'Active') leadFunnel.active++;
             
             // Assume "Won" is any client with at least one paid installment
-            if (c.payments?.some(p => p.status === 'Paid')) leadFunnel.won++;
+            if ((c.payments || []).some(p => p.status === 'Paid')) leadFunnel.won++;
         });
 
         // Workforce Costing
@@ -163,11 +164,6 @@ export default function FinancePage() {
             leadFunnel
         };
     }, [clients, marketing, users]);
-
-    // Data for sparklines (Simulated history based on real count)
-    const sparkData = [
-        { v: 40 }, { v: 30 }, { v: 45 }, { v: 50 }, { v: 35 }, { v: 60 }, { v: 55 }
-    ];
 
     if (clientsLoading || marketingLoading) {
         return (
@@ -253,9 +249,9 @@ export default function FinancePage() {
                                 <div><p className="text-[9px] font-bold text-muted-foreground uppercase">Total Budget</p><p className="text-xl font-black">₹{(stats.marketingBudget / 100000).toFixed(2)}L</p></div>
                                 <div className="text-right"><p className="text-[9px] font-bold text-muted-foreground uppercase">Spent to Date</p><p className="text-xl font-black text-rose-600">₹{(stats.marketingSpent / 100000).toFixed(2)}L</p></div>
                             </div>
-                            <Progress value={(stats.marketingSpent / stats.marketingBudget) * 100} className="h-2 rounded-none bg-muted" indicatorClassName="bg-primary" />
+                            <Progress value={(stats.marketingSpent / (stats.marketingBudget || 1)) * 100} className="h-2 rounded-none bg-muted" indicatorClassName="bg-primary" />
                             <div className="flex justify-between text-[8px] font-black uppercase text-slate-400 tracking-widest">
-                                <span>Utilization: {Math.round((stats.marketingSpent / stats.marketingBudget) * 100)}%</span>
+                                <span>Utilization: {Math.round((stats.marketingSpent / (stats.marketingBudget || 1)) * 100)}%</span>
                                 <span>Target: &lt;₹5.00L</span>
                             </div>
                         </div>
@@ -271,7 +267,7 @@ export default function FinancePage() {
                     <div className="space-y-1">
                         <p className="text-[10px] font-black text-primary uppercase tracking-widest">Client Project Value</p>
                         <p className="text-3xl font-black text-slate-900 tracking-tighter">₹{(stats.totalRevenue / 100000).toFixed(2)}L</p>
-                        <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase tracking-widest border-none px-2">{clients?.length} ACTIVE PROJECTS</Badge>
+                        <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase tracking-widest border-none px-2">{(clients || []).length} ACTIVE PROJECTS</Badge>
                     </div>
                     <div className="h-24 w-full opacity-10 flex items-center justify-center">
                         <Globe className="size-20" />
@@ -336,7 +332,9 @@ export default function FinancePage() {
                                                     <span>Efficiency</span>
                                                     <span className="text-primary">85%</span>
                                                 </div>
-                                                <Progress value={85} className="h-1 w-24 rounded-none bg-muted/20" indicatorClassName="bg-primary" />
+                                                <div className="h-1 w-24 bg-muted/20 overflow-hidden">
+                                                    <div className="h-full bg-primary" style={{ width: '85%' }} />
+                                                </div>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -355,7 +353,10 @@ export default function FinancePage() {
                     </CardHeader>
                     <ScrollArea className="flex-1 max-h-[400px]">
                         <div className="divide-y divide-border/50">
-                            {clients?.flatMap(c => c.payments?.map(p => ({ ...p, clientName: c.companyName }))).filter(p => p.status !== 'Paid').slice(0, 10).map((p, i) => (
+                            {clients?.flatMap(c => (c.payments || []).map(p => ({ ...p, clientName: c.companyName })))
+                                .filter(p => p && p.status !== 'Paid')
+                                .slice(0, 10)
+                                .map((p, i) => (
                                 <div key={i} className="p-4 hover:bg-white transition-all flex items-center justify-between group">
                                     <div className="space-y-1">
                                         <p className="text-[9px] font-black uppercase text-primary truncate max-w-[150px]">{p.clientName}</p>
