@@ -224,9 +224,9 @@ export default function FinancePage() {
             {/* Header Terminal */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-1">
                 <div className="space-y-0.5">
-                    <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-slate-900">Financial Ledger</h1>
+                    <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-slate-900">Money Ledger</h1>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-                        {dateFilter === 'custom-range' ? `${format(dateRange.start!, 'PP')} - ${format(dateRange.end, 'PP')}` : `Operational Audit • ${format(new Date(), 'MMMM yyyy')}`}
+                        {dateFilter === 'custom-range' ? `${format(dateRange.start!, 'PP')} - ${format(dateRange.end, 'PP')}` : `Verified Audit • ${format(new Date(), 'MMMM yyyy')}`}
                     </p>
                 </div>
                 
@@ -268,10 +268,10 @@ export default function FinancePage() {
 
             {/* Core KPI Matrix */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard title="Revenue" value={`₹${(stats.totalRevenue / 100000).toFixed(2)}L`} trend="+22.4%" up={true} icon={DollarSign} color="text-primary" bg="bg-primary/5" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('revenue')} />
-                <KPICard title="Expenses" value={`₹${((stats.workforceCost + stats.marketingSpent) / 100000).toFixed(2)}L`} trend="+7.8%" up={false} icon={TrendingDown} color="text-amber-600" bg="bg-amber-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
-                <KPICard title="Net Profit" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Deficit" : "+18.7%"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
-                <KPICard title="Margin" value={`${stats.margin.toFixed(1)}%`} trend="+2.1pp" up={true} icon={Target} color="text-indigo-600" bg="bg-indigo-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('margin')} />
+                <KPICard title="Money Got" value={`₹${(stats.totalRevenue / 100000).toFixed(2)}L`} trend="+22.4%" up={true} icon={DollarSign} color="text-primary" bg="bg-primary/5" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('revenue')} />
+                <KPICard title="Money Spent" value={`₹${((stats.workforceCost + stats.marketingSpent) / 100000).toFixed(2)}L`} trend="+7.8%" up={false} icon={TrendingDown} color="text-amber-600" bg="bg-amber-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
+                <KPICard title="Leftover" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Deficit" : "+18.7%"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
+                <KPICard title="Profit %" value={`${stats.margin.toFixed(1)}%`} trend="+2.1pp" up={true} icon={Target} color="text-indigo-600" bg="bg-indigo-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('margin')} />
             </div>
 
             {/* Portfolio Performance (Dynamic from Client/Project/Pipeline Hubs) */}
@@ -281,21 +281,21 @@ export default function FinancePage() {
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
                                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                    <Package className="size-4" /> Operational Service Portfolio
+                                    <Package className="size-4" /> Service Summary
                                 </CardTitle>
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Money Got (Collected) vs Potential (Pipeline)</p>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Money Received vs Planned Money</p>
                             </div>
-                            <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase px-2">Live Data Audit</Badge>
+                            <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase px-2">Live Audit</Badge>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader className="bg-muted/10">
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className="font-black text-[8px] uppercase py-3 px-6 tracking-widest">Service Category</TableHead>
-                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">Money Got</TableHead>
-                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">In Pipeline</TableHead>
-                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">Volume</TableHead>
+                                    <TableHead className="font-black text-[8px] uppercase py-3 px-6 tracking-widest">Category</TableHead>
+                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">Money Received</TableHead>
+                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">Planned Money</TableHead>
+                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">Workload</TableHead>
                                     <TableHead className="text-right px-6 font-black text-[8px] uppercase py-3">Audit</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -312,7 +312,7 @@ export default function FinancePage() {
                                         <TableCell className="text-center">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-xs font-black">{data.count}</span>
-                                                <span className="text-[7px] font-bold text-muted-foreground uppercase">Accounts</span>
+                                                <span className="text-[7px] font-bold text-muted-foreground uppercase">Tasks</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right px-6">
@@ -321,7 +321,7 @@ export default function FinancePage() {
                                     </TableRow>
                                 ))}
                                 {Object.keys(stats.portfolioData).length === 0 && (
-                                    <TableRow><TableCell colSpan={5} className="py-10 text-center text-[10px] font-bold uppercase opacity-30">No active projects in this window</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={5} className="py-10 text-center text-[10px] font-bold uppercase opacity-30">No active work in this window</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -332,7 +332,7 @@ export default function FinancePage() {
                 <Card className="lg:col-span-4 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm flex flex-col">
                     <CardHeader className="bg-muted/5 border-b p-4">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                            <Users className="size-4" /> Team Revenue Attribution
+                            <Users className="size-4" /> Team Revenue Share
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0 flex-1">
@@ -357,8 +357,8 @@ export default function FinancePage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <Card className="lg:col-span-4 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm p-5 flex flex-col gap-6">
                     <div className="space-y-1">
-                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">Marketing Budget Control</p>
-                        <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Ad spend utilization audit</p>
+                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">Marketing Funds</p>
+                        <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Ad spend utilization</p>
                     </div>
                     <div className="space-y-4 flex-1">
                         <div className="flex justify-between items-end">
@@ -372,7 +372,7 @@ export default function FinancePage() {
                         </div>
                     </div>
                     <div className="p-4 bg-emerald-50/50 border border-dashed border-emerald-200 rounded-none">
-                        <p className="text-[9px] font-black uppercase text-emerald-700 tracking-widest">Remaining Balance</p>
+                        <p className="text-[9px] font-black uppercase text-emerald-700 tracking-widest">Balance Remaining</p>
                         <p className="text-2xl font-black text-emerald-900">₹{(stats.marketingBalance / 100000).toFixed(2)}L</p>
                     </div>
                 </Card>
@@ -380,7 +380,7 @@ export default function FinancePage() {
                 <Card className="lg:col-span-8 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm overflow-hidden flex flex-col">
                     <CardHeader className="bg-muted/5 border-b p-4">
                         <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                            <Clock className="size-4" /> Upcoming Pipeline Milestones
+                            <Clock className="size-4" /> Upcoming Money
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0 flex-1">
@@ -400,7 +400,7 @@ export default function FinancePage() {
                                             <div className="p-2 rounded-none bg-primary/5 text-primary"><ListChecks className="size-4" /></div>
                                             <div className="space-y-0.5">
                                                 <p className="text-[10px] font-black uppercase text-primary truncate max-w-[200px]">{p.clientName}</p>
-                                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Scheduled Installment</p>
+                                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Next Installment</p>
                                             </div>
                                         </div>
                                         <div className="text-right space-y-0.5">
@@ -410,7 +410,7 @@ export default function FinancePage() {
                                     </div>
                                 ))}
                                 {(clients?.length === 0 || !clients) && (
-                                    <div className="py-20 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No milestones pending</div>
+                                    <div className="py-20 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No payments pending</div>
                                 )}
                             </div>
                         </ScrollArea>
@@ -423,15 +423,15 @@ export default function FinancePage() {
                 <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
                     <SheetHeader className="p-8 border-b bg-white shrink-0">
                         <div className="flex items-center justify-between mb-2">
-                            <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Portfolio Audit</Badge>
+                            <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Category Detail</Badge>
                         </div>
                         <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{selectedPortfolio?.name}</SheetTitle>
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Revenue Source Analysis</p>
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Received Funds Analysis</p>
                     </SheetHeader>
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10 pb-32">
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Money Received Breakdown</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Transaction Log</h4>
                                 <div className="space-y-3">
                                     {selectedPortfolio?.transactions?.length > 0 ? selectedPortfolio.transactions.map((t: any, i: number) => (
                                         <div key={i} className="p-5 bg-white ring-1 ring-border shadow-sm space-y-3 hover:border-primary transition-all">
@@ -447,7 +447,7 @@ export default function FinancePage() {
                                                 <ShieldCheck className="size-2.5" />
                                             </div>
                                         </div>
-                                    )) : <p className="py-10 text-center text-xs italic text-muted-foreground uppercase opacity-40">No confirmed revenue in this window.</p>}
+                                    )) : <p className="py-10 text-center text-xs italic text-muted-foreground uppercase opacity-40">No confirmed payments in this window.</p>}
                                 </div>
                             </div>
                         </div>
@@ -459,14 +459,14 @@ export default function FinancePage() {
             <Dialog open={!!selectedMetric} onOpenChange={o => !o && setSelectedMetric(null)}>
                 <DialogContent className="rounded-none border-none shadow-3xl sm:max-w-2xl p-0 overflow-hidden">
                     <DialogHeader className="p-8 border-b bg-white">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Audit Log: {selectedMetric?.toUpperCase()}</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-40">Transaction verification and historical synchronization</DialogDescription>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Audit: {selectedMetric === 'revenue' ? 'Money Got' : selectedMetric?.toUpperCase()}</DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-40">Verified historical logs</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[60vh]">
                         <div className="p-8 space-y-6">
                             {selectedMetric === 'revenue' && (
                                 <div className="space-y-4">
-                                    {clients?.flatMap(c => (c.payments || []).filter(p => p.status === 'Paid').map(p => ({ ...p, clientName: c.companyName }))).map((p, i) => (
+                                    {clients?.flatMap(c => (c.payments || []).filter(p => parseFloat(p.amountReceived || '0') > 0).map(p => ({ ...p, clientName: c.companyName }))).map((p, i) => (
                                         <div key={i} className="flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100">
                                             <div>
                                                 <p className="font-bold text-xs uppercase">{p.clientName}</p>
@@ -475,20 +475,20 @@ export default function FinancePage() {
                                             <p className="text-sm font-black text-emerald-900">₹{parseFloat(p.amountReceived || '0').toLocaleString()}</p>
                                         </div>
                                     ))}
-                                    {(!clients || clients.length === 0) && <p className="py-10 text-center opacity-30 uppercase font-black text-[10px]">No confirmed revenue</p>}
+                                    {(!clients || clients.length === 0) && <p className="py-10 text-center opacity-30 uppercase font-black text-[10px]">No confirmed money received</p>}
                                 </div>
                             )}
                             {selectedMetric === 'expenses' && (
                                 <div className="space-y-4">
                                     <div className="p-6 bg-rose-50 border border-rose-100 rounded-none text-center space-y-1">
-                                        <p className="text-[10px] font-black text-rose-700 uppercase tracking-widest">Total Monthly Payroll</p>
+                                        <p className="text-[10px] font-black text-rose-700 uppercase tracking-widest">Monthly Salaries</p>
                                         <p className="text-3xl font-black text-rose-900">₹{stats.workforceCost.toLocaleString()}</p>
                                     </div>
                                     <div className="p-6 bg-muted/20 border rounded-none text-center space-y-1">
-                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Marketing Spend</p>
+                                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Ads & Marketing</p>
                                         <p className="text-2xl font-black">₹{stats.marketingSpent.toLocaleString()}</p>
                                     </div>
-                                    <p className="text-[9px] font-bold text-center text-muted-foreground uppercase italic">Expense audit derived from verified payroll and marketing ad-spend logs.</p>
+                                    <p className="text-[9px] font-bold text-center text-muted-foreground uppercase italic">Salaries and marketing ad-spend totals.</p>
                                 </div>
                             )}
                             {selectedMetric === 'profit' && (
@@ -499,7 +499,7 @@ export default function FinancePage() {
                                             onClick={() => setSelectedMetric('revenue')}
                                         >
                                             <div className="flex justify-between items-start mb-2">
-                                                <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Inflow</p>
+                                                <p className="text-[9px] font-bold uppercase text-muted-foreground">Money In</p>
                                                 <ChevronRight className="size-3 opacity-0 group-hover:opacity-40" />
                                             </div>
                                             <p className="text-xl font-black text-emerald-600">₹{stats.totalRevenue.toLocaleString()}</p>
@@ -509,14 +509,14 @@ export default function FinancePage() {
                                             onClick={() => setSelectedMetric('expenses')}
                                         >
                                             <div className="flex justify-between items-start mb-2">
-                                                <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Outflow</p>
+                                                <p className="text-[9px] font-bold uppercase text-muted-foreground">Money Out</p>
                                                 <ChevronRight className="size-3 opacity-0 group-hover:opacity-40" />
                                             </div>
                                             <p className="text-xl font-black text-rose-600">₹{(stats.workforceCost + stats.marketingSpent).toLocaleString()}</p>
                                         </div>
                                     </div>
                                     <div className={cn("p-8 rounded-none text-center shadow-2xl", stats.netProfitRaw > 0 ? "bg-primary text-white" : "bg-rose-600 text-white")}>
-                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">{stats.netProfitRaw > 0 ? "Calculated Net Profit" : "Operational Deficit"}</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">{stats.netProfitRaw > 0 ? "Total Gain" : "Total Shortfall"}</p>
                                         <p className="text-4xl font-black tracking-tighter">₹{stats.netProfit.toLocaleString()}</p>
                                     </div>
                                 </div>
@@ -565,9 +565,10 @@ function KPICard({ title, value, trend, up, icon: Icon, color, bg, lastUpdate, o
                     </ResponsiveContainer>
                 </div>
                 <p className="text-[7px] font-black uppercase text-muted-foreground/30">
-                    {lastUpdate ? `Updated: ${format(lastUpdate.toDate(), 'HH:mm')}` : 'Live Audit'}
+                    {lastUpdate ? `Last Sync: ${format(lastUpdate.toDate(), 'HH:mm')}` : 'Live Audit'}
                 </p>
             </div>
         </Card>
     );
 }
+
