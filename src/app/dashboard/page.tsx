@@ -1,8 +1,9 @@
+
 'use client';
 
 import * as React from "react";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, collection, query, where, orderBy, Timestamp, getDocs, or, and, limit } from "firebase/firestore";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
 import { TodoWidget } from "@/components/geohrm/todo-widget";
@@ -21,81 +22,23 @@ import {
   ArrowUpRight, ArrowDownRight, Bell, Calendar,
   Target, MousePointer2, 
   BarChart3, LayoutGrid, CheckCircle2, AlertCircle, Clock, Plus,
-  PhoneCall, ShieldCheck, ChevronRight, FileText, Settings, UserPlus, Building2, Filter
+  PhoneCall, ShieldCheck, ChevronRight, FileText, Settings, UserPlus, Building2, Filter,
+  Megaphone,
+  PartyPopper,
+  Info
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths, isToday, addDays, isBefore } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-
-// --- DATA DEFINITIONS ---
-const kpiData = [
-  { name: 'Total Revenue', value: '₹18.45L', trend: '+22.4%', up: true, icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50', sparkline: [30, 45, 35, 50, 48, 65, 55] },
-  { name: 'Net Profit', value: '₹4.32L', trend: '+18.7%', up: true, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', sparkline: [20, 30, 25, 40, 38, 45, 42] },
-  { name: 'New Leads', value: '142', trend: '+31.5%', up: true, icon: MousePointer2, color: 'text-blue-600', bg: 'bg-blue-50', sparkline: [40, 35, 55, 60, 58, 80, 75] },
-  { name: 'Active Projects', value: '24', trend: '+9.1%', up: true, icon: Briefcase, color: 'text-orange-600', bg: 'bg-orange-50', sparkline: [15, 18, 17, 22, 21, 25, 24] },
-  { name: 'Team Utilization', value: '84%', trend: '+6.3%', up: true, icon: Zap, color: 'text-indigo-600', bg: 'bg-indigo-50', sparkline: [75, 78, 80, 82, 81, 84, 84] },
-];
-
-const revenueTrend = [
-  { name: 'Mon', revenue: 2.0, lastWeek: 1.8 },
-  { name: 'Tue', revenue: 3.3, lastWeek: 2.1 },
-  { name: 'Wed', revenue: 3.6, lastWeek: 2.5 },
-  { name: 'Thu', revenue: 3.0, lastWeek: 1.9 },
-  { name: 'Fri', revenue: 3.6, lastWeek: 2.2 },
-  { name: 'Sat', revenue: 4.5, lastWeek: 3.0 },
-  { name: 'Sun', revenue: 3.45, lastWeek: 1.58 },
-];
-
-const businessUnits = [
-  { name: 'IT Products', value: 7.25, percentage: 39, color: '#6D28D9' },
-  { name: 'Software Dev', value: 5.10, percentage: 28, color: '#3B82F6' },
-  { name: 'Digital Marketing', value: 3.65, percentage: 20, color: '#F59E0B' },
-  { name: 'IT Training', value: 2.45, percentage: 13, color: '#22C55E' },
-];
-
-const projectHealth = [
-  { name: 'On Track', value: 18, percentage: 75, color: '#22C55E' },
-  { name: 'At Risk', value: 4, percentage: 17, color: '#F59E0B' },
-  { name: 'Delayed', value: 2, percentage: 8, color: '#EF4444' },
-];
-
-const salesFunnel = [
-  { name: 'New Leads', value: 142, color: 'bg-purple-500' },
-  { name: 'Qualified', value: 57, color: 'bg-blue-500' },
-  { name: 'Proposal Sent', value: 24, color: 'bg-orange-500' },
-  { name: 'Negotiation', value: 12, color: 'bg-amber-500' },
-  { name: 'Won', value: 7, color: 'bg-emerald-500' },
-];
-
-const alerts = [
-  { title: 'Project Delay', desc: '2 projects delayed', time: '20m ago', icon: Clock, color: 'text-rose-600', bg: 'bg-rose-50' },
-  { title: 'Revenue Below Target', desc: 'Weekly target: ₹20L', time: '1h ago', icon: Target, color: 'text-amber-600', bg: 'bg-amber-50' },
-  { title: 'Client Escalation', desc: 'High priority ticket', time: '2h ago', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
-  { title: 'Payment Pending', desc: '3 invoices overdue', time: '3h ago', icon: DollarSign, color: 'text-orange-600', bg: 'bg-orange-50' },
-  { title: 'New Lead Received', desc: 'Project from ABC Corp', time: '4h ago', icon: MousePointer2, color: 'text-blue-600', bg: 'bg-blue-50' },
-];
-
-const recentActivities = [
-  { time: '30m ago', text: 'New project "Mobile App Development" created by John Doe', icon: Plus, color: 'text-primary' },
-  { time: '1h ago', text: 'Payment of ₹2,45,000 received from ABC Corp by Finance Team', icon: DollarSign, color: 'text-green-600' },
-  { time: '2h ago', text: 'New employee Sarah Johnson joined Digital Marketing Team', icon: Users, color: 'text-blue-600' },
-  { time: '3h ago', text: 'Facebook Ads campaign "Summer Offer" launched by Marketing Team', icon: Zap, color: 'text-amber-600' },
-];
-
-const topClients = [
-  { name: 'ABC Corporation', value: 3.25, max: 4 },
-  { name: 'TechNova Solutions', value: 2.75, max: 4 },
-  { name: 'Global Retail Ltd.', value: 2.10, max: 4 },
-  { name: 'EduSmart Technologies', value: 1.85, max: 4 },
-  { name: 'Future Labs', value: 1.60, max: 4 },
-];
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 
 export default function DashboardPage() {
   const { user: currentUser } = useUser();
@@ -109,8 +52,9 @@ export default function DashboardPage() {
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   
   const userRole = currentUserData?.role;
-  const isExecutive = userRole === 'CEO/Admin' || userRole === 'CEO/MD';
+  const isExecutive = userRole === 'CEO/Admin' || userRole === 'CEO/MD' || userRole === 'HR Manager';
 
+  // --- TACTICAL RANGE LOGIC ---
   const dateRange = React.useMemo(() => {
     const now = new Date();
     let start: Date;
@@ -156,6 +100,64 @@ export default function DashboardPage() {
     }
     return { start, end };
   }, [dateFilter, customStartDate, customEndDate]);
+
+  // --- DATA STREAMS FOR EXECUTIVE VIEW ---
+  const clientsQuery = useMemoFirebase(() => query(collection(firestore, 'clients')), [firestore]);
+  const { data: clients } = useCollection<any>(clientsQuery);
+
+  const leaveRequestsQuery = useMemoFirebase(() => {
+    if (!isExecutive) return null;
+    return query(collection(firestore, "leave_requests"), where("status", "in", ["Pending", "Pending HR Approval"]));
+  }, [firestore, isExecutive]);
+  const { data: leaveRequests } = useCollection<any>(leaveRequestsQuery);
+
+  const announcementsQuery = useMemoFirebase(() => query(collection(firestore, 'announcements')), [firestore]);
+  const { data: announcements } = useCollection<any>(announcementsQuery);
+
+  const eventsQuery = useMemoFirebase(() => query(collection(firestore, 'events')), [firestore]);
+  const { data: events } = useCollection<any>(eventsQuery);
+
+  const issuesQuery = useMemoFirebase(() => query(collection(firestore, 'issue_reports'), where('status', 'in', ['Open', 'In Progress'])), [firestore]);
+  const { data: openIssues } = useCollection<any>(issuesQuery);
+
+  // --- NOTIFICATION CALCULATIONS ---
+  const unreadAnnouncementsCount = announcements?.length || 0; // Simplified for MVP
+  const todaysEventsCount = events?.filter((e: any) => e.date && isToday(e.date.toDate())).length || 0;
+  const totalNotifications = (leaveRequests?.length || 0) + unreadAnnouncementsCount + todaysEventsCount + (openIssues?.length || 0);
+
+  // --- KPI CALCULATIONS ---
+  const stats = React.useMemo(() => {
+    if (!clients) return { revenue: 0, leads: 0, activeProjects: 0 };
+    
+    let revenue = 0;
+    let leads = 0;
+    let activeProjects = 0;
+
+    clients.forEach(c => {
+      const created = c.createdAt?.toDate ? c.createdAt.toDate() : new Date(c.createdAt || Date.now());
+      const isWithin = isBefore(created, dateRange.end) && (isBefore(dateRange.start, created) || isSameDay(dateRange.start, created));
+      
+      if (isWithin && c.status === 'Lead') leads++;
+      if (c.status === 'Active') activeProjects++;
+
+      (c.payments || []).forEach((p: any) => {
+        const pDate = p.invoiceDate ? new Date(p.invoiceDate) : (p.dueDate ? new Date(p.dueDate) : created);
+        if (isBefore(pDate, dateRange.end) && (isBefore(dateRange.start, pDate) || isSameDay(dateRange.start, pDate))) {
+            revenue += parseFloat(p.amountReceived || '0') || 0;
+        }
+      });
+    });
+
+    return { revenue, leads, activeProjects };
+  }, [clients, dateRange]);
+
+  const kpiData = [
+    { name: 'Total Revenue', value: `₹${(stats.revenue / 100000).toFixed(2)}L`, trend: '+22.4%', up: true, icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50', sparkline: [30, 45, 35, 50, 48, 65, 55] },
+    { name: 'New Leads', value: stats.leads.toString(), trend: '+31.5%', up: true, icon: MousePointer2, color: 'text-blue-600', bg: 'bg-blue-50', sparkline: [40, 35, 55, 60, 58, 80, 75] },
+    { name: 'Active Projects', value: stats.activeProjects.toString(), trend: '+9.1%', up: true, icon: Briefcase, color: 'text-orange-600', bg: 'bg-orange-50', sparkline: [15, 18, 17, 22, 21, 25, 24] },
+    { name: 'Team Utilization', value: '84%', trend: '+6.3%', up: true, icon: Zap, color: 'text-indigo-600', bg: 'bg-indigo-50', sparkline: [75, 78, 80, 82, 81, 84, 84] },
+    { name: 'Project Health', value: 'On Track', trend: 'Audit', up: true, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', sparkline: [90, 92, 91, 94, 95, 94, 94] },
+  ];
 
   if (!isExecutive) {
     return (
@@ -249,11 +251,79 @@ export default function DashboardPage() {
                 {dateFilter.replace('-', ' ')}
             </div>
           </div>
-          <Button variant="outline" size="icon" className="rounded-none h-12 w-12 relative bg-white border-slate-200 hover:border-primary transition-colors">
-            <Bell className="size-6 text-slate-600" />
-            {/* Hardcoded notification dot for visual fidelity */}
-            <span className="absolute top-3 right-3 size-2.5 bg-rose-500 rounded-full ring-2 ring-white" />
-          </Button>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" className="rounded-none h-12 w-12 relative bg-white border-slate-200 hover:border-primary transition-colors">
+                    <Bell className="size-6 text-slate-600" />
+                    {totalNotifications > 0 && (
+                        <span className="absolute top-3 right-3 size-2.5 bg-rose-500 rounded-full ring-2 ring-white" />
+                    )}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0 rounded-none border-none shadow-3xl" align="end" sideOffset={12}>
+                <div className="p-6 border-b bg-white">
+                    <h4 className="text-lg font-black uppercase tracking-tighter text-primary">Mission Signals</h4>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Verified Updates</p>
+                </div>
+                <ScrollArea className="max-h-[400px]">
+                    <div className="p-4 space-y-2">
+                        {totalNotifications === 0 ? (
+                            <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
+                                <CheckCircle2 className="size-10 mb-2" />
+                                <p className="font-bold uppercase text-[10px] tracking-widest">Grid Clear</p>
+                            </div>
+                        ) : (
+                            <>
+                                {leaveRequests?.map((req: any, i: number) => (
+                                    <Link 
+                                        href="/dashboard/leave" 
+                                        key={i}
+                                        className="flex items-center gap-3 p-3 bg-sky-50 hover:bg-sky-100 transition-all border border-sky-100 group"
+                                    >
+                                        <div className="size-8 bg-sky-500 text-white flex items-center justify-center rounded-none"><Briefcase className="size-4"/></div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[10px] font-bold uppercase text-sky-700">Leave Request</p>
+                                            <p className="text-xs font-black truncate text-sky-900">{req.employeeName}</p>
+                                        </div>
+                                    </Link>
+                                ))}
+                                {todaysEventsCount > 0 && (
+                                    <Link 
+                                        href="/dashboard/events" 
+                                        className="flex items-center gap-3 p-3 bg-amber-50 hover:bg-amber-100 transition-all border border-amber-100 group"
+                                    >
+                                        <div className="size-8 bg-amber-500 text-white flex items-center justify-center rounded-none"><PartyPopper className="size-4"/></div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[10px] font-bold uppercase text-amber-700">Events Today</p>
+                                            <p className="text-xs font-black truncate text-amber-900">{todaysEventsCount} celebrations</p>
+                                        </div>
+                                    </Link>
+                                )}
+                                {openIssues?.map((issue: any, i: number) => (
+                                    <Link 
+                                        href="/dashboard/issues" 
+                                        key={i}
+                                        className="flex items-center gap-3 p-3 bg-rose-50 hover:bg-rose-100 transition-all border border-rose-100 group"
+                                    >
+                                        <div className="size-8 bg-rose-500 text-white flex items-center justify-center rounded-none"><AlertCircle className="size-4"/></div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[10px] font-bold uppercase text-rose-700">Support Ticket</p>
+                                            <p className="text-xs font-black truncate text-rose-900">{issue.title}</p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </>
+                        )}
+                    </div>
+                </ScrollArea>
+                <div className="p-4 border-t bg-muted/10">
+                    <Button variant="ghost" className="w-full rounded-none h-10 text-[9px] font-black uppercase text-muted-foreground hover:text-primary transition-colors" asChild>
+                        <Link href="/dashboard/monitor">Launch Global Monitor</Link>
+                    </Button>
+                </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -280,7 +350,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{kpi.name}</p>
                 <div className="flex items-baseline gap-2">
                     <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{kpi.value}</h3>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase">vs LW</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Audit</span>
                 </div>
               </div>
               <div className="h-10 w-full opacity-60 group-hover:opacity-100 transition-opacity">
@@ -295,24 +365,22 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Row 2: Visual Intelligence */}
+      {/* Row 2: Tactical Intelligence Visuals */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-        {/* Revenue Trend */}
+        {/* Placeholder charts for fidelity - in real usage these would be computed from collectionGroup queries */}
         <Card className="lg:col-span-2 border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
           <CardHeader className="p-8 pb-0 flex flex-row items-center justify-between">
             <div className="space-y-1 text-left">
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue Trend</CardTitle>
-              <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-tight">Verified on {format(new Date(), 'PP')}</CardDescription>
-            </div>
-            <div className="flex gap-6">
-               <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-primary" /><span className="text-[10px] font-black uppercase text-slate-600">Current</span></div>
-               <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-slate-200" /><span className="text-[10px] font-black uppercase text-slate-400">Previous</span></div>
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Growth Velocity</CardTitle>
+              <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-tight">Financial trend audit</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="p-8">
             <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={[
+                    { name: 'W1', value: 10 }, { name: 'W2', value: 25 }, { name: 'W3', value: 20 }, { name: 'W4', value: 45 }
+                ]}>
                   <defs>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6D28D9" stopOpacity={0.2}/>
@@ -320,27 +388,17 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#F1F5F9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} className="text-[10px] font-black uppercase fill-slate-400" tickMargin={15} />
-                  <YAxis axisLine={false} tickLine={false} className="text-[10px] font-black fill-slate-400" tickFormatter={(v) => `₹${v}L`} />
-                  <Tooltip 
-                      contentStyle={{ borderRadius: '0px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '11px', fontWeight: '900' }}
-                  />
-                  <Area type="monotone" dataKey="revenue" stroke="#6D28D9" strokeWidth={4} fill="url(#colorRev)" dot={{ r: 5, fill: '#6D28D9', strokeWidth: 3, stroke: '#FFF' }} activeDot={{ r: 8, strokeWidth: 0 }} />
-                  <Line type="monotone" dataKey="lastWeek" stroke="#E2E8F0" strokeWidth={3} strokeDasharray="6 6" dot={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} className="text-[10px] font-black uppercase fill-slate-400" />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ borderRadius: '0px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '11px', fontWeight: '900' }} />
+                  <Area type="monotone" dataKey="value" stroke="#6D28D9" strokeWidth={4} fill="url(#colorRev)" />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
-            <div className="mt-8 p-6 bg-slate-50 rounded-none flex items-center justify-between ring-1 ring-slate-100">
-                <div className="flex gap-10 text-left">
-                    <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Target Period</p><p className="text-lg font-black text-slate-900">₹18.45L</p></div>
-                    <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Previous Audit</p><p className="text-lg font-black text-slate-900">₹15.08L</p></div>
-                </div>
-                <Badge className="bg-emerald-50 text-emerald-700 border-none rounded-none font-black text-[10px] uppercase px-4 h-8">+22.4% Growth</Badge>
             </div>
           </CardContent>
         </Card>
 
-        {/* Revenue by BU */}
+        {/* Business Unit Distribution */}
         <Card className="border-none shadow-sm rounded-none bg-white flex flex-col">
           <CardHeader className="p-8 pb-0 text-left">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue by BU</CardTitle>
@@ -349,262 +407,52 @@ export default function DashboardPage() {
             <div className="relative size-48">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                        <Pie data={businessUnits} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={6} dataKey="value" stroke="none">
-                        {businessUnits.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                        <Pie data={[
+                            { name: 'Technical', value: 400, color: '#6D28D9' },
+                            { name: 'Marketing', value: 300, color: '#3B82F6' },
+                            { name: 'CSR', value: 100, color: '#22C55E' }
+                        ]} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={6} dataKey="value" stroke="none">
+                        {[0, 1, 2].map((i) => <Cell key={i} fill={['#6D28D9', '#3B82F6', '#22C55E'][i]} />)}
                         </Pie>
                         <Tooltip />
                     </PieChart>
                 </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-xl font-black tracking-tighter">₹18.45L</span>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Aggregate</span>
-                </div>
             </div>
             <div className="w-full space-y-3">
-              {businessUnits.map((unit, i) => (
+              {['Technical', 'Marketing', 'CSR'].map((unit, i) => (
                 <div key={i} className="flex items-center justify-between text-[10px] font-black uppercase">
-                  <div className="flex items-center gap-3"><div className="size-2 rounded-full" style={{ backgroundColor: unit.color }} /> <span className="text-slate-600">{unit.name}</span></div>
-                  <span className="text-slate-900">₹{unit.value.toFixed(2)}L <span className="text-slate-400 ml-1">({unit.percentage}%)</span></span>
+                  <div className="flex items-center gap-3"><div className="size-2 rounded-full" style={{ backgroundColor: ['#6D28D9', '#3B82F6', '#22C55E'][i] }} /> <span className="text-slate-600">{unit}</span></div>
+                  <span className="text-slate-900">Verified Audit</span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Project Health & Alerts */}
-        <div className="flex flex-col gap-6">
-            <Card className="flex-1 border-none shadow-sm rounded-none bg-white p-6 flex flex-col justify-center text-left">
-                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800 mb-6">Mission Health</CardTitle>
-                <div className="flex items-center gap-6">
-                    <div className="relative size-24 shrink-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie data={projectHealth} cx="50%" cy="50%" innerRadius={30} outerRadius={45} dataKey="value" stroke="none">
-                                    {projectHealth.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                                </Pie>
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-sm font-black">24</span>
-                        </div>
-                    </div>
-                    <div className="flex-1 space-y-1.5">
-                        {projectHealth.map((h, i) => (
-                            <div key={i} className="flex items-center justify-between text-[9px] font-black uppercase">
-                                <span className="text-slate-400">{h.name}</span>
-                                <span className="text-slate-900">{h.value}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                <Button variant="link" className="h-8 p-0 text-[10px] font-black uppercase text-primary mt-4 self-end group" asChild><Link href="/dashboard/projects">View Projects <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Link></Button>
-            </Card>
-
-            <Card className="flex-[1.5] border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
-                <div className="p-4 border-b border-slate-50 flex items-center justify-between">
-                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-800">Critical Signals</CardTitle>
-                    <Badge className="bg-rose-500 text-white border-none rounded-none text-[10px] font-black h-5 px-2.5 shadow-lg shadow-rose-500/20">{alerts.length}</Badge>
-                </div>
-                <ScrollArea className="flex-1 max-h-[160px]">
-                    <div className="p-3 space-y-2">
-                        {alerts.map((alert, i) => (
-                            <div key={i} className="p-3 rounded-none bg-slate-50 border border-slate-100 flex items-start gap-4 group hover:bg-white hover:border-slate-200 hover:shadow-md transition-all cursor-pointer">
-                                <div className={cn("p-2 rounded-none shrink-0 shadow-sm", alert.bg, alert.color)}><alert.icon className="size-4"/></div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-black uppercase text-slate-800 truncate">{alert.title}</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase truncate mt-0.5">{alert.desc}</p>
-                                </div>
-                                <span className="text-[8px] font-black text-slate-300 uppercase shrink-0 mt-1">{alert.time}</span>
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea>
-                <div className="p-3 pt-0">
-                    <Button variant="ghost" className="w-full h-9 rounded-none text-[10px] font-black uppercase text-slate-400 hover:text-primary transition-colors">Audit All Signals</Button>
-                </div>
-            </Card>
-        </div>
+        <ActionItemsWidget />
       </div>
 
-      {/* Row 3: Tactical Progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-        {/* Sales Funnel */}
-        <Card className="border-none shadow-sm rounded-none bg-white p-8 flex flex-col text-left">
-          <div className="flex items-center justify-between mb-8">
-            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Sales Funnel</CardTitle>
-            <div className="text-right"><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Conversion</p><p className="text-lg font-black text-primary">12.28%</p></div>
-          </div>
-          <div className="flex-1 flex flex-col gap-3 justify-center">
-             {salesFunnel.map((f, i) => (
-               <div key={i} className="flex items-center gap-4">
-                 <div className="w-32 text-[10px] font-black uppercase text-slate-400 truncate">{f.name}</div>
-                 <div 
-                   className={cn("h-7 rounded-none border-r-4 border-black/10 transition-all duration-1000 flex items-center px-4 shadow-sm", f.color)} 
-                   style={{ width: `${(f.value / salesFunnel[0].value) * 100}%`, opacity: 1 - (i * 0.1) }}
-                 >
-                    <span className="text-xs font-black text-white">{f.value}</span>
-                 </div>
-               </div>
-             ))}
-          </div>
-        </Card>
-
-        {/* Marketing Performance */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
-            <CardHeader className="p-8 pb-4">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Marketing ROI</CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 pt-0 grid grid-cols-2 gap-4">
-                {[
-                    { l: 'Visitors', v: '8,245', t: '+18.6%', up: true },
-                    { l: 'Leads', v: '142', t: '+31.5%', up: true },
-                    { l: 'Ad Spend', v: '₹92,000', t: '+4.2%', up: false },
-                    { l: 'CPL', v: '₹64.79', t: '+5.3%', up: false },
-                    { l: 'ROI', v: '4.35x', t: '+16.8%', up: true },
-                    { l: 'Efficiency', v: '94%', t: 'Verified', up: true }
-                ].map((s, i) => (
-                    <div key={i} className="p-4 rounded-none bg-slate-50 border border-slate-100 flex flex-col justify-center shadow-sm">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">{s.l}</p>
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-slate-800 tracking-tight">{s.v}</span>
-                            <span className={cn("text-[9px] font-black", s.up ? "text-emerald-600" : "text-rose-600")}>{s.t}</span>
-                        </div>
-                    </div>
-                ))}
-            </CardContent>
-            <div className="px-8 py-4 bg-slate-50 border-t border-slate-100">
-                <Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full justify-center group" asChild><Link href="/dashboard/marketing">Marketing Intelligence Hub <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Link></Button>
-            </div>
-        </Card>
-
-        {/* Team Overview */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
-            <CardHeader className="p-8 pb-4">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Fleet Deployment</CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 pt-0 space-y-6">
-                <div className="flex justify-between items-center bg-primary/5 p-6 rounded-none ring-1 ring-primary/10">
-                    <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Staff</p><div className="flex items-center gap-3 mt-1"><p className="text-4xl font-black text-primary tracking-tighter">84</p><Badge className="bg-emerald-100 text-emerald-700 border-none rounded-none text-[10px] font-black shadow-sm">+2</Badge></div></div>
-                    <div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Attendance</p><p className="text-2xl font-black text-slate-800 mt-1">71 <span className="text-sm text-slate-400 font-bold ml-1">(84%)</span></p></div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                    {[
-                        { l: 'Attrition', v: '1.2%', c: 'text-rose-600' },
-                        { l: 'New Joins', v: '2', c: 'text-emerald-600' },
-                        { l: 'Openings', v: '6', c: 'text-sky-600' }
-                    ].map((m, i) => (
-                        <div key={i} className="text-center p-4 rounded-none border border-slate-100 shadow-sm">
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">{m.l}</p>
-                            <p className={cn("text-sm font-black", m.c)}>{m.v}</p>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-            <div className="px-8 py-4 bg-slate-50 border-t border-slate-100">
-                <Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full justify-center group" asChild><Link href="/dashboard/users">People Analytics Portal <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Link></Button>
-            </div>
-        </Card>
-
-        {/* Weekly Goals */}
-        <Card className="border-none shadow-sm rounded-none bg-white p-8 flex flex-col gap-6 text-left">
-          <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Mission Benchmarks</CardTitle>
-          <div className="flex-1 flex flex-col gap-6 justify-center">
-            {[
-              { l: 'Revenue', v: 92, val: '₹18.45L / ₹20L', c: 'bg-primary' },
-              { l: 'New Clients', v: 60, val: '3 / 5', c: 'bg-emerald-500' },
-              { l: 'Delivery', v: 75, val: '75% / 90%', c: 'bg-sky-500' },
-              { l: 'Lead Target', v: 95, val: '142 / 150', c: 'bg-amber-500' }
-            ].map((g, i) => (
-              <div key={i} className="space-y-2">
-                <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>{g.l}</span><span className="text-slate-900">{g.val}</span></div>
-                <div className="flex items-center gap-4">
-                    <Progress value={g.v} className="h-2 rounded-none bg-slate-100 flex-1" indicatorClassName={g.c} />
-                    <span className="text-[10px] font-black text-slate-900 w-8">{g.v}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <Button variant="outline" className="h-12 w-full rounded-none text-[10px] font-black uppercase border-slate-200 shadow-sm tracking-widest">Audit All Targets</Button>
-        </Card>
-      </div>
-
-      {/* Row 4: Financial & Tactical */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-        {/* Financial Snapshot */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
-            <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Financial Ledger</CardTitle></div>
-            <CardContent className="p-6 grid grid-cols-2 gap-4">
-                {[
-                    { l: 'Revenue', v: '₹18.45L', t: '+22.4%', c: 'text-emerald-600' },
-                    { l: 'Expenses', v: '₹12.13L', t: '+7.8%', c: 'text-rose-600' },
-                    { l: 'Net Profit', v: '₹4.32L', t: '+18.7%', c: 'text-emerald-600' },
-                    { l: 'Margin', v: '23.4%', t: '+2.1pp', c: 'text-emerald-600' }
-                ].map((s, i) => (
-                    <div key={i} className="p-4 rounded-none bg-slate-50 border border-slate-100 shadow-sm">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">{s.l}</p>
-                        <div className="flex flex-col"><span className="text-sm font-black text-slate-900 tracking-tight">{s.v}</span><span className={cn("text-[9px] font-black mt-1", s.c)}>{s.t}</span></div>
-                    </div>
-                ))}
-            </CardContent>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100"><Button variant="link" className="h-6 p-0 text-[10px] font-black uppercase text-primary w-full group" asChild><Link href="/dashboard/finance">Finance Intelligence Portal <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Link></Button></div>
-        </Card>
-
-        {/* Top Clients */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
-            <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Principal Contributors</CardTitle></div>
-            <ScrollArea className="h-[280px]">
-                <div className="p-6 space-y-6">
-                    {topClients.map((client, i) => (
-                        <div key={i} className="space-y-2.5">
-                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                                <span className="text-slate-600 truncate max-w-[150px]">{client.name}</span>
-                                <span className="text-slate-900">₹{client.value.toFixed(2)}L</span>
-                            </div>
-                            <Progress value={(client.value / client.max) * 100} className="h-2 rounded-none bg-slate-100" indicatorClassName="bg-primary" />
-                        </div>
-                    ))}
-                </div>
-            </ScrollArea>
-        </Card>
-
-        {/* Recent Activities */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
-            <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Operational Log</CardTitle></div>
-            <ScrollArea className="h-[280px]">
-                <div className="p-6 space-y-8">
-                    {recentActivities.map((act, i) => (
-                        <div key={i} className="flex gap-4 items-start relative">
-                            {i < recentActivities.length - 1 && <div className="absolute left-2.5 top-6 bottom-[-32px] w-[2px] bg-slate-100" />}
-                            <div className={cn("size-5 rounded-none flex items-center justify-center shrink-0 z-10 bg-white ring-4 ring-slate-50 shadow-sm")}>
-                                <act.icon className={cn("size-3", act.color)} />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[11px] font-black text-slate-700 leading-tight line-clamp-2 uppercase tracking-tight">{act.text}</p>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">{act.time}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </ScrollArea>
-        </Card>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
-           {[
-             { l: 'New Project', i: Plus, c: 'bg-purple-600' },
-             { l: 'Acquire Lead', i: MousePointer2, c: 'bg-blue-600' },
-             { l: 'Add Staff', i: UserPlus, c: 'bg-emerald-600' },
-             { l: 'Audit Report', i: FileText, c: 'bg-orange-600' },
-             { l: 'Deep Dive', i: BarChart3, c: 'bg-sky-600' },
-             { l: 'Terminal', i: Settings, c: 'bg-slate-800' }
-           ].map((btn, i) => (
-             <Button key={i} variant="outline" className="h-full rounded-none border-none ring-1 ring-slate-200 bg-white hover:bg-slate-50 flex flex-col gap-3 p-4 shadow-sm group active:scale-95 transition-all">
-               <div className={cn("p-2.5 rounded-none text-white group-hover:scale-110 transition-transform shadow-md", btn.c)}><btn.i className="size-5" /></div>
-               <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 leading-none">{btn.l}</span>
-             </Button>
-           ))}
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <TodoWidget />
+          <WorkHoursSummaryWidget />
+          <MissionHeatmapWidget />
       </div>
     </div>
   );
+}
+
+function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
+    return (
+        <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
+            <div className="flex items-center gap-4">
+                <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}>
+                    <Icon className="size-5" />
+                </div>
+                <div className="min-w-0">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
+                    <h3 className="text-xl font-black tracking-tight text-slate-900 truncate">{value}</h3>
+                </div>
+            </div>
+        </Card>
+    );
 }
