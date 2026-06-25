@@ -11,6 +11,9 @@ import { WorkHoursSummaryWidget } from "@/components/geohrm/work-hours-summary-w
 import { MissionHeatmapWidget } from "@/components/geohrm/mission-heatmap-widget";
 import { ProfileBentoCard } from "@/components/geohrm/profile-bento-card";
 import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
+import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
+import { AnnouncementsWidget } from "@/components/geohrm/announcements-widget";
+import { EventsWidget } from "@/components/geohrm/events-widget";
 import { 
   AreaChart, Area, PieChart, Pie, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, 
@@ -192,10 +195,10 @@ export default function DashboardPage() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-6 pt-8 animate-fade-in-up">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none">
+          <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none text-left">
             Good Morning, {currentUserData?.firstName || 'Executive'} 👋
           </h1>
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Founder & CEO, Cognithorz</p>
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest text-left">Founder & CEO, Cognithorz</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex flex-wrap items-center bg-white rounded-none ring-1 ring-slate-200 p-1 shadow-sm h-auto md:h-12 min-h-12">
@@ -247,7 +250,7 @@ export default function DashboardPage() {
             )}
             
             <div className="w-px h-6 bg-slate-200 mx-1 hidden md:block" />
-            <div className="px-4 text-[10px] font-black uppercase text-slate-900 truncate max-w-[200px]">
+            <div className="px-4 text-[10px] font-black uppercase text-slate-900 truncate max-w-[200px] text-left">
                 {dateFilter.replace('-', ' ')}
             </div>
           </div>
@@ -263,15 +266,15 @@ export default function DashboardPage() {
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0 rounded-none border-none shadow-3xl" align="end" sideOffset={12}>
                 <div className="p-6 border-b bg-white">
-                    <h4 className="text-lg font-black uppercase tracking-tighter text-primary">Notifications</h4>
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Latest Updates</p>
+                    <h4 className="text-lg font-black uppercase tracking-tighter text-primary text-left">Notifications</h4>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 text-left">Latest Updates</p>
                 </div>
                 <ScrollArea className="max-h-[400px]">
                     <div className="p-4 space-y-2">
                         {totalNotifications === 0 ? (
                             <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
                                 <CheckCircle2 className="size-10 mb-2" />
-                                <p className="font-bold uppercase text-[10px] tracking-widest">No alerts</p>
+                                <p className="font-bold uppercase text-[10px] tracking-widest text-center">No alerts</p>
                             </div>
                         ) : (
                             <>
@@ -282,7 +285,7 @@ export default function DashboardPage() {
                                         className="flex items-center gap-3 p-3 bg-sky-50 hover:bg-sky-100 transition-all border border-sky-100 group"
                                     >
                                         <div className="size-8 bg-sky-500 text-white flex items-center justify-center rounded-none"><Briefcase className="size-4"/></div>
-                                        <div className="flex-1 min-w-0">
+                                        <div className="flex-1 min-w-0 text-left">
                                             <p className="text-[10px] font-bold uppercase text-sky-700">Leave Request</p>
                                             <p className="text-xs font-black truncate text-sky-900">{req.employeeName}</p>
                                         </div>
@@ -294,7 +297,7 @@ export default function DashboardPage() {
                                         className="flex items-center gap-3 p-3 bg-amber-50 hover:bg-amber-100 transition-all border border-amber-100 group"
                                     >
                                         <div className="size-8 bg-amber-500 text-white flex items-center justify-center rounded-none"><PartyPopper className="size-4"/></div>
-                                        <div className="flex-1 min-w-0">
+                                        <div className="flex-1 min-w-0 text-left">
                                             <p className="text-[10px] font-bold uppercase text-amber-700">Events Today</p>
                                             <p className="text-xs font-black truncate text-amber-900">{todaysEventsCount} celebrations</p>
                                         </div>
@@ -307,7 +310,7 @@ export default function DashboardPage() {
                                         className="flex items-center gap-3 p-3 bg-rose-50 hover:bg-rose-100 transition-all border border-rose-100 group"
                                     >
                                         <div className="size-8 bg-rose-500 text-white flex items-center justify-center rounded-none"><AlertCircle className="size-4"/></div>
-                                        <div className="flex-1 min-w-0">
+                                        <div className="flex-1 min-w-0 text-left">
                                             <p className="text-[10px] font-bold uppercase text-rose-700">Support Ticket</p>
                                             <p className="text-xs font-black truncate text-rose-900">{issue.title}</p>
                                         </div>
@@ -336,7 +339,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         {kpiData.map((kpi, i) => (
           <Card key={i} className="border-none shadow-sm rounded-none bg-white group hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
-            <CardContent className="p-6 flex flex-col gap-4">
+            <CardContent className="p-6 flex flex-col gap-4 text-left">
               <div className="flex items-center justify-between">
                 <div className={cn("p-3 rounded-none shadow-sm", kpi.bg, kpi.color)}>
                   <kpi.icon className="size-5" />
@@ -365,10 +368,15 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Row 2: Tactical Intelligence Visuals */}
+      {/* Row 2: Daily Monitor (Operational Presence) */}
+      <div className="px-6 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+          <DailyMonitorWidget />
+      </div>
+
+      {/* Row 3: Tactical Intelligence Visuals */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
         <Card className="lg:col-span-2 border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
-          <CardHeader className="p-8 pb-0 flex flex-row items-center justify-between">
+          <CardHeader className="p-8 pb-0 flex flex-row items-center justify-between text-left">
             <div className="space-y-1 text-left">
               <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Growth Velocity</CardTitle>
               <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-tight">Financial trend audit</CardDescription>
@@ -419,7 +427,7 @@ export default function DashboardPage() {
             <div className="w-full space-y-3">
               {['Technical', 'Marketing', 'CSR'].map((unit, i) => (
                 <div key={i} className="flex items-center justify-between text-[10px] font-black uppercase">
-                  <div className="flex items-center gap-3"><div className="size-2 rounded-full" style={{ backgroundColor: ['#6D28D9', '#3B82F6', '#22C55E'][i] }} /> <span className="text-slate-600">{unit}</span></div>
+                  <div className="flex items-center gap-3 text-left"><div className="size-2 rounded-full" style={{ backgroundColor: ['#6D28D9', '#3B82F6', '#22C55E'][i] }} /> <span className="text-slate-600">{unit}</span></div>
                   <span className="text-slate-900">Verified Audit</span>
                 </div>
               ))}
@@ -427,9 +435,18 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <ActionItemsWidget />
+        <div className="flex flex-col gap-6">
+            <ActionItemsWidget />
+        </div>
       </div>
 
+      {/* Row 4: Communication (Announcements & Events) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '250ms' }}>
+          <AnnouncementsWidget />
+          <EventsWidget />
+      </div>
+
+      {/* Row 5: Task Management & Performance */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <TodoWidget />
           <WorkHoursSummaryWidget />
@@ -437,20 +454,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-}
-
-function MetricCard({ label, value, sub, icon: Icon, color, bg }: any) {
-    return (
-        <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
-            <div className="flex items-center gap-4">
-                <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}>
-                    <Icon className="size-5" />
-                </div>
-                <div className="min-w-0">
-                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
-                    <h3 className="text-xl font-black tracking-tight text-slate-900 truncate">{value}</h3>
-                </div>
-            </div>
-        </Card>
-    );
 }
