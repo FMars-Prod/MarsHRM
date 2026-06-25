@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths, isToday, addDays, isBefore } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths, isToday, addDays, isBefore, isSameDay } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -121,7 +121,7 @@ export default function DashboardPage() {
   const { data: openIssues } = useCollection<any>(issuesQuery);
 
   // --- NOTIFICATION CALCULATIONS ---
-  const unreadAnnouncementsCount = announcements?.length || 0; // Simplified for MVP
+  const unreadAnnouncementsCount = announcements?.length || 0; 
   const todaysEventsCount = events?.filter((e: any) => e.date && isToday(e.date.toDate())).length || 0;
   const totalNotifications = (leaveRequests?.length || 0) + unreadAnnouncementsCount + todaysEventsCount + (openIssues?.length || 0);
 
@@ -209,17 +209,17 @@ export default function DashboardPage() {
                 <SelectContent className="rounded-none">
                     <SelectGroup>
                         <SelectLabel className="text-[9px] font-black uppercase opacity-40">Tactical Range</SelectLabel>
-                        <SelectItem value="today" className="text-[10px] font-bold uppercase">Today</SelectItem>
-                        <SelectItem value="yesterday" className="text-[10px] font-bold uppercase">Yesterday</SelectItem>
-                        <SelectItem value="this-week" className="text-[10px] font-bold uppercase">This Week</SelectItem>
-                        <SelectItem value="prev-week" className="text-[10px] font-bold uppercase">Prev Week</SelectItem>
-                        <SelectItem value="this-month" className="text-[10px] font-bold uppercase">This Month</SelectItem>
-                        <SelectItem value="prev-month" className="text-[10px] font-bold uppercase">Prev Month</SelectItem>
+                        <SelectItem value="today" className="text-xs font-bold uppercase">Today</SelectItem>
+                        <SelectItem value="yesterday" className="text-xs font-bold uppercase">Yesterday</SelectItem>
+                        <SelectItem value="this-week" className="text-xs font-bold uppercase">This Week</SelectItem>
+                        <SelectItem value="prev-week" className="text-xs font-bold uppercase">Prev Week</SelectItem>
+                        <SelectItem value="this-month" className="text-xs font-bold uppercase">This Month</SelectItem>
+                        <SelectItem value="prev-month" className="text-xs font-bold uppercase">Prev Month</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
                         <SelectLabel className="text-[9px] font-black uppercase opacity-40">Custom Range</SelectLabel>
-                        <SelectItem value="custom-date" className="text-[10px] font-bold uppercase">Specific Date</SelectItem>
-                        <SelectItem value="custom-range" className="text-[10px] font-bold uppercase">Select Range</SelectItem>
+                        <SelectItem value="custom-date" className="text-xs font-bold uppercase">Specific Date</SelectItem>
+                        <SelectItem value="custom-range" className="text-xs font-bold uppercase">Select Range</SelectItem>
                     </SelectGroup>
                 </SelectContent>
             </Select>
@@ -254,24 +254,24 @@ export default function DashboardPage() {
           
           <Popover>
             <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="rounded-none h-12 w-12 relative bg-white border-slate-200 hover:border-primary transition-colors">
+                <button className="rounded-none h-12 w-12 flex items-center justify-center relative bg-white ring-1 ring-slate-200 hover:ring-primary transition-all">
                     <Bell className="size-6 text-slate-600" />
                     {totalNotifications > 0 && (
                         <span className="absolute top-3 right-3 size-2.5 bg-rose-500 rounded-full ring-2 ring-white" />
                     )}
-                </Button>
+                </button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0 rounded-none border-none shadow-3xl" align="end" sideOffset={12}>
                 <div className="p-6 border-b bg-white">
-                    <h4 className="text-lg font-black uppercase tracking-tighter text-primary">Mission Signals</h4>
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Verified Updates</p>
+                    <h4 className="text-lg font-black uppercase tracking-tighter text-primary">Notifications</h4>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Latest Updates</p>
                 </div>
                 <ScrollArea className="max-h-[400px]">
                     <div className="p-4 space-y-2">
                         {totalNotifications === 0 ? (
                             <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
                                 <CheckCircle2 className="size-10 mb-2" />
-                                <p className="font-bold uppercase text-[10px] tracking-widest">Grid Clear</p>
+                                <p className="font-bold uppercase text-[10px] tracking-widest">No alerts</p>
                             </div>
                         ) : (
                             <>
@@ -319,7 +319,7 @@ export default function DashboardPage() {
                 </ScrollArea>
                 <div className="p-4 border-t bg-muted/10">
                     <Button variant="ghost" className="w-full rounded-none h-10 text-[9px] font-black uppercase text-muted-foreground hover:text-primary transition-colors" asChild>
-                        <Link href="/dashboard/monitor">Launch Global Monitor</Link>
+                        <Link href="/dashboard/monitor">Go to Monitor</Link>
                     </Button>
                 </div>
             </PopoverContent>
@@ -367,7 +367,6 @@ export default function DashboardPage() {
 
       {/* Row 2: Tactical Intelligence Visuals */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-        {/* Placeholder charts for fidelity - in real usage these would be computed from collectionGroup queries */}
         <Card className="lg:col-span-2 border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
           <CardHeader className="p-8 pb-0 flex flex-row items-center justify-between">
             <div className="space-y-1 text-left">
@@ -398,7 +397,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Business Unit Distribution */}
         <Card className="border-none shadow-sm rounded-none bg-white flex flex-col">
           <CardHeader className="p-8 pb-0 text-left">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue by BU</CardTitle>
