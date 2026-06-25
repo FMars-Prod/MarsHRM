@@ -21,16 +21,18 @@ import {
   ArrowUpRight, ArrowDownRight, Bell, Calendar,
   Target, MousePointer2, 
   BarChart3, LayoutGrid, CheckCircle2, AlertCircle, Clock, Plus,
-  PhoneCall, ShieldCheck, ChevronRight, FileText, Settings, UserPlus, Building2
+  PhoneCall, ShieldCheck, ChevronRight, FileText, Settings, UserPlus, Building2, Filter
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 // --- DATA DEFINITIONS ---
 const kpiData = [
@@ -99,11 +101,61 @@ export default function DashboardPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
 
+  const [dateFilter, setDateFilter] = React.useState<string>("this-week");
+  const [customStartDate, setCustomStartDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [customEndDate, setCustomEndDate] = React.useState<string>(format(new Date(), 'yyyy-MM-dd'));
+
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   
   const userRole = currentUserData?.role;
   const isExecutive = userRole === 'CEO/Admin' || userRole === 'CEO/MD';
+
+  const dateRange = React.useMemo(() => {
+    const now = new Date();
+    let start: Date;
+    let end: Date = endOfDay(now);
+
+    switch (dateFilter) {
+        case 'today':
+            start = startOfDay(now);
+            end = endOfDay(now);
+            break;
+        case 'yesterday':
+            start = startOfDay(subDays(now, 1));
+            end = endOfDay(subDays(now, 1));
+            break;
+        case 'this-week':
+            start = startOfWeek(now, { weekStartsOn: 1 });
+            end = endOfDay(now);
+            break;
+        case 'prev-week':
+            start = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+            end = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+            break;
+        case 'this-month':
+            start = startOfMonth(now);
+            end = endOfDay(now);
+            break;
+        case 'prev-month':
+            start = startOfMonth(subMonths(now, 1));
+            end = endOfMonth(subMonths(now, 1));
+            break;
+        case 'custom-date':
+            start = startOfDay(new Date(customStartDate));
+            end = endOfDay(new Date(customStartDate));
+            break;
+        case 'custom-range':
+            start = startOfDay(new Date(customStartDate));
+            end = endOfDay(new Date(customEndDate));
+            break;
+        default:
+            start = startOfWeek(now, { weekStartsOn: 1 });
+            end = endOfDay(now);
+            break;
+    }
+    return { start, end };
+  }, [dateFilter, customStartDate, customEndDate]);
 
   if (!isExecutive) {
     return (
@@ -134,9 +186,9 @@ export default function DashboardPage() {
 
   // --- ENTERPRISE EXECUTIVE DASHBOARD ---
   return (
-    <div className="min-h-screen space-y-8 pb-20 font-jakarta bg-[#F8FAFC]">
+    <div className="min-h-screen space-y-8 pb-20 font-jakarta bg-gradient-to-br from-purple-500/5 via-[#F8FAFC] to-indigo-500/5">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-1 animate-fade-in-up">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 px-6 pt-8 animate-fade-in-up">
         <div className="space-y-1">
           <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none">
             Good Morning, {currentUserData?.firstName || 'Executive'} 👋
@@ -144,25 +196,74 @@ export default function DashboardPage() {
           <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Founder & CEO, Cognithorz</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center bg-white rounded-none ring-1 ring-slate-200 p-1 shadow-sm h-12">
-            <Button variant="ghost" size="sm" className="h-10 rounded-none px-6 text-[11px] font-black uppercase text-slate-500">2 Jun – 8 Jun 2025</Button>
-            <div className="w-px h-6 bg-slate-200 mx-1" />
-            <Button variant="ghost" size="sm" className="h-10 rounded-none px-6 text-[11px] font-black uppercase bg-slate-50 text-slate-900 shadow-inner">This Week</Button>
+          <div className="flex flex-wrap items-center bg-white rounded-none ring-1 ring-slate-200 p-1 shadow-sm h-auto md:h-12 min-h-12">
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-[160px] h-10 border-none ring-0 focus:ring-0 rounded-none bg-transparent font-black uppercase text-[10px] tracking-widest text-slate-500">
+                    <div className="flex items-center gap-2">
+                        <Filter className="size-3 opacity-50" />
+                        <SelectValue placeholder="Tactical Range" />
+                    </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                    <SelectGroup>
+                        <SelectLabel className="text-[9px] font-black uppercase opacity-40">Tactical Range</SelectLabel>
+                        <SelectItem value="today" className="text-[10px] font-bold uppercase">Today</SelectItem>
+                        <SelectItem value="yesterday" className="text-[10px] font-bold uppercase">Yesterday</SelectItem>
+                        <SelectItem value="this-week" className="text-[10px] font-bold uppercase">This Week</SelectItem>
+                        <SelectItem value="prev-week" className="text-[10px] font-bold uppercase">Prev Week</SelectItem>
+                        <SelectItem value="this-month" className="text-[10px] font-bold uppercase">This Month</SelectItem>
+                        <SelectItem value="prev-month" className="text-[10px] font-bold uppercase">Prev Month</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                        <SelectLabel className="text-[9px] font-black uppercase opacity-40">Custom Range</SelectLabel>
+                        <SelectItem value="custom-date" className="text-[10px] font-bold uppercase">Specific Date</SelectItem>
+                        <SelectItem value="custom-range" className="text-[10px] font-bold uppercase">Select Range</SelectItem>
+                    </SelectGroup>
+                </SelectContent>
+            </Select>
+
+            {(dateFilter === 'custom-date' || dateFilter === 'custom-range') && (
+                <div className="flex gap-1 items-center px-2 animate-fade-in-up">
+                    <Input 
+                        type="date" 
+                        value={customStartDate} 
+                        onChange={e => setCustomStartDate(e.target.value)} 
+                        className="h-8 rounded-none w-28 text-[9px] font-black bg-muted/20 border-none ring-1 ring-border" 
+                    />
+                    {dateFilter === 'custom-range' && (
+                        <>
+                            <span className="text-[8px] font-black uppercase opacity-20">to</span>
+                            <Input 
+                                type="date" 
+                                value={customEndDate} 
+                                onChange={e => setCustomEndDate(e.target.value)} 
+                                className="h-8 rounded-none w-28 text-[9px] font-black bg-muted/20 border-none ring-1 ring-border" 
+                            />
+                        </>
+                    )}
+                </div>
+            )}
+            
+            <div className="w-px h-6 bg-slate-200 mx-1 hidden md:block" />
+            <div className="px-4 text-[10px] font-black uppercase text-slate-900 truncate max-w-[200px]">
+                {dateFilter.replace('-', ' ')}
+            </div>
           </div>
           <Button variant="outline" size="icon" className="rounded-none h-12 w-12 relative bg-white border-slate-200 hover:border-primary transition-colors">
             <Bell className="size-6 text-slate-600" />
+            {/* Hardcoded notification dot for visual fidelity */}
             <span className="absolute top-3 right-3 size-2.5 bg-rose-500 rounded-full ring-2 ring-white" />
           </Button>
         </div>
       </div>
 
-      {/* Row 0: Attendance Protocol (Kept for all tiers) */}
-      <div className="w-full animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+      {/* Row 0: Attendance Protocol */}
+      <div className="w-full px-6 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
           <AttendanceWidget />
       </div>
 
       {/* Row 1: KPI Matrix */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         {kpiData.map((kpi, i) => (
           <Card key={i} className="border-none shadow-sm rounded-none bg-white group hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
             <CardContent className="p-6 flex flex-col gap-4">
@@ -175,7 +276,7 @@ export default function DashboardPage() {
                   {kpi.trend}
                 </div>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 text-left">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{kpi.name}</p>
                 <div className="flex items-baseline gap-2">
                     <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{kpi.value}</h3>
@@ -195,13 +296,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 2: Visual Intelligence */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
         {/* Revenue Trend */}
         <Card className="lg:col-span-2 border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
           <CardHeader className="p-8 pb-0 flex flex-row items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue Trend (This Week)</CardTitle>
-              <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-tight">Financial velocity audit</CardDescription>
+            <div className="space-y-1 text-left">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue Trend</CardTitle>
+              <CardDescription className="text-[10px] font-bold uppercase opacity-40 tracking-tight">Verified on {format(new Date(), 'PP')}</CardDescription>
             </div>
             <div className="flex gap-6">
                <div className="flex items-center gap-2"><div className="size-2.5 rounded-full bg-primary" /><span className="text-[10px] font-black uppercase text-slate-600">Current</span></div>
@@ -230,18 +331,18 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
             <div className="mt-8 p-6 bg-slate-50 rounded-none flex items-center justify-between ring-1 ring-slate-100">
-                <div className="flex gap-10">
-                    <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">This Week</p><p className="text-lg font-black text-slate-900">₹18.45L</p></div>
-                    <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Last Week</p><p className="text-lg font-black text-slate-900">₹15.08L</p></div>
+                <div className="flex gap-10 text-left">
+                    <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Target Period</p><p className="text-lg font-black text-slate-900">₹18.45L</p></div>
+                    <div><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Previous Audit</p><p className="text-lg font-black text-slate-900">₹15.08L</p></div>
                 </div>
-                <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[10px] uppercase px-4 h-8">+22.4% Growth</Badge>
+                <Badge className="bg-emerald-50 text-emerald-700 border-none rounded-none font-black text-[10px] uppercase px-4 h-8">+22.4% Growth</Badge>
             </div>
           </CardContent>
         </Card>
 
         {/* Revenue by BU */}
         <Card className="border-none shadow-sm rounded-none bg-white flex flex-col">
-          <CardHeader className="p-8 pb-0">
+          <CardHeader className="p-8 pb-0 text-left">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue by BU</CardTitle>
           </CardHeader>
           <CardContent className="p-8 flex flex-col items-center justify-center gap-8">
@@ -272,7 +373,7 @@ export default function DashboardPage() {
 
         {/* Project Health & Alerts */}
         <div className="flex flex-col gap-6">
-            <Card className="flex-1 border-none shadow-sm rounded-none bg-white p-6 flex flex-col justify-center">
+            <Card className="flex-1 border-none shadow-sm rounded-none bg-white p-6 flex flex-col justify-center text-left">
                 <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-800 mb-6">Mission Health</CardTitle>
                 <div className="flex items-center gap-6">
                     <div className="relative size-24 shrink-0">
@@ -299,10 +400,10 @@ export default function DashboardPage() {
                 <Button variant="link" className="h-8 p-0 text-[10px] font-black uppercase text-primary mt-4 self-end group" asChild><Link href="/dashboard/projects">View Projects <ChevronRight className="size-3 ml-1 group-hover:translate-x-1 transition-transform"/></Link></Button>
             </Card>
 
-            <Card className="flex-[1.5] border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
+            <Card className="flex-[1.5] border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
                 <div className="p-4 border-b border-slate-50 flex items-center justify-between">
                     <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-800">Critical Signals</CardTitle>
-                    <Badge className="bg-rose-500 text-white border-none text-[10px] font-black h-5 px-2.5 shadow-lg shadow-rose-500/20">{alerts.length}</Badge>
+                    <Badge className="bg-rose-500 text-white border-none rounded-none text-[10px] font-black h-5 px-2.5 shadow-lg shadow-rose-500/20">{alerts.length}</Badge>
                 </div>
                 <ScrollArea className="flex-1 max-h-[160px]">
                     <div className="p-3 space-y-2">
@@ -319,16 +420,16 @@ export default function DashboardPage() {
                     </div>
                 </ScrollArea>
                 <div className="p-3 pt-0">
-                    <Button variant="ghost" className="w-full h-9 text-[10px] font-black uppercase text-slate-400 hover:text-primary transition-colors">Audit All Signals</Button>
+                    <Button variant="ghost" className="w-full h-9 rounded-none text-[10px] font-black uppercase text-slate-400 hover:text-primary transition-colors">Audit All Signals</Button>
                 </div>
             </Card>
         </div>
       </div>
 
       {/* Row 3: Tactical Progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
         {/* Sales Funnel */}
-        <Card className="border-none shadow-sm rounded-none bg-white p-8 flex flex-col">
+        <Card className="border-none shadow-sm rounded-none bg-white p-8 flex flex-col text-left">
           <div className="flex items-center justify-between mb-8">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Sales Funnel</CardTitle>
             <div className="text-right"><p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Conversion</p><p className="text-lg font-black text-primary">12.28%</p></div>
@@ -349,7 +450,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Marketing Performance */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
             <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Marketing ROI</CardTitle>
             </CardHeader>
@@ -377,13 +478,13 @@ export default function DashboardPage() {
         </Card>
 
         {/* Team Overview */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
             <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Fleet Deployment</CardTitle>
             </CardHeader>
             <CardContent className="p-8 pt-0 space-y-6">
                 <div className="flex justify-between items-center bg-primary/5 p-6 rounded-none ring-1 ring-primary/10">
-                    <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Staff</p><div className="flex items-center gap-3 mt-1"><p className="text-4xl font-black text-primary tracking-tighter">84</p><Badge className="bg-emerald-100 text-emerald-700 border-none text-[10px] font-black shadow-sm">+2</Badge></div></div>
+                    <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Staff</p><div className="flex items-center gap-3 mt-1"><p className="text-4xl font-black text-primary tracking-tighter">84</p><Badge className="bg-emerald-100 text-emerald-700 border-none rounded-none text-[10px] font-black shadow-sm">+2</Badge></div></div>
                     <div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Attendance</p><p className="text-2xl font-black text-slate-800 mt-1">71 <span className="text-sm text-slate-400 font-bold ml-1">(84%)</span></p></div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
@@ -405,7 +506,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Weekly Goals */}
-        <Card className="border-none shadow-sm rounded-none bg-white p-8 flex flex-col gap-6">
+        <Card className="border-none shadow-sm rounded-none bg-white p-8 flex flex-col gap-6 text-left">
           <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Mission Benchmarks</CardTitle>
           <div className="flex-1 flex flex-col gap-6 justify-center">
             {[
@@ -428,9 +529,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 4: Financial & Tactical */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
         {/* Financial Snapshot */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
             <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Financial Ledger</CardTitle></div>
             <CardContent className="p-6 grid grid-cols-2 gap-4">
                 {[
@@ -449,7 +550,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Top Clients */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
             <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Principal Contributors</CardTitle></div>
             <ScrollArea className="h-[280px]">
                 <div className="p-6 space-y-6">
@@ -467,7 +568,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Activities */}
-        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden">
+        <Card className="border-none shadow-sm rounded-none bg-white flex flex-col overflow-hidden text-left">
             <div className="p-6 border-b border-slate-50"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Operational Log</CardTitle></div>
             <ScrollArea className="h-[280px]">
                 <div className="p-6 space-y-8">
