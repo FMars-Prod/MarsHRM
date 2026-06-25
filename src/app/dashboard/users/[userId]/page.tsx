@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -148,12 +149,11 @@ const TechnicalAuditDetail = ({ report }: { report: any }) => (
 );
 
 export default function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
+  const { userId } = use(params);
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
   const { toast } = useToast();
   const router = useRouter();
-  const resolvedParams = use(params);
-  const userId = resolvedParams.userId;
   
   const [userReports, setUserReports] = React.useState<any[]>([]);
   const [isReportsLoading, setIsReportsLoading] = React.useState(false);
@@ -729,7 +729,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ userId: 
                             </CardHeader>
                             <CardContent className="pt-6 space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-left"><p className="text-[9px] font-bold text-muted-foreground uppercase">Target Meets</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div>
+                                    <div className="text-left"><p className="text-[9px] font-bold text-muted-foreground uppercase">Meetings Tomorrow</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div>
                                     <div className="text-left"><p className="text-[9px] font-bold text-muted-foreground uppercase">Priority Trigger</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div>
                                 </div>
                                 <div className="p-4 bg-muted/10 border-l-4 border-primary text-left">

@@ -24,7 +24,9 @@ import {
   Target, MousePointer2, 
   BarChart3, LayoutGrid, CheckCircle2, AlertCircle, Clock, Plus,
   PhoneCall, ShieldCheck, ChevronRight, FileText, Settings, UserPlus, Building2, Filter,
-  Megaphone, PartyPopper, Info, History, ArrowRight, Share2, MoreHorizontal
+  Megaphone, PartyPopper, Info, History, ArrowRight, Share2, MoreHorizontal,
+  TrendingDown,
+  Activity
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,10 +74,10 @@ const salesFunnelData = [
 ];
 
 const topClientsData = [
-  { name: 'ABC Corporation', value: 325000 },
-  { name: 'TechNova Solutions', value: 275000 },
-  { name: 'Global Retail Ltd.', value: 210000 },
-  { name: 'EduSmart Technologies', value: 185000 },
+  { name: 'ABC Corp', value: 325000 },
+  { name: 'TechNova', value: 275000 },
+  { name: 'Global Retail', value: 210000 },
+  { name: 'EduSmart', value: 185000 },
   { name: 'Future Labs', value: 160000 },
 ];
 
@@ -121,7 +123,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen space-y-6 pb-20 font-jakarta bg-gradient-to-br from-purple-500/5 via-[#F8FAFC] to-indigo-500/5 px-4 md:px-8">
+    <div className="min-h-screen space-y-6 pb-20 font-jakarta bg-gradient-to-br from-primary/5 via-[#F8FAFC] to-indigo-500/5 px-4 md:px-8">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pt-8 animate-fade-in-up">
         <div className="space-y-1">
@@ -147,6 +149,7 @@ export default function DashboardPage() {
                         <SelectItem value="this-week" className="text-xs font-bold uppercase">This Week</SelectItem>
                         <SelectItem value="prev-week" className="text-xs font-bold uppercase">Prev Week</SelectItem>
                         <SelectItem value="this-month" className="text-xs font-bold uppercase">This Month</SelectItem>
+                        <SelectItem value="prev-month" className="text-xs font-bold uppercase">Prev Month</SelectItem>
                     </SelectGroup>
                 </SelectContent>
             </Select>
@@ -166,7 +169,14 @@ export default function DashboardPage() {
         <KPICard title="Team Utilization" value="84%" trend="↑ 6.3%" color="text-indigo-600" bg="bg-indigo-50" sparkline={[75, 78, 80, 82, 81, 84, 84]} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* OPERATIONAL HUB */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in-up">
+        <div className="lg:col-span-12">
+            <DailyMonitorWidget />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in-up">
         {/* REVENUE TREND */}
         <Card className="lg:col-span-8 border-none shadow-sm rounded-none bg-white overflow-hidden">
           <CardHeader className="p-6 border-b flex flex-row items-center justify-between bg-muted/5">
@@ -243,11 +253,11 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
         {/* REVENUE BY BUSINESS UNIT */}
         <Card className="border-none shadow-sm rounded-none bg-white">
           <CardHeader className="p-6 border-b bg-muted/5">
-            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue by Business Unit (This Week)</CardTitle>
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Revenue by BU</CardTitle>
           </CardHeader>
           <CardContent className="p-6 flex flex-col items-center">
             <div className="size-56 relative">
@@ -312,7 +322,7 @@ export default function DashboardPage() {
         {/* SALES FUNNEL */}
         <Card className="border-none shadow-sm rounded-none bg-white">
           <CardHeader className="p-6 border-b bg-muted/5">
-            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Sales Funnel (This Week)</CardTitle>
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Sales Funnel</CardTitle>
           </CardHeader>
           <CardContent className="p-6 flex flex-col items-center justify-center">
             <div className="h-[300px] w-full">
@@ -332,11 +342,12 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* STRATEGIC SNAPSOT ROW */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
         {/* MARKETING PERFORMANCE */}
         <Card className="border-none shadow-sm rounded-none bg-white">
           <CardHeader className="p-6 border-b bg-muted/5">
-            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Marketing Performance (This Week)</CardTitle>
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Marketing Performance</CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <div className="space-y-4">
@@ -355,13 +366,6 @@ export default function DashboardPage() {
                 <p className="text-lg font-black">4.35x</p>
               </div>
             </div>
-            <div className="p-4 bg-primary/5 border border-primary/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Badge className="bg-primary text-white text-[7px] font-black uppercase rounded-none">TOP CAMPAIGN</Badge>
-                <span className="text-[10px] font-black uppercase">Google Ads</span>
-              </div>
-              <span className="text-[10px] font-black text-primary">68 Leads</span>
-            </div>
             <Button variant="outline" className="w-full rounded-none h-10 text-[9px] font-black uppercase text-muted-foreground hover:text-primary" asChild>
               <Link href="/dashboard/marketing">View Marketing Dashboard →</Link>
             </Button>
@@ -371,7 +375,7 @@ export default function DashboardPage() {
         {/* TEAM OVERVIEW */}
         <Card className="border-none shadow-sm rounded-none bg-white">
           <CardHeader className="p-6 border-b bg-muted/5">
-            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Team Overview (This Week)</CardTitle>
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Team Overview</CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <div className="grid grid-cols-3 gap-3">
@@ -408,11 +412,11 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
         {/* FINANCIAL SNAPSHOT */}
         <Card className="border-none shadow-sm rounded-none bg-slate-900 text-white">
           <CardHeader className="p-6 border-b border-white/10">
-            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">Financial Snapshot (This Week)</CardTitle>
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">Financial Snapshot</CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-8">
             <div className="grid grid-cols-2 gap-x-8 gap-y-10">
@@ -430,7 +434,7 @@ export default function DashboardPage() {
         {/* TOP CLIENTS BY REVENUE */}
         <Card className="border-none shadow-sm rounded-none bg-white">
           <CardHeader className="p-6 border-b bg-muted/5">
-            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Top Clients by Revenue (This Week)</CardTitle>
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-800">Top Clients</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <div className="h-[240px] w-full">
@@ -458,10 +462,10 @@ export default function DashboardPage() {
             <ScrollArea className="h-[280px]">
               <div className="divide-y">
                 {[
-                  { t: 'New project "Mobile App Development" created', b: 'by John Doe', time: '30m ago', icon: Briefcase },
-                  { t: 'Payment of ₹2,45,000 received from ABC Corp', b: 'by Finance Team', time: '1h ago', icon: DollarSign },
-                  { t: 'New employee Sarah Johnson joined', b: 'Digital Marketing team', time: '2h ago', icon: UserPlus },
-                  { t: 'Facebook Ads campaign "Summer Offer" launched', b: 'by Marketing Team', time: '3h ago', icon: Zap },
+                  { t: 'Project "Mobile App" created', b: 'by John Doe', time: '30m ago', icon: Briefcase },
+                  { t: 'Payment of ₹2.45L received', b: 'by Finance Team', time: '1h ago', icon: DollarSign },
+                  { t: 'New member Sarah joined', b: 'Digital Marketing', time: '2h ago', icon: UserPlus },
+                  { t: 'Facebook Ads campaign launched', b: 'by Marketing Team', time: '3h ago', icon: Zap },
                 ].map((act, i) => (
                   <div key={i} className="p-4 flex items-start gap-4">
                     <div className="p-2 rounded-none bg-muted/20 text-slate-500"><act.icon className="size-4" /></div>
@@ -483,7 +487,7 @@ export default function DashboardPage() {
       </div>
 
       {/* QUICK ACTIONS */}
-      <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden">
+      <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden animate-fade-in-up">
         <CardHeader className="p-6 border-b bg-primary/5">
           <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">Quick Actions</CardTitle>
         </CardHeader>
@@ -554,23 +558,4 @@ function ActionButton({ icon: Icon, label, href }: { icon: any, label: string, h
       </Link>
     </Button>
   );
-}
-
-function MetricStat({ label, val, color }: any) {
-    return <div className="text-center"><p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-tighter">{label}</p><p className={cn("text-xs font-black", color)}>{val}</p></div>;
-}
-
-function TimelineItem({ icon: Icon, title, time, desc, color, onClick }: any) {
-    return (
-        <div className="flex gap-4 items-start relative group cursor-pointer" onClick={onClick}>
-            <div className={cn("h-8 w-8 rounded-none flex items-center justify-center shrink-0 z-10 shadow-sm", color)}><Icon className="size-4" /></div>
-            <div className="space-y-1 flex-1 pt-0.5">
-                <p className="font-black text-sm uppercase tracking-tight leading-none group-hover:text-primary transition-colors">{title}</p>
-                <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">{time}</span>
-                    <Badge variant="outline" className="h-4 px-2 text-[8px] font-black uppercase border-none bg-muted/40 tracking-widest rounded-none">{desc}</Badge>
-                </div>
-            </div>
-        </div>
-    );
 }
