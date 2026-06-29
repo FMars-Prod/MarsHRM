@@ -11,13 +11,13 @@ import {
 } from '@/components/ui/sidebar';
 import { MainNav } from '@/components/geohrm/main-nav';
 import { UserNav } from '@/components/geohrm/user-nav';
-import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert, ListTodo, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert, ListTodo, CheckCircle2, AlertCircle, Clock, CheckCircle } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { doc, collection, query, where, Timestamp, getDocs, or } from 'firebase/firestore';
-import { format, isToday, startOfDay, endOfDay, isBefore, addDays } from 'date-fns';
+import { doc, collection, query, where, Timestamp, getDocs, or, and, orderBy, limit } from 'firebase/firestore';
+import { format, isToday, startOfDay, endOfDay, isBefore, addDays, subDays } from 'date-fns';
 import Image from 'next/image';
 import { AutomatedReportSender } from '@/components/geohrm/automated-report-sender';
 import { MeetingReminder } from '@/components/geohrm/meeting-reminder';
@@ -215,7 +215,29 @@ export default function DashboardLayout({
     return activeTodos.filter((t: any) => t.dueDate && isBefore(t.dueDate.toDate(), alertThreshold));
   }, [activeTodos]);
 
-  const totalNotifications = (leaveRequests?.length || 0) + unreadAnnouncements + todaysEventsCount + (locationRequests?.length || 0) + ticketUpdateCount + (attRequests?.length || 0) + taskReminders.length;
+  // NEW: Monitor tasks assigned by me that are now completed
+  const completedTasksQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+        collection(firestore, "todos"),
+        where("assignedBy", "==", user.uid),
+        where("completed", "==", true),
+        orderBy("completedAt", "desc"),
+        limit(10)
+    );
+  }, [firestore, user]);
+  const { data: completedTasks } = useCollection<any>(completedTasksQuery);
+
+  const teamCompletedTasks = useMemo(() => {
+    if (!completedTasks || !user) return [];
+    const threshold = subDays(new Date(), 2); // Show completions from last 48 hours
+    return completedTasks.filter((t: any) => 
+        t.assignedTo !== user.uid && 
+        t.completedAt && (t.completedAt.toDate ? t.completedAt.toDate() : new Date(t.completedAt)) > threshold
+    );
+  }, [completedTasks, user]);
+
+  const totalNotifications = (leaveRequests?.length || 0) + unreadAnnouncements + todaysEventsCount + (locationRequests?.length || 0) + ticketUpdateCount + (attRequests?.length || 0) + taskReminders.length + teamCompletedTasks.length;
 
   const filteredSearchLinks = useMemo(() => {
     return SEARCHABLE_LINKS.filter(link => 
@@ -374,8 +396,8 @@ export default function DashboardLayout({
                    </PopoverTrigger>
                    <PopoverContent className="w-80 p-0 rounded-none border-none shadow-2xl" align="end" sideOffset={12}>
                        <div className="p-6 border-b bg-white">
-                           <h4 className="text-lg font-black uppercase tracking-tighter text-primary">Notifications</h4>
-                           <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Action Required</p>
+                           <h4 className="text-lg font-black uppercase tracking-tighter text-primary text-left">Notifications</h4>
+                           <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 text-left">Latest Updates</p>
                        </div>
                        <ScrollArea className="max-h-[400px]">
                            <div className="p-4 space-y-2">
@@ -386,6 +408,27 @@ export default function DashboardLayout({
                                    </div>
                                ) : (
                                    <>
+                                       {teamCompletedTasks.map((todo: any) => {
+                                           const completedBy = allUsers?.find((u: any) => u.id === todo.assignedTo);
+                                           return (
+                                               <Link 
+                                                  href="/dashboard/todo" 
+                                                  key={todo.id}
+                                                  onClick={() => setIsNotificationsOpen(false)}
+                                                  className="flex items-center gap-3 p-3 bg-emerald-50 hover:bg-emerald-100 transition-all border border-emerald-100"
+                                               >
+                                                   <Avatar className="size-8 rounded-none border border-emerald-200">
+                                                        <AvatarImage src={completedBy?.avatar} className="object-cover" />
+                                                        <AvatarFallback className="bg-emerald-500 text-white text-[8px] font-black">{completedBy?.firstName?.[0]}</AvatarFallback>
+                                                   </Avatar>
+                                                   <div className="flex-1 min-w-0 text-left">
+                                                       <p className="text-[10px] font-black uppercase text-emerald-700">Task Completed</p>
+                                                       <p className="text-[11px] font-bold truncate leading-tight">{todo.task}</p>
+                                                       <p className="text-[9px] text-muted-foreground uppercase mt-0.5">By {todo.assignedToName} • {todo.completedAt ? format(todo.completedAt.toDate(), 'p, PP') : ''}</p>
+                                                   </div>
+                                               </Link>
+                                           );
+                                       })}
                                        {taskReminders.map((todo: any) => (
                                            <Link 
                                               href="/dashboard/todo" 
@@ -394,8 +437,8 @@ export default function DashboardLayout({
                                               className="flex items-center gap-3 p-3 bg-red-50 hover:bg-red-100 transition-all border border-red-100"
                                            >
                                                <div className="size-8 bg-red-500 text-white flex items-center justify-center rounded-none"><Clock className="size-4"/></div>
-                                               <div className="flex-1 min-w-0">
-                                                   <p className="text-[10px] font-bold uppercase text-red-700">Task Reminder</p>
+                                               <div className="flex-1 min-w-0 text-left">
+                                                   <p className="text-[10px] font-bold uppercase text-red-700 text-left">Task Reminder</p>
                                                    <p className="text-xs font-black truncate">{todo.task}</p>
                                                </div>
                                            </Link>
@@ -408,7 +451,7 @@ export default function DashboardLayout({
                                               className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group"
                                            >
                                                <div className="size-8 bg-sky-500 text-white flex items-center justify-center rounded-none"><Command className="size-4"/></div>
-                                               <div className="flex-1 min-w-0">
+                                               <div className="flex-1 min-w-0 text-left">
                                                    <p className="text-[10px] font-bold uppercase">Leave Request</p>
                                                    <p className="text-xs font-semibold truncate">{req.employeeName} submitted a request</p>
                                                </div>
@@ -465,7 +508,7 @@ export default function DashboardLayout({
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="rounded-none border-none shadow-2xl">
-                    <AlertDialogHeader>
+                    <AlertDialogHeader className="text-left">
                         <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
                             <ShieldAlert className="size-5" /> Log Out?
                         </AlertDialogTitle>
@@ -486,7 +529,7 @@ export default function DashboardLayout({
           <AutomatedReportSender />
         </header>
 
-        <main className="flex-1 p-4 md:p-8 overflow-x-hidden pointer-events-auto">
+        <main className="flex-1 p-4 md:p-8 overflow-x-hidden pointer-events-auto bg-gradient-to-br from-purple-500/5 via-[#F8FAFC] to-indigo-500/5">
           {children}
         </main>
         <footer className="border-t py-4 px-6 bg-white/50 backdrop-blur-sm pointer-events-auto">

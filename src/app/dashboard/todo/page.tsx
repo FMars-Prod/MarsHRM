@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, doc, where, Timestamp, or } from 'firebase/firestore';
-import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar as CalendarIcon, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle, Palette, LayoutGrid, ChevronRight, ChevronLeft, CalendarDays } from 'lucide-react';
+import { collection, query, orderBy, serverTimestamp, doc, where, Timestamp, or, and, limit } from 'firebase/firestore';
+import { Plus, Trash2, CheckCircle2, ListTodo, Clock, Calendar as CalendarIcon, User, AlertTriangle, Filter, Check, X, ShieldCheck, Eye, Info, CheckCircle, Palette, LayoutGrid, ChevronRight, ChevronLeft, CalendarDays, UserCheck, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isToday, isBefore, startOfDay, addDays, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
+import { format, isToday, isBefore, startOfDay, addDays, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, subDays } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type Todo = {
     id: string;
@@ -43,6 +44,7 @@ type UserData = {
     firstName: string;
     lastName: string;
     role: string;
+    avatar?: string;
 };
 
 const TASK_COLORS = [
@@ -89,7 +91,6 @@ export default function TodoPage() {
 
     const todosQuery = useMemoFirebase(() => {
         if (!user) return null;
-        // Query tasks assigned to me OR assigned by me
         return query(
             collection(firestore, 'todos'), 
             or(where('assignedTo', '==', user.uid), where('assignedBy', '==', user.uid)),
@@ -98,6 +99,26 @@ export default function TodoPage() {
     }, [user, firestore]);
 
     const { data: todos, isLoading } = useCollection<Todo>(todosQuery);
+
+    // Monitor team completions for the empty state
+    const recentCompletionsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(
+            collection(firestore, "todos"),
+            and(
+                where("assignedBy", "==", user.uid),
+                where("completed", "==", true)
+            ),
+            orderBy("completedAt", "desc"),
+            limit(5)
+        );
+    }, [firestore, user]);
+    const { data: recentTeamCompletions } = useCollection<Todo>(recentCompletionsQuery);
+
+    const teamActivity = React.useMemo(() => {
+        if (!recentTeamCompletions || !user) return [];
+        return recentTeamCompletions.filter(t => t.assignedTo !== user.uid);
+    }, [recentTeamCompletions, user]);
 
     const handleAddTask = (e: React.FormEvent) => {
         e.preventDefault();
@@ -236,12 +257,12 @@ export default function TodoPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent className="rounded-3xl">
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle className="font-black uppercase tracking-tighter">Clear Tasks?</AlertDialogTitle>
-                                    <AlertDialogDescription>Are you sure you want to remove {selectedIds.length} tasks from your list?</AlertDialogDescription>
+                                    <AlertDialogTitle className="font-black uppercase tracking-tighter text-left text-primary">Clear Tasks?</AlertDialogTitle>
+                                    <AlertDialogDescription className="text-left text-sm">Are you sure you want to remove {selectedIds.length} tasks from your list?</AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel className="rounded-full font-bold text-xs uppercase">Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => deleteTasks(selectedIds)} className="rounded-full font-bold text-xs uppercase bg-red-600">Delete</AlertDialogAction>
+                                <AlertDialogFooter className="gap-2">
+                                    <AlertDialogCancel className="rounded-full font-bold text-xs uppercase px-6">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteTasks(selectedIds)} className="rounded-full font-bold text-xs uppercase bg-red-600 px-6">Delete</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
@@ -273,22 +294,22 @@ export default function TodoPage() {
                         </DialogTrigger>
                         <DialogContent className="rounded-3xl sm:max-w-lg p-0 overflow-hidden">
                             <DialogHeader className="p-8 pb-0">
-                                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Create Task</DialogTitle>
-                                <DialogDescription>Fill in the details below to add a new task.</DialogDescription>
+                                <DialogTitle className="text-xl font-black uppercase tracking-tighter text-left text-primary">Create Task</DialogTitle>
+                                <DialogDescription className="text-left">Fill in the details below to add a new task.</DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleAddTask} className="flex flex-col h-full max-h-[85vh]">
                                 <ScrollArea className="flex-1 px-8 py-6">
                                     <div className="space-y-8">
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 text-left">
                                             <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Title</Label>
                                             <Input value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="What needs to be done?" className="rounded-xl h-11" required />
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 text-left">
                                             <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Description</Label>
                                             <Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Add more context if needed..." className="rounded-xl min-h-[80px]" />
                                         </div>
 
-                                        <div className="space-y-4">
+                                        <div className="space-y-4 text-left">
                                             <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Palette className="size-3" /> Note Color</Label>
                                             <div className="grid grid-cols-4 gap-3">
                                                 {TASK_COLORS.map(color => (
@@ -308,12 +329,12 @@ export default function TodoPage() {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-2 gap-4 text-left">
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Priority</Label>
                                                 <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
-                                                    <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectTrigger className="rounded-xl h-11 font-bold"><SelectValue /></SelectTrigger>
+                                                    <SelectContent className="rounded-none">
                                                         <SelectItem value="low">Low</SelectItem>
                                                         <SelectItem value="medium">Medium</SelectItem>
                                                         <SelectItem value="high">High</SelectItem>
@@ -323,8 +344,8 @@ export default function TodoPage() {
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Assign To</Label>
                                                 <Select value={assignedTo} onValueChange={setAssignedTo}>
-                                                    <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectTrigger className="rounded-xl h-11 font-bold"><SelectValue /></SelectTrigger>
+                                                    <SelectContent className="rounded-none">
                                                         <SelectItem value="self">Myself</SelectItem>
                                                         {canAssign && allUsers?.filter(u => u.id !== user?.uid).map(u => (
                                                             <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
@@ -333,14 +354,14 @@ export default function TodoPage() {
                                                 </Select>
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-2 gap-4 text-left">
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Due Date</Label>
-                                                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="rounded-xl h-11" />
+                                                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="rounded-xl h-11 font-bold" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Time</Label>
-                                                <Input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} className="rounded-xl h-11" />
+                                                <Input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} className="rounded-xl h-11 font-bold" />
                                             </div>
                                         </div>
                                     </div>
@@ -408,8 +429,8 @@ export default function TodoPage() {
                     <Dialog open={!!detailedDay} onOpenChange={o => !o && setDetailedDay(null)}>
                         <DialogContent className="rounded-[2rem] sm:max-w-lg p-0 overflow-hidden border-none shadow-2xl">
                             <DialogHeader className="p-6 pb-4">
-                                <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Day View</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">
+                                <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary text-left">Day View</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 text-left">
                                     {detailedDay ? format(detailedDay, 'PPPP') : ''}
                                 </DialogDescription>
                             </DialogHeader>
@@ -458,9 +479,49 @@ export default function TodoPage() {
                     ))}
                 </div>
             ) : (
-                <div className="py-40 text-center rounded-[3rem] border-2 border-dashed border-muted/30 flex flex-col items-center justify-center gap-4 opacity-40">
-                    <ShieldCheck className="size-16 text-primary/20" />
-                    <p className="font-bold uppercase text-xs tracking-[0.2em]">List is clear</p>
+                <div className="space-y-12 animate-fade-in-up">
+                    <div className="py-32 text-center rounded-[3rem] border-2 border-dashed border-muted/30 flex flex-col items-center justify-center gap-4 opacity-40">
+                        <ShieldCheck className="size-16 text-primary/20" />
+                        <p className="font-bold uppercase text-xs tracking-[0.2em]">Active list is clear</p>
+                    </div>
+
+                    {teamActivity.length > 0 && viewFilter === 'active' && (
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground shrink-0">Recent Team Activity</h3>
+                                <Separator className="flex-1 opacity-50" />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {teamActivity.map(todo => {
+                                    const completedBy = allUsers?.find(u => u.id === todo.assignedTo);
+                                    return (
+                                        <Card key={todo.id} className="border-none shadow-sm rounded-none bg-emerald-50/50 p-6 space-y-4 ring-1 ring-emerald-200/50">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar className="size-10 rounded-none border border-emerald-200">
+                                                        <AvatarImage src={completedBy?.avatar} className="object-cover" />
+                                                        <AvatarFallback className="bg-emerald-500 text-white font-black text-xs">{todo.assignedToName[0]}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="text-left">
+                                                        <p className="font-black text-xs uppercase tracking-tight">{todo.assignedToName}</p>
+                                                        <p className="text-[9px] font-bold text-muted-foreground uppercase">{completedBy?.jobTitle || 'Team Member'}</p>
+                                                    </div>
+                                                </div>
+                                                <Badge className="bg-emerald-500 text-white border-none rounded-none text-[8px] font-black uppercase tracking-widest px-2 h-5">Mission Success</Badge>
+                                            </div>
+                                            <div className="space-y-2 text-left">
+                                                <p className="text-sm font-bold text-emerald-900 leading-tight">"{todo.task}"</p>
+                                                <div className="flex items-center gap-2 pt-2 border-t border-emerald-200/50">
+                                                    <CheckCircle className="size-3 text-emerald-600" />
+                                                    <span className="text-[9px] font-black uppercase text-emerald-700">Finished: {todo.completedAt ? format(todo.completedAt.toDate(), 'PP p') : 'Recently'}</span>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -482,14 +543,14 @@ export default function TodoPage() {
                                 <Badge className="bg-green-100 text-green-700 border-none rounded-full text-[9px] font-black uppercase px-3 py-1">Task Done</Badge>
                              )}
                         </div>
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{selectedTodo?.task}</DialogTitle>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary text-left">{selectedTodo?.task}</DialogTitle>
                     </DialogHeader>
                     
-                    <div className="py-6 space-y-8">
+                    <div className="py-6 space-y-8 text-left">
                         {selectedTodo?.description && (
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Details</Label>
-                                <p className="text-sm font-medium leading-relaxed italic text-foreground/80">{selectedTodo.description}</p>
+                                <p className="text-sm font-medium leading-relaxed italic text-foreground/80">"{selectedTodo.description}"</p>
                             </div>
                         )}
                         
@@ -514,11 +575,11 @@ export default function TodoPage() {
                             <div className="flex items-center justify-between gap-4">
                                 <div className="space-y-1 flex-1">
                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">From</Label>
-                                    <p className="text-sm font-bold truncate">{selectedTodo?.assignedByName}</p>
+                                    <p className="text-sm font-bold truncate uppercase">{selectedTodo?.assignedByName}</p>
                                 </div>
                                 <div className="space-y-1 flex-1 text-right">
                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">To</Label>
-                                    <p className="text-sm font-bold truncate">{selectedTodo?.assignedToName}</p>
+                                    <p className="text-sm font-bold truncate uppercase">{selectedTodo?.assignedToName}</p>
                                 </div>
                             </div>
                             {selectedTodo?.completedAt && (
@@ -561,7 +622,7 @@ function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDel
                 )}
             </div>
 
-            <CardContent className="p-8 space-y-4">
+            <CardContent className="p-8 space-y-4 text-left">
                 <div className="space-y-2">
                     <div className="flex items-start gap-4">
                         <button 
@@ -598,11 +659,11 @@ function StickyNote({ todo, currentUserId, isSelected, onSelect, onToggle, onDel
                     {todo.completed ? (
                         <div className="space-y-1">
                              <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-green-600">
-                                <CheckCircle2 className="size-3" /> DONE
+                                <CheckCircle2 className="size-3" /> Mission Finished
                             </div>
                             {todo.completedAt && (
                                 <p className="text-[9px] font-bold opacity-60">
-                                    Finished: {format(todo.completedAt.toDate(), 'p, MMM d')}
+                                    Timestamp: {format(todo.completedAt.toDate(), 'p, MMM d')}
                                 </p>
                             )}
                         </div>
