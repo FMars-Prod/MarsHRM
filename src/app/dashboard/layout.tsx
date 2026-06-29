@@ -1,4 +1,3 @@
-
 'use client';
 import {
   SidebarProvider,
@@ -215,7 +214,6 @@ export default function DashboardLayout({
     return activeTodos.filter((t: any) => t.dueDate && isBefore(t.dueDate.toDate(), alertThreshold));
   }, [activeTodos]);
 
-  // NEW: Monitor tasks assigned by me that are now completed
   const completedTasksQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -230,7 +228,7 @@ export default function DashboardLayout({
 
   const teamCompletedTasks = useMemo(() => {
     if (!completedTasks || !user) return [];
-    const threshold = subDays(new Date(), 2); // Show completions from last 48 hours
+    const threshold = subDays(new Date(), 2); 
     return completedTasks.filter((t: any) => 
         t.assignedTo !== user.uid && 
         t.completedAt && (t.completedAt.toDate ? t.completedAt.toDate() : new Date(t.completedAt)) > threshold
@@ -394,13 +392,13 @@ export default function DashboardLayout({
                            )}
                        </Button>
                    </PopoverTrigger>
-                   <PopoverContent className="w-80 p-0 rounded-none border-none shadow-2xl" align="end" sideOffset={12}>
+                   <PopoverContent className="w-[340px] p-0 rounded-none border-none shadow-3xl" align="end" sideOffset={12}>
                        <div className="p-6 border-b bg-white">
                            <h4 className="text-lg font-black uppercase tracking-tighter text-primary text-left">Notifications</h4>
                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 text-left">Latest Updates</p>
                        </div>
-                       <ScrollArea className="max-h-[400px]">
-                           <div className="p-4 space-y-2">
+                       <ScrollArea className="max-h-[450px]">
+                           <div className="p-4 space-y-3">
                                {totalNotifications === 0 ? (
                                    <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
                                        <CheckCircle2 className="size-10 mb-2" />
@@ -415,16 +413,29 @@ export default function DashboardLayout({
                                                   href="/dashboard/todo" 
                                                   key={todo.id}
                                                   onClick={() => setIsNotificationsOpen(false)}
-                                                  className="flex items-center gap-3 p-3 bg-emerald-50 hover:bg-emerald-100 transition-all border border-emerald-100"
+                                                  className="flex items-start gap-3 p-4 bg-emerald-50 hover:bg-emerald-100 transition-all border border-emerald-100 shadow-sm"
                                                >
-                                                   <Avatar className="size-8 rounded-none border border-emerald-200">
+                                                   <Avatar className="size-10 rounded-none border border-emerald-200 ring-2 ring-white">
                                                         <AvatarImage src={completedBy?.avatar} className="object-cover" />
-                                                        <AvatarFallback className="bg-emerald-500 text-white text-[8px] font-black">{completedBy?.firstName?.[0]}</AvatarFallback>
+                                                        <AvatarFallback className="bg-emerald-500 text-white text-[9px] font-black">{completedBy?.firstName?.[0]}</AvatarFallback>
                                                    </Avatar>
-                                                   <div className="flex-1 min-w-0 text-left">
-                                                       <p className="text-[10px] font-black uppercase text-emerald-700">Task Completed</p>
-                                                       <p className="text-[11px] font-bold truncate leading-tight">{todo.task}</p>
-                                                       <p className="text-[9px] text-muted-foreground uppercase mt-0.5">By {todo.assignedToName} • {todo.completedAt ? format(todo.completedAt.toDate(), 'p, PP') : ''}</p>
+                                                   <div className="flex-1 min-w-0 text-left space-y-2">
+                                                       <div className="flex justify-between items-start gap-2">
+                                                            <p className="text-[10px] font-black uppercase text-emerald-700">Task Completed</p>
+                                                            <span className="text-[8px] font-bold text-muted-foreground opacity-40 whitespace-nowrap">{todo.completedAt ? format(todo.completedAt.toDate(), 'HH:mm') : ''}</span>
+                                                       </div>
+                                                       <p className="text-[11px] font-black truncate leading-tight uppercase text-slate-800">{todo.task}</p>
+                                                       <div className="grid grid-cols-2 gap-2 pt-1 border-t border-emerald-100/50">
+                                                            <div>
+                                                                <p className="text-[7px] font-black text-muted-foreground/60 uppercase">Assigned</p>
+                                                                <p className="text-[8px] font-bold text-slate-500">{todo.createdAt ? format(todo.createdAt.toDate(), 'p, MMM d') : 'N/A'}</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-[7px] font-black text-emerald-600/60 uppercase">Completed</p>
+                                                                <p className="text-[8px] font-black text-emerald-700">{todo.completedAt ? format(todo.completedAt.toDate(), 'p, MMM d') : 'N/A'}</p>
+                                                            </div>
+                                                       </div>
+                                                       <p className="text-[9px] font-black text-slate-900 uppercase pt-1 italic">By: {todo.assignedToName}</p>
                                                    </div>
                                                </Link>
                                            );

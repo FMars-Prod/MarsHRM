@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -69,11 +68,9 @@ export default function TodoPage() {
     const [selectedTodo, setSelectedTodo] = React.useState<Todo | null>(null);
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
     
-    // Calendar Specific States
     const [currentMonthDate, setCurrentMonthDate] = React.useState(new Date());
     const [detailedDay, setDetailedDay] = React.useState<Date | null>(null);
 
-    // Form States
     const [newTask, setNewTask] = React.useState('');
     const [newDesc, setNewDesc] = React.useState('');
     const [priority, setPriority] = React.useState<'low' | 'medium' | 'high'>('medium');
@@ -100,7 +97,6 @@ export default function TodoPage() {
 
     const { data: todos, isLoading } = useCollection<Todo>(todosQuery);
 
-    // Monitor team completions for the empty state
     const recentCompletionsQuery = useMemoFirebase(() => {
         if (!user) return null;
         return query(
@@ -110,7 +106,7 @@ export default function TodoPage() {
                 where("completed", "==", true)
             ),
             orderBy("completedAt", "desc"),
-            limit(5)
+            limit(10)
         );
     }, [firestore, user]);
     const { data: recentTeamCompletions } = useCollection<Todo>(recentCompletionsQuery);
@@ -509,11 +505,17 @@ export default function TodoPage() {
                                                 </div>
                                                 <Badge className="bg-emerald-500 text-white border-none rounded-none text-[8px] font-black uppercase tracking-widest px-2 h-5">Mission Success</Badge>
                                             </div>
-                                            <div className="space-y-2 text-left">
-                                                <p className="text-sm font-bold text-emerald-900 leading-tight">"{todo.task}"</p>
-                                                <div className="flex items-center gap-2 pt-2 border-t border-emerald-200/50">
-                                                    <CheckCircle className="size-3 text-emerald-600" />
-                                                    <span className="text-[9px] font-black uppercase text-emerald-700">Finished: {todo.completedAt ? format(todo.completedAt.toDate(), 'PP p') : 'Recently'}</span>
+                                            <div className="space-y-3 text-left">
+                                                <p className="text-sm font-black text-emerald-900 leading-tight uppercase">"{todo.task}"</p>
+                                                <div className="grid grid-cols-2 gap-4 pt-3 border-t border-emerald-200/50">
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[8px] font-black text-emerald-700/60 uppercase">Assignment</p>
+                                                        <p className="text-[9px] font-bold text-emerald-800">{todo.createdAt ? format(todo.createdAt.toDate(), 'p, MMM d') : 'N/A'}</p>
+                                                    </div>
+                                                    <div className="space-y-0.5 text-right">
+                                                        <p className="text-[8px] font-black text-emerald-600 uppercase">Success Stamping</p>
+                                                        <p className="text-[9px] font-black text-emerald-700">{todo.completedAt ? format(todo.completedAt.toDate(), 'p, MMM d') : 'N/A'}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </Card>
