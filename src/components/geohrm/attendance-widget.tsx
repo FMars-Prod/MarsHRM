@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -232,7 +233,7 @@ export function AttendanceWidget() {
         setCurrentSignal(`${userLoc.latitude.toFixed(4)}, ${userLoc.longitude.toFixed(4)}`);
         
         const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-        const buffer = 0.015; 
+        const buffer = 0.05; // 50 meters buffer for accuracy
         
         setIsVerifyingLocation(false);
         if (dist <= (activeGeofence.radius + buffer)) {
@@ -270,7 +271,7 @@ export function AttendanceWidget() {
           setCurrentSignal(`${userLoc.latitude.toFixed(4)}, ${userLoc.longitude.toFixed(4)}`);
           
           const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-          const buffer = 0.015;
+          const buffer = 0.05; // 50 meters buffer for accuracy
 
           setIsVerifyingLocation(false);
           if (dist <= (activeGeofence.radius + buffer)) {
@@ -403,6 +404,10 @@ export function AttendanceWidget() {
   };
 
   if (isUserDocLoading) return <div className="h-64 flex items-center justify-center text-[10px] font-black uppercase opacity-20 tracking-[0.2em]">Loading...</div>;
+
+  // CEO exclusion check (handled in parent as well, but extra safety here)
+  const isCEO = userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD';
+  if (isCEO) return null;
 
   return (
     <>

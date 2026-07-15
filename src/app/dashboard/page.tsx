@@ -12,6 +12,8 @@ import { MissionHeatmapWidget } from "@/components/geohrm/mission-heatmap-widget
 import { ProfileBentoCard } from "@/components/geohrm/profile-bento-card";
 import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
 import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
+import { AnnouncementsWidget } from "@/components/geohrm/announcements-widget";
+import { EventsWidget } from "@/components/geohrm/events-widget";
 import { 
   AreaChart, Area, PieChart, Pie, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, 
@@ -94,6 +96,7 @@ export default function DashboardPage() {
   
   const userRole = currentUserData?.role;
   const isExecutive = userRole === 'CEO/Admin' || userRole === 'CEO/MD' || userRole === 'HR Manager';
+  const isCEO = userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
   if (!isExecutive) {
     return (
@@ -102,6 +105,7 @@ export default function DashboardPage() {
             <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black tracking-tighter leading-none text-primary uppercase">
                 {new Date().getHours() < 12 ? "Good Morning" : new Date().getHours() < 17 ? "Good Afternoon" : "Good Evening"}, {currentUserData?.firstName || 'Strategist'}
             </h1>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">{currentUserData?.jobTitle || 'Fleet Member'}</p>
         </div>
         <DashboardReminder />
         <div className="w-full animate-fade-in-up">
@@ -130,7 +134,7 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none">
             Good Morning, {currentUserData?.firstName || 'Executive'} 👋
           </h1>
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Founder & CEO, Cognithorz</p>
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{currentUserData?.jobTitle || 'Executive Portal'}</p>
         </div>
         
         <div className="flex flex-wrap items-center bg-white rounded-none ring-1 ring-slate-200 p-1 shadow-sm h-auto md:h-12 min-h-12">
@@ -168,6 +172,13 @@ export default function DashboardPage() {
         <KPICard title="Active Projects" value="24" trend="↑ 9.1%" color="text-amber-600" bg="bg-amber-50" sparkline={[15, 18, 17, 22, 21, 25, 24]} />
         <KPICard title="Team Utilization" value="84%" trend="↑ 6.3%" color="text-indigo-600" bg="bg-indigo-50" sparkline={[75, 78, 80, 82, 81, 84, 84]} />
       </div>
+
+      {/* ATTENDANCE PROTOCOL (EXEMPT FOR CEO) */}
+      {!isCEO && (
+        <div className="animate-fade-in-up">
+          <AttendanceWidget />
+        </div>
+      )}
 
       {/* OPERATIONAL HUB */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in-up">
@@ -342,6 +353,12 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
+        <AnnouncementsWidget />
+        <EventsWidget />
+        <ActionItemsWidget />
+      </div>
+
       {/* STRATEGIC SNAPSOT ROW */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
         {/* MARKETING PERFORMANCE */}
@@ -410,6 +427,12 @@ export default function DashboardPage() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
+        <TodoWidget />
+        <WorkHoursSummaryWidget />
+        <MissionHeatmapWidget />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
