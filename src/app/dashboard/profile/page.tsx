@@ -1,10 +1,9 @@
-
 'use client';
 
 import * as React from 'react';
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useMemoFirebase, useCollection, useDoc, useUser, updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useMemoFirebase, useCollection, useDoc, useUser, updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, useStorage } from '@/firebase';
 import { collection, query, doc, where, orderBy, limit, Timestamp, getDocs, serverTimestamp } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -631,7 +630,7 @@ function TimelineItem({ icon: Icon, title, time, desc, color, onClick }: any) {
 function InfoRow({ label, value }: { label: string, value: string }) {
     return (
         <div className="flex items-center justify-between py-3 border-b border-dashed border-border/50 last:border-none group gap-4">
-            <span className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest shrink-0">{label}</span>
+            <span className="text-[8px] font-bold uppercase text-muted-foreground/40 tracking-widest shrink-0">{label}</span>
             <span className="text-sm font-bold text-foreground/80 uppercase text-right leading-tight">{value}</span>
         </div>
     );
