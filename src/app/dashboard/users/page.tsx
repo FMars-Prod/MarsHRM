@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -11,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, CheckCircle2, Check, X, LocateFixed, Building2, RotateCcw, Home, Search, Loader2, MapPin, ShieldAlert } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, UserCircle, CheckCircle2, Check, X, LocateFixed, Building2, RotateCcw, Home, Search, Loader2, MapPin, ShieldAlert, Clock } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { doc, collection, query, writeBatch, serverTimestamp, getDocs, where, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +75,9 @@ export default function UsersPage() {
 
   const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
   const { data: branches } = useCollection<any>(branchesQuery);
+
+  const shiftsQuery = useMemoFirebase(() => query(collection(firestore, 'settings', 'config', 'shifts'), orderBy('name', 'asc')), [firestore]);
+  const { data: shifts } = useCollection<any>(shiftsQuery);
 
   const complianceQuery = useMemoFirebase(() => query(collection(firestore, 'compliance_reports')), [firestore]);
   const { data: complianceReports } = useCollection<any>(complianceQuery);
@@ -277,25 +279,25 @@ export default function UsersPage() {
   return (
     <TooltipProvider delayDuration={0}>
     <div className="space-y-8 animate-fade-in-up">
-      <PageHeader title="Employees" description="Manage all team members and their roles.">
+      <PageHeader title="Employees" description="Manage all team members and their operational roles.">
         <div className="flex gap-2">
             <Dialog open={isDialogOpen} onOpenChange={(open) => { if(!open) { setEditingUser(null); setManagerSearchQuery(""); } setIsDialogOpen(open); }}>
                 <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button></DialogTrigger>
-                <DialogContent className="sm:max-w-2xl rounded-none p-8 border-none shadow-2xl">
+                <DialogContent className="sm:max-w-2xl rounded-none p-8 border-none shadow-3xl">
                     <DialogHeader className="text-left">
                         <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Profile' : 'Register New Member'}</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Provide system access and details</DialogDescription>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Provide system access and operational details</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-8 px-8">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-4 pb-8">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-4 text-left">
                                     <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">First Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                     <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Last Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 </div>
-                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Email Address</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Email Address</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 
-                                <div className="space-y-4">
+                                <div className="space-y-4 text-left">
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting To</Label>
                                     
                                     <div className="flex flex-wrap gap-2 min-h-[48px] p-3 bg-muted/10 border-2 border-dashed border-border/50">
@@ -364,12 +366,12 @@ export default function UsersPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-4 text-left">
                                     <FormField control={form.control} name="jobTitle" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Job Title</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                     <FormField control={form.control} name="department" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Department</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 </div>
                                 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-4 text-left">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className={cn("text-[10px] font-black uppercase text-primary tracking-widest", isWfhAllowedValue && "opacity-20")}>Office Branch</FormLabel>
@@ -381,10 +383,16 @@ export default function UsersPage() {
                                             </Select>
                                         </FormItem>
                                     )} />
-                                    <FormField control={form.control} name="shiftType" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Type</FormLabel><FormControl><Input {...field} placeholder="e.g. General Shift" className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="shiftType" render={({ field }) => (
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Shift Protocol</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Shift" /></SelectTrigger></FormControl><SelectContent className="rounded-none">
+                                            {shifts?.map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.start}-{s.end})</SelectItem>)}
+                                            {(!shifts || shifts.length === 0) && <SelectItem value="General Shift">General Shift</SelectItem>}
+                                        </SelectContent></Select></FormItem>
+                                    )} />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-4 text-left">
                                     <FormField control={form.control} name="employmentType" render={({ field }) => (
                                         <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Employment Type</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
@@ -397,7 +405,7 @@ export default function UsersPage() {
 
                                 <Separator className="my-4 opacity-50" />
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                                     <FormField control={form.control} name="performanceRating" render={({ field }) => (
                                         <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Performance Rating</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Improving">Improving</SelectItem><SelectItem value="In Review">In Review</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
@@ -414,7 +422,7 @@ export default function UsersPage() {
                                 
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
-                                        <div className="space-y-0.5">
+                                        <div className="space-y-0.5 text-left">
                                             <Label className="text-sm font-black uppercase tracking-tight">Allow Work From Home</Label>
                                             <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Enable remote attendance tracking</p>
                                         </div>
@@ -422,7 +430,7 @@ export default function UsersPage() {
                                     </div>
 
                                     {isWfhAllowedValue && (
-                                        <div className="p-6 bg-primary/5 rounded-none border-2 border-primary/10 space-y-6 animate-fade-in-up">
+                                        <div className="p-6 bg-primary/5 rounded-none border-2 border-primary/10 space-y-6 animate-fade-in-up text-left">
                                             <div className="flex items-center justify-between">
                                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
                                                     <MapPin className="size-3" /> Home Coordinates
@@ -461,7 +469,7 @@ export default function UsersPage() {
                                     )}
                                 </div>
                                 
-                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Account Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
+                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Account Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
                                 <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Finalize Profile</Button>
                             </form>
                         </Form>
@@ -481,7 +489,7 @@ export default function UsersPage() {
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Avatar</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Name & Title</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Location</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Shift</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Shift Protocol</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Role</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-8">Action</TableHead>
             </TableRow>
@@ -543,7 +551,10 @@ export default function UsersPage() {
                         )}
                     </TableCell>
                     <TableCell className="py-6 align-middle">
-                        <span className="text-[10px] font-black uppercase text-muted-foreground tracking-tight">{u.shiftType}</span>
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground tracking-tight">
+                            <Clock className="size-3 opacity-40" />
+                            {u.shiftType}
+                        </div>
                     </TableCell>
                     <TableCell className="py-6 align-middle">
                         <Badge variant="outline" className="rounded-none font-black text-[9px] uppercase tracking-widest px-2.5 h-6 bg-muted/20 border-none">
@@ -593,10 +604,10 @@ export default function UsersPage() {
       <AlertDialog open={!!userToReset} onOpenChange={o => !o && setUserToReset(null)}>
           <AlertDialogContent className="rounded-none border-none shadow-2xl">
               <AlertDialogHeader>
-                  <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-amber-600 flex items-center gap-2">
+                  <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-amber-600 flex items-center gap-2 text-left">
                       <RotateCcw className="size-5" /> Reset Today's Attendance?
                   </AlertDialogTitle>
-                  <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+                  <AlertDialogDescription className="text-sm font-medium leading-relaxed text-left">
                       Are you sure you want to reset the attendance for <span className="font-bold text-foreground">{userToReset?.firstName} {userToReset?.lastName}</span> for today?
                   </AlertDialogDescription>
               </AlertDialogHeader>
@@ -612,10 +623,10 @@ export default function UsersPage() {
       <AlertDialog open={!!userToDelete} onOpenChange={o => !o && setUserToDelete(null)}>
           <AlertDialogContent className="rounded-none border-none shadow-2xl">
               <AlertDialogHeader>
-                  <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
+                  <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 text-left">
                       <Trash2 className="size-5" /> Delete User?
                   </AlertDialogTitle>
-                  <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+                  <AlertDialogDescription className="text-sm font-medium leading-relaxed text-left">
                       Are you sure you want to delete <span className="font-bold text-foreground">{userToDelete?.firstName}</span>? This will permanently remove all their records.
                   </AlertDialogDescription>
               </AlertDialogHeader>
@@ -632,3 +643,4 @@ export default function UsersPage() {
     </TooltipProvider>
   );
 }
+

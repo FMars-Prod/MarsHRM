@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -21,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc, useCollection } from "@/firebase";
-import { doc, serverTimestamp, collection, Timestamp, query, where } from "firebase/firestore";
+import { doc, serverTimestamp, collection, Timestamp, query, where, getDocs } from "firebase/firestore";
 import { Label } from "@/components/ui/label";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { Textarea } from "../ui/textarea";
@@ -261,7 +260,29 @@ export function AttendanceWidget() {
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   };
 
-  const handleClockOut = () => {
+  const handleClockOut = async () => {
+      // Protocol Check: Must submit report before clock out
+      const isPrivileged = userData?.role === 'HR Manager' || userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD';
+      if (!isPrivileged) {
+          const todayS = startOfDay(new Date());
+          const todayE = endOfDay(new Date());
+          const q = query(
+              collection(firestore, `users/${user!.uid}/reports`),
+              where('date', '>=', todayS),
+              where('date', '<=', todayE)
+          );
+          const snap = await getDocs(q);
+          if (snap.empty) {
+              toast({ 
+                  variant: 'destructive', 
+                  title: "Report Required", 
+                  description: "Protocol violation: Please submit your daily strategic log before clocking out." 
+              });
+              router.push('/dashboard/reports');
+              return;
+          }
+      }
+
       setIsVerifyingLocation(true);
       setCurrentSignal("Checking...");
       
@@ -280,8 +301,7 @@ export function AttendanceWidget() {
                   locationCheckOutLatitude: p.coords.latitude, 
                   locationCheckOutLongitude: p.coords.longitude 
               });
-              toast({ title: "Clocked Out" });
-              router.push('/dashboard/reports');
+              toast({ title: "Clocked Out", description: "Mission finished." });
           } else {
               setOutOfRangeType('Clock Out');
               setIsOutOfRangeDialogOpen(true);
@@ -405,7 +425,7 @@ export function AttendanceWidget() {
 
   if (isUserDocLoading) return <div className="h-64 flex items-center justify-center text-[10px] font-black uppercase opacity-20 tracking-[0.2em]">Loading...</div>;
 
-  // CEO exclusion check (handled in parent as well, but extra safety here)
+  // CEO exclusion check
   const isCEO = userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD';
   if (isCEO) return null;
 
@@ -440,7 +460,7 @@ export function AttendanceWidget() {
             </div>
 
             <div className="flex flex-col items-center gap-2 px-4 text-center">
-                <h1 className="text-[64px] sm:text-[100px] lg:text-[140px] font-black leading-none tracking-tighter text-primary drop-shadow-sm font-mono">
+                <h1 className="text-[64px] sm:text-[100px] lg:text-[140px] font-black leading-none tracking-tighter text-primary drop-shadow-sm font-mono text-center w-full">
                     {formatTime(workTimer)}
                 </h1>
                 <div className="flex flex-col items-center gap-2">
@@ -533,12 +553,12 @@ export function AttendanceWidget() {
                         <AlertTriangle className="size-6" />
                     </div>
                     <DialogTitle className="text-xl font-black uppercase tracking-tighter">Out of Range</DialogTitle>
-                    <DialogDescription className="text-xs font-medium leading-relaxed">
+                    <DialogDescription className="text-xs font-medium leading-relaxed text-left">
                         You are outside the authorized <span className="font-bold text-primary">{activeGeofence.name}</span> area. 
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="py-4 space-y-4">
+                <div className="py-4 space-y-4 text-left">
                     <div className="bg-muted/30 p-4 rounded-none border border-dashed border-border space-y-2">
                         <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest text-left">Location Details</p>
                         <div className="grid grid-cols-2 gap-4">
@@ -602,3 +622,4 @@ function StatusStep({ icon: Icon, label, time, isActive, coords }: { icon: any, 
         </Card>
     );
 }
+
