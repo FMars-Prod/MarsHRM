@@ -52,7 +52,7 @@ export function UserNav({ user }: { user: User | null }) {
 
     try {
         const userRole = (employee as any)?.role || 'Member';
-        const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+        const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
         if (!isPrivileged) {
             const todayStart = startOfDay(new Date());
@@ -129,7 +129,7 @@ export function UserNav({ user }: { user: User | null }) {
 
         <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
             <AlertDialogContent className="rounded-none border-none shadow-2xl">
-                <AlertDialogHeader>
+                <AlertDialogHeader className="text-left">
                     <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
                         <ShieldAlert className="size-5" /> Log Out?
                     </AlertDialogTitle>
@@ -138,8 +138,8 @@ export function UserNav({ user }: { user: User | null }) {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="mt-8 gap-3">
-                    <AlertDialogCancel className="rounded-none font-black uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleLogout} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                    <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLogout} className="rounded-none font-bold uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
                         Log Out
                     </AlertDialogAction>
                 </AlertDialogFooter>
