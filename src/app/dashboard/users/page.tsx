@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -109,7 +110,7 @@ export default function UsersPage() {
   });
 
   const isWfhAllowedValue = form.watch("isWfhAllowed");
-  const selectedHeadIds = form.watch("reportingHeadIds");
+  const selectedHeadIds = form.watch("reportingHeadIds") || [];
 
   React.useEffect(() => {
       if (isWfhAllowedValue) {
@@ -301,7 +302,7 @@ export default function UsersPage() {
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting To</Label>
                                     
                                     <div className="flex flex-wrap gap-2 min-h-[48px] p-3 bg-muted/10 border-2 border-dashed border-border/50">
-                                        {selectedHeadIds.length === 0 ? (
+                                        {(selectedHeadIds?.length || 0) === 0 ? (
                                             <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier Command (Unassigned)</span>
                                         ) : (
                                             selectedHeadIds.map(headId => {
@@ -343,7 +344,7 @@ export default function UsersPage() {
                                                                 isSelected ? "bg-primary/5 border-primary/20" : "hover:bg-muted/50"
                                                             )}
                                                             onClick={() => {
-                                                                const current = form.getValues("reportingHeadIds");
+                                                                const current = form.getValues("reportingHeadIds") || [];
                                                                 if (isSelected) form.setValue("reportingHeadIds", current.filter(id => id !== manager.id));
                                                                 else form.setValue("reportingHeadIds", [...current, manager.id]);
                                                             }}
@@ -643,4 +644,3 @@ export default function UsersPage() {
     </TooltipProvider>
   );
 }
-
