@@ -131,12 +131,12 @@ export default function MonitorPage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <PageHeader title="Real-Time Monitor" description="Monitor employee attendance and locations for the selected date.">
+      <PageHeader title="Daily Status" description="See who is logged in and where they are.">
         <div className="flex gap-3">
             <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground opacity-50" />
                 <Input 
-                    placeholder="Search employees..." 
+                    placeholder="Search people..." 
                     value={searchQuery} 
                     onChange={e => setSearchQuery(e.target.value)} 
                     className="h-10 pl-10 rounded-full bg-white border-none ring-1 ring-border/50" 
@@ -156,10 +156,10 @@ export default function MonitorPage() {
       <Tabs defaultValue="list" className="w-full">
           <TabsList className="flex w-fit bg-muted/30 p-1 rounded-xl mb-6">
               <TabsTrigger value="list" className="rounded-lg font-black uppercase text-[10px] tracking-widest gap-2">
-                <List className="size-3.5"/> Attendance List
+                <List className="size-3.5"/> List View
               </TabsTrigger>
               <TabsTrigger value="map" className="rounded-lg font-black uppercase text-[10px] tracking-widest gap-2">
-                <MapIcon className="size-3.5"/> Live Map
+                <MapIcon className="size-3.5"/> Map View
               </TabsTrigger>
           </TabsList>
 
@@ -167,7 +167,7 @@ export default function MonitorPage() {
               <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
                   <CardHeader className="bg-muted/10 border-b py-4">
                       <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2 text-primary">
-                          <Activity className="size-4" /> Attendance Registry
+                          <Activity className="size-4" /> Attendance List
                       </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
@@ -175,17 +175,17 @@ export default function MonitorPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Employee</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Name</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px]">Status</TableHead>
-                                    <TableHead className="font-black uppercase tracking-widest text-[9px]">Check In</TableHead>
-                                    <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Lunch Break</TableHead>
-                                    <TableHead className="font-black uppercase tracking-widest text-[9px]">Check Out</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px]">In</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Break</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px]">Out</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px] text-right px-6">Contact</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={6} className="h-32 text-center animate-pulse font-bold text-xs uppercase opacity-30">Loading records...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-32 text-center animate-pulse font-bold text-xs uppercase opacity-30">Loading...</TableCell></TableRow>
                                 ) : filteredData.length > 0 ? (
                                     filteredData.map((row, i) => (
                                         <TableRow key={i} className="border-border/50 group hover:bg-primary/5 transition-colors">
@@ -225,7 +225,7 @@ export default function MonitorPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic text-sm">No records found for this date.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic text-sm">No data found.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -241,8 +241,8 @@ export default function MonitorPage() {
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 bg-muted/10">
                             <MapPin className="size-12 text-muted-foreground opacity-20 mb-4" />
-                            <h3 className="text-lg font-black uppercase">Maps Disabled</h3>
-                            <p className="text-xs text-muted-foreground max-w-xs mt-2 font-bold uppercase tracking-tight opacity-60">Configure your Google Maps API Key in Settings to enable map visualization.</p>
+                            <h3 className="text-lg font-black uppercase">Map Disabled</h3>
+                            <p className="text-xs text-muted-foreground max-w-xs mt-2 font-bold uppercase tracking-tight opacity-60">Maps key needed in Settings.</p>
                         </div>
                     )}
                 </Card>
