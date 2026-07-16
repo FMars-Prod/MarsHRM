@@ -44,19 +44,21 @@ type LeaveRequest = {
   endDate: Timestamp;
 };
 
+type MemberWithStatus = UserData & { att?: AttendanceRecord };
+
 export function DailyMonitorWidget() {
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
   const [summary, setSummary] = React.useState({
-    office: [] as UserData[], // Present + Late at branch
-    wfhActive: [] as UserData[], // WFH checked in
-    wfhAbsent: [] as UserData[], // WFH authorized but not checked in
-    absent: [] as UserData[], // Office absent
-    onLeave: [] as UserData[],
-    outOfRange: [] as UserData[], // Remote/Field
+    office: [] as MemberWithStatus[], // Present + Late at branch
+    wfhActive: [] as MemberWithStatus[], // WFH checked in
+    wfhAbsent: [] as MemberWithStatus[], // WFH authorized but not checked in
+    absent: [] as MemberWithStatus[], // Office absent
+    onLeave: [] as MemberWithStatus[],
+    outOfRange: [] as MemberWithStatus[], // Remote/Field
     isLoading: true,
   });
-  const [sheetContent, setSheetContent] = React.useState<{title: string, users: UserData[], color: string, icon: React.ReactNode } | null>(null);
+  const [sheetContent, setSheetContent] = React.useState<{title: string, users: MemberWithStatus[], color: string, icon: React.ReactNode } | null>(null);
 
   const currentUserDataRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
@@ -122,24 +124,21 @@ export function DailyMonitorWidget() {
           }
         });
         
-        const office: UserData[] = [];
-        const wfhActive: UserData[] = [];
-        const wfhAbsent: UserData[] = [];
-        const onLeaveUsers: UserData[] = [];
-        const absentUsers: UserData[] = [];
-        const outOfRangeUsers: UserData[] = [];
+        const office: MemberWithStatus[] = [];
+        const wfhActive: MemberWithStatus[] = [];
+        const wfhAbsent: MemberWithStatus[] = [];
+        const onLeaveUsers: MemberWithStatus[] = [];
+        const absentUsers: MemberWithStatus[] = [];
+        const outOfRangeUsers: MemberWithStatus[] = [];
 
         fleetUsers.forEach(u => {
-          const isAdmin = u.role === 'CEO/Admin' || u.role === 'HR Manager';
-          if (isAdmin) return;
-
           const att = attendanceMap.get(u.id);
           const isWfhUser = u.isWfhAllowed;
 
           if (att) {
-              if (att.isAtHome) wfhActive.push(u);
-              else if (att.isOutOfRange) outOfRangeUsers.push(u);
-              else office.push(u);
+              if (att.isAtHome) wfhActive.push({ ...u, att });
+              else if (att.isOutOfRange) outOfRangeUsers.push({ ...u, att });
+              else office.push({ ...u, att });
           } else if (onLeaveTodayIds.has(u.id)) {
             onLeaveUsers.push(u);
           } else {
@@ -194,7 +193,7 @@ export function DailyMonitorWidget() {
     pdfDoc.save(`attendance_summary_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
-  const UserListCard = ({ title, users, Icon, iconColor, onClick, gradient, description }: { title: string; users: UserData[]; Icon: React.ElementType, iconColor: string; onClick: () => void; gradient: string; description: string }) => (
+  const UserListCard = ({ title, users, Icon, iconColor, onClick, gradient, description }: { title: string; users: MemberWithStatus[]; Icon: React.ElementType, iconColor: string; onClick: () => void; gradient: string; description: string }) => (
     <Card className={cn("group hover:bg-muted/50 transition-all duration-300 cursor-pointer border-none ring-1 ring-border/50 rounded-none overflow-hidden", gradient)} onClick={onClick}>
       <CardHeader className="p-4 pb-1">
         <div className="flex items-center justify-between">
@@ -312,9 +311,14 @@ export function DailyMonitorWidget() {
                   <div className="p-6 space-y-3">
                      {sheetContent.users.map(member => {
                         const complianceCount = complianceCounts[member.id] || 0;
+                        const isLate = member.att?.status === 'late';
+                        
                         return (
                             <Link key={member.id} href={`/dashboard/users/${member.id}`} className="block">
-                                <Card className="border-none ring-1 ring-border/50 rounded-none p-4 bg-white hover:bg-primary/5 transition-colors cursor-pointer group shadow-sm">
+                                <Card className={cn(
+                                    "border-none ring-1 ring-border/50 rounded-none p-4 bg-white hover:bg-primary/5 transition-colors cursor-pointer group shadow-sm",
+                                    member.id === currentUser?.uid && "ring-2 ring-primary"
+                                )}>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="relative">
@@ -330,7 +334,13 @@ export function DailyMonitorWidget() {
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">{member.firstName} {member.lastName}</p>
+                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">
+                                                        {member.firstName} {member.lastName}
+                                                        {member.id === currentUser?.uid && " (You)"}
+                                                    </p>
+                                                    {isLate && (
+                                                        <Badge className="bg-yellow-100 text-yellow-700 border-none text-[8px] font-black h-4 px-1.5 rounded-none uppercase">Late</Badge>
+                                                    )}
                                                     {isExecutive && complianceCount > 0 && (
                                                         <ShieldAlert className="size-3 text-red-600 animate-pulse" />
                                                     )}
