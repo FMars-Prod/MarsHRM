@@ -22,7 +22,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { initializeApp, deleteApp } from "firebase/app";
+import { firebaseConfig } from "@/firebase/config";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -59,7 +61,7 @@ type UserFormValues = z.infer<typeof userSchema>;
 export default function UsersPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
-  const auth = useAuth();
+  const mainAuth = useAuth();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -100,10 +102,9 @@ export default function UsersPage() {
     return counts;
   }, [complianceReports]);
 
-  const userDocRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
-  const { data: currentUserData } = useDoc<any>(userDocRef);
+  const currentUserDataRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
+  const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   
-  // Security Tiers
   const isExecutive = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
 
@@ -169,10 +170,16 @@ export default function UsersPage() {
             if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', editingUser.id), { employeeId: editingUser.id });
 
             await batch.commit();
-            toast({ title: "Updated" });
+            toast({ title: "Profile updated" });
         } else {
-            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password!);
+            // Secondary App Logic to avoid signing out the admin
+            const tempAppName = `create-user-${Date.now()}`;
+            const tempApp = initializeApp(firebaseConfig, tempAppName);
+            const tempAuth = getAuth(tempApp);
+            
+            const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, values.password!);
             const newUserId = userCredential.user.uid;
+            
             const userRef = doc(firestore, 'users', newUserId);
             const { password, ...userData } = values;
             
@@ -197,12 +204,14 @@ export default function UsersPage() {
             else if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', newUserId), { employeeId: newUserId });
             
             await batch.commit();
-            toast({ title: "Person added" });
+            await deleteApp(tempApp);
+            
+            toast({ title: "User added successfully" });
         }
         setIsDialogOpen(false);
         form.reset();
     } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Error', description: e.message });
+        toast({ variant: 'destructive', title: 'Action failed', description: e.message });
     }
   };
 
@@ -419,8 +428,8 @@ export default function UsersPage() {
                 <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><PlusCircle className="mr-2 h-4 w-4" /> Add Person</Button></DialogTrigger>
                 <DialogContent className="sm:max-w-2xl rounded-none p-8 border-none shadow-3xl">
                     <DialogHeader className="text-left">
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Person' : 'Add New Person'}</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Give them access and set their details</DialogDescription>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Details' : 'Add New Person'}</DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Complete the form to manage this person's account</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-8 px-8">
                         <Form {...form}>
@@ -429,14 +438,14 @@ export default function UsersPage() {
                                     <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">First Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                     <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Last Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 </div>
-                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Email</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                <FormField control={form.control} name="email" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Email Address</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 
                                 <div className="space-y-4 text-left">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting To</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Managers</Label>
                                     
                                     <div className="flex flex-wrap gap-2 min-h-[48px] p-3 bg-muted/10 border-2 border-dashed border-border/50">
                                         {(selectedHeadIds?.length || 0) === 0 ? (
-                                            <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">None (Direct report to admin)</span>
+                                            <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier Command (Direct report to admin)</span>
                                         ) : (
                                             selectedHeadIds.map(headId => {
                                                 const head = users?.find(h => h.id === headId);
@@ -457,7 +466,7 @@ export default function UsersPage() {
                                         <div className="p-4 border-b bg-muted/20 flex items-center gap-4">
                                             <Search className="size-4 text-muted-foreground/50" />
                                             <Input 
-                                                placeholder="Search people..." 
+                                                placeholder="Search managers..." 
                                                 className="h-8 border-none ring-0 focus-visible:ring-0 bg-transparent text-xs font-bold uppercase tracking-tight p-0"
                                                 onChange={(e) => setManagerSearchQuery(e.target.value)}
                                             />
@@ -465,7 +474,8 @@ export default function UsersPage() {
                                         <ScrollArea className="h-48 bg-white">
                                             <div className="p-2 space-y-1">
                                                 {users?.filter(u => {
-                                                    const matchesSearch = `${u.firstName} ${u.lastName}`.toLowerCase().includes(managerSearchQuery.toLowerCase()) || u.jobTitle.toLowerCase().includes(managerSearchQuery.toLowerCase());
+                                                    const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
+                                                    const matchesSearch = fullName.includes(managerSearchQuery.toLowerCase()) || (u.jobTitle || '').toLowerCase().includes(managerSearchQuery.toLowerCase());
                                                     return u.id !== editingUser?.id && matchesSearch;
                                                 }).map(manager => {
                                                     const isSelected = !!selectedHeadIds.includes(manager.id);
@@ -485,7 +495,7 @@ export default function UsersPage() {
                                                             <Checkbox checked={isSelected} className="rounded-none pointer-events-none" />
                                                             <Avatar className="size-10 rounded-none border shrink-0">
                                                                 <AvatarImage src={manager.avatar} className="object-cover rounded-none" />
-                                                                <AvatarFallback className="rounded-none text-xs font-black">{manager.firstName[0]}{manager.lastName[0]}</AvatarFallback>
+                                                                <AvatarFallback className="rounded-none text-xs font-black">{manager.firstName?.[0] || 'U'}{manager.lastName?.[0] || ''}</AvatarFallback>
                                                             </Avatar>
                                                             <div className="min-w-0 flex-1">
                                                                 <p className="text-sm font-black uppercase truncate group-hover:text-primary transition-colors">{manager.firstName} {manager.lastName}</p>
@@ -518,7 +528,7 @@ export default function UsersPage() {
                                         </FormItem>
                                     )} />
                                     <FormField control={form.control} name="shiftType" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Shift</FormLabel>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Work Shift</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Shift" /></SelectTrigger></FormControl><SelectContent className="rounded-none">
                                             {shifts?.map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.start}-{s.end})</SelectItem>)}
                                             {(!shifts || shifts.length === 0) && <SelectItem value="General Shift">General Shift</SelectItem>}
@@ -528,11 +538,11 @@ export default function UsersPage() {
 
                                 <div className="grid grid-cols-2 gap-4 text-left">
                                     <FormField control={form.control} name="employmentType" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Type</FormLabel>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Staff Type</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Intern">Intern</SelectItem><SelectItem value="Employee">Employee</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="role" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Role</FormLabel>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Access Role</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Member">Member</SelectItem><SelectItem value="Team Lead">Team Lead</SelectItem><SelectItem value="HR Manager">HR Manager</SelectItem><SelectItem value="CEO/MD">CEO/MD</SelectItem><SelectItem value="CEO/Admin">CEO/Admin</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                 </div>
@@ -541,14 +551,14 @@ export default function UsersPage() {
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                                     <FormField control={form.control} name="performanceRating" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Performance</FormLabel>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Rating</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Excellent">Excellent</SelectItem><SelectItem value="Good">Good</SelectItem><SelectItem value="Improving">Improving</SelectItem><SelectItem value="In Review">In Review</SelectItem><SelectItem value="Poor">Poor</SelectItem></SelectContent></Select></FormItem>
                                     )} />
                                     <FormField control={form.control} name="leaveBalance" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Leave Balance</FormLabel><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Leaves</FormLabel><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
                                     )} />
                                     <FormField control={form.control} name="payrollAmount" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Monthly Amount</FormLabel><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Salary Amount</FormLabel><FormControl><Input type="number" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>
                                     )} />
                                 </div>
 
@@ -558,7 +568,7 @@ export default function UsersPage() {
                                     <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
                                         <div className="space-y-0.5 text-left">
                                             <Label className="text-sm font-black uppercase tracking-tight">Allow Work From Home</Label>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Enable remote check-in</p>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Enable remote check-in for this user</p>
                                         </div>
                                         <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} className="rounded-none" />)} />
                                     </div>
@@ -567,7 +577,7 @@ export default function UsersPage() {
                                         <div className="p-6 bg-primary/5 rounded-none border-2 border-primary/10 space-y-6 animate-fade-in-up text-left">
                                             <div className="flex items-center justify-between">
                                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                                    <MapPin className="size-3" /> Home Location
+                                                    <MapPin className="size-3" /> Set Home Coordinates
                                                 </Label>
                                                 <Button 
                                                     type="button" 
@@ -576,7 +586,7 @@ export default function UsersPage() {
                                                     className="h-8 rounded-none text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5"
                                                     onClick={handleGetCurrentLocation}
                                                 >
-                                                    <LocateFixed className="size-3 mr-1.5" /> Use My Location
+                                                    <LocateFixed className="size-3 mr-1.5" /> Capture My Location
                                                 </Button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
@@ -603,16 +613,19 @@ export default function UsersPage() {
                                     )}
                                 </div>
                                 
-                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
-                                <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">Save</Button>
+                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">New Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
+                                <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">
+                                    {editingUser ? "Save Changes" : "Create Account"}
+                                </Button>
                             </form>
                         </Form>
                     </ScrollArea>
                 </DialogContent>
             </Dialog>
-        </div>
-      </PageHeader>
+        </Table>
+      </div>
 
+      {/* Main Employee Table */}
       <div className="border-none ring-1 ring-border/50 rounded-none overflow-hidden bg-white shadow-xl">
         <Table>
           <TableHeader className="bg-muted/10 border-b">
@@ -620,19 +633,18 @@ export default function UsersPage() {
               <TableHead className="w-[60px] py-6 px-6">
                   <Checkbox checked={selectedUserIds.length === (users?.length || 0) && (users?.length || 0) > 0} onCheckedChange={toggleSelectAll} className="rounded-none" />
               </TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Avatar</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Name</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">User</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Location</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Shift</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Role</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-8">Action</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-8">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Loading Personnel...</TableCell></TableRow>
             ) : users?.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No one here.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No records found.</TableCell></TableRow>
             ) : users?.map(u => {
               const userBranch = branches?.find((b: any) => b.id === u.branchId);
               const isRemote = u.isWfhAllowed;
@@ -644,32 +656,27 @@ export default function UsersPage() {
                         <Checkbox checked={selectedUserIds.includes(u.id)} onCheckedChange={(c) => toggleSelectUser(u.id, !!c)} className="rounded-none" />
                     </TableCell>
                     <TableCell className="py-6 align-middle">
-                        <div className="relative">
-                            <Avatar className="h-10 w-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
-                                <AvatarImage src={u.avatar} className="object-cover" />
-                                <AvatarFallback className="rounded-none font-black text-xs bg-muted">{u.firstName?.[0]}{u.lastName?.[0]}</AvatarFallback>
-                            </Avatar>
-                            {isExecutive && complianceCount > 0 && (
-                                <div className="absolute -top-2 -right-2 bg-red-600 rounded-full size-6 flex items-center justify-center border-2 border-white shadow-lg animate-pulse z-10">
-                                    <span className="text-white font-black text-[10px]">{complianceCount}</span>
-                                </div>
-                            )}
-                        </div>
-                    </TableCell>
-                    <TableCell className="py-6 align-middle">
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                                <Link href={`/dashboard/users/${u.id}`} className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors flex items-center gap-2 leading-none">
-                                    {u.firstName} {u.lastName} 
-                                    {u.isDemoAccount && <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase border-none px-2 h-4 rounded-none">DEMO</Badge>}
-                                </Link>
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <Avatar className="h-10 w-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
+                                    <AvatarImage src={u.avatar} className="object-cover" />
+                                    <AvatarFallback className="rounded-none font-black text-xs bg-muted">{u.firstName?.[0] || 'U'}{u.lastName?.[0] || ''}</AvatarFallback>
+                                </Avatar>
                                 {isExecutive && complianceCount > 0 && (
-                                    <Badge className="bg-red-600 text-white animate-pulse rounded-none font-black text-[7px] h-4 px-1.5 border-none">
-                                        {complianceCount} ALERTS
-                                    </Badge>
+                                    <div className="absolute -top-2 -right-2 bg-red-600 rounded-full size-6 flex items-center justify-center border-2 border-white shadow-lg animate-pulse z-10">
+                                        <span className="text-white font-black text-[10px]">{complianceCount}</span>
+                                    </div>
                                 )}
                             </div>
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{u.jobTitle}</span>
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                    <Link href={`/dashboard/users/${u.id}`} className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors flex items-center gap-2 leading-none">
+                                        {u.firstName} {u.lastName} 
+                                        {u.isDemoAccount && <Badge className="bg-purple-100 text-purple-700 text-[8px] font-black uppercase border-none px-2 h-4 rounded-none">DEMO</Badge>}
+                                    </Link>
+                                </div>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{u.jobTitle}</span>
+                            </div>
                         </div>
                     </TableCell>
                     <TableCell className="py-6 align-middle">
@@ -704,13 +711,13 @@ export default function UsersPage() {
                             <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-56">
                                 <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2">Actions</DropdownMenuLabel>
                                 <DropdownMenuItem asChild className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
-                                    <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-4 text-primary" /> View Profile</Link>
+                                    <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-4 text-primary" /> Profile</Link>
                                 </DropdownMenuItem>
                                 
                                 {isAdmin && (
                                     <>
                                         <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
-                                            <Edit className="size-4 text-primary" /> Edit Details
+                                            <Edit className="size-4 text-primary" /> Edit
                                         </DropdownMenuItem>
                                         
                                         <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToReset(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-amber-50 text-amber-600">
@@ -720,7 +727,7 @@ export default function UsersPage() {
                                         <DropdownMenuSeparator />
                                         
                                         <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToDelete(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-red-50 text-destructive">
-                                            <Trash2 className="size-4" /> Delete Person
+                                            <Trash2 className="size-4" /> Delete
                                         </DropdownMenuItem>
                                     </>
                                 )}
@@ -739,16 +746,16 @@ export default function UsersPage() {
           <AlertDialogContent className="rounded-none border-none shadow-2xl">
               <AlertDialogHeader>
                   <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-amber-600 flex items-center gap-2 text-left">
-                      <RotateCcw className="size-5" /> Reset Today?
+                      <RotateCcw className="size-5" /> Clear Attendance?
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-sm font-medium leading-relaxed text-left">
-                      Clear attendance for <span className="font-bold text-foreground">{userToReset?.firstName}</span> for today?
+                      Clear today's logs for <span className="font-bold text-foreground">{userToReset?.firstName}</span>?
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="mt-8 gap-3">
                   <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={() => handleResetDay(userToReset.id)} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-600/20">
-                      Reset
+                      Clear
                   </AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
@@ -758,10 +765,10 @@ export default function UsersPage() {
           <AlertDialogContent className="rounded-none border-none shadow-3xl">
               <AlertDialogHeader className="text-left">
                   <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 text-left">
-                      <Trash2 className="size-5" /> Delete Person?
+                      <Trash2 className="size-5" /> Delete User?
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-sm font-medium leading-relaxed text-left">
-                      Remove <span className="font-bold text-foreground">{userToDelete?.firstName}</span>? All their data will be lost.
+                      Remove <span className="font-bold text-foreground">{userToDelete?.firstName}</span> and all their data? This action is permanent.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="mt-8 gap-3">
@@ -825,3 +832,4 @@ function TimelineItem({ icon: Icon, title, time, desc, color, onClick }: any) {
         </div>
     );
 }
+
