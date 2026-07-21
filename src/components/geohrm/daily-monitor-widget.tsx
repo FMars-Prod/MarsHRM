@@ -300,61 +300,61 @@ export function DailyMonitorWidget() {
         </Card>
 
         {sheetContent && (
-            <SheetContent className="rounded-none border-none shadow-2xl w-full sm:max-w-md p-0 overflow-hidden">
-                <SheetHeader className="p-6 border-b bg-white">
+            <SheetContent className="rounded-none border-none shadow-2xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col">
+                <SheetHeader className="p-6 border-b bg-white shrink-0">
                     <SheetTitle className={cn("text-xl font-black uppercase tracking-tighter flex items-center gap-2", sheetContent.color)}>
                         {sheetContent.icon}
                         {sheetContent.title}
                     </SheetTitle>
                 </SheetHeader>
                 <ScrollArea className="flex-1">
-                  <div className="p-6 space-y-3">
-                     {sheetContent.users.map(member => {
-                        const complianceCount = complianceCounts[member.id] || 0;
-                        const isLate = member.att?.status === 'late';
-                        
-                        return (
-                            <Link key={member.id} href={`/dashboard/users/${member.id}`} className="block">
-                                <Card className={cn(
-                                    "border-none ring-1 ring-border/50 rounded-none p-4 bg-white hover:bg-primary/5 transition-colors cursor-pointer group shadow-sm",
-                                    member.id === currentUser?.uid && "ring-2 ring-primary"
-                                )}>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="relative">
-                                                <Avatar className="h-10 w-10 rounded-none">
-                                                    <AvatarImage src={member.avatar} className="object-cover" />
-                                                    <AvatarFallback className="font-bold rounded-none">{member.firstName?.[0]}</AvatarFallback>
-                                                </Avatar>
-                                                {isExecutive && complianceCount > 0 && (
-                                                    <div className="absolute -top-2 -right-2 bg-red-600 rounded-full size-5 flex items-center justify-center border-2 border-white animate-pulse z-10">
-                                                        <span className="text-white font-black text-[9px]">{complianceCount}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-black text-sm group-hover:text-primary transition-colors">
-                                                        {member.firstName} {member.lastName}
-                                                        {member.id === currentUser?.uid && " (You)"}
-                                                    </p>
-                                                    {isLate && (
-                                                        <Badge className="bg-yellow-100 text-yellow-700 border-none text-[8px] font-black h-4 px-1.5 rounded-none uppercase">Late</Badge>
-                                                    )}
+                    <div className="p-6 space-y-3">
+                        {sheetContent.users.map(member => {
+                            const complianceCount = complianceCounts[member.id] || 0;
+                            const isLate = member.att?.status === 'late';
+                            
+                            return (
+                                <Link key={member.id} href={`/dashboard/users/${member.id}`} className="block">
+                                    <Card className={cn(
+                                        "border-none ring-1 ring-border/50 rounded-none p-4 bg-white hover:bg-primary/5 transition-colors cursor-pointer group shadow-sm",
+                                        member.id === currentUser?.uid && "ring-2 ring-primary"
+                                    )}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative">
+                                                    <Avatar className="h-10 w-10 rounded-none">
+                                                        <AvatarImage src={member.avatar} className="object-cover" />
+                                                        <AvatarFallback className="font-bold rounded-none">{member.firstName?.[0]}</AvatarFallback>
+                                                    </Avatar>
                                                     {isExecutive && complianceCount > 0 && (
-                                                        <ShieldAlert className="size-3 text-red-600 animate-pulse" />
+                                                        <div className="absolute -top-2 -right-2 bg-red-600 rounded-full size-5 flex items-center justify-center border-2 border-white animate-pulse z-10">
+                                                            <span className="text-white font-black text-[9px]">{complianceCount}</span>
+                                                        </div>
                                                     )}
                                                 </div>
-                                                <p className="text-[10px] font-bold uppercase opacity-50">{member.jobTitle}</p>
+                                                <div>
+                                                    <div className="flex items-center gap-2 text-left">
+                                                        <p className="font-black text-sm group-hover:text-primary transition-colors">
+                                                            {member.firstName} {member.lastName}
+                                                            {member.id === currentUser?.uid && " (You)"}
+                                                        </p>
+                                                        {isLate && (
+                                                            <Badge className="bg-yellow-100 text-yellow-700 border-none text-[8px] font-black h-4 px-1.5 rounded-none uppercase">Late</Badge>
+                                                        )}
+                                                        {isExecutive && complianceCount > 0 && (
+                                                            <ShieldAlert className="size-3 text-red-600 animate-pulse" />
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] font-bold uppercase opacity-50 text-left">{member.jobTitle}</p>
+                                                </div>
                                             </div>
+                                            <ChevronRight className="size-4 text-muted-foreground opacity-20 group-hover:opacity-100 transition-opacity" />
                                         </div>
-                                        <ChevronRight className="size-4 text-muted-foreground opacity-20 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                </Card>
-                            </Link>
-                        );
-                     })}
-                  </div>
+                                    </Card>
+                                </Link>
+                            );
+                        })}
+                    </div>
                 </ScrollArea>
             </SheetContent>
         )}
