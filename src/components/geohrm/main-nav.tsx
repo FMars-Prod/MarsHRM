@@ -102,8 +102,7 @@ const groups = [
   {
     label: "NEWS",
     links: [
-      { href: "/dashboard/announcements", label: "Announcements", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "unreadAnnouncementsCount" },
-      { href: "/dashboard/events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
+      { href: "/dashboard/announcements", label: "Feed", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "combinedNewsCount" },
       { href: "/dashboard/holidays", label: "Holidays", icon: CalendarDays, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/issues", label: "Support", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
     ]
@@ -143,8 +142,7 @@ export function MainNav({
 
   const badgeCounts: { [key: string]: number } = {
     pendingLeaveCount,
-    unreadAnnouncementsCount,
-    todaysEventsCount,
+    combinedNewsCount: unreadAnnouncementsCount + todaysEventsCount,
     pendingLocationRequestsCount,
     pendingAttRequestsCount,
     ticketUpdateCount,

@@ -92,7 +92,7 @@ export function EventsWidget() {
             </div>
         </div>
         {!isToday && <span className="text-[8px] font-black uppercase text-muted-foreground opacity-40">{formatDate(item.date)}</span>}
-        {isToday && <Sparkles className="size-3 text-primary animate-pulse" />}
+        {isToday && <span className="text-[10px] animate-pulse">✨</span>}
       </div>
   );
 
@@ -138,7 +138,7 @@ export function EventsWidget() {
       </CardContent>
       <CardFooter className="p-6 pt-0 mt-auto">
         <Button variant="outline" className="w-full rounded-none h-9 font-black uppercase text-[9px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50" asChild>
-          <Link href="/dashboard/events">View All <ChevronRight className="size-3 ml-1.5 opacity-50" /></Link>
+          <Link href="/dashboard/announcements?tab=events">View All <ChevronRight className="size-3 ml-1.5 opacity-50" /></Link>
         </Button>
       </CardFooter>
     </Card>
