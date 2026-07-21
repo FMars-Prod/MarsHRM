@@ -35,7 +35,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 const userSchema = z.object({
   firstName: z.string().min(1, "Required"),
-  lastName: z.string().min(1, "Required"),
+  lastName: z.string().optional(),
   email: z.string().email(),
   phoneNumber: z.string().optional(),
   jobTitle: z.string().min(1, "Required"),
@@ -193,6 +193,7 @@ export default function UsersPage() {
                 employeeId: newUserId, 
                 hireDate: new Date().toISOString(), 
                 ...userData, 
+                lastName: values.lastName || "",
                 leaveBalance: leaveBal,
                 totalLeaveEntitlement: totalLeave,
                 canUpdateSignature: true,
@@ -206,7 +207,7 @@ export default function UsersPage() {
             await batch.commit();
             await deleteApp(tempApp);
             
-            toast({ title: "User added successfully" });
+            toast({ title: "User added" });
         }
         setIsDialogOpen(false);
         form.reset();
@@ -302,7 +303,7 @@ export default function UsersPage() {
           });
 
           await batch.commit();
-          toast({ title: "Updated all selected people" });
+          toast({ title: "Updated all selected" });
           setIsBulkEditDialogOpen(false);
           setSelectedUserIds([]);
           setBulkShift("");
@@ -351,7 +352,7 @@ export default function UsersPage() {
   return (
     <TooltipProvider delayDuration={0}>
     <div className="space-y-8 animate-fade-in-up">
-      <PageHeader title="People" description="Manage all team members and their roles.">
+      <PageHeader title="People" description="Manage all team members.">
         <div className="flex gap-2">
             {selectedUserIds.length > 0 && isExecutive && (
                 <div className="flex gap-2 animate-fade-in-up">
@@ -363,7 +364,7 @@ export default function UsersPage() {
                         </DialogTrigger>
                         <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                             <DialogHeader className="text-left">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Edit Multiple People</DialogTitle>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Edit Multiple</DialogTitle>
                                 <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Update settings for all selected members</DialogDescription>
                             </DialogHeader>
                             <div className="py-6 space-y-6 text-left">
@@ -412,7 +413,7 @@ export default function UsersPage() {
                         </AlertDialogTrigger>
                         <AlertDialogContent className="rounded-none border-none shadow-3xl">
                             <AlertDialogHeader className="text-left">
-                                <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Delete selected people?</AlertDialogTitle>
+                                <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Delete selected?</AlertDialogTitle>
                                 <AlertDialogDescription className="text-sm font-medium leading-relaxed">This will remove all data for {selectedUserIds.length} people. This cannot be undone.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter className="mt-8 gap-3">
@@ -428,7 +429,7 @@ export default function UsersPage() {
                 <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><PlusCircle className="mr-2 h-4 w-4" /> Add Person</Button></DialogTrigger>
                 <DialogContent className="sm:max-w-2xl rounded-none p-8 border-none shadow-3xl">
                     <DialogHeader className="text-left">
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Details' : 'Add New Person'}</DialogTitle>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Details' : 'Add Person'}</DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Complete the form to manage this person's account</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-8 px-8">
@@ -445,7 +446,7 @@ export default function UsersPage() {
                                     
                                     <div className="flex flex-wrap gap-2 min-h-[48px] p-3 bg-muted/10 border-2 border-dashed border-border/50">
                                         {(selectedHeadIds?.length || 0) === 0 ? (
-                                            <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier Command (Direct report to admin)</span>
+                                            <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier (Direct report to admin)</span>
                                         ) : (
                                             selectedHeadIds.map(headId => {
                                                 const head = users?.find(h => h.id === headId);
@@ -528,7 +529,7 @@ export default function UsersPage() {
                                         </FormItem>
                                     )} />
                                     <FormField control={form.control} name="shiftType" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Work Shift</FormLabel>
+                                        <FormItem><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Shift</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select Shift" /></SelectTrigger></FormControl><SelectContent className="rounded-none">
                                             {shifts?.map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.start}-{s.end})</SelectItem>)}
                                             {(!shifts || shifts.length === 0) && <SelectItem value="General Shift">General Shift</SelectItem>}
@@ -568,7 +569,7 @@ export default function UsersPage() {
                                     <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
                                         <div className="space-y-0.5 text-left">
                                             <Label className="text-sm font-black uppercase tracking-tight">Allow Work From Home</Label>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Enable remote check-in for this user</p>
+                                            <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-60">Enable remote check-in</p>
                                         </div>
                                         <FormField control={form.control} name="isWfhAllowed" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} className="rounded-none" />)} />
                                     </div>
@@ -577,7 +578,7 @@ export default function UsersPage() {
                                         <div className="p-6 bg-primary/5 rounded-none border-2 border-primary/10 space-y-6 animate-fade-in-up text-left">
                                             <div className="flex items-center justify-between">
                                                 <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                                    <MapPin className="size-3" /> Set Home Coordinates
+                                                    <MapPin className="size-3" /> Home Location
                                                 </Label>
                                                 <Button 
                                                     type="button" 
@@ -586,7 +587,7 @@ export default function UsersPage() {
                                                     className="h-8 rounded-none text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5"
                                                     onClick={handleGetCurrentLocation}
                                                 >
-                                                    <LocateFixed className="size-3 mr-1.5" /> Capture My Location
+                                                    <LocateFixed className="size-3 mr-1.5" /> Set Current
                                                 </Button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
@@ -613,19 +614,18 @@ export default function UsersPage() {
                                     )}
                                 </div>
                                 
-                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">New Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
+                                {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
                                 <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">
-                                    {editingUser ? "Save Changes" : "Create Account"}
+                                    {editingUser ? "Save Changes" : "Create User"}
                                 </Button>
                             </form>
                         </Form>
                     </ScrollArea>
                 </DialogContent>
             </Dialog>
-        </Table>
-      </div>
+        </div>
+      </PageHeader>
 
-      {/* Main Employee Table */}
       <div className="border-none ring-1 ring-border/50 rounded-none overflow-hidden bg-white shadow-xl">
         <Table>
           <TableHeader className="bg-muted/10 border-b">
@@ -634,7 +634,7 @@ export default function UsersPage() {
                   <Checkbox checked={selectedUserIds.length === (users?.length || 0) && (users?.length || 0) > 0} onCheckedChange={toggleSelectAll} className="rounded-none" />
               </TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">User</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Location</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Office</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Shift</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Role</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-8">Actions</TableHead>
@@ -642,9 +642,9 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Loading Personnel...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse uppercase font-black text-sm text-muted-foreground tracking-[0.3em]">Loading...</TableCell></TableRow>
             ) : users?.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No records found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[11px] tracking-widest opacity-30">No people found.</TableCell></TableRow>
             ) : users?.map(u => {
               const userBranch = branches?.find((b: any) => b.id === u.branchId);
               const isRemote = u.isWfhAllowed;
@@ -768,7 +768,7 @@ export default function UsersPage() {
                       <Trash2 className="size-5" /> Delete User?
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-sm font-medium leading-relaxed text-left">
-                      Remove <span className="font-bold text-foreground">{userToDelete?.firstName}</span> and all their data? This action is permanent.
+                      Remove <span className="font-bold text-foreground">{userToDelete?.firstName}</span>? This is permanent.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="mt-8 gap-3">
