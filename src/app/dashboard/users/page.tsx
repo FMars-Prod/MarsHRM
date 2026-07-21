@@ -33,26 +33,27 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+// Optimized schema for flexibility
 const userSchema = z.object({
   firstName: z.string().min(1, "Required"),
-  lastName: z.string().optional(),
+  lastName: z.string().optional().or(z.literal("")),
   email: z.string().email(),
-  phoneNumber: z.string().optional(),
+  phoneNumber: z.string().optional().or(z.literal("")),
   jobTitle: z.string().min(1, "Required"),
   department: z.string().min(1, "Required"),
-  branchId: z.string().optional(),
+  branchId: z.string().optional().nullable().or(z.literal("")),
   shiftType: z.string().min(1, "Required"),
   employmentType: z.enum(['Intern', 'Employee']),
   role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin']),
   password: z.string().optional(),
   isWfhAllowed: z.boolean().default(false),
   isDemoAccount: z.boolean().default(false),
-  homeLatitude: z.coerce.number().optional(),
-  homeLongitude: z.coerce.number().optional(),
-  homeRadius: z.coerce.number().optional().default(0.5),
-  performanceRating: z.string().optional(),
+  homeLatitude: z.union([z.coerce.number(), z.literal(""), z.null()]).optional(),
+  homeLongitude: z.union([z.coerce.number(), z.literal(""), z.null()]).optional(),
+  homeRadius: z.coerce.number().default(0.5),
+  performanceRating: z.string().optional().default("Good"),
   leaveBalance: z.coerce.number().default(0),
-  payrollAmount: z.coerce.number().optional(),
+  payrollAmount: z.coerce.number().optional().default(0),
   reportingHeadIds: z.array(z.string()).default([]),
 });
 
@@ -70,7 +71,7 @@ export default function UsersPage() {
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
   const [isPurging, setIsPurging] = React.useState(false);
 
-  // Bulk Edit States
+  // Bulk States
   const [isBulkEditDialogOpen, setIsBulkEditDialogOpen] = React.useState(false);
   const [bulkShift, setBulkShift] = React.useState<string>("");
   const [bulkRole, setBulkRole] = React.useState<string>("");
@@ -113,7 +114,7 @@ export default function UsersPage() {
     defaultValues: {
       firstName: "", lastName: "", email: "", phoneNumber: "", jobTitle: "", department: "",
       branchId: undefined, shiftType: "General Shift",
-      employmentType: "Intern", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
+      employmentType: "Employee", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
       homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5,
       performanceRating: "Good", leaveBalance: 0, payrollAmount: 0, reportingHeadIds: []
     },
@@ -122,9 +123,13 @@ export default function UsersPage() {
   const isWfhAllowedValue = form.watch("isWfhAllowed");
   const selectedHeadIds = form.watch("reportingHeadIds") || [];
 
+  // Cleanup logic when toggling WFH
   React.useEffect(() => {
-      if (isWfhAllowedValue && form.getValues("branchId") !== undefined) {
-          form.setValue("branchId", undefined);
+      if (isWfhAllowedValue) {
+          const currentBranch = form.getValues("branchId");
+          if (currentBranch !== undefined && currentBranch !== null) {
+              form.setValue("branchId", null);
+          }
       }
   }, [isWfhAllowedValue, form]);
 
@@ -134,10 +139,10 @@ export default function UsersPage() {
         (position) => {
           form.setValue("homeLatitude", position.coords.latitude);
           form.setValue("homeLongitude", position.coords.longitude);
-          toast({ title: "Location saved" });
+          toast({ title: "Coordinates Saved" });
         },
         (error) => {
-          toast({ variant: "destructive", title: "Error", description: error.message });
+          toast({ variant: "destructive", title: "GPS Error", description: error.message });
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
@@ -146,9 +151,17 @@ export default function UsersPage() {
 
   const onSubmit = async (values: UserFormValues) => {
     try {
+        // Clean values before sending to Firestore
+        const processedData: any = { ...values };
+        if (values.isWfhAllowed) processedData.branchId = null;
+        if (!processedData.branchId) processedData.branchId = null;
+        if (!processedData.homeLatitude) processedData.homeLatitude = null;
+        if (!processedData.homeLongitude) processedData.homeLongitude = null;
+        if (!processedData.lastName) processedData.lastName = "";
+        
         if (editingUser) {
             const userRef = doc(firestore, 'users', editingUser.id);
-            const { password, ...updateData } = values;
+            const { password, ...updateData } = processedData;
             const batch = writeBatch(firestore);
             
             if (values.performanceRating !== editingUser.performanceRating) {
@@ -170,9 +183,9 @@ export default function UsersPage() {
             if (values.role === 'Team Lead') batch.set(doc(firestore, 'system_roles_teamlead', editingUser.id), { employeeId: editingUser.id });
 
             await batch.commit();
-            toast({ title: "Profile updated" });
+            toast({ title: "User Updated" });
         } else {
-            // Secondary App Logic to avoid signing out the admin
+            // Secondary App Logic for creation
             const tempAppName = `create-user-${Date.now()}`;
             const tempApp = initializeApp(firebaseConfig, tempAppName);
             const tempAuth = getAuth(tempApp);
@@ -181,7 +194,7 @@ export default function UsersPage() {
             const newUserId = userCredential.user.uid;
             
             const userRef = doc(firestore, 'users', newUserId);
-            const { password, ...userData } = values;
+            const { password, ...userData } = processedData;
             
             const batch = writeBatch(firestore);
             const isEmployeeType = values.employmentType === 'Employee';
@@ -193,7 +206,6 @@ export default function UsersPage() {
                 employeeId: newUserId, 
                 hireDate: new Date().toISOString(), 
                 ...userData, 
-                lastName: values.lastName || "",
                 leaveBalance: leaveBal,
                 totalLeaveEntitlement: totalLeave,
                 canUpdateSignature: true,
@@ -207,12 +219,12 @@ export default function UsersPage() {
             await batch.commit();
             await deleteApp(tempApp);
             
-            toast({ title: "User added" });
+            toast({ title: "Account Created" });
         }
         setIsDialogOpen(false);
         form.reset();
     } catch (e: any) {
-        toast({ variant: 'destructive', title: 'Action failed', description: e.message });
+        toast({ variant: 'destructive', title: 'Action Failed', description: e.message });
     }
   };
 
@@ -268,9 +280,9 @@ export default function UsersPage() {
         });
 
         await batch.commit();
-        toast({ title: "Account deleted" });
+        toast({ title: "Account Deleted" });
     } catch (err: any) {
-        toast({ variant: 'destructive', title: "Error", description: err.message });
+        toast({ variant: 'destructive', title: "Delete Error", description: err.message });
     } finally {
         setIsPurging(false);
         setUserToDelete(null);
@@ -303,14 +315,14 @@ export default function UsersPage() {
           });
 
           await batch.commit();
-          toast({ title: "Updated all selected" });
+          toast({ title: "Bulk Update Finished" });
           setIsBulkEditDialogOpen(false);
           setSelectedUserIds([]);
           setBulkShift("");
           setBulkRole("");
           setBulkBranch("");
       } catch (err: any) {
-          toast({ variant: 'destructive', title: "Update failed", description: err.message });
+          toast({ variant: 'destructive', title: "Update Failed", description: err.message });
       } finally {
           setIsBulkUpdating(false);
       }
@@ -323,10 +335,10 @@ export default function UsersPage() {
         for (const uid of selectedUserIds) {
             await handleDeleteUser(uid);
         }
-        toast({ title: "Deleted selected accounts" });
+        toast({ title: "Bulk Delete Finished" });
         setSelectedUserIds([]);
     } catch (err: any) {
-        toast({ variant: 'destructive', title: "Action failed" });
+        toast({ variant: 'destructive', title: "Action Failed" });
     } finally {
         setIsPurging(false);
     }
@@ -336,7 +348,7 @@ export default function UsersPage() {
       const todayId = format(new Date(), 'yyyy-MM-dd');
       const attRef = doc(firestore, `users/${userId}/attendances`, todayId);
       deleteDocumentNonBlocking(attRef);
-      toast({ title: "Cleared today's attendance" });
+      toast({ title: "Attendance Cleared" });
       setUserToReset(null);
   };
 
@@ -352,7 +364,7 @@ export default function UsersPage() {
   return (
     <TooltipProvider delayDuration={0}>
     <div className="space-y-8 animate-fade-in-up">
-      <PageHeader title="People" description="Manage all team members.">
+      <PageHeader title="People" description="Manage user accounts and office assignments.">
         <div className="flex gap-2">
             {selectedUserIds.length > 0 && isExecutive && (
                 <div className="flex gap-2 animate-fade-in-up">
@@ -364,8 +376,8 @@ export default function UsersPage() {
                         </DialogTrigger>
                         <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                             <DialogHeader className="text-left">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Edit Multiple</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Update settings for all selected members</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Bulk Edit</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Apply changes to all selected members</DialogDescription>
                             </DialogHeader>
                             <div className="py-6 space-y-6 text-left">
                                 <div className="space-y-2">
@@ -387,7 +399,7 @@ export default function UsersPage() {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Update Location</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Update Office</Label>
                                     <Select value={bulkBranch} onValueChange={setBulkBranch}>
                                         <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="No Change" /></SelectTrigger>
                                         <SelectContent className="rounded-none">
@@ -399,7 +411,7 @@ export default function UsersPage() {
                             <DialogFooter>
                                 <Button onClick={handleBulkUpdate} disabled={isBulkUpdating} className="w-full h-12 rounded-none font-black uppercase tracking-widest shadow-2xl">
                                     {isBulkUpdating ? <Loader2 className="size-4 animate-spin mr-2"/> : null}
-                                    Update Selected
+                                    Save Changes
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
@@ -414,7 +426,7 @@ export default function UsersPage() {
                         <AlertDialogContent className="rounded-none border-none shadow-3xl">
                             <AlertDialogHeader className="text-left">
                                 <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Delete selected?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-sm font-medium leading-relaxed">This will remove all data for {selectedUserIds.length} people. This cannot be undone.</AlertDialogDescription>
+                                <AlertDialogDescription className="text-sm font-medium leading-relaxed">This will remove {selectedUserIds.length} accounts permanently. This cannot be undone.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter className="mt-8 gap-3">
                                 <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
@@ -429,8 +441,8 @@ export default function UsersPage() {
                 <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><PlusCircle className="mr-2 h-4 w-4" /> Add Person</Button></DialogTrigger>
                 <DialogContent className="sm:max-w-2xl rounded-none p-8 border-none shadow-3xl">
                     <DialogHeader className="text-left">
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit Details' : 'Add Person'}</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Complete the form to manage this person's account</DialogDescription>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit User' : 'Add New Person'}</DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Manage account information and assignments</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-8 px-8">
                         <Form {...form}>
@@ -442,10 +454,10 @@ export default function UsersPage() {
                                 <FormField control={form.control} name="email" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Email Address</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 
                                 <div className="space-y-4 text-left">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Managers</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting To</Label>
                                     
                                     <div className="flex flex-wrap gap-2 min-h-[48px] p-3 bg-muted/10 border-2 border-dashed border-border/50">
-                                        {(selectedHeadIds?.length || 0) === 0 ? (
+                                        {(!selectedHeadIds || selectedHeadIds.length === 0) ? (
                                             <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier (Direct report to admin)</span>
                                         ) : (
                                             selectedHeadIds.map(headId => {
@@ -519,7 +531,7 @@ export default function UsersPage() {
                                 <div className="grid grid-cols-2 gap-4 text-left">
                                     <FormField control={form.control} name="branchId" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className={cn("text-[10px] font-black uppercase text-primary tracking-widest", isWfhAllowedValue && "opacity-20")}>Office Location</FormLabel>
+                                            <FormLabel className={cn("text-[10px] font-black uppercase text-primary tracking-widest", isWfhAllowedValue && "opacity-20")}>Office</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value || ""} disabled={isWfhAllowedValue}>
                                                 <FormControl><SelectTrigger className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder={isWfhAllowedValue ? "HOME" : "Select Office"} /></SelectTrigger></FormControl>
                                                 <SelectContent className="rounded-none">
@@ -616,7 +628,7 @@ export default function UsersPage() {
                                 
                                 {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
                                 <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">
-                                    {editingUser ? "Save Changes" : "Create User"}
+                                    {editingUser ? "Save User" : "Add User"}
                                 </Button>
                             </form>
                         </Form>
@@ -687,7 +699,7 @@ export default function UsersPage() {
                         ) : (
                             <div className="flex items-center gap-2.5 text-xs font-bold uppercase text-foreground/70">
                                 <Building2 className="size-4 opacity-40" />
-                                {userBranch?.name || "UNASSIGNED"}
+                                {userBranch?.name || "OFFICE"}
                             </div>
                         )}
                     </TableCell>
@@ -832,4 +844,3 @@ function TimelineItem({ icon: Icon, title, time, desc, color, onClick }: any) {
         </div>
     );
 }
-
