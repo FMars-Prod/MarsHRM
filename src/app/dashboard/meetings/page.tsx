@@ -168,22 +168,22 @@ export default function MeetingsPage() {
                             </DialogHeader>
                             <ScrollArea className="max-h-[60vh] p-10 bg-muted/5">
                                 <div className="space-y-8">
-                                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Meeting Title</Label><Input value={meetingForm.title} onChange={e => setMeetingForm({...meetingForm, title: e.target.value})} placeholder="e.g., Weekly Sync" className="h-12 rounded-none" /></div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase text-muted-foreground">Meeting Title</Label><Input value={meetingForm.title} onChange={e => setMeetingForm({...meetingForm, title: e.target.value})} placeholder="e.g., Weekly Sync" className="h-12 rounded-none" /></div>
+                                    <div className="space-y-2 text-left">
                                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Meeting Regarding? (Topic)</Label>
                                         <Textarea value={meetingForm.description} onChange={e => setMeetingForm({...meetingForm, description: e.target.value})} placeholder="Describe the purpose of this meeting..." className="rounded-none min-h-[80px]" />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Type</Label>
+                                    <div className="grid grid-cols-2 gap-6 text-left">
+                                        <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase text-muted-foreground">Type</Label>
                                             <Select value={meetingForm.type} onValueChange={v => setMeetingForm({...meetingForm, type: v as any})}>
                                                 <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue /></SelectTrigger>
                                                 <SelectContent><SelectItem value="Internal">Team Call</SelectItem><SelectItem value="Client Meet">Client Call</SelectItem></SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Date & Time</Label><Input type="datetime-local" value={meetingForm.date} onChange={e => setMeetingForm({...meetingForm, date: e.target.value})} className="h-12 rounded-none" /></div>
+                                        <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase text-muted-foreground">Date & Time</Label><Input type="datetime-local" value={meetingForm.date} onChange={e => setMeetingForm({...meetingForm, date: e.target.value})} className="h-12 rounded-none" /></div>
                                     </div>
                                     {meetingForm.type === 'Client Meet' && (
-                                        <div className="space-y-2 animate-fade-in-up">
+                                        <div className="space-y-2 animate-fade-in-up text-left">
                                             <Label className="text-[10px] font-black uppercase text-primary">Select Client</Label>
                                             <Select value={meetingForm.clientId} onValueChange={v => setMeetingForm({...meetingForm, clientId: v})}>
                                                 <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Which client?" /></SelectTrigger>
@@ -191,8 +191,8 @@ export default function MeetingsPage() {
                                             </Select>
                                         </div>
                                     )}
-                                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Meeting Link (Google Meet / Zoom)</Label><Input value={meetingForm.link} onChange={e => setMeetingForm({...meetingForm, link: e.target.value})} placeholder="https://meet.google.com/..." className="h-12 rounded-none" /></div>
-                                    <div className="space-y-4">
+                                    <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase text-muted-foreground">Meeting Link (Google Meet / Zoom)</Label><Input value={meetingForm.link} onChange={e => setMeetingForm({...meetingForm, link: e.target.value})} placeholder="https://meet.google.com/..." className="h-12 rounded-none" /></div>
+                                    <div className="space-y-4 text-left">
                                         <Label className="text-[10px] font-black uppercase text-muted-foreground">People Attending</Label>
                                         <div className="grid grid-cols-1 gap-2">
                                             {allUsers?.filter(u => u.id !== user?.uid).map(u => (
@@ -208,7 +208,7 @@ export default function MeetingsPage() {
                                     </div>
                                 </div>
                             </ScrollArea>
-                            <div className="p-10 border-t bg-white">
+                            <div className="p-10 border-t bg-white shrink-0">
                                 <Button onClick={handleCreateMeeting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Confirm Meeting</Button>
                             </div>
                         </DialogContent>
@@ -217,15 +217,15 @@ export default function MeetingsPage() {
             </PageHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border-none shadow-sm rounded-none bg-emerald-50 p-6 flex items-center gap-5 ring-1 ring-border/50">
+                <Card className="border-none shadow-sm rounded-none bg-emerald-50 p-6 flex items-center gap-5 ring-1 ring-border/50 text-left">
                     <div className="p-4 bg-emerald-600 text-white rounded-none shadow-lg"><Video className="size-6" /></div>
                     <div><p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 opacity-60">Upcoming Calls</p><h3 className="text-3xl font-black text-emerald-900">{upcomingCount}</h3></div>
                 </Card>
-                <Card className="border-none shadow-sm rounded-none bg-blue-50 p-6 flex items-center gap-5 ring-1 ring-border/50">
+                <Card className="border-none shadow-sm rounded-none bg-blue-50 p-6 flex items-center gap-5 ring-1 ring-border/50 text-left">
                     <div className="p-4 bg-blue-600 text-white rounded-none shadow-lg"><Users className="size-6" /></div>
                     <div><p className="text-[10px] font-black uppercase tracking-widest text-blue-700 opacity-60">Total Meetings</p><h3 className="text-3xl font-black text-blue-900">{meetings?.length || 0}</h3></div>
                 </Card>
-                <Card className="border-none shadow-sm rounded-none bg-indigo-50 p-6 flex items-center gap-5 ring-1 ring-border/50">
+                <Card className="border-none shadow-sm rounded-none bg-indigo-50 p-6 flex items-center gap-5 ring-1 ring-border/50 text-left">
                     <div className="p-4 bg-indigo-600 text-white rounded-none shadow-lg"><Calendar className="size-6" /></div>
                     <div><p className="text-[10px] font-black uppercase tracking-widest text-indigo-700 opacity-60">This Month</p><h3 className="text-xl font-black text-indigo-900">{format(new Date(), 'MMMM yyyy')}</h3></div>
                 </Card>
@@ -280,12 +280,12 @@ export default function MeetingsPage() {
                                     )} 
                                     onClick={() => setSelectedMeeting(m)}
                                 >
-                                    <TableCell className="py-8 px-8">
+                                    <TableCell className="py-8 px-8 text-left">
                                         <div className="flex items-center gap-5">
                                             <div className={cn("p-3 rounded-none shadow-sm", isPast ? "bg-slate-200 text-slate-400" : "bg-primary/5 text-primary")}>
                                                 <Video className="size-5" />
                                             </div>
-                                            <div>
+                                            <div className="text-left">
                                                 <span className={cn("font-black text-sm uppercase block", isPast && "line-through text-slate-500")}>{m.title}</span>
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-[10px] font-bold text-muted-foreground uppercase">By: {m.createdByName}</p>
@@ -295,7 +295,7 @@ export default function MeetingsPage() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <div className="flex flex-col gap-1.5">
+                                        <div className="flex flex-col gap-1.5 text-left">
                                             {m.type === 'Client Meet' ? 
                                                 <Badge className={cn("border-none w-fit text-[8px] font-black uppercase rounded-none px-2", isPast ? "bg-slate-100 text-slate-400" : "bg-sky-100 text-sky-700")}>{m.clientName}</Badge> : 
                                                 <Badge className={cn("border-none w-fit text-[8px] font-black uppercase rounded-none px-2", isPast ? "bg-slate-100 text-slate-400" : "bg-purple-100 text-purple-700")}>TEAM CALL</Badge>
@@ -303,7 +303,7 @@ export default function MeetingsPage() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <div className="space-y-1">
+                                        <div className="space-y-1 text-left">
                                             <p className="text-xs font-bold uppercase">{format(m.date.toDate(), 'PPP')}</p>
                                             <p className={cn("text-[10px] font-black uppercase", isPast ? "text-slate-400" : "text-primary")}>{format(m.date.toDate(), 'p')}</p>
                                         </div>
@@ -331,67 +331,73 @@ export default function MeetingsPage() {
             </div>
 
             <Sheet open={!!selectedMeeting} onOpenChange={o => !o && setSelectedMeeting(null)}>
-                <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col">
-                    <SheetHeader className="p-8 border-b bg-white shrink-0">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex gap-2">
-                                <Badge className={cn("rounded-none font-black text-[9px] h-5 uppercase tracking-widest border-none px-2", selectedMeeting?.type === 'Client Meet' ? "bg-sky-100 text-sky-700" : "bg-purple-100 text-purple-700")}>
+                <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-[380px] p-0 overflow-hidden flex flex-col">
+                    <SheetHeader className="p-5 border-b bg-white shrink-0 text-left">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex gap-1.5">
+                                <Badge className={cn("rounded-none font-black text-[8px] h-4 uppercase tracking-widest border-none px-2", selectedMeeting?.type === 'Client Meet' ? "bg-sky-100 text-sky-700" : "bg-purple-100 text-purple-700")}>
                                     {selectedMeeting?.type}
                                 </Badge>
                                 {selectedMeeting && isBefore(selectedMeeting.date.toDate(), now) && (
-                                    <Badge className="bg-slate-100 text-slate-500 border-none rounded-none text-[9px] font-black uppercase tracking-widest px-2 h-5">Finished</Badge>
+                                    <Badge className="bg-slate-100 text-slate-500 border-none rounded-none text-[8px] font-black uppercase tracking-widest px-2 h-4">Finished</Badge>
                                 )}
                             </div>
                         </div>
-                        <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary leading-tight">{selectedMeeting?.title}</SheetTitle>
+                        <SheetTitle className="text-lg font-black uppercase tracking-tighter text-primary leading-tight text-left">{selectedMeeting?.title}</SheetTitle>
                     </SheetHeader>
                     <ScrollArea className="flex-1 bg-muted/5">
-                        <div className="p-8 space-y-10 pb-20">
-                            <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Time & Link</Label>
-                                <div className="p-6 bg-white border border-border/50 shadow-sm rounded-none space-y-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="size-10 rounded-none bg-primary/5 flex items-center justify-center text-primary"><Calendar className="size-5"/></div>
-                                        <div><p className="text-sm font-bold uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'PPPP')}</p><p className="text-xs font-black text-primary uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'p')}</p></div>
+                        <div className="p-5 space-y-5 pb-12 text-left">
+                            <div className="space-y-2 text-left">
+                                <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Time & Link</Label>
+                                <div className="p-3 bg-white border border-border/50 shadow-sm rounded-none space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="size-8 rounded-none bg-primary/5 flex items-center justify-center text-primary"><Calendar className="size-4"/></div>
+                                        <div className="text-left">
+                                            <p className="text-xs font-bold uppercase leading-none mb-1">{selectedMeeting && format(selectedMeeting.date.toDate(), 'PPP')}</p>
+                                            <p className="text-[10px] font-black text-primary uppercase leading-none">{selectedMeeting && format(selectedMeeting.date.toDate(), 'p')}</p>
+                                        </div>
                                     </div>
                                     <Separator className="opacity-50" />
                                     {selectedMeeting?.link && !isBefore(selectedMeeting.date.toDate(), now) && (
-                                        <Button className="w-full h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2" asChild>
-                                            <Link href={selectedMeeting.link} target="_blank"><ExternalLink className="size-4" /> Join Video Call</Link>
+                                        <Button className="w-full h-9 rounded-none font-black uppercase text-[9px] tracking-widest gap-2" asChild>
+                                            <Link href={selectedMeeting.link} target="_blank"><ExternalLink className="size-3" /> Join Call</Link>
                                         </Button>
                                     )}
                                 </div>
                             </div>
 
                             {selectedMeeting?.description && (
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Topic / Regarding</Label>
-                                    <div className="p-5 bg-white border border-border/50 rounded-none">
-                                        <p className="text-sm font-medium italic text-foreground/70 leading-relaxed">"{selectedMeeting.description}"</p>
+                                <div className="space-y-2 text-left">
+                                    <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Topic</Label>
+                                    <div className="p-3 bg-white border border-border/50 rounded-none text-left">
+                                        <p className="text-[11px] font-medium italic text-foreground/70 leading-snug">"{selectedMeeting.description}"</p>
                                     </div>
                                 </div>
                             )}
 
                             {selectedMeeting?.type === 'Client Meet' && (
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Linked Client</Label>
+                                <div className="space-y-2 text-left">
+                                    <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Linked Client</Label>
                                     <Link href={`/dashboard/clients?clientId=${selectedMeeting.clientId}`} className="block group">
-                                        <div className="flex items-center gap-4 p-5 bg-sky-50/50 border border-sky-100 rounded-none group-hover:bg-sky-50 transition-colors">
+                                        <div className="flex items-center gap-3 p-3 bg-sky-50/50 border border-sky-100 rounded-none group-hover:bg-sky-50 transition-colors">
                                             {(() => {
                                                 const client = allClients?.find(c => c.id === selectedMeeting.clientId);
-                                                if (client?.logoUrl) return <img src={client.logoUrl} className="size-10 object-contain" alt={client.companyName} />;
-                                                return <div className="size-10 bg-sky-600 text-white flex items-center justify-center font-black text-xs">{selectedMeeting.clientName?.slice(0, 2).toUpperCase()}</div>;
+                                                if (client?.logoUrl) return <img src={client.logoUrl} className="size-8 object-contain" alt={client.companyName} />;
+                                                return <div className="size-8 bg-sky-600 text-white flex items-center justify-center font-black text-[10px]">{selectedMeeting.clientName?.slice(0, 2).toUpperCase()}</div>;
                                             })()}
-                                            <p className="text-sm font-black uppercase text-sky-900 flex-1">{selectedMeeting.clientName}</p>
-                                            <ChevronRight className="size-4 text-sky-400 group-hover:translate-x-1 transition-transform" />
+                                            <p className="text-[11px] font-black uppercase text-sky-900 flex-1">{selectedMeeting.clientName}</p>
+                                            <ChevronRight className="size-3 text-sky-400 group-hover:translate-x-1 transition-transform" />
                                         </div>
                                     </Link>
                                 </div>
                             )}
 
-                            <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">People Attending</Label>
-                                <div className="space-y-3">
+                            <div className="space-y-2 text-left">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Attendance</h4>
+                                    <Badge variant="outline" className="text-[7px] font-black uppercase rounded-none border-none bg-primary/5 text-primary px-1.5 h-4">{selectedMeeting?.participantIds.length} Persons</Badge>
+                                </div>
+                                <div className="space-y-1">
                                     {selectedMeeting?.participantIds.map((id, i) => {
                                         const name = selectedMeeting.participantNames[i];
                                         const participantUser = allUsers?.find(u => u.id === id);
@@ -400,13 +406,13 @@ export default function MeetingsPage() {
 
                                         return (
                                             <Link href={`/dashboard/users/${id}`} key={id} className="block group">
-                                                <div className="flex items-center gap-4 p-4 bg-white border border-border/50 rounded-none group-hover:bg-primary/5 transition-colors">
-                                                    <Avatar className="size-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
+                                                <div className="flex items-center gap-3 p-2 bg-white border border-border/50 rounded-none group-hover:bg-primary/5 transition-colors">
+                                                    <Avatar className="size-7 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
                                                         {avatar ? (
-                                                            isUrl ? <AvatarImage src={avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 font-black text-xs">{avatar}</div>
-                                                        ) : <AvatarFallback className="text-[10px] font-black bg-muted">{name?.[0]}</AvatarFallback>}
+                                                            isUrl ? <AvatarImage src={avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 font-black text-[9px]">{avatar}</div>
+                                                        ) : <AvatarFallback className="text-[8px] font-black bg-muted">{name?.[0]}</AvatarFallback>}
                                                     </Avatar>
-                                                    <span className="text-xs font-bold uppercase tracking-tight flex-1">{name}</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-tight flex-1 truncate">{name}</span>
                                                     <ChevronRight className="size-3 text-muted-foreground opacity-0 group-hover:opacity-40 transition-all" />
                                                 </div>
                                             </Link>
@@ -415,21 +421,21 @@ export default function MeetingsPage() {
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Organizer</Label>
-                                <Link href={`/dashboard/users/${selectedMeeting?.createdBy}`} className="flex items-center gap-4 group">
-                                    <Avatar className="size-10 rounded-none ring-1 ring-border">
+                            <div className="space-y-2 pt-2 border-t border-dashed text-left">
+                                <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Organizer</Label>
+                                <Link href={`/dashboard/users/${selectedMeeting?.createdBy}`} className="flex items-center gap-3 group">
+                                    <Avatar className="size-7 rounded-none ring-1 ring-border">
                                         {(() => {
                                             const organizerUser = allUsers?.find(u => u.id === selectedMeeting?.createdBy);
                                             const avatar = organizerUser?.avatar;
                                             const isUrl = avatar && avatar.startsWith('http');
                                             if (avatar) {
-                                                return isUrl ? <AvatarImage src={avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 font-black text-xs">{avatar}</div>
+                                                return isUrl ? <AvatarImage src={avatar} className="object-cover" /> : <div className="h-full w-full flex items-center justify-center bg-primary/10 font-black text-[9px]">{avatar}</div>
                                             }
-                                            return <AvatarFallback className="text-[10px] font-black bg-muted">{selectedMeeting?.createdByName?.[0]}</AvatarFallback>
+                                            return <AvatarFallback className="text-[8px] font-black bg-muted">{selectedMeeting?.createdByName?.[0]}</AvatarFallback>
                                         })()}
                                     </Avatar>
-                                    <p className="text-sm font-black text-primary uppercase group-hover:underline">{selectedMeeting?.createdByName}</p>
+                                    <p className="text-[11px] font-black text-primary uppercase group-hover:underline truncate">{selectedMeeting?.createdByName}</p>
                                 </Link>
                             </div>
                         </div>
@@ -437,5 +443,21 @@ export default function MeetingsPage() {
                 </SheetContent>
             </Sheet>
         </div>
+    );
+}
+
+function MetricCard({ label, value, icon: Icon, color, bg }: { label: string, value: number, icon: any, color: string, bg: string }) {
+    return (
+        <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl text-left">
+            <div className="flex items-center gap-4 text-left">
+                <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}>
+                    <Icon className="size-5" />
+                </div>
+                <div className="min-w-0 text-left">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
+                    <h3 className="text-xl font-black tracking-tight text-slate-900 truncate">{value}</h3>
+                </div>
+            </div>
+        </Card>
     );
 }
