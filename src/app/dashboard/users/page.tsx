@@ -107,7 +107,6 @@ export default function UsersPage() {
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
-  const isExecutive = isAdmin;
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -165,6 +164,13 @@ export default function UsersPage() {
             // Branch handling
             branchId: values.isWfhAllowed ? null : (values.branchId || null)
         };
+        
+        // CRITICAL: Firestore does not support 'undefined'. Replace with 'null'.
+        Object.keys(processedData).forEach(key => {
+            if (processedData[key] === undefined) {
+                processedData[key] = null;
+            }
+        });
         
         if (editingUser) {
             const userRef = doc(firestore, 'users', editingUser.id);
@@ -733,7 +739,7 @@ export default function UsersPage() {
                                 
                                 {isAdmin && (
                                     <>
-                                        <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); setIsOfRangeDialogOpen(false); setIsDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5 text-left">
+                                        <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5 text-left">
                                             <Edit className="size-4 text-primary" /> Edit
                                         </DropdownMenuItem>
                                         
