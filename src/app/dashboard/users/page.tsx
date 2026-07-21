@@ -33,7 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Optimized schema for flexibility
+// Permissive schema for simple user management
 const userSchema = z.object({
   firstName: z.string().min(1, "Required"),
   lastName: z.string().optional().or(z.literal("")),
@@ -41,19 +41,19 @@ const userSchema = z.object({
   phoneNumber: z.string().optional().or(z.literal("")),
   jobTitle: z.string().min(1, "Required"),
   department: z.string().min(1, "Required"),
-  branchId: z.string().optional().nullable().or(z.literal("")),
+  branchId: z.any().optional(),
   shiftType: z.string().min(1, "Required"),
   employmentType: z.enum(['Intern', 'Employee']),
   role: z.enum(['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin']),
   password: z.string().optional(),
   isWfhAllowed: z.boolean().default(false),
   isDemoAccount: z.boolean().default(false),
-  homeLatitude: z.union([z.coerce.number(), z.literal(""), z.null()]).optional(),
-  homeLongitude: z.union([z.coerce.number(), z.literal(""), z.null()]).optional(),
-  homeRadius: z.coerce.number().default(0.5),
+  homeLatitude: z.any().optional(),
+  homeLongitude: z.any().optional(),
+  homeRadius: z.any().optional().default(0.5),
   performanceRating: z.string().optional().default("Good"),
-  leaveBalance: z.coerce.number().default(0),
-  payrollAmount: z.coerce.number().optional().default(0),
+  leaveBalance: z.any().optional().default(0),
+  payrollAmount: z.any().optional().default(0),
   reportingHeadIds: z.array(z.string()).default([]),
 });
 
@@ -106,16 +106,16 @@ export default function UsersPage() {
   const currentUserDataRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   
-  const isExecutive = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
-  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
+  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
+  const isExecutive = isAdmin;
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       firstName: "", lastName: "", email: "", phoneNumber: "", jobTitle: "", department: "",
-      branchId: undefined, shiftType: "General Shift",
+      branchId: "", shiftType: "General Shift",
       employmentType: "Employee", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
-      homeLatitude: undefined, homeLongitude: undefined, homeRadius: 0.5,
+      homeLatitude: "", homeLongitude: "", homeRadius: 0.5,
       performanceRating: "Good", leaveBalance: 0, payrollAmount: 0, reportingHeadIds: []
     },
   });
@@ -123,12 +123,12 @@ export default function UsersPage() {
   const isWfhAllowedValue = form.watch("isWfhAllowed");
   const selectedHeadIds = form.watch("reportingHeadIds") || [];
 
-  // Cleanup logic when toggling WFH
+  // Reset branch if WFH is toggled
   React.useEffect(() => {
       if (isWfhAllowedValue) {
           const currentBranch = form.getValues("branchId");
-          if (currentBranch !== undefined && currentBranch !== null) {
-              form.setValue("branchId", null);
+          if (currentBranch) {
+              form.setValue("branchId", "");
           }
       }
   }, [isWfhAllowedValue, form]);
@@ -151,13 +151,20 @@ export default function UsersPage() {
 
   const onSubmit = async (values: UserFormValues) => {
     try {
-        // Clean values before sending to Firestore
-        const processedData: any = { ...values };
-        if (values.isWfhAllowed) processedData.branchId = null;
-        if (!processedData.branchId) processedData.branchId = null;
-        if (!processedData.homeLatitude) processedData.homeLatitude = null;
-        if (!processedData.homeLongitude) processedData.homeLongitude = null;
-        if (!processedData.lastName) processedData.lastName = "";
+        const processedData: any = { 
+            ...values,
+            firstName: values.firstName.trim(),
+            lastName: values.lastName?.trim() || "",
+            phoneNumber: values.phoneNumber?.trim() || "",
+            // Coordinates and numeric conversions
+            homeLatitude: values.homeLatitude ? Number(values.homeLatitude) : null,
+            homeLongitude: values.homeLongitude ? Number(values.homeLongitude) : null,
+            homeRadius: values.homeRadius ? Number(values.homeRadius) : 0.5,
+            leaveBalance: Number(values.leaveBalance) || 0,
+            payrollAmount: Number(values.payrollAmount) || 0,
+            // Branch handling
+            branchId: values.isWfhAllowed ? null : (values.branchId || null)
+        };
         
         if (editingUser) {
             const userRef = doc(firestore, 'users', editingUser.id);
@@ -165,11 +172,11 @@ export default function UsersPage() {
             const batch = writeBatch(firestore);
             
             if (values.performanceRating !== editingUser.performanceRating) {
-                (updateData as any).lastReviewDate = serverTimestamp();
+                updateData.lastReviewDate = serverTimestamp();
             }
 
             if (values.payrollAmount !== editingUser.payrollAmount) {
-                (updateData as any).payrollDate = serverTimestamp();
+                updateData.payrollDate = serverTimestamp();
             }
 
             const isEmployeeType = values.employmentType === 'Employee';
@@ -185,7 +192,7 @@ export default function UsersPage() {
             await batch.commit();
             toast({ title: "User Updated" });
         } else {
-            // Secondary App Logic for creation
+            // Secondary App Protocol for account registration
             const tempAppName = `create-user-${Date.now()}`;
             const tempApp = initializeApp(firebaseConfig, tempAppName);
             const tempAuth = getAuth(tempApp);
@@ -199,14 +206,12 @@ export default function UsersPage() {
             const batch = writeBatch(firestore);
             const isEmployeeType = values.employmentType === 'Employee';
             const totalLeave = isEmployeeType ? 12 : 0;
-            const leaveBal = isEmployeeType ? values.leaveBalance : 0;
 
             batch.set(userRef, { 
                 id: newUserId, 
                 employeeId: newUserId, 
                 hireDate: new Date().toISOString(), 
                 ...userData, 
-                leaveBalance: leaveBal,
                 totalLeaveEntitlement: totalLeave,
                 canUpdateSignature: true,
                 lastReviewDate: serverTimestamp()
@@ -366,7 +371,7 @@ export default function UsersPage() {
     <div className="space-y-8 animate-fade-in-up">
       <PageHeader title="People" description="Manage user accounts and office assignments.">
         <div className="flex gap-2">
-            {selectedUserIds.length > 0 && isExecutive && (
+            {selectedUserIds.length > 0 && isAdmin && (
                 <div className="flex gap-2 animate-fade-in-up">
                     <Dialog open={isBulkEditDialogOpen} onOpenChange={setIsBulkEditDialogOpen}>
                         <DialogTrigger asChild>
@@ -376,7 +381,7 @@ export default function UsersPage() {
                         </DialogTrigger>
                         <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                             <DialogHeader className="text-left">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Bulk Edit</DialogTitle>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Bulk Update</DialogTitle>
                                 <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Apply changes to all selected members</DialogDescription>
                             </DialogHeader>
                             <div className="py-6 space-y-6 text-left">
@@ -426,7 +431,7 @@ export default function UsersPage() {
                         <AlertDialogContent className="rounded-none border-none shadow-3xl">
                             <AlertDialogHeader className="text-left">
                                 <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Delete selected?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-sm font-medium leading-relaxed">This will remove {selectedUserIds.length} accounts permanently. This cannot be undone.</AlertDialogDescription>
+                                <AlertDialogDescription className="text-sm font-medium leading-relaxed text-left">This will remove {selectedUserIds.length} accounts permanently. This cannot be undone.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter className="mt-8 gap-3">
                                 <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
@@ -442,7 +447,7 @@ export default function UsersPage() {
                 <DialogContent className="sm:max-w-2xl rounded-none p-8 border-none shadow-3xl">
                     <DialogHeader className="text-left">
                         <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{editingUser ? 'Edit User' : 'Add New Person'}</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Manage account information and assignments</DialogDescription>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Manage account details and assignments</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[70vh] -mx-8 px-8">
                         <Form {...form}>
@@ -454,11 +459,11 @@ export default function UsersPage() {
                                 <FormField control={form.control} name="email" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Email Address</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
                                 
                                 <div className="space-y-4 text-left">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting To</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reporting Managers</Label>
                                     
                                     <div className="flex flex-wrap gap-2 min-h-[48px] p-3 bg-muted/10 border-2 border-dashed border-border/50">
                                         {(!selectedHeadIds || selectedHeadIds.length === 0) ? (
-                                            <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier (Direct report to admin)</span>
+                                            <span className="text-[11px] font-black uppercase text-muted-foreground/30 tracking-widest self-center px-1">Top Tier Command (Unassigned)</span>
                                         ) : (
                                             selectedHeadIds.map(headId => {
                                                 const head = users?.find(h => h.id === headId);
@@ -628,7 +633,7 @@ export default function UsersPage() {
                                 
                                 {!editingUser && <FormField control={form.control} name="password" render={({ field }) => (<FormItem className="text-left"><FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12 font-bold text-sm bg-muted/20 border-none ring-1 ring-border/50"/></FormControl></FormItem>)} />}
                                 <Button type="submit" className="w-full h-14 rounded-none font-black uppercase tracking-widest mt-8 shadow-xl shadow-primary/20">
-                                    {editingUser ? "Save User" : "Add User"}
+                                    {editingUser ? "Save Updates" : "Register Person"}
                                 </Button>
                             </form>
                         </Form>
@@ -674,13 +679,13 @@ export default function UsersPage() {
                                     <AvatarImage src={u.avatar} className="object-cover" />
                                     <AvatarFallback className="rounded-none font-black text-xs bg-muted">{u.firstName?.[0] || 'U'}{u.lastName?.[0] || ''}</AvatarFallback>
                                 </Avatar>
-                                {isExecutive && complianceCount > 0 && (
+                                {isAdmin && complianceCount > 0 && (
                                     <div className="absolute -top-2 -right-2 bg-red-600 rounded-full size-6 flex items-center justify-center border-2 border-white shadow-lg animate-pulse z-10">
                                         <span className="text-white font-black text-[10px]">{complianceCount}</span>
                                     </div>
                                 )}
                             </div>
-                            <div className="flex flex-col">
+                            <div className="flex flex-col text-left">
                                 <div className="flex items-center gap-2">
                                     <Link href={`/dashboard/users/${u.id}`} className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors flex items-center gap-2 leading-none">
                                         {u.firstName} {u.lastName} 
@@ -691,7 +696,7 @@ export default function UsersPage() {
                             </div>
                         </div>
                     </TableCell>
-                    <TableCell className="py-6 align-middle">
+                    <TableCell className="py-6 align-middle text-left">
                         {isRemote ? (
                             <Badge className="bg-sky-100 text-sky-700 text-[8px] font-black uppercase border-none px-2 h-6 rounded-none flex gap-1.5 items-center w-fit shadow-sm">
                                 <Home className="size-3"/> HOME
@@ -703,13 +708,13 @@ export default function UsersPage() {
                             </div>
                         )}
                     </TableCell>
-                    <TableCell className="py-6 align-middle">
+                    <TableCell className="py-6 align-middle text-left">
                         <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground tracking-tight">
                             <Clock className="size-3 opacity-40" />
                             {u.shiftType}
                         </div>
                     </TableCell>
-                    <TableCell className="py-6 align-middle">
+                    <TableCell className="py-6 align-middle text-left">
                         <Badge variant="outline" className="rounded-none font-black text-[9px] uppercase tracking-widest px-2.5 h-6 bg-muted/20 border-none">
                             {u.role}
                         </Badge>
@@ -720,25 +725,25 @@ export default function UsersPage() {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="rounded-none h-9 w-9 hover:bg-muted/50"><MoreHorizontal className="size-4.5" /></Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-56">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2">Actions</DropdownMenuLabel>
-                                <DropdownMenuItem asChild className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
-                                    <Link href={`/dashboard/users/${u.id}`}><UserCircle className="size-4 text-primary" /> Profile</Link>
+                            <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-56 text-left">
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60 px-3 py-2 text-left">Actions</DropdownMenuLabel>
+                                <DropdownMenuItem asChild className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5 text-left">
+                                    <Link href={`/dashboard/users/${u.id}`} className="flex items-center"><UserCircle className="size-4 text-primary mr-2" /> Profile</Link>
                                 </DropdownMenuItem>
                                 
                                 {isAdmin && (
                                     <>
-                                        <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5">
+                                        <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); setIsOfRangeDialogOpen(false); setIsDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5 text-left">
                                             <Edit className="size-4 text-primary" /> Edit
                                         </DropdownMenuItem>
                                         
-                                        <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToReset(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-amber-50 text-amber-600">
-                                            <RotateCcw className="size-4" /> Reset Today
+                                        <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToReset(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-amber-50 text-amber-600 text-left">
+                                            <RotateCcw className="size-4" /> Reset Day
                                         </DropdownMenuItem>
 
                                         <DropdownMenuSeparator />
                                         
-                                        <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToDelete(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-red-50 text-destructive">
+                                        <DropdownMenuItem onSelect={e => { e.preventDefault(); setUserToDelete(u); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-red-50 text-destructive text-left">
                                             <Trash2 className="size-4" /> Delete
                                         </DropdownMenuItem>
                                     </>
