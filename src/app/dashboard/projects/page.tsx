@@ -294,17 +294,17 @@ export default function ProjectsPage() {
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl rounded-none border-none shadow-3xl p-0 overflow-hidden h-[85vh] flex flex-col">
-                            <DialogHeader className="p-10 border-b bg-white">
+                            <DialogHeader className="p-10 border-b bg-white shrink-0 text-left">
                                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Project</DialogTitle>
                                 <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Create project and assign team</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
                                 <div className="p-10 space-y-8">
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 text-left">
                                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Project Name</Label>
                                         <Input value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="e.g., Marketing Website" className="h-12 rounded-none" />
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 text-left">
                                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Classification</Label>
                                         <Select value={newProjectType} onValueChange={setNewProjectType}>
                                             <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue /></SelectTrigger>
@@ -317,7 +317,7 @@ export default function ProjectsPage() {
                                     </div>
 
                                     {newProjectType === 'Client Project' && (
-                                        <div className="space-y-6 p-6 bg-white border-2 border-dashed border-border/50 rounded-none">
+                                        <div className="space-y-6 p-6 bg-white border-2 border-dashed border-border/50 rounded-none text-left">
                                             <div className="flex items-center justify-between">
                                                 <Label className="text-[10px] font-black uppercase text-primary">Client Assignment</Label>
                                                 <div className="flex items-center gap-2">
@@ -338,7 +338,7 @@ export default function ProjectsPage() {
                                         </div>
                                     )}
 
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-2 gap-6 text-left">
                                         <div className="space-y-2">
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground">Assign Team</Label>
                                             <Select value={newProjectTeamId} onValueChange={setNewProjectTeamId}>
@@ -378,7 +378,7 @@ export default function ProjectsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-8 bg-white border-none shadow-xl ring-1 ring-border/50 rounded-none overflow-hidden flex flex-col">
                     <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
-                        <div className="space-y-1">
+                        <div className="space-y-1 text-left">
                             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                 <Layers className="size-4" /> Project Registry
                             </CardTitle>
@@ -401,7 +401,7 @@ export default function ProjectsPage() {
                                     <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No projects found.</TableCell></TableRow>
                                 ) : projectMatrix.map(project => (
                                     <TableRow key={project.id} className="border-b group hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => { setSelectedProject(project); setManualProgress(project.completion); setEditedName(project.name); }}>
-                                        <TableCell className="py-6 px-8">
+                                        <TableCell className="py-6 px-8 text-left">
                                             <div className="flex flex-col">
                                                 <span className="font-black text-sm uppercase tracking-tight text-slate-800">{project.name}</span>
                                                 <span className="text-[9px] font-bold text-muted-foreground uppercase mt-1">{project.team}</span>
@@ -427,7 +427,7 @@ export default function ProjectsPage() {
                                         </TableCell>
                                         <TableCell className="text-right px-8">
                                             <div className="flex items-center justify-end gap-3 text-right">
-                                                <div>
+                                                <div className="text-right">
                                                     <p className="text-[10px] font-black uppercase text-slate-800">{project.leader}</p>
                                                     <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">Lead</p>
                                                 </div>
@@ -445,7 +445,7 @@ export default function ProjectsPage() {
 
                 <div className="lg:col-span-4 space-y-6">
                     <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden ring-1 ring-border/50">
-                        <CardHeader className="p-8 pb-4">
+                        <CardHeader className="p-8 pb-4 text-left">
                             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                 <PieChartIcon className="size-4" /> Portfolio Breakdown
                             </CardTitle>
@@ -479,7 +479,7 @@ export default function ProjectsPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-none shadow-xl rounded-none bg-slate-900 text-white p-8 space-y-6 overflow-hidden relative group">
+                    <Card className="border-none shadow-xl rounded-none bg-slate-900 text-white p-8 space-y-4 overflow-hidden relative group text-left">
                         <div className="absolute -right-10 -bottom-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
                             <ShieldCheck className="size-48" />
                         </div>
@@ -499,7 +499,7 @@ export default function ProjectsPage() {
 
             <Sheet open={!!selectedProject} onOpenChange={o => !o && setSelectedProject(null)}>
                 <SheetContent className="w-full sm:max-w-[500px] p-0 border-none shadow-3xl w-full flex flex-col bg-[#F8FAFC]">
-                    <SheetHeader className="p-8 pb-4 bg-white border-b shadow-sm shrink-0">
+                    <SheetHeader className="p-8 pb-4 bg-white border-b shadow-sm shrink-0 text-left">
                         <div className="flex items-start justify-between mb-4">
                             <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black h-5 uppercase px-2 shadow-sm">{selectedProject?.type}</Badge>
                             <Badge className={cn(
@@ -509,15 +509,15 @@ export default function ProjectsPage() {
                                 {selectedProject?.status}
                             </Badge>
                         </div>
-                        <SheetTitle className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-tight">{selectedProject?.name}</SheetTitle>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">{selectedProject?.team} Team</p>
+                        <SheetTitle className="text-2xl font-black tracking-tighter text-slate-900 uppercase leading-tight text-left">{selectedProject?.name}</SheetTitle>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2 text-left">{selectedProject?.team} Team</p>
                     </SheetHeader>
 
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10 pb-32">
                             {selectedProject && (isExecutive || user?.uid === selectedProject.leaderId) && (
                                 <div className="space-y-6 bg-white p-8 ring-1 ring-border/50 rounded-none shadow-sm animate-fade-in-up">
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 text-left">
                                         <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Project Control</h4>
                                         <div className="space-y-2">
                                             <Label className="text-[9px] font-bold text-muted-foreground uppercase">Rename Project</Label>
@@ -530,7 +530,7 @@ export default function ProjectsPage() {
                                     
                                     <Separator className="opacity-50" />
                                     
-                                    <div className="space-y-6">
+                                    <div className="space-y-6 text-left">
                                         <div className="flex items-center justify-between">
                                             <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Manual Progress</h4>
                                             <span className="text-2xl font-black text-primary">{manualProgress}%</span>
@@ -544,10 +544,10 @@ export default function ProjectsPage() {
                                 </div>
                             )}
 
-                            <div className="space-y-4">
+                            <div className="space-y-4 text-left">
                                 <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Description</h4>
                                 <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50">
-                                    <p className="text-xs font-medium text-slate-600 leading-relaxed uppercase italic">"{selectedProject?.description}"</p>
+                                    <p className="text-xs font-medium text-slate-600 leading-relaxed uppercase italic text-left">"{selectedProject?.description}"</p>
                                 </Card>
                             </div>
 
@@ -562,7 +562,7 @@ export default function ProjectsPage() {
                                 </Button>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-4 text-left">
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Team Members</h4>
                                     <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none border-none bg-primary/5 text-primary px-2">{selectedProject?.memberIds.length} Members</Badge>
@@ -577,7 +577,7 @@ export default function ProjectsPage() {
                                                     <AvatarImage src={member.avatar} className="object-cover" />
                                                     <AvatarFallback className="text-[10px] font-black bg-muted">{member.firstName[0]}</AvatarFallback>
                                                 </Avatar>
-                                                <div className="flex-1 min-w-0">
+                                                <div className="flex-1 min-w-0 text-left">
                                                     <p className="font-black text-xs uppercase truncate group-hover:text-primary transition-colors">{member.firstName} {member.lastName}</p>
                                                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">{member.jobTitle}</p>
                                                 </div>
@@ -588,7 +588,7 @@ export default function ProjectsPage() {
                                 </div>
                             </div>
 
-                            <div className="space-y-4 pt-6 border-t border-dashed">
+                            <div className="space-y-4 pt-6 border-t border-dashed text-left">
                                 <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Management Actions</h4>
                                 <Button variant="outline" className="w-full h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2 bg-white" onClick={() => setIsAssignOpen(true)}>
                                     <Settings2 className="size-4" /> Change Team
@@ -605,8 +605,8 @@ export default function ProjectsPage() {
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Assign Team</DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Assign project to a different team</DialogDescription>
                     </DialogHeader>
-                    <div className="py-8 space-y-6">
-                        <div className="space-y-2">
+                    <div className="py-8 space-y-6 text-left">
+                        <div className="space-y-2 text-left">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Select Team</Label>
                             <Select onValueChange={handleAssignTeam}>
                                 <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Target Team" /></SelectTrigger>
@@ -616,7 +616,7 @@ export default function ProjectsPage() {
                             </Select>
                         </div>
                         <div className="p-4 bg-muted/20 border border-dashed rounded-none flex items-center justify-between">
-                            <div className="space-y-0.5">
+                            <div className="space-y-0.5 text-left">
                                 <p className="text-[9px] font-black uppercase">No teams?</p>
                                 <p className="text-[8px] font-bold text-muted-foreground uppercase">Create a new unit</p>
                             </div>
@@ -634,16 +634,16 @@ export default function ProjectsPage() {
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Schedule Meeting</DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Set up a meeting with all team members</DialogDescription>
                     </DialogHeader>
-                    <div className="py-6 space-y-6">
-                        <div className="space-y-2">
+                    <div className="py-6 space-y-6 text-left">
+                        <div className="space-y-2 text-left">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Subject</Label>
                             <Input value={meetingTitle} onChange={e => setMeetingTitle(e.target.value)} placeholder="e.g., Progress Review" className="h-12 rounded-none" />
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 text-left">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Time</Label>
                             <Input type="datetime-local" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} className="h-12 rounded-none" />
                         </div>
-                        <div className="p-5 bg-primary/5 rounded-none ring-1 ring-primary/10">
+                        <div className="p-5 bg-primary/5 rounded-none ring-1 ring-primary/10 text-left">
                             <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-3">Participants</p>
                             <div className="flex -space-x-2">
                                 {selectedProject?.memberIds.slice(0, 5).map(id => (
@@ -668,12 +668,12 @@ export default function ProjectsPage() {
 
 function MetricCard({ label, value, icon: Icon, color, bg }: { label: string, value: number, icon: any, color: string, bg: string }) {
     return (
-        <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl">
-            <div className="flex items-center gap-4">
+        <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl text-left">
+            <div className="flex items-center gap-4 text-left">
                 <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}>
                     <Icon className="size-5" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 text-left">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
                     <h3 className="text-xl font-black tracking-tight text-slate-900 truncate">{value}</h3>
                 </div>
@@ -681,4 +681,3 @@ function MetricCard({ label, value, icon: Icon, color, bg }: { label: string, va
         </Card>
     );
 }
-

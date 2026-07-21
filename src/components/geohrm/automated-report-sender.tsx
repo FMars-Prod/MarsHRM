@@ -7,6 +7,17 @@ import { collection, query, where, getDocs, collectionGroup, doc, setDoc, server
 import { format, startOfDay, endOfDay, isWithinInterval, subWeeks, startOfWeek, endOfWeek, differenceInSeconds } from 'date-fns';
 import { sendDailySummaryEmail, sendWeeklySummaryEmail } from '@/app/actions/email-actions';
 
+/**
+ * Move helper function outside component to avoid reference recreation 
+ * which triggers useEffect loops when used as dependency.
+ */
+const formatDuration = (seconds: number) => {
+  if (seconds < 0) seconds = 0;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${hours}h ${minutes}m`;
+};
+
 export function AutomatedReportSender() {
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
@@ -18,13 +29,6 @@ export function AutomatedReportSender() {
 
   const configDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
   const { data: configData } = useDoc<any>(configDocRef);
-
-  const formatDuration = (seconds: number) => {
-    if (seconds < 0) seconds = 0;
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
-  };
 
   const checkAndSendReport = React.useCallback(async () => {
     if (!isAdminOrHR || !firestore || !configData?.timings) return;
@@ -113,7 +117,7 @@ export function AutomatedReportSender() {
     } catch (err) {
       console.error("[MarsHRM] Automated report fail:", err);
     }
-  }, [firestore, isAdminOrHR, currentUser, configData, formatDuration]);
+  }, [firestore, isAdminOrHR, currentUser, configData]);
 
   const checkAndSendWeeklyReport = React.useCallback(async () => {
     if (!isAdminOrHR || !firestore) return;

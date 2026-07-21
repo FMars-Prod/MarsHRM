@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -101,7 +102,6 @@ export default function UsersPage() {
 
   const userDocRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
-  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD' || currentUserData?.role === 'Team Lead';
   const isExecutive = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
 
   const form = useForm<UserFormValues>({
@@ -119,7 +119,8 @@ export default function UsersPage() {
   const selectedHeadIds = form.watch("reportingHeadIds") || [];
 
   React.useEffect(() => {
-      if (isWfhAllowedValue) {
+      // Defensive check to prevent re-render loop
+      if (isWfhAllowedValue && form.getValues("branchId") !== undefined) {
           form.setValue("branchId", undefined);
       }
   }, [isWfhAllowedValue, form]);
@@ -308,7 +309,6 @@ export default function UsersPage() {
     if (selectedUserIds.length === 0) return;
     setIsPurging(true);
     try {
-        // We delete users one by one using the existing robust logic
         for (const uid of selectedUserIds) {
             await handleDeleteUser(uid);
         }
@@ -407,7 +407,7 @@ export default function UsersPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter className="mt-8 gap-3">
                                 <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleBulkDeleteAction} className="rounded-none font-bold uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700">Confirm</AlertDialogAction>
+                                <AlertDialogAction onClick={handleBulkDeleteAction} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700">Confirm</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -443,7 +443,7 @@ export default function UsersPage() {
                                                     <Badge key={headId} className="bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-none h-8 px-4 border-none gap-2 shadow-sm">
                                                         {head.firstName} {head.lastName}
                                                         <X className="size-3.5 cursor-pointer opacity-60 hover:opacity-100" onClick={() => { 
-                                                            const current = form.getValues("reportingHeadIds");
+                                                            const current = form.getValues("reportingHeadIds") || [];
                                                             form.setValue("reportingHeadIds", current.filter(id => id !== headId));
                                                         }} />
                                                     </Badge>
@@ -754,8 +754,8 @@ export default function UsersPage() {
       </AlertDialog>
 
       <AlertDialog open={!!userToDelete} onOpenChange={o => !o && setUserToDelete(null)}>
-          <AlertDialogContent className="rounded-none border-none shadow-2xl">
-              <AlertDialogHeader>
+          <AlertDialogContent className="rounded-none border-none shadow-3xl">
+              <AlertDialogHeader className="text-left">
                   <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 text-left">
                       <Trash2 className="size-5" /> Delete Person?
                   </AlertDialogTitle>

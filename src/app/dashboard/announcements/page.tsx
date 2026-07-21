@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -68,6 +69,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, getYear, getMonth, getDate, getDaysInMonth } from "date-fns";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 // --- TYPES ---
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'Briefcase' | 'Building' | 'Home' | 'Milestone' | 'Trophy';
@@ -146,9 +149,14 @@ export default function FeedPage() {
         announcements.forEach(ann => {
             newStatus[ann.id] = readIds.has(ann.id) ? "Read" : "Unread";
         });
-        setAnnouncementStatus(newStatus);
+        
+        // Defensive check to avoid infinite loop by comparing content
+        const statusChanged = JSON.stringify(newStatus) !== JSON.stringify(announcementStatus);
+        if (statusChanged) {
+            setAnnouncementStatus(newStatus);
+        }
       }
-  }, [announcements, readAnnouncements]);
+  }, [announcements, readAnnouncements, announcementStatus]);
 
   // --- EVENTS DATA ---
   const eventsQuery = useMemoFirebase(
@@ -304,11 +312,11 @@ export default function FeedPage() {
                 
                 <ScrollArea className="max-h-[60vh] p-8">
                   <TabsContent value="announcements" className="space-y-6 mt-0">
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                       <Label className="text-[10px] font-black uppercase text-primary">Title</Label>
                       <Input placeholder="e.g., Office Picnic" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} className="h-11 rounded-xl" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                       <Label className="text-[10px] font-black uppercase text-primary">Message</Label>
                       <Textarea placeholder="Details..." value={newContent} onChange={(e) => setNewContent(e.target.value)} className="rounded-2xl min-h-[120px]" />
                     </div>
@@ -316,11 +324,11 @@ export default function FeedPage() {
                   </TabsContent>
 
                   <TabsContent value="events" className="space-y-6 mt-0">
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                       <Label className="text-[10px] font-black uppercase text-primary">Person's Name</Label>
                       <Input value={newPersonName} onChange={(e) => setNewPersonName(e.target.value)} placeholder="e.g., John Doe" className="h-11 rounded-xl" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                       <Label className="text-[10px] font-black uppercase text-primary">Category</Label>
                       <Select onValueChange={setNewEventType} value={newEventType}>
                           <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select type" /></SelectTrigger>
@@ -328,12 +336,12 @@ export default function FeedPage() {
                       </Select>
                     </div>
                     {newEventType === 'Other' && (
-                        <div className="space-y-2">
+                        <div className="space-y-2 text-left">
                             <Label className="text-[10px] font-black uppercase text-primary">Details</Label>
                             <Input value={otherEventType} onChange={(e) => setOtherEventType(e.target.value)} placeholder="e.g., Project Success" className="h-11 rounded-xl" />
                         </div>
                     )}
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                         <Label className="text-[10px] font-black uppercase text-primary">Date</Label>
                         <div className="grid grid-cols-3 gap-2">
                             <Select onValueChange={setYear} value={year}><SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Year" /></SelectTrigger><SelectContent>{yearsOptions.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
@@ -341,8 +349,8 @@ export default function FeedPage() {
                             <Select onValueChange={setDay} value={day} disabled={!month}><SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Day" /></SelectTrigger><SelectContent>{daysOptions.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-4 text-left">
+                      <div className="space-y-2 text-left">
                         <Label className="text-[10px] font-black uppercase text-primary">Visual Icon</Label>
                         <div className="flex flex-wrap gap-2">
                             {(Object.keys(iconComponents) as IconName[]).map(iconName => (
@@ -350,7 +358,7 @@ export default function FeedPage() {
                             ))}
                         </div>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2 text-left">
                         <Label className="text-[10px] font-black uppercase text-primary">Color</Label>
                         <div className="flex flex-wrap gap-2">
                             {colorOptions.map(color => (
@@ -443,7 +451,7 @@ export default function FeedPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {events?.map((event) => (
                 <Card key={event.id} className="group border-none ring-1 ring-border/50 shadow-xl rounded-[2.5rem] bg-white overflow-hidden transition-all hover:scale-[1.02] duration-500">
-                  <CardHeader className="p-10 pb-4 flex flex-row items-start justify-between">
+                  <CardHeader className="p-10 pb-4 flex flex-row items-start justify-between text-left">
                     <div className="flex items-center gap-5">
                       <div className="p-4 rounded-3xl shadow-sm transition-transform group-hover:rotate-12" style={{ backgroundColor: event.color + '1A', color: event.color }}>
                         {renderIcon(event.icon, { className: "size-6" })}
@@ -496,7 +504,7 @@ export default function FeedPage() {
 
       <Sheet open={!!selectedAnnouncement} onOpenChange={o => !o && setSelectedAnnouncement(null)}>
         <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-lg p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
-            <SheetHeader className="p-10 border-b bg-white shrink-0">
+            <SheetHeader className="p-10 border-b bg-white shrink-0 text-left">
               <div className="flex items-center gap-2 mb-4">
                 <Badge className="bg-primary/10 text-primary rounded-none border-none font-black text-[9px] h-5 uppercase tracking-widest px-3">Company Update</Badge>
                 <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase opacity-40 ml-auto">
@@ -504,10 +512,10 @@ export default function FeedPage() {
                   {selectedAnnouncement && formatDate(selectedAnnouncement.publishDate)}
                 </div>
               </div>
-              <SheetTitle className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-tight">{selectedAnnouncement?.title}</SheetTitle>
+              <SheetTitle className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-tight text-left">{selectedAnnouncement?.title}</SheetTitle>
             </SheetHeader>
             <ScrollArea className="flex-1">
-              <div className="p-10 space-y-8 pb-32">
+              <div className="p-10 space-y-8 pb-32 text-left">
                 <div className="p-8 bg-white ring-1 ring-border shadow-sm rounded-none border-l-8 border-primary">
                   <p className="text-sm font-medium text-slate-700 whitespace-pre-wrap leading-relaxed">
                     {selectedAnnouncement?.content}
