@@ -71,6 +71,21 @@ import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // --- TYPES ---
 type IconName = 'Cake' | 'PartyPopper' | 'Users' | 'Gift' | 'Award' | 'Briefcase' | 'Building' | 'Home' | 'Milestone' | 'Trophy';
@@ -298,16 +313,16 @@ export default function FeedPage() {
                 Post to Feed
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-lg rounded-3xl p-0 overflow-hidden border-none shadow-3xl">
-              <DialogHeader className="p-8 border-b bg-white">
-                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Post</DialogTitle>
-                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Share an update or celebrate a milestone</DialogDescription>
+            <DialogContent className="sm:max-w-lg rounded-3xl p-0 overflow-hidden border-none shadow-3xl text-left">
+              <DialogHeader className="p-8 border-b bg-white text-left">
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary text-left">New Post</DialogTitle>
+                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 text-left">Share an update or celebrate a milestone</DialogDescription>
               </DialogHeader>
               
               <Tabs defaultValue={activeTab} className="flex-1">
                 <TabsList className="grid w-full grid-cols-2 h-12 rounded-none bg-muted/20 border-b">
-                  <TabsTrigger value="announcements" className="rounded-none font-bold uppercase text-[10px] tracking-widest">Update</TabsTrigger>
-                  <TabsTrigger value="events" className="rounded-none font-bold uppercase text-[10px] tracking-widest">Celebration</TabsTrigger>
+                  <TabsTrigger value="announcements" className="rounded-none font-bold uppercase text-[10px] tracking-widest text-left">Update</TabsTrigger>
+                  <TabsTrigger value="events" className="rounded-none font-bold uppercase text-[10px] tracking-widest text-left">Celebration</TabsTrigger>
                 </TabsList>
                 
                 <ScrollArea className="max-h-[60vh] p-8">
@@ -452,31 +467,31 @@ export default function FeedPage() {
               {events?.map((event) => (
                 <Card key={event.id} className="group border-none ring-1 ring-border/50 shadow-xl rounded-[2.5rem] bg-white overflow-hidden transition-all hover:scale-[1.02] duration-500">
                   <CardHeader className="p-10 pb-4 flex flex-row items-start justify-between text-left">
-                    <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-5 text-left">
                       <div className="p-4 rounded-3xl shadow-sm transition-transform group-hover:rotate-12" style={{ backgroundColor: event.color + '1A', color: event.color }}>
                         {renderIcon(event.icon, { className: "size-6" })}
                       </div>
                       <div className="text-left">
-                        <CardTitle className="text-xl font-black uppercase tracking-tighter">{event.name}</CardTitle>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{event.event}</p>
+                        <CardTitle className="text-xl font-black uppercase tracking-tighter text-left">{event.name}</CardTitle>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 text-left">{event.event}</p>
                       </div>
                     </div>
                     {isAdmin && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full h-10 w-10"><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-2xl border-none shadow-2xl p-2">
-                                <DropdownMenuItem className="rounded-xl font-bold uppercase text-[10px] py-3 gap-3" onClick={() => { setEditingEvent(event); setNewPersonName(event.name); setNewEventType(event.event); setDay(getDate(event.date.toDate()).toString()); setMonth(getMonth(event.date.toDate()).toString()); setYear(getYear(event.date.toDate()).toString()); setIsCreateDialogOpen(true); }}>
+                            <DropdownMenuContent align="end" className="rounded-2xl border-none shadow-2xl p-2 text-left">
+                                <DropdownMenuItem className="rounded-xl font-bold uppercase text-[10px] py-3 gap-3 text-left" onClick={() => { setEditingEvent(event); setNewPersonName(event.name); setNewEventType(event.event); setDay(getDate(event.date.toDate()).toString()); setMonth(getMonth(event.date.toDate()).toString()); setYear(getYear(event.date.toDate()).toString()); setIsCreateDialogOpen(true); }}>
                                     <Edit className="size-4" /> Edit Event
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="rounded-xl font-bold uppercase text-[10px] py-3 gap-3 text-destructive" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'events', event.id))}>
+                                <DropdownMenuItem className="rounded-xl font-bold uppercase text-[10px] py-3 gap-3 text-destructive text-left" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'events', event.id))}>
                                     <Trash2 className="size-4" /> Delete Event
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}
                   </CardHeader>
-                  <CardContent className="px-10 pb-4">
-                     <div className="flex items-center gap-3 p-4 bg-muted/20 rounded-2xl border-2 border-dashed border-border/50">
+                  <CardContent className="px-10 pb-4 text-left">
+                     <div className="flex items-center gap-3 p-4 bg-muted/20 rounded-2xl border-2 border-dashed border-border/50 text-left">
                         <CalendarDays className="size-4 text-primary/40" />
                         <span className="text-xs font-black uppercase tracking-tight">{formatDate(event.date)} {event.time && `at ${event.time}`}</span>
                      </div>
@@ -505,7 +520,7 @@ export default function FeedPage() {
       <Sheet open={!!selectedAnnouncement} onOpenChange={o => !o && setSelectedAnnouncement(null)}>
         <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-lg p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
             <SheetHeader className="p-10 border-b bg-white shrink-0 text-left">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-4 text-left">
                 <Badge className="bg-primary/10 text-primary rounded-none border-none font-black text-[9px] h-5 uppercase tracking-widest px-3">Company Update</Badge>
                 <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase opacity-40 ml-auto">
                   <Clock className="size-3" />
@@ -516,8 +531,8 @@ export default function FeedPage() {
             </SheetHeader>
             <ScrollArea className="flex-1">
               <div className="p-10 space-y-8 pb-32 text-left">
-                <div className="p-8 bg-white ring-1 ring-border shadow-sm rounded-none border-l-8 border-primary">
-                  <p className="text-sm font-medium text-slate-700 whitespace-pre-wrap leading-relaxed">
+                <div className="p-8 bg-white ring-1 ring-border shadow-sm rounded-none border-l-8 border-primary text-left">
+                  <p className="text-sm font-medium text-slate-700 whitespace-pre-wrap leading-relaxed text-left">
                     {selectedAnnouncement?.content}
                   </p>
                 </div>
