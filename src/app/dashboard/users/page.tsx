@@ -102,7 +102,10 @@ export default function UsersPage() {
 
   const userDocRef = useMemoFirebase(() => (currentUser ? doc(firestore, "users", currentUser.uid) : null), [currentUser, firestore]);
   const { data: currentUserData } = useDoc<any>(userDocRef);
+  
+  // Security Tiers
   const isExecutive = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
+  const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin';
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -119,7 +122,6 @@ export default function UsersPage() {
   const selectedHeadIds = form.watch("reportingHeadIds") || [];
 
   React.useEffect(() => {
-      // Defensive check to prevent re-render loop
       if (isWfhAllowedValue && form.getValues("branchId") !== undefined) {
           form.setValue("branchId", undefined);
       }
@@ -283,7 +285,6 @@ export default function UsersPage() {
 
           selectedUserIds.forEach(uid => {
               batch.update(doc(firestore, 'users', uid), updateData);
-              // Handle role permissions if role changed
               if (bulkRole) {
                 if (bulkRole === 'CEO/Admin' || bulkRole === 'CEO/MD') batch.set(doc(firestore, 'system_roles_admin', uid), { employeeId: uid });
                 if (bulkRole === 'HR Manager') batch.set(doc(firestore, 'system_roles_hr', uid), { employeeId: uid });
