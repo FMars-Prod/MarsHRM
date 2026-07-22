@@ -431,32 +431,32 @@ export function AttendanceWidget() {
 
   return (
     <>
-        <div className="w-full flex flex-col items-center gap-3 py-2 animate-fade-in-up font-jakarta max-w-4xl mx-auto">
+        <div className="w-full flex flex-col items-center gap-2 py-2 animate-fade-in-up font-jakarta max-w-4xl mx-auto">
             <div className="flex flex-wrap justify-center gap-2">
                 {status !== 'out' && (
                     <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-none border border-emerald-100 shadow-sm animate-pulse">
-                        <div className="size-1.5 rounded-full bg-emerald-500" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">Clocked In</span>
+                        <div className="size-1 rounded-full bg-emerald-500" />
+                        <span className="text-[8px] font-black uppercase tracking-widest text-emerald-700">Clocked In</span>
                     </div>
                 )}
                 {(status === 'lunch' || status === 'short_break') && (
                     <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 rounded-none border border-amber-100 shadow-sm">
-                        <Coffee className="size-3 text-amber-600" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-700">Break: {formatTime(currentBreakTimer)}</span>
+                        <Coffee className="size-2.5 text-amber-600" />
+                        <span className="text-[8px] font-black uppercase tracking-widest text-amber-700">Break: {formatTime(currentBreakTimer)}</span>
                     </div>
                 )}
             </div>
 
             <div className="flex flex-col items-center gap-1 px-4 text-center">
-                <h1 className="text-[60px] sm:text-[80px] lg:text-[100px] font-black leading-none tracking-tighter text-primary font-mono w-full">
+                <h1 className="text-[40px] sm:text-[50px] lg:text-[60px] font-black leading-none tracking-tighter text-primary font-mono w-full">
                     {formatTime(workTimer)}
                 </h1>
-                <Badge variant="outline" className="rounded-none px-4 h-6 bg-white/50 border-primary/20 text-primary font-black uppercase text-[9px] tracking-widest">
+                <Badge variant="outline" className="rounded-none px-3 h-5 bg-white/50 border-primary/20 text-primary font-black uppercase text-[8px] tracking-widest">
                   Location: {activeGeofence.name}
                 </Badge>
             </div>
 
-            <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 px-2">
+            <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-2 mt-1 px-2">
                 <StatusStep 
                     icon={LogIn} 
                     label="Clock In" 
@@ -483,38 +483,38 @@ export function AttendanceWidget() {
                 />
             </div>
 
-            <div className="w-full max-w-2xl pt-4 flex flex-wrap items-center justify-center gap-2 px-4">
+            <div className="w-full max-w-xl pt-2 flex flex-wrap items-center justify-center gap-2 px-4">
                 {isVerifyingLocation ? (
-                    <Button disabled className="h-10 rounded-none px-6 bg-muted text-muted-foreground font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
-                        <Loader2 className="size-4 animate-spin" /> Verifying...
+                    <Button disabled className="h-8 rounded-none px-4 bg-muted text-muted-foreground font-black uppercase text-[8px] tracking-widest flex items-center gap-2">
+                        <Loader2 className="size-3 animate-spin" /> Verifying...
                     </Button>
                 ) : status === 'out' && !hasClockedOutToday ? (
-                    <Button onClick={handleClockIn} className="h-12 rounded-none px-8 text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-                        <LogIn className="size-4 mr-2" /> Clock In
+                    <Button onClick={handleClockIn} className="h-10 rounded-none px-6 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                        <LogIn className="size-3.5 mr-2" /> Clock In
                     </Button>
                 ) : status === 'in' ? (
                     <>
-                        <Button onClick={handleLunchOut} variant="outline" className="h-10 rounded-none px-4 bg-white border-2 font-black uppercase text-[9px] tracking-widest hover:bg-primary/5 transition-all">
+                        <Button onClick={handleLunchOut} variant="outline" className="h-8 rounded-none px-3 bg-white border-2 font-black uppercase text-[8px] tracking-widest hover:bg-primary/5 transition-all">
                             Lunch Start
                         </Button>
-                        <Button onClick={handleShortBreakOut} variant="outline" className="h-10 rounded-none px-4 bg-white border-2 font-black uppercase text-[9px] tracking-widest hover:bg-primary/5 transition-all">
+                        <Button onClick={handleShortBreakOut} variant="outline" className="h-8 rounded-none px-3 bg-white border-2 font-black uppercase text-[8px] tracking-widest hover:bg-primary/5 transition-all">
                             Short Break
                         </Button>
-                        <Button onClick={handleClockOut} className="h-10 rounded-none px-6 bg-rose-500 hover:bg-rose-600 text-white font-black uppercase text-[9px] tracking-widest shadow-lg shadow-rose-500/20 transition-all hover:scale-[1.02]">
+                        <Button onClick={handleClockOut} className="h-8 rounded-none px-4 bg-rose-500 hover:bg-rose-600 text-white font-black uppercase text-[8px] tracking-widest shadow-lg shadow-rose-500/20 transition-all hover:scale-[1.02]">
                             Clock Out
                         </Button>
                     </>
                 ) : status === 'lunch' ? (
-                    <Button onClick={handleLunchIn} className="h-12 rounded-none px-10 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
+                    <Button onClick={handleLunchIn} className="h-10 rounded-none px-8 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
                         End Lunch
                     </Button>
                 ) : status === 'short_break' ? (
-                    <Button onClick={handleShortBreakIn} className="h-12 rounded-none px-10 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
+                    <Button onClick={handleShortBreakIn} className="h-10 rounded-none px-8 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
                         End Break
                     </Button>
                 ) : (
-                    <div className="flex items-center gap-2 py-2 text-emerald-700 font-black uppercase tracking-[0.2em] text-[10px]">
-                        <CheckCircle2 className="size-4" /> Duty Finished
+                    <div className="flex items-center gap-2 py-1 text-emerald-700 font-black uppercase tracking-[0.2em] text-[8px]">
+                        <CheckCircle2 className="size-3" /> Duty Finished
                     </div>
                 )}
             </div>
@@ -562,16 +562,16 @@ function StatusStep({ icon: Icon, label, time, isActive }: { icon: any, label: s
             "border-none shadow-sm rounded-none transition-all duration-300 overflow-hidden",
             isActive ? "bg-white ring-1 ring-border shadow-md" : "bg-transparent opacity-20 grayscale"
         )}>
-            <CardContent className="p-3 flex flex-col items-center text-center gap-1.5">
+            <CardContent className="p-2 flex flex-col items-center text-center gap-1">
                 <div className={cn(
-                    "p-1.5 rounded-none transition-colors",
+                    "p-1 rounded-none transition-colors",
                     isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground"
                 )}>
-                    <Icon className="size-3.5" />
+                    <Icon className="size-3" />
                 </div>
                 <div>
-                    <p className="text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">{label}</p>
-                    <p className="text-xs font-black tabular-nums">{time}</p>
+                    <p className="text-[6px] font-black uppercase tracking-widest text-muted-foreground mb-0">{label}</p>
+                    <p className="text-[10px] font-black tabular-nums leading-none">{time}</p>
                 </div>
             </CardContent>
         </Card>
