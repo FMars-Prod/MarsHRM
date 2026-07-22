@@ -72,10 +72,10 @@ const SEARCHABLE_LINKS = [
     { label: "Compliance", href: "/dashboard/compliance", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Activity Monitor", href: "/dashboard/monitor", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Announcements", href: "/dashboard/announcements", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-    { label: "Events", href: "/dashboard/events", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Events", href: "/dashboard/announcements?tab=events", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Holiday Calendar", href: "/dashboard/holidays", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Support Centre", href: "/dashboard/issues", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-    { label: "User Management", href: "/dashboard/users", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Reports", href: "/dashboard/report-templates", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "System Settings", href: "/dashboard/settings", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "My Profile", href: "/dashboard/profile", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
 ];
@@ -540,7 +540,7 @@ export default function DashboardLayout({
           <AutomatedReportSender />
         </header>
 
-        <main className="flex-1 p-4 md:p-8 overflow-x-hidden pointer-events-auto bg-gradient-to-br from-purple-500/5 via-[#F8FAFC] to-indigo-500/5">
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden pointer-events-auto bg-gradient-to-br from-purple-500/5 via-[#F8FAFC] to-indigo-500/5">
           {children}
         </main>
         <footer className="border-t py-4 px-6 bg-white/50 backdrop-blur-sm pointer-events-auto">
