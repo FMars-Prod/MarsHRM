@@ -276,7 +276,7 @@ export function AttendanceWidget() {
               toast({ 
                   variant: 'destructive', 
                   title: "Report Required", 
-                  description: "Protocol violation: Please submit your daily strategic log before clocking out." 
+                  description: "Protocol violation: Please submit your daily report before clocking out." 
               });
               router.push('/dashboard/reports');
               return;
@@ -423,7 +423,7 @@ export function AttendanceWidget() {
         .finally(() => setIsSubmittingApproval(false));
   };
 
-  if (isUserDocLoading) return <div className="h-64 flex items-center justify-center text-[10px] font-black uppercase opacity-20 tracking-[0.2em]">Loading...</div>;
+  if (isUserDocLoading) return null;
 
   // CEO exclusion check
   const isCEO = userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD';
@@ -431,163 +431,123 @@ export function AttendanceWidget() {
 
   return (
     <>
-        <div className="w-full flex flex-col items-center gap-6 py-6 sm:py-10 animate-fade-in-up font-jakarta max-w-5xl mx-auto">
-            <div className="flex flex-wrap justify-center gap-3">
+        <div className="w-full flex flex-col items-center gap-3 py-2 animate-fade-in-up font-jakarta max-w-4xl mx-auto">
+            <div className="flex flex-wrap justify-center gap-2">
                 {status !== 'out' && (
-                    <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100 shadow-sm animate-pulse">
-                        <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Clocked In</span>
-                    </div>
-                )}
-                {activeWfhToday && (
-                    <div className="flex items-center gap-2 px-4 py-1.5 bg-sky-50 rounded-full border border-sky-100 shadow-sm">
-                        <Home className="size-3 text-sky-600" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-sky-700">WFH Active</span>
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-none border border-emerald-100 shadow-sm animate-pulse">
+                        <div className="size-1.5 rounded-full bg-emerald-500" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">Clocked In</span>
                     </div>
                 )}
                 {(status === 'lunch' || status === 'short_break') && (
-                    <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 rounded-full border border-amber-100 shadow-sm">
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 rounded-none border border-amber-100 shadow-sm">
                         <Coffee className="size-3 text-amber-600" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Break: {formatTime(currentBreakTimer)}</span>
-                    </div>
-                )}
-                {totalBreakTime > 0 && (
-                    <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 rounded-full border border-blue-100 shadow-sm">
-                        <Timer className="size-3 text-blue-600" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-700">Total Break: {formatTime(totalBreakTime)}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-700">Break: {formatTime(currentBreakTimer)}</span>
                     </div>
                 )}
             </div>
 
-            <div className="flex flex-col items-center gap-2 px-4 text-center">
-                <h1 className="text-[64px] sm:text-[100px] lg:text-[140px] font-black leading-none tracking-tighter text-primary drop-shadow-sm font-mono text-center w-full">
+            <div className="flex flex-col items-center gap-1 px-4 text-center">
+                <h1 className="text-[60px] sm:text-[80px] lg:text-[100px] font-black leading-none tracking-tighter text-primary font-mono w-full">
                     {formatTime(workTimer)}
                 </h1>
-                <div className="flex flex-col items-center gap-2">
-                    <Badge variant="outline" className="rounded-full px-6 h-8 bg-white/50 border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest">
-                    Location: {activeGeofence.name}
-                    </Badge>
-                    {isVerifyingLocation && currentSignal && (
-                        <div className="flex items-center gap-2 text-[9px] font-black uppercase text-primary animate-pulse">
-                            <Signal className="size-3" /> Location Check: {currentSignal}
-                        </div>
-                    )}
-                </div>
+                <Badge variant="outline" className="rounded-none px-4 h-6 bg-white/50 border-primary/20 text-primary font-black uppercase text-[9px] tracking-widest">
+                  Location: {activeGeofence.name}
+                </Badge>
             </div>
 
-            <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-8 px-2">
+            <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 px-2">
                 <StatusStep 
                     icon={LogIn} 
                     label="Clock In" 
                     time={todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'p') : '--:--'} 
                     isActive={!!todaysAttendance?.checkInTime}
-                    coords={{ lat: todaysAttendance?.locationCheckInLatitude, lng: todaysAttendance?.locationCheckInLongitude }}
                 />
                 <StatusStep 
                     icon={Utensils} 
                     label="Lunch Start" 
                     time={todaysAttendance?.lunchOutTime ? format(todaysAttendance.lunchOutTime.toDate(), 'p') : '--:--'} 
                     isActive={!!todaysAttendance?.lunchOutTime}
-                    coords={{ lat: todaysAttendance?.locationLunchOutLatitude, lng: todaysAttendance?.locationLunchOutLongitude }}
                 />
                 <StatusStep 
                     icon={LogIn} 
                     label="Lunch End" 
                     time={todaysAttendance?.lunchInTime ? format(todaysAttendance.lunchInTime.toDate(), 'p') : '--:--'} 
                     isActive={!!todaysAttendance?.lunchInTime}
-                    coords={{ lat: todaysAttendance?.locationLunchInLatitude, lng: todaysAttendance?.locationLunchInLongitude }}
                 />
                 <StatusStep 
                     icon={LogOut} 
                     label="Clock Out" 
                     time={todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'} 
                     isActive={!!todaysAttendance?.checkOutTime}
-                    coords={{ lat: todaysAttendance?.locationCheckOutLatitude, lng: todaysAttendance?.locationCheckOutLongitude }}
                 />
             </div>
 
-            <div className="w-full max-w-4xl pt-8 sm:pt-12 flex flex-wrap items-center justify-center gap-3 sm:gap-4 px-4">
+            <div className="w-full max-w-2xl pt-4 flex flex-wrap items-center justify-center gap-2 px-4">
                 {isVerifyingLocation ? (
-                    <Button disabled className="h-14 sm:h-16 rounded-none px-8 sm:px-12 bg-muted text-muted-foreground font-black uppercase text-xs tracking-widest flex items-center gap-3">
-                        <Loader2 className="size-5 animate-spin" /> Verifying...
+                    <Button disabled className="h-10 rounded-none px-6 bg-muted text-muted-foreground font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                        <Loader2 className="size-4 animate-spin" /> Verifying...
                     </Button>
                 ) : status === 'out' && !hasClockedOutToday ? (
-                    <Button onClick={handleClockIn} className="h-14 sm:h-16 rounded-none px-8 sm:px-12 text-sm sm:text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-                        <LogIn className="size-5 mr-3" /> Clock In
+                    <Button onClick={handleClockIn} className="h-12 rounded-none px-8 text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                        <LogIn className="size-4 mr-2" /> Clock In
                     </Button>
                 ) : status === 'in' ? (
                     <>
-                        <Button onClick={handleLunchOut} variant="outline" className="h-14 sm:h-16 rounded-none px-6 sm:px-10 bg-white border-2 font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 transition-all">
+                        <Button onClick={handleLunchOut} variant="outline" className="h-10 rounded-none px-4 bg-white border-2 font-black uppercase text-[9px] tracking-widest hover:bg-primary/5 transition-all">
                             Lunch Start
                         </Button>
-                        <Button onClick={handleShortBreakOut} variant="outline" className="h-14 sm:h-16 rounded-none px-6 sm:px-10 bg-white border-2 font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 transition-all">
+                        <Button onClick={handleShortBreakOut} variant="outline" className="h-10 rounded-none px-4 bg-white border-2 font-black uppercase text-[9px] tracking-widest hover:bg-primary/5 transition-all">
                             Short Break
                         </Button>
-                        <Button onClick={handleClockOut} className="h-14 sm:h-16 rounded-none px-8 sm:px-12 bg-rose-500 hover:bg-rose-600 text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-rose-500/20 transition-all hover:scale-[1.02]">
+                        <Button onClick={handleClockOut} className="h-10 rounded-none px-6 bg-rose-500 hover:bg-rose-600 text-white font-black uppercase text-[9px] tracking-widest shadow-lg shadow-rose-500/20 transition-all hover:scale-[1.02]">
                             Clock Out
                         </Button>
                     </>
                 ) : status === 'lunch' ? (
-                    <Button onClick={handleLunchIn} className="h-14 sm:h-16 rounded-none px-10 sm:px-16 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
+                    <Button onClick={handleLunchIn} className="h-12 rounded-none px-10 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
                         End Lunch
                     </Button>
                 ) : status === 'short_break' ? (
-                    <Button onClick={handleShortBreakIn} className="h-14 sm:h-16 rounded-none px-10 sm:px-16 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
+                    <Button onClick={handleShortBreakIn} className="h-12 rounded-none px-10 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
                         End Break
                     </Button>
                 ) : (
-                    <div className="flex flex-col items-center gap-4 py-6">
-                        <div className="p-4 bg-emerald-50 rounded-full border-2 border-dashed border-emerald-200">
-                            <CheckCircle2 className="size-10 text-emerald-500" />
-                        </div>
-                        <p className="font-black uppercase tracking-[0.3em] text-emerald-700 text-sm">Duty Finished</p>
+                    <div className="flex items-center gap-2 py-2 text-emerald-700 font-black uppercase tracking-[0.2em] text-[10px]">
+                        <CheckCircle2 className="size-4" /> Duty Finished
                     </div>
                 )}
             </div>
         </div>
 
         <Dialog open={isOutOfRangeDialogOpen} onOpenChange={setIsOutOfRangeDialogOpen}>
-            <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-2xl">
+            <DialogContent className="rounded-none sm:max-w-md p-6 border-none shadow-2xl">
                 <DialogHeader className="text-left">
-                    <div className="size-12 rounded-none bg-orange-100 text-orange-600 flex items-center justify-center mb-4">
-                        <AlertTriangle className="size-6" />
+                    <div className="size-10 rounded-none bg-orange-100 text-orange-600 flex items-center justify-center mb-3">
+                        <AlertTriangle className="size-5" />
                     </div>
-                    <DialogTitle className="text-xl font-black uppercase tracking-tighter">Out of Range</DialogTitle>
-                    <DialogDescription className="text-xs font-medium leading-relaxed text-left">
-                        You are outside the authorized <span className="font-bold text-primary">{activeGeofence.name}</span> area. 
+                    <DialogTitle className="text-lg font-black uppercase tracking-tighter">Out of Range</DialogTitle>
+                    <DialogDescription className="text-[11px] font-medium leading-relaxed text-left">
+                        Outside authorized <span className="font-bold text-primary">{activeGeofence.name}</span> area.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="py-4 space-y-4 text-left">
-                    <div className="bg-muted/30 p-4 rounded-none border border-dashed border-border space-y-2">
-                        <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-widest text-left">Location Details</p>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-0.5 text-left">
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Your Lat</p>
-                                <p className="text-xs font-mono font-bold">{lastCapturedLoc?.latitude.toFixed(6)}</p>
-                            </div>
-                            <div className="space-y-0.5 text-left">
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Your Lng</p>
-                                <p className="text-xs font-mono font-bold">{lastCapturedLoc?.longitude.toFixed(6)}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2 text-left">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Reason</Label>
+                <div className="py-3 space-y-3 text-left">
+                    <div className="space-y-1.5 text-left">
+                        <Label className="text-[9px] font-black uppercase tracking-widest text-primary">Reason</Label>
                         <Textarea 
                             value={outOfRangeReason} 
                             onChange={e => setOutOfRangeReason(e.target.value)} 
-                            placeholder="Please provide a reason for checking in from this location..." 
-                            className="rounded-none min-h-[100px] bg-muted/20 border-muted text-sm"
+                            placeholder="Why are you checking in from here?" 
+                            className="rounded-none min-h-[80px] bg-muted/20 border-muted text-xs"
                         />
                     </div>
                 </div>
 
                 <DialogFooter>
-                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim() || isSubmittingApproval} className="w-full rounded-none h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">
+                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim() || isSubmittingApproval} className="w-full rounded-none h-11 font-black uppercase tracking-widest shadow-xl shadow-primary/20 text-xs">
                         {isSubmittingApproval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        {isSubmittingApproval ? "Processing..." : "Ask for Approval"}
+                        Ask for Approval
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -596,30 +556,24 @@ export function AttendanceWidget() {
   );
 }
 
-function StatusStep({ icon: Icon, label, time, isActive, coords }: { icon: any, label: string, time: string, isActive: boolean, coords?: {lat?: number, lng?: number} }) {
+function StatusStep({ icon: Icon, label, time, isActive }: { icon: any, label: string, time: string, isActive: boolean }) {
     return (
         <Card className={cn(
-            "border-none shadow-sm rounded-none transition-all duration-500 overflow-hidden",
-            isActive ? "bg-white ring-1 ring-border shadow-lg" : "bg-transparent opacity-20 grayscale"
+            "border-none shadow-sm rounded-none transition-all duration-300 overflow-hidden",
+            isActive ? "bg-white ring-1 ring-border shadow-md" : "bg-transparent opacity-20 grayscale"
         )}>
-            <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center gap-2 sm:gap-3">
+            <CardContent className="p-3 flex flex-col items-center text-center gap-1.5">
                 <div className={cn(
-                    "p-2.5 sm:p-3 rounded-none transition-colors",
+                    "p-1.5 rounded-none transition-colors",
                     isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground"
                 )}>
-                    <Icon className="size-4 sm:size-5" />
+                    <Icon className="size-3.5" />
                 </div>
                 <div>
-                    <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
-                    <p className="text-sm sm:text-xl font-black tabular-nums">{time}</p>
-                    {isActive && coords?.lat && coords?.lng && (
-                        <p className="text-[7px] font-mono font-bold text-primary mt-1">
-                            {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-                        </p>
-                    )}
+                    <p className="text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">{label}</p>
+                    <p className="text-xs font-black tabular-nums">{time}</p>
                 </div>
             </CardContent>
         </Card>
     );
 }
-
