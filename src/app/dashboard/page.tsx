@@ -13,6 +13,7 @@ import { DashboardReminder } from "@/components/geohrm/dashboard-reminder";
 import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
 import { AnnouncementsWidget } from "@/components/geohrm/announcements-widget";
 import { EventsWidget } from "@/components/geohrm/events-widget";
+import { MonthlyReviewBanner } from "@/components/geohrm/monthly-review-banner";
 import { 
   AreaChart, Area, PieChart, Pie, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, 
@@ -74,14 +75,6 @@ const salesFunnelData = [
   { value: 7, name: 'Won', fill: '#10B981' },
 ];
 
-const topClientsData = [
-  { name: 'ABC Corp', value: 325000 },
-  { name: 'TechNova', value: 275000 },
-  { name: 'Global Retail', value: 210000 },
-  { name: 'EduSmart', value: 185000 },
-  { name: 'Future Labs', value: 160000 },
-];
-
 export default function DashboardPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
@@ -100,6 +93,7 @@ export default function DashboardPage() {
   if (!isExecutive) {
     return (
       <div className="space-y-4 max-w-full mx-auto pb-6 font-jakarta">
+        <MonthlyReviewBanner />
         <div className="flex flex-col gap-0.5 mb-2 animate-fade-in-up">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter leading-none text-primary uppercase">
                 {new Date().getHours() < 12 ? "Good Morning" : new Date().getHours() < 17 ? "Good Afternoon" : "Good Evening"}, {currentUserData?.firstName || 'Strategist'}
@@ -127,6 +121,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen space-y-4 pb-10 font-jakarta bg-gradient-to-br from-primary/5 via-[#F8FAFC] to-indigo-500/5 px-4 md:px-6">
+      <MonthlyReviewBanner />
       {/* Header Section */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-4 animate-fade-in-up">
         <div className="space-y-0.5">
