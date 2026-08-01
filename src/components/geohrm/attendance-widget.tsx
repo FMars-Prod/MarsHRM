@@ -68,7 +68,6 @@ export function AttendanceWidget() {
   const globalLocationDocRef = useMemoFirebase(() => doc(firestore, "settings", "location"), [firestore]);
   const { data: globalLocationData } = useDoc<any>(globalLocationDocRef);
 
-  // Fetch approved WFH requests for this user
   const wfhRequestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -80,7 +79,6 @@ export function AttendanceWidget() {
   }, [user, firestore]);
   const { data: wfhRequests } = useCollection<any>(wfhRequestsQuery);
 
-  // Determine if there is an active approved WFH request for today
   const activeWfhToday = React.useMemo(() => {
     if (!wfhRequests) return null;
     const currentDay = new Date();
@@ -94,44 +92,16 @@ export function AttendanceWidget() {
   }, [wfhRequests]);
   
   const activeGeofence = React.useMemo(() => {
-    // Priority 1: Approved Dynamic WFH Request for Today
     if (activeWfhToday && typeof activeWfhToday.latitude === 'number') {
-        return { 
-            name: "WFH", 
-            lat: Number(activeWfhToday.latitude), 
-            lng: Number(activeWfhToday.longitude), 
-            radius: 0.5, 
-            type: 'wfh'
-        };
+        return { name: "WFH", lat: Number(activeWfhToday.latitude), lng: Number(activeWfhToday.longitude), radius: 0.5, type: 'wfh' };
     }
-    // Priority 2: Permanent Home Authorization
     if (userData?.isWfhAllowed && typeof userData.homeLatitude === 'number') {
-        return { 
-            name: "Home", 
-            lat: Number(userData.homeLatitude), 
-            lng: Number(userData.homeLongitude), 
-            radius: Number(userData.homeRadius || 0.5),
-            type: 'wfh'
-        };
+        return { name: "Home", lat: Number(userData.homeLatitude), lng: Number(userData.homeLongitude), radius: Number(userData.homeRadius || 0.5), type: 'wfh' };
     }
-    // Priority 3: Assigned Branch Office
     if (userData?.branchId && branchData) {
-        return { 
-            name: branchData.name, 
-            lat: Number(branchData.latitude), 
-            lng: Number(branchData.longitude), 
-            radius: Number(branchData.radius || 0.5),
-            type: 'office'
-        };
+        return { name: branchData.name, lat: Number(branchData.latitude), lng: Number(branchData.longitude), radius: Number(branchData.radius || 0.5), type: 'office' };
     }
-    // Priority 4: Default Office (Fallback)
-    return { 
-        name: "Office", 
-        lat: Number(globalLocationData?.latitude || 13.0827), 
-        lng: Number(globalLocationData?.longitude || 80.2707), 
-        radius: Number(globalLocationData?.maxDistanceKm || 0.5),
-        type: 'office'
-    };
+    return { name: "Office", lat: Number(globalLocationData?.latitude || 13.0827), lng: Number(globalLocationData?.longitude || 80.2707), radius: Number(globalLocationData?.maxDistanceKm || 0.5), type: 'office' };
   }, [branchData, globalLocationData, userData, activeWfhToday]);
 
   const [isOutOfRangeDialogOpen, setIsOutOfRangeDialogOpen] = useState(false);
@@ -146,7 +116,6 @@ export function AttendanceWidget() {
   
   const {data: todaysAttendance} = useDoc<any>(getTodaysAttendanceRef);
 
-  // Monitor pending requests
   const pendingRequestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -224,356 +193,164 @@ export function AttendanceWidget() {
 
   const handleClockIn = () => {
     setIsVerifyingLocation(true);
-    setCurrentSignal("Checking...");
-    
     navigator.geolocation.getCurrentPosition((p) => {
         const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
         setLastCapturedLoc(userLoc);
-        setCurrentSignal(`${userLoc.latitude.toFixed(4)}, ${userLoc.longitude.toFixed(4)}`);
-        
         const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-        const buffer = 0.05; // 50 meters buffer for accuracy
-        
         setIsVerifyingLocation(false);
-        if (dist <= (activeGeofence.radius + buffer)) {
+        if (dist <= (activeGeofence.radius + 0.05)) {
             const todayId = format(new Date(), 'yyyy-MM-dd');
             setDocumentNonBlocking(getTodaysAttendanceRef!, { 
-                id: todayId, 
-                employeeId: user!.uid, 
-                checkInTime: serverTimestamp(), 
-                status: 'present', 
-                totalBreakDuration: 0, 
-                locationCheckInLatitude: userLoc.latitude, 
-                locationCheckInLongitude: userLoc.longitude, 
-                isOutOfRange: false,
-                isAtHome: activeGeofence.type === 'wfh'
+                id: todayId, employeeId: user!.uid, checkInTime: serverTimestamp(), 
+                status: 'present', totalBreakDuration: 0, 
+                locationCheckInLatitude: userLoc.latitude, locationCheckInLongitude: userLoc.longitude, 
+                isOutOfRange: false, isAtHome: activeGeofence.type === 'wfh'
             }, { merge: true });
-            toast({ title: "Clocked In", description: `Location: ${activeGeofence.name}` });
-        } else {
-            setOutOfRangeType('Check In');
-            setIsOutOfRangeDialogOpen(true);
-        }
-    }, () => { 
-        setIsVerifyingLocation(false); 
-        setCurrentSignal("");
-        toast({ variant: "destructive", title: "Location Error", description: "Please enable location services." }); 
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+            toast({ title: "Clocked In" });
+        } else { setOutOfRangeType('Check In'); setIsOutOfRangeDialogOpen(true); }
+    }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Location Error" }); }, { enableHighAccuracy: true });
   };
 
   const handleClockOut = async () => {
-      // Protocol Check: Must submit report before clock out
-      const isPrivileged = userData?.role === 'HR Manager' || userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD';
-      if (!isPrivileged) {
-          const todayS = startOfDay(new Date());
-          const todayE = endOfDay(new Date());
-          const q = query(
-              collection(firestore, `users/${user!.uid}/reports`),
-              where('date', '>=', todayS),
-              where('date', '<=', todayE)
-          );
-          const snap = await getDocs(q);
-          if (snap.empty) {
-              toast({ 
-                  variant: 'destructive', 
-                  title: "Report Required", 
-                  description: "Protocol violation: Please submit your daily report before clocking out." 
-              });
-              router.push('/dashboard/reports');
-              return;
-          }
-      }
-
       setIsVerifyingLocation(true);
-      setCurrentSignal("Checking...");
-      
       navigator.geolocation.getCurrentPosition(p => {
           const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
           setLastCapturedLoc(userLoc);
-          setCurrentSignal(`${userLoc.latitude.toFixed(4)}, ${userLoc.longitude.toFixed(4)}`);
-          
           const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
-          const buffer = 0.05; // 50 meters buffer for accuracy
-
           setIsVerifyingLocation(false);
-          if (dist <= (activeGeofence.radius + buffer)) {
+          if (dist <= (activeGeofence.radius + 0.05)) {
               updateDocumentNonBlocking(getTodaysAttendanceRef!, { 
                   checkOutTime: serverTimestamp(), 
-                  locationCheckOutLatitude: p.coords.latitude, 
-                  locationCheckOutLongitude: p.coords.longitude 
+                  locationCheckOutLatitude: p.coords.latitude, locationCheckOutLongitude: p.coords.longitude 
               });
-              toast({ title: "Clocked Out", description: "Mission finished." });
-          } else {
-              setOutOfRangeType('Clock Out');
-              setIsOutOfRangeDialogOpen(true);
-          }
-      }, () => { 
-          setIsVerifyingLocation(false); 
-          setCurrentSignal("");
-          toast({ variant: "destructive", title: "Location Error" }); 
-      }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+              toast({ title: "Clocked Out" });
+          } else { setOutOfRangeType('Clock Out'); setIsOutOfRangeDialogOpen(true); }
+      }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Location Error" }); }, { enableHighAccuracy: true });
   };
 
   const handleLunchOut = () => {
-    setIsVerifyingLocation(true);
-    navigator.geolocation.getCurrentPosition(p => {
-        const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
-        setIsVerifyingLocation(false);
-        updateDocumentNonBlocking(getTodaysAttendanceRef!, {
-          lunchOutTime: serverTimestamp(),
-          lunchInTime: null,
-          locationLunchOutLatitude: userLoc.latitude,
-          locationLunchOutLongitude: userLoc.longitude
-        });
-        toast({ title: "Lunch Break Started" });
-    }, () => {
-        setIsVerifyingLocation(false);
-        toast({ variant: "destructive", title: "Location Error" });
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    updateDocumentNonBlocking(getTodaysAttendanceRef!, { lunchOutTime: serverTimestamp(), lunchInTime: null });
+    toast({ title: "Lunch Started" });
   };
 
   const handleLunchIn = () => {
-    setIsVerifyingLocation(true);
-    navigator.geolocation.getCurrentPosition(p => {
-        const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
-        setIsVerifyingLocation(false);
-        const breakStart = todaysAttendance?.lunchOutTime?.toDate();
-        const breakEnd = new Date();
-        const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
-        updateDocumentNonBlocking(getTodaysAttendanceRef!, {
-          lunchInTime: serverTimestamp(),
-          locationLunchInLatitude: userLoc.latitude,
-          locationLunchInLongitude: userLoc.longitude,
-          totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
-        });
-        toast({ title: "Lunch Break Ended" });
-    }, () => {
-        setIsVerifyingLocation(false);
-        toast({ variant: "destructive", title: "Location Error" });
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    const breakStart = todaysAttendance?.lunchOutTime?.toDate();
+    const duration = breakStart ? Math.floor((new Date().getTime() - breakStart.getTime()) / 1000) : 0;
+    updateDocumentNonBlocking(getTodaysAttendanceRef!, { 
+        lunchInTime: serverTimestamp(), 
+        totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration 
+    });
+    toast({ title: "Lunch Ended" });
   };
 
   const handleShortBreakOut = () => {
-    setIsVerifyingLocation(true);
-    navigator.geolocation.getCurrentPosition(p => {
-        const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
-        setIsVerifyingLocation(false);
-        updateDocumentNonBlocking(getTodaysAttendanceRef!, {
-            breakOutTime: serverTimestamp(),
-            breakInTime: null,
-            locationBreakOutLatitude: userLoc.latitude,
-            locationBreakOutLongitude: userLoc.longitude
-        });
-        toast({ title: "Break Started" });
-    }, () => {
-        setIsVerifyingLocation(false);
-        toast({ variant: "destructive", title: "Location Error" });
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    updateDocumentNonBlocking(getTodaysAttendanceRef!, { breakOutTime: serverTimestamp(), breakInTime: null });
+    toast({ title: "Break Started" });
   };
 
   const handleShortBreakIn = () => {
-    setIsVerifyingLocation(true);
-    navigator.geolocation.getCurrentPosition(p => {
-        const userLoc = { latitude: p.coords.latitude, longitude: p.coords.longitude };
-        setIsVerifyingLocation(false);
-        const breakStart = todaysAttendance?.breakOutTime?.toDate();
-        const breakEnd = new Date();
-        const duration = breakStart ? Math.floor((breakEnd.getTime() - breakStart.getTime()) / 1000) : 0;
-        updateDocumentNonBlocking(getTodaysAttendanceRef!, {
-          breakInTime: serverTimestamp(),
-          locationBreakInLatitude: userLoc.latitude,
-          locationBreakInLongitude: userLoc.longitude,
-          totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration
-        });
-        toast({ title: "Break Ended" });
-    }, () => {
-        setIsVerifyingLocation(false);
-        toast({ variant: "destructive", title: "Location Error" });
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    const breakStart = todaysAttendance?.breakOutTime?.toDate();
+    const duration = breakStart ? Math.floor((new Date().getTime() - breakStart.getTime()) / 1000) : 0;
+    updateDocumentNonBlocking(getTodaysAttendanceRef!, { 
+        breakInTime: serverTimestamp(), 
+        totalBreakDuration: (todaysAttendance?.totalBreakDuration || 0) + duration 
+    });
+    toast({ title: "Break Ended" });
   };
 
   const handleSubmitOutOfRangeRequest = () => {
       if (!outOfRangeReason.trim() || !user || !userData || !lastCapturedLoc || isSubmittingApproval) return;
-      const todayId = format(new Date(), 'yyyy-MM-dd');
-      const alreadyPending = userPendingRequests?.some(r => r.dateId === todayId && r.type === outOfRangeType);
-      if (alreadyPending) {
-          toast({ variant: 'destructive', title: "Request Pending", description: `You already have a pending ${outOfRangeType} approval.` });
-          setIsOutOfRangeDialogOpen(false);
-          return;
-      }
       setIsSubmittingApproval(true);
       const payload = {
-          employeeId: user.uid,
-          employeeName: `${userData.firstName} ${userData.lastName}`,
-          requestedCheckInTime: format(new Date(), 'PP p'),
-          dateId: todayId,
-          intendedStatus: 'present',
-          requestedLatitude: lastCapturedLoc.latitude,
-          requestedLongitude: lastCapturedLoc.longitude,
-          reason: outOfRangeReason,
-          status: 'Pending',
-          type: outOfRangeType,
-          requestTimestamp: serverTimestamp()
+          employeeId: user.uid, employeeName: `${userData.firstName} ${userData.lastName}`,
+          requestedCheckInTime: format(new Date(), 'PP p'), dateId: format(new Date(), 'yyyy-MM-dd'),
+          intendedStatus: 'present', requestedLatitude: lastCapturedLoc.latitude, requestedLongitude: lastCapturedLoc.longitude,
+          reason: outOfRangeReason, status: 'Pending', type: outOfRangeType, requestTimestamp: serverTimestamp()
       };
-      addDocumentNonBlocking(collection(firestore, 'attendanceApprovalRequests'), payload)
-        .then(() => {
-            toast({ title: "Request Sent", description: "Awaiting approval." });
-            setIsOutOfRangeDialogOpen(false);
-            setOutOfRangeReason("");
-        })
-        .finally(() => setIsSubmittingApproval(false));
+      addDocumentNonBlocking(collection(firestore, 'attendanceApprovalRequests'), payload).then(() => {
+          toast({ title: "Request Sent" });
+          setIsOutOfRangeDialogOpen(false);
+          setOutOfRangeReason("");
+      }).finally(() => setIsSubmittingApproval(false));
   };
 
-  if (isUserDocLoading) return null;
+  const isBreak = status === 'lunch' || status === 'short_break';
+  const progress = Math.min(100, (workTimer / (9 * 3600)) * 100);
+  const strokeDasharray = 2 * Math.PI * 45;
+  const strokeDashoffset = strokeDasharray - (progress / 100) * strokeDasharray;
 
-  // CEO exclusion check
-  const isCEO = userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD';
-  if (isCEO) return null;
+  if (isUserDocLoading || userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD') return null;
 
   return (
-    <>
-        <div className="w-full flex flex-col items-center gap-2 py-2 animate-fade-in-up font-jakarta max-w-4xl mx-auto">
-            <div className="flex flex-wrap justify-center gap-2">
-                {status !== 'out' && (
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-none border border-emerald-100 shadow-sm animate-pulse">
-                        <div className="size-1 rounded-full bg-emerald-500" />
-                        <span className="text-[8px] font-black uppercase tracking-widest text-emerald-700">Clocked In</span>
-                    </div>
-                )}
-                {(status === 'lunch' || status === 'short_break') && (
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 rounded-none border border-amber-100 shadow-sm">
-                        <Coffee className="size-2.5 text-amber-600" />
-                        <span className="text-[8px] font-black uppercase tracking-widest text-amber-700">Break: {formatTime(currentBreakTimer)}</span>
-                    </div>
-                )}
-            </div>
-
-            <div className="flex flex-col items-center gap-1 px-4 text-center">
-                <h1 className="text-[40px] sm:text-[50px] lg:text-[60px] font-black leading-none tracking-tighter text-primary font-mono w-full">
+    <div className="flex flex-col items-center gap-4 py-4 animate-fade-in-up font-jakarta w-full">
+        <div className="relative size-48 sm:size-56 flex items-center justify-center">
+            <svg className="size-full -rotate-90">
+                <circle cx="50%" cy="50%" r="45%" className="fill-none stroke-muted/20" strokeWidth="6" />
+                <circle cx="50%" cy="50%" r="45%" className={cn("fill-none transition-all duration-500", isBreak ? "stroke-orange-500" : "stroke-primary")} strokeWidth="8" strokeDasharray={strokeDasharray} strokeDashoffset={strokeDashoffset} strokeLinecap="square" />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-40 mb-1", isBreak ? "text-orange-600" : "text-primary")}>
+                    {isBreak ? "On Break" : "Mission Timer"}
+                </p>
+                <h1 className={cn("text-3xl sm:text-4xl font-black font-mono tabular-nums leading-none tracking-tighter", isBreak ? "text-orange-600" : "text-slate-900")}>
                     {formatTime(workTimer)}
                 </h1>
-                <Badge variant="outline" className="rounded-none px-3 h-5 bg-white/50 border-primary/20 text-primary font-black uppercase text-[8px] tracking-widest">
-                  Location: {activeGeofence.name}
-                </Badge>
-            </div>
-
-            <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-2 mt-1 px-2">
-                <StatusStep 
-                    icon={LogIn} 
-                    label="Clock In" 
-                    time={todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'p') : '--:--'} 
-                    isActive={!!todaysAttendance?.checkInTime}
-                />
-                <StatusStep 
-                    icon={Utensils} 
-                    label="Lunch Start" 
-                    time={todaysAttendance?.lunchOutTime ? format(todaysAttendance.lunchOutTime.toDate(), 'p') : '--:--'} 
-                    isActive={!!todaysAttendance?.lunchOutTime}
-                />
-                <StatusStep 
-                    icon={LogIn} 
-                    label="Lunch End" 
-                    time={todaysAttendance?.lunchInTime ? format(todaysAttendance.lunchInTime.toDate(), 'p') : '--:--'} 
-                    isActive={!!todaysAttendance?.lunchInTime}
-                />
-                <StatusStep 
-                    icon={LogOut} 
-                    label="Clock Out" 
-                    time={todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'} 
-                    isActive={!!todaysAttendance?.checkOutTime}
-                />
-            </div>
-
-            <div className="w-full max-w-xl pt-2 flex flex-wrap items-center justify-center gap-2 px-4">
-                {isVerifyingLocation ? (
-                    <Button disabled className="h-8 rounded-none px-4 bg-muted text-muted-foreground font-black uppercase text-[8px] tracking-widest flex items-center gap-2">
-                        <Loader2 className="size-3 animate-spin" /> Verifying...
-                    </Button>
-                ) : status === 'out' && !hasClockedOutToday ? (
-                    <Button onClick={handleClockIn} className="h-10 rounded-none px-6 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-                        <LogIn className="size-3.5 mr-2" /> Clock In
-                    </Button>
-                ) : status === 'in' ? (
-                    <>
-                        <Button onClick={handleLunchOut} variant="outline" className="h-8 rounded-none px-3 bg-white border-2 font-black uppercase text-[8px] tracking-widest hover:bg-primary/5 transition-all">
-                            Lunch Start
-                        </Button>
-                        <Button onClick={handleShortBreakOut} variant="outline" className="h-8 rounded-none px-3 bg-white border-2 font-black uppercase text-[8px] tracking-widest hover:bg-primary/5 transition-all">
-                            Short Break
-                        </Button>
-                        <Button onClick={handleClockOut} className="h-8 rounded-none px-4 bg-rose-500 hover:bg-rose-600 text-white font-black uppercase text-[8px] tracking-widest shadow-lg shadow-rose-500/20 transition-all hover:scale-[1.02]">
-                            Clock Out
-                        </Button>
-                    </>
-                ) : status === 'lunch' ? (
-                    <Button onClick={handleLunchIn} className="h-10 rounded-none px-8 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
-                        End Lunch
-                    </Button>
-                ) : status === 'short_break' ? (
-                    <Button onClick={handleShortBreakIn} className="h-10 rounded-none px-8 bg-primary text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-[1.02]">
-                        End Break
-                    </Button>
-                ) : (
-                    <div className="flex items-center gap-2 py-1 text-emerald-700 font-black uppercase tracking-[0.2em] text-[8px]">
-                        <CheckCircle2 className="size-3" /> Duty Finished
-                    </div>
-                )}
+                <Badge variant="outline" className="mt-3 rounded-none border-none bg-muted/20 text-[7px] font-black uppercase tracking-widest">{activeGeofence.name}</Badge>
             </div>
         </div>
 
-        <Dialog open={isOutOfRangeDialogOpen} onOpenChange={setIsOutOfRangeDialogOpen}>
-            <DialogContent className="rounded-none sm:max-w-md p-6 border-none shadow-2xl">
-                <DialogHeader className="text-left">
-                    <div className="size-10 rounded-none bg-orange-100 text-orange-600 flex items-center justify-center mb-3">
-                        <AlertTriangle className="size-5" />
-                    </div>
-                    <DialogTitle className="text-lg font-black uppercase tracking-tighter">Out of Range</DialogTitle>
-                    <DialogDescription className="text-[11px] font-medium leading-relaxed text-left">
-                        Outside authorized <span className="font-bold text-primary">{activeGeofence.name}</span> area.
-                    </DialogDescription>
-                </DialogHeader>
+        <div className="w-full grid grid-cols-5 gap-1.5 px-2 max-w-2xl">
+            <StatusStep label="In" time={todaysAttendance?.checkInTime ? format(todaysAttendance.checkInTime.toDate(), 'p') : '--:--'} isActive={!!todaysAttendance?.checkInTime} />
+            <StatusStep label="Lunch" time={todaysAttendance?.lunchOutTime ? format(todaysAttendance.lunchOutTime.toDate(), 'p') : '--:--'} isActive={!!todaysAttendance?.lunchOutTime} />
+            <StatusStep label="Break" time={todaysAttendance?.breakOutTime ? format(todaysAttendance.breakOutTime.toDate(), 'p') : '--:--'} isActive={!!todaysAttendance?.breakOutTime} />
+            <StatusStep label="Total Break" time={formatTime(totalBreakTime)} isActive={totalBreakTime > 0} isMeta />
+            <StatusStep label="Out" time={todaysAttendance?.checkOutTime ? format(todaysAttendance.checkOutTime.toDate(), 'p') : '--:--'} isActive={!!todaysAttendance?.checkOutTime} />
+        </div>
 
-                <div className="py-3 space-y-3 text-left">
-                    <div className="space-y-1.5 text-left">
-                        <Label className="text-[9px] font-black uppercase tracking-widest text-primary">Reason</Label>
-                        <Textarea 
-                            value={outOfRangeReason} 
-                            onChange={e => setOutOfRangeReason(e.target.value)} 
-                            placeholder="Why are you checking in from here?" 
-                            className="rounded-none min-h-[80px] bg-muted/20 border-muted text-xs"
-                        />
-                    </div>
+        <div className="flex flex-wrap gap-2 justify-center pt-2">
+            {isVerifyingLocation ? (
+                <Button disabled className="h-9 rounded-none bg-muted text-muted-foreground text-[8px] font-black uppercase px-6"><Loader2 className="size-3 animate-spin mr-2"/> Verifying...</Button>
+            ) : status === 'out' && !hasClockedOutToday ? (
+                <Button onClick={handleClockIn} className="h-10 rounded-none px-8 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"><LogIn className="size-4 mr-2"/> Clock In</Button>
+            ) : status === 'in' ? (
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleLunchOut} className="h-9 rounded-none px-4 text-[9px] font-black uppercase border-2">Lunch</Button>
+                    <Button variant="outline" onClick={handleShortBreakOut} className="h-9 rounded-none px-4 text-[9px] font-black uppercase border-2">Break</Button>
+                    <Button onClick={handleClockOut} className="h-9 rounded-none px-6 bg-rose-600 text-white text-[9px] font-black uppercase">Clock Out</Button>
                 </div>
+            ) : status === 'lunch' ? (
+                <Button onClick={handleLunchIn} className="h-10 rounded-none px-8 bg-primary text-white font-black uppercase text-[10px]">End Lunch</Button>
+            ) : status === 'short_break' ? (
+                <Button onClick={handleShortBreakIn} className="h-10 rounded-none px-8 bg-primary text-white font-black uppercase text-[10px]">End Break</Button>
+            ) : (
+                <Badge className="bg-emerald-50 text-emerald-700 rounded-none border-none font-black text-[9px] uppercase px-4 h-8 flex items-center">Duty Finished</Badge>
+            )}
+        </div>
 
+        <Dialog open={isOutOfRangeDialogOpen} onOpenChange={setIsOutOfRangeDialogOpen}>
+            <DialogContent className="rounded-none sm:max-w-md p-6">
+                <DialogHeader className="text-left">
+                    <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Out of Range</DialogTitle>
+                    <DialogDescription className="text-[11px] font-bold uppercase opacity-60">Outside authorized {activeGeofence.name} sector</DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Provide Justification</Label>
+                    <Textarea value={outOfRangeReason} onChange={e => setOutOfRangeReason(e.target.value)} placeholder="Reason for remote check-in..." className="rounded-none min-h-[100px] text-xs font-bold bg-muted/20" />
+                </div>
                 <DialogFooter>
-                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim() || isSubmittingApproval} className="w-full rounded-none h-11 font-black uppercase tracking-widest shadow-xl shadow-primary/20 text-xs">
-                        {isSubmittingApproval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Ask for Approval
-                    </Button>
+                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim() || isSubmittingApproval} className="w-full rounded-none h-12 font-black uppercase shadow-xl">{isSubmittingApproval ? <Loader2 className="animate-spin mr-2 size-4"/> : null} Submit for Approval</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    </>
+    </div>
   );
 }
 
-function StatusStep({ icon: Icon, label, time, isActive }: { icon: any, label: string, time: string, isActive: boolean }) {
+function StatusStep({ label, time, isActive, isMeta }: { label: string, time: string, isActive: boolean, isMeta?: boolean }) {
     return (
-        <Card className={cn(
-            "border-none shadow-sm rounded-none transition-all duration-300 overflow-hidden",
-            isActive ? "bg-white ring-1 ring-border shadow-md" : "bg-transparent opacity-20 grayscale"
-        )}>
-            <CardContent className="p-2 flex flex-col items-center text-center gap-1">
-                <div className={cn(
-                    "p-1 rounded-none transition-colors",
-                    isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-                )}>
-                    <Icon className="size-3" />
-                </div>
-                <div>
-                    <p className="text-[6px] font-black uppercase tracking-widest text-muted-foreground mb-0">{label}</p>
-                    <p className="text-[10px] font-black tabular-nums leading-none">{time}</p>
-                </div>
-            </CardContent>
-        </Card>
+        <div className={cn("p-2 rounded-none border flex flex-col items-center text-center transition-all", isActive ? (isMeta ? "bg-amber-50 border-amber-200" : "bg-primary/5 border-primary/20 shadow-sm") : "bg-muted/10 opacity-30 grayscale border-transparent")}>
+            <p className={cn("text-[6px] font-black uppercase tracking-tighter mb-0.5", isActive ? "text-primary/60" : "text-muted-foreground")}>{label}</p>
+            <p className={cn("text-[9px] font-black tabular-nums leading-none", isActive ? "text-slate-900" : "text-muted-foreground")}>{time}</p>
+        </div>
     );
 }
