@@ -14,6 +14,7 @@ import { DailyMonitorWidget } from "@/components/geohrm/daily-monitor-widget";
 import { AnnouncementsWidget } from "@/components/geohrm/announcements-widget";
 import { EventsWidget } from "@/components/geohrm/events-widget";
 import { MonthlyReviewBanner } from "@/components/geohrm/monthly-review-banner";
+import { WfhSetupReminder } from "@/components/geohrm/wfh-setup-reminder";
 import { 
   AreaChart, Area, PieChart, Pie, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, 
@@ -54,27 +55,6 @@ const revenueTrendData = [
   { name: 'Sun', value: 345000 },
 ];
 
-const revenueBUData = [
-  { name: 'IT Products', value: 725000, color: '#6D28D9' },
-  { name: 'Software Dev', value: 510000, color: '#3B82F6' },
-  { name: 'Digital Marketing', value: 365000, color: '#F43F5E' },
-  { name: 'IT Training', value: 245000, color: '#10B981' },
-];
-
-const projectHealthData = [
-  { name: 'On Track', value: 18, color: '#10B981' },
-  { name: 'At Risk', value: 4, color: '#F59E0B' },
-  { name: 'Delayed', value: 2, color: '#EF4444' },
-];
-
-const salesFunnelData = [
-  { value: 142, name: 'New Leads', fill: '#6D28D9' },
-  { value: 57, name: 'Qualified', fill: '#3B82F6' },
-  { value: 24, name: 'Proposal Sent', fill: '#8B5CF6' },
-  { value: 12, name: 'Negotiation', fill: '#F43F5E' },
-  { value: 7, name: 'Won', fill: '#10B981' },
-];
-
 export default function DashboardPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
@@ -86,12 +66,12 @@ export default function DashboardPage() {
   
   const userRole = currentUserData?.role;
   const isExecutive = userRole === 'CEO/Admin' || userRole === 'CEO/MD' || userRole === 'HR Manager';
-  const isCEO = userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
   if (!isExecutive) {
     return (
       <div className="space-y-3 max-w-full mx-auto pb-4 font-jakarta">
         <MonthlyReviewBanner />
+        <WfhSetupReminder />
         <div className="flex flex-col gap-0.5 mb-1 animate-fade-in-up">
             <h1 className="text-xl sm:text-2xl font-black tracking-tighter leading-none text-primary uppercase">
                 {new Date().getHours() < 12 ? "Good Morning" : new Date().getHours() < 17 ? "Good Afternoon" : "Good Evening"}, {currentUserData?.firstName || 'Strategist'}
@@ -136,6 +116,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen space-y-3 pb-6 font-jakarta bg-gradient-to-br from-primary/5 via-[#F8FAFC] to-indigo-500/5 px-2 md:px-4">
       <MonthlyReviewBanner />
+      <WfhSetupReminder />
       {/* Header Section */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pt-2 animate-fade-in-up">
         <div className="space-y-0.5">
