@@ -51,10 +51,8 @@ export function AttendanceWidget() {
   const [currentBreakStartTime, setCurrentBreakStartTime] = useState<Date | null>(null);
   const [hasClockedOutToday, setHasClockedOutToday] = useState(false);
   const [isVerifyingLocation, setIsVerifyingLocation] = useState(false);
-  const [currentSignal, setCurrentSignal] = useState<string>("");
   const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
 
   const { user } = useUser();
   const firestore = useFirestore();
@@ -116,16 +114,6 @@ export function AttendanceWidget() {
   
   const {data: todaysAttendance} = useDoc<any>(getTodaysAttendanceRef);
 
-  const pendingRequestsQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(
-      collection(firestore, 'attendanceApprovalRequests'),
-      where('employeeId', '==', user.uid),
-      where('status', '==', 'Pending')
-    );
-  }, [user, firestore]);
-  const { data: userPendingRequests } = useCollection<any>(pendingRequestsQuery);
-
   useEffect(() => {
     if (todaysAttendance) {
         const checkIn = todaysAttendance.checkInTime?.toDate?.() || null;
@@ -185,11 +173,6 @@ export function AttendanceWidget() {
     }
     return 0;
   }, [now, status, lastClockInTime, totalBreakTime, currentBreakStartTime, hasClockedOutToday, todaysAttendance]);
-
-  const currentBreakTimer = useMemo(() => {
-      if (!currentBreakStartTime) return 0;
-      return (now - currentBreakStartTime.getTime()) / 1000;
-  }, [now, currentBreakStartTime]);
 
   const handleClockIn = () => {
     setIsVerifyingLocation(true);

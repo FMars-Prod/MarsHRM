@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, Camera, UserPlus, X, Loader2, UserCheck as UserCheckIcon, Coffee } from 'lucide-react';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, Camera, UserPlus, X, Loader2, UserCheck as UserCheckIcon, Coffee, LocateFixed } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -42,9 +42,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { updateProfile, updatePassword } from "firebase/auth";
 import { useAuth } from "@/firebase";
+import { Input } from '@/components/ui/input';
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "Required"),
@@ -58,6 +59,9 @@ const profileFormSchema = z.object({
     maritalStatus: z.string().optional(),
     bloodGroup: z.string().optional(),
     languages: z.array(z.string()).default([]),
+    homeLatitude: z.any().optional(),
+    homeLongitude: z.any().optional(),
+    homeRadius: z.any().optional().default(0.5),
 }).refine(data => !data.password || data.password.length >= 6, { message: "Min 6 chars", path: ["password"] })
   .refine(data => data.password === data.confirmPassword, { message: "Mismatch", path: ["confirmPassword"] });
 
@@ -181,7 +185,6 @@ export default function ProfilePage() {
     const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
     const [isAvatarDialogOpen, setIsAvatarDialogOpen] = React.useState(false);
     const [userReports, setUserReports] = React.useState<any[]>([]);
-    const [langInput, setLangInput] = React.useState('');
     const [selectedReportForReview, setSelectedReportForReview] = React.useState<any | null>(null);
 
     const userDocRef = useMemoFirebase(() => (user ? doc(firestore, "users", user.uid) : null), [user, firestore]);
@@ -228,7 +231,7 @@ export default function ProfilePage() {
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: { firstName: "", lastName: "", phoneNumber: "", password: "", confirmPassword: "", dob: "", gender: "", nationality: "", maritalStatus: "", bloodGroup: "", languages: [] },
+        defaultValues: { firstName: "", lastName: "", phoneNumber: "", password: "", confirmPassword: "", dob: "", gender: "", nationality: "", maritalStatus: "", bloodGroup: "", languages: [], homeLatitude: "", homeLongitude: "", homeRadius: 0.5 },
     });
 
     React.useEffect(() => {
@@ -242,10 +245,31 @@ export default function ProfilePage() {
             maritalStatus: employee.maritalStatus || '',
             bloodGroup: employee.bloodGroup || '',
             languages: Array.isArray(employee.languages) ? employee.languages : [],
+            homeLatitude: employee.homeLatitude || '',
+            homeLongitude: employee.homeLongitude || '',
+            homeRadius: employee.homeRadius || 0.5,
             password: '', 
             confirmPassword: '' 
         });
     }, [employee, form]);
+
+    const isWfhAllowed = employee?.isWfhAllowed;
+
+    const handleGetCurrentLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    form.setValue("homeLatitude", position.coords.latitude);
+                    form.setValue("homeLongitude", position.coords.longitude);
+                    toast({ title: "Coordinates Captured", description: "GPS signal synced to form." });
+                },
+                (error) => {
+                    toast({ variant: "destructive", title: "GPS Error", description: error.message });
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+    };
 
     React.useEffect(() => {
         const fetchReports = async () => {
@@ -262,7 +286,16 @@ export default function ProfilePage() {
         if (!user || !auth.currentUser) return;
         try {
             const { password, confirmPassword, ...updateData } = data;
-            if (userDocRef) updateDocumentNonBlocking(userDocRef, updateData);
+            
+            // Clean up numbers
+            const processedData: any = {
+                ...updateData,
+                homeLatitude: data.homeLatitude ? Number(data.homeLatitude) : null,
+                homeLongitude: data.homeLongitude ? Number(data.homeLongitude) : null,
+                homeRadius: data.homeRadius ? Number(data.homeRadius) : 0.5,
+            };
+
+            if (userDocRef) updateDocumentNonBlocking(userDocRef, processedData);
             await updateProfile(auth.currentUser, { displayName: `${data.firstName} ${data.lastName}` });
             if (data.password) await updatePassword(auth.currentUser, data.password);
             toast({ title: "Profile updated" });
@@ -327,7 +360,7 @@ export default function ProfilePage() {
                     {/* Employee Details */}
                     <div className="flex-1 p-8 lg:p-10 space-y-10 flex flex-col justify-center">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                            <div className="space-y-2">
+                            <div className="space-y-2 text-left">
                                 <h2 className="text-3xl lg:text-4xl font-black tracking-tighter leading-tight uppercase">{employee.firstName} {employee.lastName}</h2>
                                 <p className="text-md font-bold text-muted-foreground uppercase tracking-widest">{employee.jobTitle}</p>
                             </div>
@@ -337,7 +370,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-8 gap-x-12 pt-8 border-t border-dashed border-border/50">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-8 gap-x-12 pt-8 border-t border-dashed border-border/50 text-left">
                             <DetailItem icon={ShieldCheck} label="Employee ID" value={`MR-${employee.id.slice(0, 8).toUpperCase()}`} />
                             <DetailItem icon={CalendarDays} label="Joined Date" value={employee.hireDate ? format(new Date(employee.hireDate), 'dd MMM yyyy') : 'N/A'} />
                             <DetailItem icon={Mail} label="Email Address" value={employee.email} />
@@ -380,7 +413,7 @@ export default function ProfilePage() {
                         </TabsTrigger>
                     ))}
                 </TabsList>
-                <TabsContent value="activity" className="mt-0">
+                <TabsContent value="activity" className="mt-0 text-left">
                     <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-8">
                         <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Activity History</h3>
                         <div className="space-y-6">
@@ -470,7 +503,7 @@ export default function ProfilePage() {
                     </Card>
                 </TabsContent>
                 <TabsContent value="bio data">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                         <Card className="border-none shadow-sm rounded-none bg-white p-8 space-y-6">
                             <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Bio Data Profile</h3>
                             <div className="space-y-4">
@@ -499,11 +532,69 @@ export default function ProfilePage() {
                 </TabsContent>
             </Tabs>
 
+            <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+                <DialogContent className="sm:max-w-xl rounded-none p-8 border-none shadow-3xl">
+                    <DialogHeader className="text-left">
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Edit Profile</DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Update your personal and tactical settings</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[70vh] -mx-8 px-8">
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-4 pb-8 text-left">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary">First Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary">Last Name</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                </div>
+                                <FormField control={form.control} name="phoneNumber" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary">Phone Number</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold text-sm"/></FormControl></FormItem>)} />
+                                
+                                {isWfhAllowed && (
+                                    <div className="p-6 bg-primary/5 border-2 border-dashed border-primary/20 space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><MapPin className="size-3"/> Home Location (WFH)</Label>
+                                            <Button type="button" variant="ghost" size="sm" className="h-8 rounded-none text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5" onClick={handleGetCurrentLocation}>
+                                                <LocateFixed className="size-3 mr-1.5" /> Capture GPS
+                                            </Button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <FormField control={form.control} name="homeLatitude" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black opacity-40">Lat</FormLabel><FormControl><Input type="number" step="any" {...field} className="rounded-none h-11 font-mono text-sm font-bold"/></FormControl></FormItem>)} />
+                                            <FormField control={form.control} name="homeLongitude" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black opacity-40">Lng</FormLabel><FormControl><Input type="number" step="any" {...field} className="rounded-none h-11 font-mono text-sm font-bold"/></FormControl></FormItem>)} />
+                                        </div>
+                                        <FormField control={form.control} name="homeRadius" render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black opacity-40">Radius (KM)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-none h-11 font-bold"/></FormControl></FormItem>)} />
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="dob" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary">DOB</FormLabel><FormControl><Input type="date" {...field} className="rounded-none h-12 font-bold"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="gender" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary">Gender</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent></Select></FormItem>)} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="nationality" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary">Nationality</FormLabel><FormControl><Input {...field} className="rounded-none h-12 font-bold"/></FormControl></FormItem>)} />
+                                    <FormField control={form.control} name="maritalStatus" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-primary">Marital Status</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-12"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Single">Single</SelectItem><SelectItem value="Married">Married</SelectItem><SelectItem value="Divorced">Divorced</SelectItem></SelectContent></Select></FormItem>)} />
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h4 className="text-[11px] font-black uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Security (Optional)</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormField control={form.control} name="password" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground">New Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12"/></FormControl></FormItem>)} />
+                                        <FormField control={form.control} name="confirmPassword" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Confirm</FormLabel><FormControl><Input type="password" {...field} className="rounded-none h-12"/></FormControl></FormItem>)} />
+                                    </div>
+                                </div>
+                                <Button type="submit" disabled={isSubmitting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">
+                                    {isSubmitting ? <Loader2 className="animate-spin mr-2 size-4"/> : null} Finalize Updates
+                                </Button>
+                            </form>
+                        </Form>
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
+
             {/* Report Review Dialog */}
             <Dialog open={!!selectedReportForReview} onOpenChange={o => !o && setSelectedReportForReview(null)}>
                 <DialogContent className="max-w-3xl rounded-3xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
                     <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center shrink-0">
-                        <div>
+                        <div className="text-left">
                             <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Mission Audit Log</DialogTitle>
                             <p className="text-xs font-bold text-muted-foreground">{selectedReportForReview && formatIST(selectedReportForReview.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p>
                         </div>
@@ -513,10 +604,10 @@ export default function ProfilePage() {
                         </div>
                     </DialogHeader>
                     <ScrollArea className="flex-1 bg-secondary/10">
-                        <div className="p-8 space-y-8 pb-20">
+                        <div className="p-8 space-y-8 pb-20 text-left">
                             <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personnel</p><p className="font-bold text-lg uppercase">{selectedReportForReview?.employeeName}</p></div>
-                                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sector</p><p className="font-bold text-lg uppercase">{selectedReportForReview?.employeeDepartment}</p></div>
+                                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personnel</p><p className="font-bold lg uppercase">{selectedReportForReview?.employeeName}</p></div>
+                                <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sector</p><p className="font-bold lg uppercase">{selectedReportForReview?.employeeDepartment}</p></div>
                             </div>
                             <Separator className="opacity-50" />
                             {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
@@ -524,15 +615,15 @@ export default function ProfilePage() {
                             {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetail report={selectedReportForReview} />}
                             
                             <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm">
-                                <CardHeader className="bg-muted/10 py-3">
+                                <CardHeader className="bg-muted/10 py-3 text-left">
                                     <CardTitle className="text-xs font-bold uppercase text-primary flex items-center gap-2"><Target className="size-4"/> Planning (T+1)</CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-6 space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div><p className="text-[9px] font-bold text-muted-foreground uppercase">Target Meets</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div>
-                                        <div><p className="text-[9px] font-bold text-muted-foreground uppercase">Priority Trigger</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div>
+                                        <div className="text-left"><p className="text-[9px] font-bold text-muted-foreground uppercase">Target Meets</p><p className="font-black">{selectedReportForReview?.meetingsTomorrow || 0}</p></div>
+                                        <div className="text-left"><p className="text-[9px] font-bold text-muted-foreground uppercase">Priority Trigger</p><p className={cn("font-black", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-green-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div>
                                     </div>
-                                    <div className="p-4 bg-muted/10 border-l-4 border-primary">
+                                    <div className="p-4 bg-muted/10 border-l-4 border-primary text-left">
                                         <p className="text-[8px] font-black uppercase text-primary mb-1">Primary Objective</p>
                                         <p className="text-sm font-medium italic">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p>
                                     </div>
@@ -561,24 +652,6 @@ export default function ProfilePage() {
     );
 }
 
-function ActivityBarItem({ icon: Icon, title, value, status, color }: any) {
-    return (
-        <Card className="border-none shadow-sm rounded-none bg-white p-4 flex items-center gap-5 group hover:shadow-md transition-all ring-1 ring-border/50">
-            <div className={cn("p-3 rounded-none text-white shrink-0 group-hover:scale-110 transition-transform shadow-md", color)}>
-                <Icon className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-[9px] font-bold uppercase text-muted-foreground/40 tracking-widest leading-none mb-1.5">{title}</p>
-                <p className="text-sm font-bold truncate text-foreground leading-tight tracking-tight uppercase">{value}</p>
-                <div className="flex items-center gap-2 mt-1.5">
-                    <div className="h-1.5 w-1.5 rounded-none bg-current opacity-40" />
-                    <p className="text-[9px] font-bold uppercase opacity-30 tracking-wider">{status}</p>
-                </div>
-            </div>
-        </Card>
-    );
-}
-
 function DetailItem({ icon: Icon, label, value }: any) {
     return (
         <div className="flex items-start gap-4">
@@ -598,7 +671,7 @@ function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any
                 <div className={cn("p-4 rounded-none shadow-md", color, "bg-muted/10")}><Icon className="size-6" /></div>
                 <Badge variant="outline" className="text-[9px] font-bold uppercase bg-muted/20 border-none rounded-none px-3 h-6 tracking-widest">Active</Badge>
             </div>
-            <div>
+            <div className="text-left">
                 <div className="flex items-center justify-between mb-2.5"><p className="text-[12px] font-black uppercase text-muted-foreground/70 tracking-widest">{title}</p><span className={cn("text-xl font-black tracking-tighter", color)}>{ratio}</span></div>
                 {progress !== undefined && <Progress value={progress} className="h-2 rounded-none bg-muted/30" />}
                 {children}
