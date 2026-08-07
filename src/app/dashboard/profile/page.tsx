@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, addMonths, eachDayOfInterval, isSunday, isToday, startOfDay } from 'date-fns';
-import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, Camera, UserPlus, X, Loader2, UserCheck as UserCheckIcon, Coffee, LocateFixed } from 'lucide-react';
+import { ShieldCheck, FileText, Clock, Users, Building2, CalendarDays, FileBox, Mail, Phone, UserCheck, Zap, Briefcase, Download, MapPin, ChevronRight, CalendarClock, FileCheck, Laptop, Network, Edit, SearchSlash, ExternalLink, Mic, PhoneCall, Target, CheckCircle2, Brain, Trash2, FileDown, Camera, UserPlus, X, Loader2, UserCheck as UserCheckIcon, Coffee, LocateFixed, ClipboardList, GraduationCap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -110,25 +111,25 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Results</div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-6 bg-primary text-white rounded-3xl shadow-xl flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span><span className="text-4xl font-black">{efficiency.toFixed(2)}%</span></div>
-                    <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients</span><span className="text-3xl font-black">{potential}</span></div>
-                    <div className="p-6 bg-white rounded-3xl ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups</span><span className="text-3xl font-black">{report.followUps || 0}</span></div>
+                    <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span><span className="text-4xl font-black">{efficiency.toFixed(2)}%</span></div>
+                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients</span><span className="text-3xl font-black">{potential}</span></div>
+                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups</span><span className="text-3xl font-black">{report.followUps || 0}</span></div>
                 </div>
             </div>
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-green-600 font-black uppercase text-[10px] tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue & Impact</div>
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Revenue Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
-                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed Revenue</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
+                    <div className="p-4 bg-green-50 rounded-none border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Revenue Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
+                    <div className="p-4 bg-green-50 rounded-none border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed Revenue</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
                 </div>
             </div>
-            <div className="p-4 bg-primary/5 rounded-2xl space-y-4">
+            <div className="p-4 bg-primary/5 rounded-none space-y-4">
                 <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence</p>
                 <div className="grid gap-4">
-                    {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-xl bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> View Recordings</Link></Button>}
+                    {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-none bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> View Recordings</Link></Button>}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[['Best Call', report.bestCallRecording, 'text-green-600'], ['Worst Call', report.worstCallRecording, 'text-red-600']].map(([l, v, c], i) => v && (
-                            <div key={i} className="p-3 bg-white rounded-xl ring-1 ring-border/50 space-y-2"><p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", c)}><Mic className="size-3"/> {l}</p><audio controls className="w-full h-8 scale-90 -ml-2"><source src={v as string} /></audio></div>
+                            <div key={i} className="p-3 bg-white rounded-none ring-1 ring-border/50 space-y-2"><p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", c)}><Mic className="size-3"/> {l}</p><audio controls className="w-full h-8 scale-90 -ml-2"><source src={v as string} /></audio></div>
                         ))}
                     </div>
                 </div>
@@ -142,7 +143,7 @@ const MarketingAuditDetail = ({ report }: { report: any }) => {
     return (
         <div className="space-y-6">
             <BusinessAuditDetail report={report} isNested />
-            <div className="border rounded-2xl overflow-hidden bg-white shadow-sm">
+            <div className="border rounded-none overflow-hidden bg-white shadow-sm">
                 <Table>
                     <TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[10px] font-black uppercase">Status</TableHead>{deliverables.map(d => <TableHead key={d.key} className="text-[10px] font-black uppercase text-center">{d.label}</TableHead>)}</TableRow></TableHeader>
                     <TableBody>
@@ -160,7 +161,7 @@ const TechnicalAuditDetail = ({ report }: { report: any }) => (
     <div className="space-y-8">
         <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4"/> Client Engagements</p>
             <div className="grid grid-cols-1 gap-3">{report.technicalMeetings?.map((m: any, i: number) => (
-                <div key={i} className="p-3 bg-white rounded-xl border flex items-center justify-between"><div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div><Badge variant="outline" className="text-[8px] uppercase font-black">{m.status}</Badge></div>
+                <div key={i} className="p-3 bg-white rounded-none border flex items-center justify-between"><div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div><Badge variant="outline" className="text-[8px] uppercase font-black">{m.status}</Badge></div>
             )) || <p className="text-xs italic text-muted-foreground">No engagements logged.</p>}</div>
         </div>
         <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Briefcase className="size-4"/> Task Progress</p>
@@ -169,8 +170,47 @@ const TechnicalAuditDetail = ({ report }: { report: any }) => (
             )) || <p className="text-xs italic text-muted-foreground">No projects logged.</p>}</div>
         </div>
         <div className="space-y-3"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Brain className="size-4"/> Notes & Learnings</p>
-            <div className="flex flex-wrap gap-2">{report.learnedToday?.map((l: string, i: number) => <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-full text-[10px] font-bold">{l}</Badge>) || <p className="text-xs italic text-muted-foreground">No learnings recorded.</p>}</div>
+            <div className="flex flex-wrap gap-2">{report.learnedToday?.map((l: string, i: number) => <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-none text-[10px] font-bold">{l}</Badge>) || <p className="text-xs italic text-muted-foreground">No learnings recorded.</p>}</div>
         </div>
+    </div>
+);
+
+const HRAuditDetail = ({ report }: { report: any }) => (
+    <div className="space-y-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest opacity-60">Sourced</span><span className="text-3xl font-black">{report.resumesSourced || 0}</span></div>
+            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Interviews</span><span className="text-3xl font-black text-emerald-600">{report.interviewsScheduled || 0}</span></div>
+            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Hired</span><span className="text-3xl font-black text-indigo-600">{report.hiredToday || 0}</span></div>
+            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Docs Done</span><span className="text-3xl font-black">{report.documentationCompleted || 0}</span></div>
+        </div>
+
+        {report.campusDrives?.length > 0 && (
+            <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><GraduationCap className="size-4"/> Campus Drives</p>
+                <div className="grid gap-2">{report.campusDrives.map((c: any, i: number) => (
+                    <div key={i} className="p-4 bg-white border border-border/50 flex justify-between items-center rounded-none shadow-sm"><span className="font-bold text-sm uppercase">{c.instituteName}</span><Badge variant="outline" className="rounded-none text-[8px] font-black uppercase">{c.status}</Badge></div>
+                ))}</div>
+            </div>
+        )}
+
+        {report.othersSourcedSwitch && report.othersSourced?.length > 0 && (
+            <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Users className="size-4"/> Staff Contributions</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{report.othersSourced.map((s: any, i: number) => (
+                    <div key={i} className="p-3 bg-muted/20 border border-transparent rounded-none flex justify-between items-center"><span className="font-bold text-xs uppercase">{s.staffName}</span><span className="font-black text-primary">{s.count} Resumes</span></div>
+                ))}</div>
+            </div>
+        )}
+
+        {report.otherTasks?.length > 0 && (
+            <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><ClipboardList className="size-4"/> Other Objectives</p>
+                <div className="space-y-2">{report.otherTasks.map((t: any, i: number) => (
+                    <div key={i} className="flex gap-3 items-start"><div className="size-1.5 rounded-none bg-primary mt-1.5 shadow-sm" /><p className="text-sm font-medium text-slate-700 uppercase">{t.content}</p></div>
+                ))}</div>
+            </div>
+        )}
+
+        {report.callRecordingsLink && (
+            <div className="p-4 bg-primary/5 rounded-none border border-dashed border-primary/20"><p className="text-[9px] font-black uppercase text-primary mb-3">Call Intelligence Assets</p><Button asChild variant="outline" className="w-full h-11 rounded-none bg-white font-black uppercase text-[10px]"><Link href={report.callRecordingsLink} target="_blank"><Share2 className="size-3 mr-2"/> Access Recordings Folder</Link></Button></div>
+        )}
     </div>
 );
 
@@ -610,6 +650,7 @@ export default function ProfilePage() {
                                 <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Sector</p><p className="font-bold lg uppercase">{selectedReportForReview?.employeeDepartment}</p></div>
                             </div>
                             <Separator className="opacity-50" />
+                            {selectedReportForReview?.reportType === 'HR' && <HRAuditDetail report={selectedReportForReview} />}
                             {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
                             {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
                             {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetail report={selectedReportForReview} />}

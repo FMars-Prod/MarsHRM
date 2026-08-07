@@ -285,7 +285,7 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
 };
 
 const HRReportFields = () => {
-    const { control, setValue } = useFormContext();
+    const { control } = useFormContext();
     const { fields: campusFields, append: addCampus, remove: removeCampus } = useFieldArray({ control, name: "campusDrives" });
     const { fields: sourcedFields, append: addSourced, remove: removeSourced } = useFieldArray({ control, name: "othersSourced" });
     const { fields: taskFields, append: addTask, remove: removeTask } = useFieldArray({ control, name: "otherTasks" });
@@ -400,6 +400,80 @@ const HRReportFields = () => {
     );
 };
 
+const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
+    const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0);
+    const potential = Number(report.potentialClients || 0);
+    const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
+    
+    return (
+        <div className="space-y-8">
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Results</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span><span className="text-4xl font-black">{efficiency.toFixed(2)}%</span></div>
+                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients</span><span className="text-3xl font-black">{potential}</span></div>
+                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups</span><span className="text-3xl font-black">{report.followUps || 0}</span></div>
+                </div>
+            </div>
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-green-600 font-black uppercase text-[10px] tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue & Impact</div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-green-50 rounded-none border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Revenue Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
+                    <div className="p-4 bg-green-50 rounded-none border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed Revenue</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
+                </div>
+            </div>
+            <div className="p-4 bg-primary/5 rounded-none space-y-4">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence</p>
+                <div className="grid gap-4">
+                    {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-none bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> View Recordings</Link></Button>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[['Best Call', report.bestCallRecording, 'text-green-600'], ['Worst Call', report.worstCallRecording, 'text-red-600']].map(([l, v, c], i) => v && (
+                            <div key={i} className="p-3 bg-white rounded-none ring-1 ring-border/50 space-y-2"><p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", c)}><Mic className="size-3"/> {l}</p><audio controls className="w-full h-8 scale-90 -ml-2"><source src={v as string} /></audio></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const MarketingAuditDetail = ({ report }: { report: any }) => {
+    const deliverables = [{ label: 'Content', key: 'dmContent' }, { label: 'Poster', key: 'dmPoster' }, { label: 'Reel', key: 'dmReel' }, { label: 'Shoot', key: 'dmShoot' }];
+    return (
+        <div className="space-y-6">
+            <BusinessAuditDetail report={report} isNested />
+            <div className="border rounded-none overflow-hidden bg-white shadow-sm">
+                <Table>
+                    <TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[10px] font-black uppercase">Status</TableHead>{deliverables.map(d => <TableHead key={d.key} className="text-[10px] font-black uppercase text-center">{d.label}</TableHead>)}</TableRow></TableHeader>
+                    <TableBody>
+                        {['Approved', 'Pending', 'Rejected'].map(status => (
+                            <TableRow key={status}><TableCell className="text-xs font-black uppercase py-4">{status}</TableCell>{deliverables.map(d => (<TableCell key={d.key} className="text-center font-bold">{report[`${d.key}${status}`] || 0}</TableCell>))}</TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
+    );
+};
+
+const TechnicalAuditDetail = ({ report }: { report: any }) => (
+    <div className="space-y-8">
+        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4"/> Client Engagements</p>
+            <div className="grid grid-cols-1 gap-3">{report.technicalMeetings?.map((m: any, i: number) => (
+                <div key={i} className="p-3 bg-white rounded-none border flex items-center justify-between"><div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div><Badge variant="outline" className="text-[8px] uppercase font-black">{m.status}</Badge></div>
+            )) || <p className="text-xs italic text-muted-foreground">No engagements logged.</p>}</div>
+        </div>
+        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Briefcase className="size-4"/> Task Progress</p>
+            <div className="grid grid-cols-1 gap-4">{report.technicalProjects?.map((p: any, i: number) => (
+                <Card key={i} className="p-4 border-none ring-1 ring-border/50 bg-white"><div className="flex justify-between items-start mb-3"><div><p className="font-bold text-sm">{p.projectName}</p><p className="text-[10px] uppercase text-muted-foreground">{p.type}</p></div><div className="text-right"><p className="text-lg font-black text-primary">{p.statusPercent}%</p><p className="text-[8px] uppercase font-bold text-muted-foreground">Progress</p></div></div><p className="text-xs italic text-muted-foreground mb-3">"{p.description}"</p>{p.isCompleted && p.liveLink && <Button variant="ghost" size="sm" className="w-full h-8 text-[9px] font-bold uppercase gap-2 bg-primary/5 text-primary" asChild><Link href={p.liveLink} target="_blank"><ExternalLink className="size-3"/> View Project</Link></Button>}</Card>
+            )) || <p className="text-xs italic text-muted-foreground">No projects logged.</p>}</div>
+        </div>
+        <div className="space-y-3"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Brain className="size-4"/> Notes & Learnings</p>
+            <div className="flex flex-wrap gap-2">{report.learnedToday?.map((l: string, i: number) => <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-none text-[10px] font-bold">{l}</Badge>) || <p className="text-xs italic text-muted-foreground">No learnings recorded.</p>}</div>
+        </div>
+    </div>
+);
+
 const HRAuditDetail = ({ report }: { report: any }) => (
     <div className="space-y-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -436,6 +510,15 @@ const HRAuditDetail = ({ report }: { report: any }) => (
         {report.callRecordingsLink && (
             <div className="p-4 bg-primary/5 rounded-none border border-dashed border-primary/20"><p className="text-[9px] font-black uppercase text-primary mb-3">Call Intelligence Assets</p><Button asChild variant="outline" className="w-full h-11 rounded-none bg-white font-black uppercase text-[10px]"><Link href={report.callRecordingsLink} target="_blank"><Share2 className="size-3 mr-2"/> Access Recordings Folder</Link></Button></div>
         )}
+    </div>
+);
+
+const DigitalMarketingFields = () => (
+    <div className="space-y-8">
+        <ShiftHeaderFields />
+        <BusinessFields isNested />
+        <MarketingMatrixTable />
+        <ExecutionPlanFields />
     </div>
 );
 
@@ -491,70 +574,6 @@ const MarketingMatrixTable = () => {
                 </div>
             </CardContent>
         </Card>
-    );
-};
-
-const DigitalMarketingFields = () => (
-    <div className="space-y-8">
-        <ShiftHeaderFields />
-        <BusinessFields isNested />
-        <MarketingMatrixTable />
-        <ExecutionPlanFields />
-    </div>
-);
-
-const TechnicalProjectItem = ({ index, control }: { index: number, control: any }) => {
-    const isCompleted = useWatch({ control, name: `technicalProjects.${index}.isCompleted` });
-    return (
-        <Card className="p-6 rounded-none border shadow-none space-y-6 text-left">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField control={control} name={`technicalProjects.${index}.projectName`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Project Name</FormLabel><FormControl><Input {...field} className="rounded-none" /></FormControl></FormItem>
-                )} />
-                <FormField control={control} name={`technicalProjects.${index}.type`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Category</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent className="rounded-none">
-                                <SelectItem value="Client">Client</SelectItem><SelectItem value="In House">In House</SelectItem><SelectItem value="Demo">Demo</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </FormItem>
-                )} />
-                <FormField control={control} name={`technicalProjects.${index}.statusPercent`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Progress (%)</FormLabel><FormControl><Input type="number" min="0" max="100" {...field} className="rounded-none" /></FormControl></FormItem>
-                )} />
-            </div>
-            <FormField control={control} name={`technicalProjects.${index}.description`} render={({ field }) => (
-                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Task Details</FormLabel><FormControl><Textarea {...field} className="rounded-none min-h-[60px]" /></FormControl></FormItem>
-            )} />
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                <FormField control={control} name={`technicalProjects.${index}.isCompleted`} render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-none" /></FormControl>
-                        <FormLabel className="text-xs font-black uppercase">Mission Success Stamping</FormLabel>
-                    </FormItem>
-                )} />
-                {isCompleted && (
-                    <FormField control={control} name={`technicalProjects.${index}.liveLink`} render={({ field }) => (
-                        <FormItem className="flex-1"><FormControl><Input {...field} placeholder="Project or Demo Link" className="rounded-none h-9" /></FormControl></FormItem>
-                    )} />
-                )}
-            </div>
-        </Card>
-    );
-};
-
-const TechnicalMeetingItem = ({ index, control }: { index: number, control: any }) => {
-    return (
-        <div className="p-4 rounded-none border bg-white grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-            <FormField control={control} name={`technicalMeetings.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Client Name</FormLabel><FormControl><Input {...field} className="rounded-none h-9" /></FormControl></FormItem>)} />
-            <FormField control={control} name={`technicalMeetings.${index}.productName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Product</FormLabel><FormControl><Input {...field} className="rounded-none h-9" /></FormControl></FormItem>)} />
-            <FormField control={control} name={`technicalMeetings.${index}.status`} render={({ field }) => (
-                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Outcome</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-9 font-bold"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none">{["Won", "Close", "Pending", "In Review", "Followup", "New"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-            )} />
-        </div>
     );
 };
 
@@ -637,6 +656,61 @@ const TechnicalFields = () => {
                 </CardContent>
             </Card>
             <ExecutionPlanFields />
+        </div>
+    );
+};
+
+const TechnicalProjectItem = ({ index, control }: { index: number, control: any }) => {
+    const isCompleted = useWatch({ control, name: `technicalProjects.${index}.isCompleted` });
+    return (
+        <Card className="p-6 rounded-none border shadow-none space-y-6 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField control={control} name={`technicalProjects.${index}.projectName`} render={({ field }) => (
+                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Project Name</FormLabel><FormControl><Input {...field} className="rounded-none" /></FormControl></FormItem>
+                )} />
+                <FormField control={control} name={`technicalProjects.${index}.type`} render={({ field }) => (
+                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Category</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent className="rounded-none">
+                                <SelectItem value="Client">Client</SelectItem><SelectItem value="In House">In House</SelectItem><SelectItem value="Demo">Demo</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </FormItem>
+                )} />
+                <FormField control={control} name={`technicalProjects.${index}.statusPercent`} render={({ field }) => (
+                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Progress (%)</FormLabel><FormControl><Input type="number" min="0" max="100" {...field} className="rounded-none" /></FormControl></FormItem>
+                )} />
+            </div>
+            <FormField control={control} name={`technicalProjects.${index}.description`} render={({ field }) => (
+                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Task Details</FormLabel><FormControl><Textarea {...field} className="rounded-none min-h-[60px]" /></FormControl></FormItem>
+            )} />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                <FormField control={control} name={`technicalProjects.${index}.isCompleted`} render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-none" /></FormControl>
+                        <FormLabel className="text-xs font-black uppercase">Mission Success Stamping</FormLabel>
+                    </FormItem>
+                )} />
+                {isCompleted && (
+                    <FormField control={control} name={`technicalProjects.${index}.liveLink`} render={({ field }) => (
+                        <FormItem className="flex-1"><FormControl><Input {...field} placeholder="Project or Demo Link" className="rounded-none h-9" /></FormControl></FormItem>
+                    )} />
+                )}
+            </div>
+        </Card>
+    );
+};
+
+const TechnicalMeetingItem = ({ index, control }: { index: number, control: any }) => {
+    return (
+        <div className="p-4 rounded-none border bg-white grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+            <FormField control={control} name={`technicalMeetings.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Client Name</FormLabel><FormControl><Input {...field} className="rounded-none h-9" /></FormControl></FormItem>)} />
+            <FormField control={control} name={`technicalMeetings.${index}.productName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Product</FormLabel><FormControl><Input {...field} className="rounded-none h-9" /></FormControl></FormItem>)} />
+            <FormField control={control} name={`technicalMeetings.${index}.status`} render={({ field }) => (
+                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Outcome</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-9 font-bold"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none">{["Won", "Close", "Pending", "In Review", "Followup", "New"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
+            )} />
         </div>
     );
 };
