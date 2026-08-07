@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 type UserData = {
   id: string;
   jobTitle: string;
+  department: string;
 };
 
 type ReportMapping = {
@@ -53,7 +54,7 @@ const SYSTEM_TEMPLATES = [
     {
         id: 'HR',
         name: 'HR Talent & Operations',
-        description: 'Hiring metrics, Campus drives, Resume sourcing, and HR tasks.',
+        description: 'Recruitment metrics, Campus drives, Sourcing, and HR objectives.',
         sections: ['Recruitment Pulse', 'Campus Drive Protocol', 'Sourcing Intelligence', 'HR Objectives', 'Planning (T+1)']
     }
 ];
@@ -74,7 +75,9 @@ export default function ReportTemplatesPage() {
   const jobTitles = React.useMemo(() => {
     if (!users) return [];
     const titles = new Set<string>();
-    users.forEach(u => { if (u.jobTitle) titles.add(u.jobTitle.trim()); });
+    users.forEach(u => { 
+        if (u.jobTitle && u.department !== 'HR') titles.add(u.jobTitle.trim()); 
+    });
     return Array.from(titles).sort();
   }, [users]);
 
@@ -135,18 +138,21 @@ export default function ReportTemplatesPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 backdrop-blur-sm overflow-hidden rounded-none">
+            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 backdrop-blur-sm overflow-hidden rounded-none text-left">
                 <CardHeader className="bg-muted/10 border-b text-left">
                     <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter">
                         <ShieldCheck className="size-5 text-primary" />
                         Role Designation Matrix
                     </CardTitle>
+                    <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                        Note: Members in 'HR' department automatically use the HR template.
+                    </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 text-left">
                     <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow className="hover:bg-transparent border-none">
-                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Employee Designation</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Non-HR Designation</TableHead>
                                 <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 text-right px-6">Strategic Mapping</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -155,7 +161,7 @@ export default function ReportTemplatesPage() {
                                 <TableRow><TableCell colSpan={2} className="h-32 text-center animate-pulse uppercase font-black text-[10px] opacity-20">Scanning records...</TableCell></TableRow>
                             ) : jobTitles.map(title => (
                                 <TableRow key={title} className="border-border/50">
-                                    <TableCell className="font-black text-xs uppercase py-4 px-6">{title}</TableCell>
+                                    <TableCell className="font-black text-xs uppercase py-4 px-6 text-left">{title}</TableCell>
                                     <TableCell className="text-right py-4 px-6">
                                         <Select 
                                             value={configData?.mappings?.[title] || "Business"} 
@@ -165,7 +171,8 @@ export default function ReportTemplatesPage() {
                                                 <SelectValue placeholder="Select Template" />
                                             </SelectTrigger>
                                             <SelectContent className="rounded-none">
-                                                {SYSTEM_TEMPLATES.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                                {SYSTEM_TEMPLATES.filter(s => s.id !== 'HR').map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                                <SelectItem value="Business">Business Intelligence</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </TableCell>
@@ -177,13 +184,13 @@ export default function ReportTemplatesPage() {
             </Card>
 
             <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 backdrop-blur-sm overflow-hidden rounded-none text-left">
-                <CardHeader className="bg-muted/10 border-b">
+                <CardHeader className="bg-muted/10 border-b text-left">
                     <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter">
                         <BrainCircuit className="size-5 text-primary" />
                         Strategic Library
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 text-left">
                     <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow className="hover:bg-transparent border-none">
@@ -194,7 +201,7 @@ export default function ReportTemplatesPage() {
                         <TableBody>
                             {SYSTEM_TEMPLATES.map(s => (
                                 <TableRow key={s.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
-                                    <TableCell className="py-6 px-6">
+                                    <TableCell className="py-6 px-6 text-left">
                                         <div className="flex flex-col text-left">
                                             <span className="font-black text-sm uppercase text-primary">{s.name}</span>
                                             <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">{s.description}</span>
@@ -215,11 +222,11 @@ export default function ReportTemplatesPage() {
         </div>
 
         <div className="space-y-6 text-left">
-          <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 rounded-none">
-            <CardHeader><CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><Upload className="size-4 text-primary" /> Import Optimized Language</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
+          <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 rounded-none text-left">
+            <CardHeader className="text-left"><CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-left"><Upload className="size-4 text-primary" /> Import Optimized Language</CardTitle></CardHeader>
+            <CardContent className="space-y-4 text-left">
                 <p className="text-[10px] text-muted-foreground font-bold uppercase leading-relaxed opacity-60">Select a JSON file refined by AI to synchronize high-fidelity wording.</p>
-                <div className="relative">
+                <div className="relative text-left">
                     <input type="file" accept=".json" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleImportTemplate} disabled={isImporting} />
                     <Button variant="outline" className="w-full h-11 rounded-none border-dashed border-primary/20 font-black uppercase text-[10px] shadow-sm bg-white" disabled={isImporting}>
                         {isImporting ? <Loader2 className="size-4 animate-spin"/> : <Upload className="size-4 mr-2"/>}
@@ -228,9 +235,9 @@ export default function ReportTemplatesPage() {
                 </div>
             </CardContent>
           </Card>
-          <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 rounded-none">
-            <CardHeader><CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><Info className="size-4 text-primary" /> AI Optimization Protocol</CardTitle></CardHeader>
-            <CardContent className="text-[9px] space-y-4 text-muted-foreground font-bold uppercase leading-relaxed opacity-60">
+          <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 rounded-none text-left">
+            <CardHeader className="text-left"><CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-left"><Info className="size-4 text-primary" /> AI Optimization Protocol</CardTitle></CardHeader>
+            <CardContent className="text-[9px] space-y-4 text-muted-foreground font-bold uppercase leading-relaxed opacity-60 text-left">
               <p>1. Export the template JSON to your device.</p>
               <p>2. Upload to AI Agent and ask it to "Optimize the wording for professional mission reporting."</p>
               <p>3. Re-import the refined JSON to update the system labels.</p>
@@ -240,22 +247,22 @@ export default function ReportTemplatesPage() {
       </div>
 
       <Dialog open={!!previewTemplate} onOpenChange={o => !o && setPreviewTemplate(null)}>
-          <DialogContent className="max-w-4xl h-[80vh] rounded-none border-none shadow-3xl overflow-hidden flex flex-col p-0">
+          <DialogContent className="max-w-4xl h-[80vh] rounded-none border-none shadow-3xl overflow-hidden flex flex-col p-0 text-left">
               <DialogHeader className="p-10 border-b bg-white shrink-0 text-left">
-                  <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Template Preview: {previewTemplate?.name}</DialogTitle>
-                  <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">{previewTemplate?.description}</DialogDescription>
+                  <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary text-left">Template Preview: {previewTemplate?.name}</DialogTitle>
+                  <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 text-left">{previewTemplate?.description}</DialogDescription>
               </DialogHeader>
-              <ScrollArea className="flex-1 bg-muted/5">
-                  <div className="max-w-2xl mx-auto space-y-8 p-10">
+              <ScrollArea className="flex-1 bg-muted/5 text-left">
+                  <div className="max-w-2xl mx-auto space-y-8 p-10 text-left">
                       {previewTemplate?.sections.map((sec: string) => (
-                          <Card key={sec} className="p-8 border-none ring-1 ring-border/50 shadow-sm bg-white rounded-none">
-                              <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-6 border-b border-primary/10 pb-2">{sec}</h4>
+                          <Card key={sec} className="p-8 border-none ring-1 ring-border/50 shadow-sm bg-white rounded-none text-left">
+                              <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-6 border-b border-primary/10 pb-2 text-left">{sec}</h4>
                               <div className="h-14 bg-muted/10 border-2 border-dashed border-border/50 flex items-center justify-center text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">Tactical Fields Area</div>
                           </Card>
                       ))}
                   </div>
               </ScrollArea>
-              <div className="p-10 border-t bg-white shrink-0">
+              <div className="p-10 border-t bg-white shrink-0 text-left">
                   <Button className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-xl" onClick={() => setPreviewTemplate(null)}>Close Preview</Button>
               </div>
           </DialogContent>

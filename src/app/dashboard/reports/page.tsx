@@ -378,7 +378,9 @@ const HRReportFields = () => {
                 <CardContent className="pt-6 space-y-4">
                     {taskFields.map((field, index) => (
                         <div key={field.id} className="flex gap-2 group">
-                            <FormField control={control} name={`otherTasks.${index}.content`} render={({ field }) => (<FormControl><Input {...field} placeholder="Specific task or objective..." className="h-10 rounded-none" /></FormControl>)} />
+                            <FormField control={control} name={`otherTasks.${index}.content`} render={({ field }) => (
+                                <FormControl><Input {...field} placeholder="Specific task or objective..." className="h-10 rounded-none" /></FormControl>
+                            )} />
                             <Button type="button" variant="ghost" size="icon" onClick={() => removeTask(index)} className="h-10 w-10 text-rose-500 shrink-0"><X className="size-4"/></Button>
                         </div>
                     ))}
@@ -400,7 +402,8 @@ const HRReportFields = () => {
     );
 };
 
-const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
+// --- AUDIT DETAIL COMPONENTS ---
+const BusinessAuditDetailComp = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
     const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0);
     const potential = Number(report.potentialClients || 0);
     const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
@@ -410,9 +413,9 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Results</div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span><span className="text-4xl font-black">{efficiency.toFixed(2)}%</span></div>
-                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients</span><span className="text-3xl font-black">{potential}</span></div>
-                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups</span><span className="text-3xl font-black">{report.followUps || 0}</span></div>
+                    <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center text-center"><span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span><span className="text-4xl font-black">{efficiency.toFixed(2)}%</span></div>
+                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center text-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients</span><span className="text-3xl font-black">{potential}</span></div>
+                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center text-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups</span><span className="text-3xl font-black">{report.followUps || 0}</span></div>
                 </div>
             </div>
             <div className="space-y-4">
@@ -428,7 +431,7 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
                     {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-none bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> View Recordings</Link></Button>}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[['Best Call', report.bestCallRecording, 'text-green-600'], ['Worst Call', report.worstCallRecording, 'text-red-600']].map(([l, v, c], i) => v && (
-                            <div key={i} className="p-3 bg-white rounded-none ring-1 ring-border/50 space-y-2"><p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", c)}><Mic className="size-3"/> {l}</p><audio controls className="w-full h-8 scale-90 -ml-2"><source src={v as string} /></audio></div>
+                            <div key={i} className="p-3 bg-white rounded-none ring-1 ring-border/50 space-y-2 text-left"><p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", c)}><Mic className="size-3"/> {l}</p><audio controls className="w-full h-8 scale-90 -ml-2"><source src={v as string} /></audio></div>
                         ))}
                     </div>
                 </div>
@@ -437,12 +440,12 @@ const BusinessAuditDetail = ({ report, isNested = false }: { report: any, isNest
     );
 };
 
-const MarketingAuditDetail = ({ report }: { report: any }) => {
+const MarketingAuditDetailComp = ({ report }: { report: any }) => {
     const deliverables = [{ label: 'Content', key: 'dmContent' }, { label: 'Poster', key: 'dmPoster' }, { label: 'Reel', key: 'dmReel' }, { label: 'Shoot', key: 'dmShoot' }];
     return (
         <div className="space-y-6">
-            <BusinessAuditDetail report={report} isNested />
-            <div className="border rounded-none overflow-hidden bg-white shadow-sm">
+            <BusinessAuditDetailComp report={report} isNested />
+            <div className="border rounded-none overflow-hidden bg-white shadow-sm text-left">
                 <Table>
                     <TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[10px] font-black uppercase">Status</TableHead>{deliverables.map(d => <TableHead key={d.key} className="text-[10px] font-black uppercase text-center">{d.label}</TableHead>)}</TableRow></TableHeader>
                     <TableBody>
@@ -456,16 +459,16 @@ const MarketingAuditDetail = ({ report }: { report: any }) => {
     );
 };
 
-const TechnicalAuditDetail = ({ report }: { report: any }) => (
-    <div className="space-y-8">
+const TechnicalAuditDetailComp = ({ report }: { report: any }) => (
+    <div className="space-y-8 text-left">
         <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4"/> Client Engagements</p>
             <div className="grid grid-cols-1 gap-3">{report.technicalMeetings?.map((m: any, i: number) => (
-                <div key={i} className="p-3 bg-white rounded-none border flex items-center justify-between"><div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div><Badge variant="outline" className="text-[8px] uppercase font-black">{m.status}</Badge></div>
+                <div key={i} className="p-3 bg-white rounded-none border flex items-center justify-between text-left"><div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div><Badge variant="outline" className="rounded-none text-[8px] font-black uppercase">{m.status}</Badge></div>
             )) || <p className="text-xs italic text-muted-foreground">No engagements logged.</p>}</div>
         </div>
         <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Briefcase className="size-4"/> Task Progress</p>
-            <div className="grid grid-cols-1 gap-4">{report.technicalProjects?.map((p: any, i: number) => (
-                <Card key={i} className="p-4 border-none ring-1 ring-border/50 bg-white"><div className="flex justify-between items-start mb-3"><div><p className="font-bold text-sm">{p.projectName}</p><p className="text-[10px] uppercase text-muted-foreground">{p.type}</p></div><div className="text-right"><p className="text-lg font-black text-primary">{p.statusPercent}%</p><p className="text-[8px] uppercase font-bold text-muted-foreground">Progress</p></div></div><p className="text-xs italic text-muted-foreground mb-3">"{p.description}"</p>{p.isCompleted && p.liveLink && <Button variant="ghost" size="sm" className="w-full h-8 text-[9px] font-bold uppercase gap-2 bg-primary/5 text-primary" asChild><Link href={p.liveLink} target="_blank"><ExternalLink className="size-3"/> View Project</Link></Button>}</Card>
+            <div className="grid grid-cols-1 gap-4 text-left">{report.technicalProjects?.map((p: any, i: number) => (
+                <Card key={i} className="p-4 border-none ring-1 ring-border/50 bg-white"><div className="flex justify-between items-start mb-3 text-left"><div><p className="font-bold text-sm">{p.projectName}</p><p className="text-[10px] uppercase text-muted-foreground">{p.type}</p></div><div className="text-right"><p className="text-lg font-black text-primary">{p.statusPercent}%</p><p className="text-[8px] uppercase font-bold text-muted-foreground">Progress</p></div></div><p className="text-xs italic text-muted-foreground mb-3">"{p.description}"</p>{p.isCompleted && p.liveLink && <Button variant="ghost" size="sm" className="w-full h-8 text-[9px] font-bold uppercase gap-2 bg-primary/5 text-primary" asChild><Link href={p.liveLink} target="_blank"><ExternalLink className="size-3"/> View Project</Link></Button>}</Card>
             )) || <p className="text-xs italic text-muted-foreground">No projects logged.</p>}</div>
         </div>
         <div className="space-y-3"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Brain className="size-4"/> Notes & Learnings</p>
@@ -474,13 +477,13 @@ const TechnicalAuditDetail = ({ report }: { report: any }) => (
     </div>
 );
 
-const HRAuditDetail = ({ report }: { report: any }) => (
-    <div className="space-y-8">
+const HRAuditDetailComp = ({ report }: { report: any }) => (
+    <div className="space-y-8 text-left">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest opacity-60">Sourced</span><span className="text-3xl font-black">{report.resumesSourced || 0}</span></div>
-            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Interviews</span><span className="text-3xl font-black text-emerald-600">{report.interviewsScheduled || 0}</span></div>
-            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Hired</span><span className="text-3xl font-black text-indigo-600">{report.hiredToday || 0}</span></div>
-            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Docs Done</span><span className="text-3xl font-black">{report.documentationCompleted || 0}</span></div>
+            <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center text-center"><span className="text-[9px] font-black uppercase tracking-widest opacity-60">Sourced</span><span className="text-3xl font-black">{report.resumesSourced || 0}</span></div>
+            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center text-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Interviews</span><span className="text-3xl font-black text-emerald-600">{report.interviewsScheduled || 0}</span></div>
+            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center text-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Hired</span><span className="text-3xl font-black text-indigo-600">{report.hiredToday || 0}</span></div>
+            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center text-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Docs Done</span><span className="text-3xl font-black">{report.documentationCompleted || 0}</span></div>
         </div>
 
         {report.campusDrives?.length > 0 && (
@@ -502,219 +505,18 @@ const HRAuditDetail = ({ report }: { report: any }) => (
         {report.otherTasks?.length > 0 && (
             <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><ClipboardList className="size-4"/> Other Objectives</p>
                 <div className="space-y-2">{report.otherTasks.map((t: any, i: number) => (
-                    <div key={i} className="flex gap-3 items-start"><div className="size-1.5 rounded-none bg-primary mt-1.5 shadow-sm" /><p className="text-sm font-medium text-slate-700 uppercase">{t.content}</p></div>
+                    <div key={i} className="flex gap-3 items-start text-left"><div className="size-1.5 rounded-none bg-primary mt-1.5 shadow-sm" /><p className="text-sm font-medium text-slate-700 uppercase">{t.content}</p></div>
                 ))}</div>
             </div>
         )}
 
         {report.callRecordingsLink && (
-            <div className="p-4 bg-primary/5 rounded-none border border-dashed border-primary/20"><p className="text-[9px] font-black uppercase text-primary mb-3">Call Intelligence Assets</p><Button asChild variant="outline" className="w-full h-11 rounded-none bg-white font-black uppercase text-[10px]"><Link href={report.callRecordingsLink} target="_blank"><Share2 className="size-3 mr-2"/> Access Recordings Folder</Link></Button></div>
+            <div className="p-4 bg-primary/5 rounded-none border border-dashed border-primary/20 text-left"><p className="text-[9px] font-black uppercase text-primary mb-3">Call Intelligence Assets</p><Button asChild variant="outline" className="w-full h-11 rounded-none bg-white font-black uppercase text-[10px]"><Link href={report.callRecordingsLink} target="_blank"><Share2 className="size-3 mr-2"/> Access Recordings Folder</Link></Button></div>
         )}
     </div>
 );
 
-const DigitalMarketingFields = () => (
-    <div className="space-y-8">
-        <ShiftHeaderFields />
-        <BusinessFields isNested />
-        <MarketingMatrixTable />
-        <ExecutionPlanFields />
-    </div>
-);
-
-const MarketingMatrixTable = () => {
-    const { control } = useFormContext();
-    const deliverables = [
-        { label: 'Content', key: 'dmContent' }, 
-        { label: 'Poster', key: 'dmPoster' }, 
-        { label: 'Reel', key: 'dmReel' }, 
-        { label: 'Shoot', key: 'dmShoot' }
-    ];
-
-    const totals = deliverables.map(d => {
-        const approved = Number(useWatch({ control, name: `${d.key}Approved` }) || 0);
-        const pending = Number(useWatch({ control, name: `${d.key}Pending` }) || 0);
-        const rejected = Number(useWatch({ control, name: `${d.key}Rejected` }) || 0);
-        return approved + pending + rejected;
-    });
-
-    return (
-        <Card className="bg-gradient-to-br from-purple-500/5 to-transparent border-none ring-1 ring-purple-500/20 shadow-sm overflow-hidden rounded-none">
-            <CardHeader className="bg-purple-500/10 py-3"><CardTitle className="text-[10px] font-black flex items-center gap-2 text-purple-700 uppercase tracking-widest">Deliverable Matrix</CardTitle></CardHeader>
-            <CardContent className="pt-6">
-                <div className="border rounded-none overflow-hidden bg-white/50">
-                    <Table>
-                        <TableHeader className="bg-muted/30">
-                            <TableRow>
-                                <TableHead className="text-[10px] font-black uppercase py-4">Status</TableHead>
-                                {deliverables.map(d => <TableHead key={d.key} className="text-[10px] font-black uppercase text-center">{d.label}</TableHead>)}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {['Approved', 'Pending', 'Rejected'].map(status => (
-                                <TableRow key={status}>
-                                    <TableCell className="text-xs font-black uppercase py-4">{status}</TableCell>
-                                    {deliverables.map(d => (
-                                        <TableCell key={d.key} className="py-2">
-                                            <FormField control={control} name={`${d.key}${status}`} render={({ field }) => (
-                                                <FormItem><FormControl><Input type="number" min="0" {...field} className="h-9 w-16 mx-auto text-center rounded-none bg-white/50" /></FormControl></FormItem>
-                                            )} />
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))}
-                            <TableRow className="bg-muted/10">
-                                <TableCell className="text-xs font-black uppercase py-4 text-primary">Total</TableCell>
-                                {totals.map((t, i) => (
-                                    <TableCell key={i} className="text-center font-black text-sm text-primary">{t}</TableCell>
-                                ))}
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
-    );
-};
-
-const TechnicalFields = () => {
-    const { control, setValue } = useFormContext();
-    const { fields: meetingFields, append: addMeeting, remove: removeMeeting } = useFieldArray({ control, name: "technicalMeetings" });
-    const { fields: projectFields, append: addProject, remove: removeProject } = useFieldArray({ control, name: "technicalProjects" });
-    const meetingsCount = useWatch({ control, name: "clientMeetingsCount" }) || 0;
-    const projectsCount = useWatch({ control, name: "projectsWorkedCount" }) || 0;
-    const learnings = useWatch({ control, name: "learnedToday" }) || [];
-    const [learningInput, setLearningRegistryInput] = React.useState("");
-
-    React.useEffect(() => {
-        const count = parseInt(meetingsCount) || 0;
-        if (count > meetingFields.length) {
-            for (let i = meetingFields.length; i < count; i++) addMeeting({ clientName: "", productName: "", status: "New" });
-        } else if (count < meetingFields.length) {
-            for (let i = meetingFields.length - 1; i >= count; i--) removeMeeting(i);
-        }
-    }, [meetingsCount, meetingFields.length, addMeeting, removeMeeting]);
-
-    React.useEffect(() => {
-        const count = parseInt(projectsCount) || 0;
-        if (count > projectFields.length) {
-            for (let i = projectFields.length; i < count; i++) addProject({ projectName: "", type: "Client", statusPercent: "0", description: "", isCompleted: false, liveLink: "" });
-        } else if (count < projectFields.length) {
-            for (let i = projectFields.length - 1; i >= count; i--) removeProject(i);
-        }
-    }, [projectsCount, projectFields.length, addProject, removeProject]);
-
-    const addLearning = () => {
-        if (!learningInput.trim()) return;
-        setValue("learnedToday", [...learnings, learningInput.trim()]);
-        setLearningRegistryInput("");
-    };
-
-    return (
-        <div className="space-y-8">
-            <ShiftHeaderFields />
-            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 rounded-none text-left">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><PhoneCall className="size-4"/> 1️⃣ Client Engagements</CardTitle></CardHeader>
-                <CardContent className="pt-6 space-y-6">
-                    <FormField control={control} name="clientMeetingsCount" render={({ field }) => (
-                        <FormItem className="max-w-[200px]"><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Meetings Today</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11" /></FormControl></FormItem>
-                    )} />
-                    <div className="space-y-4">
-                        {meetingFields.map((field, index) => (
-                            <TechnicalMeetingItem key={field.id} index={index} control={control} />
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 rounded-none text-left">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Briefcase className="size-4"/> 2️⃣ Task Progress</CardTitle></CardHeader>
-                <CardContent className="pt-6 space-y-6">
-                    <FormField control={control} name="projectsWorkedCount" render={({ field }) => (
-                        <FormItem className="max-w-[200px]"><FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Active Projects</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11" /></FormControl></FormItem>
-                    )} />
-                    <div className="space-y-6">
-                        {projectFields.map((field, index) => (
-                            <TechnicalProjectItem key={field.id} index={index} control={control} />
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card className="border-none ring-1 ring-border/50 shadow-sm bg-white/50 rounded-none text-left">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Brain className="size-4"/> 3️⃣ Notes & Learnings</CardTitle></CardHeader>
-                <CardContent className="pt-6 space-y-6">
-                    <div className="flex gap-2">
-                        <Input value={learningInput} onChange={e => setLearningRegistryInput(e.target.value)} placeholder="Add a note or learning..." className="rounded-none h-11" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addLearning())} />
-                        <Button type="button" size="icon" className="h-11 w-11 rounded-none" onClick={addLearning}><Plus className="size-5" /></Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {learnings.map((l: string, i: number) => (
-                            <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-none text-[10px] font-black uppercase gap-2">{l}<X className="size-3 cursor-pointer opacity-50" onClick={() => setValue("learnedToday", learnings.filter((_:any, idx:number) => idx !== i))} /></Badge>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-            <ExecutionPlanFields />
-        </div>
-    );
-};
-
-const TechnicalProjectItem = ({ index, control }: { index: number, control: any }) => {
-    const isCompleted = useWatch({ control, name: `technicalProjects.${index}.isCompleted` });
-    return (
-        <Card className="p-6 rounded-none border shadow-none space-y-6 text-left">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField control={control} name={`technicalProjects.${index}.projectName`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Project Name</FormLabel><FormControl><Input {...field} className="rounded-none" /></FormControl></FormItem>
-                )} />
-                <FormField control={control} name={`technicalProjects.${index}.type`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Category</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent className="rounded-none">
-                                <SelectItem value="Client">Client</SelectItem><SelectItem value="In House">In House</SelectItem><SelectItem value="Demo">Demo</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </FormItem>
-                )} />
-                <FormField control={control} name={`technicalProjects.${index}.statusPercent`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Progress (%)</FormLabel><FormControl><Input type="number" min="0" max="100" {...field} className="rounded-none" /></FormControl></FormItem>
-                )} />
-            </div>
-            <FormField control={control} name={`technicalProjects.${index}.description`} render={({ field }) => (
-                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Task Details</FormLabel><FormControl><Textarea {...field} className="rounded-none min-h-[60px]" /></FormControl></FormItem>
-            )} />
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                <FormField control={control} name={`technicalProjects.${index}.isCompleted`} render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-none" /></FormControl>
-                        <FormLabel className="text-xs font-black uppercase">Mission Success Stamping</FormLabel>
-                    </FormItem>
-                )} />
-                {isCompleted && (
-                    <FormField control={control} name={`technicalProjects.${index}.liveLink`} render={({ field }) => (
-                        <FormItem className="flex-1"><FormControl><Input {...field} placeholder="Project or Demo Link" className="rounded-none h-9" /></FormControl></FormItem>
-                    )} />
-                )}
-            </div>
-        </Card>
-    );
-};
-
-const TechnicalMeetingItem = ({ index, control }: { index: number, control: any }) => {
-    return (
-        <div className="p-4 rounded-none border bg-white grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-            <FormField control={control} name={`technicalMeetings.${index}.clientName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Client Name</FormLabel><FormControl><Input {...field} className="rounded-none h-9" /></FormControl></FormItem>)} />
-            <FormField control={control} name={`technicalMeetings.${index}.productName`} render={({ field }) => (<FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Product</FormLabel><FormControl><Input {...field} className="rounded-none h-9" /></FormControl></FormItem>)} />
-            <FormField control={control} name={`technicalMeetings.${index}.status`} render={({ field }) => (
-                <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Outcome</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-none h-9 font-bold"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none">{["Won", "Close", "Pending", "In Review", "Followup", "New"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></FormItem>
-            )} />
-        </div>
-    );
-};
-
+// --- MAIN COMPONENT ---
 export default function ReportsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -757,7 +559,12 @@ export default function ReportsPage() {
 
   const mappingDocRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
   const { data: mappingData } = useDoc<{mappings: Record<string, string>}>(mappingDocRef);
-  const currentTemplateId = mappingData?.mappings?.[currentUserData?.jobTitle || ''] || 'Business';
+  
+  // Tactical Determination: HR Department always uses HR Template
+  const currentTemplateId = React.useMemo(() => {
+      if (currentUserData?.department === 'HR') return 'HR';
+      return mappingData?.mappings?.[currentUserData?.jobTitle || ''] || 'Business';
+  }, [currentUserData, mappingData]);
 
   const fetchWeeklySummary = React.useCallback(async () => {
     if (!users || !firestore) return;
@@ -795,14 +602,7 @@ export default function ReportsPage() {
             });
 
             const aggregates = {
-                coldCalls: 0,
-                linkedin: 0,
-                emails: 0,
-                followUps: 0,
-                potentials: 0,
-                revenue: 0,
-                meetingsSecured: 0,
-                links: [] as string[]
+                coldCalls: 0, linkedin: 0, emails: 0, followUps: 0, potentials: 0, revenue: 0, meetingsSecured: 0, links: [] as string[]
             };
 
             userReports.forEach((r: any) => {
@@ -960,7 +760,7 @@ export default function ReportsPage() {
       {!isLeadOrHigher && (
           <div className="space-y-4 text-left"><div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><History className="size-4" /> Recent Reports</div>
               <div className="grid gap-3">{myRecentReports?.map(r => (
-                  <Card key={r.id} className="p-4 hover:bg-muted/50 rounded-none cursor-pointer flex items-center justify-between border-none ring-1 ring-border/50" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4"><div className="p-2 rounded-none bg-primary/10 text-primary"><Clock className="size-4" /></div><div><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Report</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
+                  <Card key={r.id} className="p-4 hover:bg-muted/50 rounded-none cursor-pointer flex items-center justify-between border-none ring-1 ring-border/50 text-left" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4 text-left"><div className="p-2 rounded-none bg-primary/10 text-primary"><Clock className="size-4" /></div><div className="text-left"><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Report</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
               ))}</div>
           </div>
       )}
@@ -976,12 +776,12 @@ export default function ReportsPage() {
                 </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="daily" className="mt-0">
-                <div className="relative mb-6">
+            <TabsContent value="daily" className="mt-0 text-left">
+                <div className="relative mb-6 text-left">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground opacity-50" />
                     <Input placeholder="Search staff..." className="pl-10 h-11 rounded-none bg-white/50 border-none ring-1 ring-border/50 font-bold uppercase text-[10px]" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                 </div>
-                <div className="border rounded-none overflow-hidden bg-white/50 shadow-sm ring-1 ring-border/50">
+                <div className="border rounded-none overflow-hidden bg-white/50 shadow-sm ring-1 ring-border/50 text-left">
                     <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow className="hover:bg-transparent border-none">
@@ -993,12 +793,12 @@ export default function ReportsPage() {
                         <TableBody>
                             {users?.filter(u => `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
                                 <TableRow key={u.id} className="border-border/50 hover:bg-primary/5 transition-colors">
-                                    <TableCell className="font-black text-xs uppercase py-4 px-6">
+                                    <TableCell className="font-black text-xs uppercase py-4 px-6 text-left">
                                         <Link href={`/dashboard/users/${u.id}`} className="hover:text-primary transition-colors flex items-center gap-2">
                                             {u.firstName} {u.lastName}
                                         </Link>
                                     </TableCell>
-                                    <TableCell className="text-[10px] font-black uppercase text-muted-foreground">{u.jobTitle}</TableCell>
+                                    <TableCell className="text-[10px] font-black uppercase text-muted-foreground text-left">{u.jobTitle}</TableCell>
                                     <TableCell className="text-right py-4 px-6">
                                         <Button variant="outline" size="sm" className="rounded-none font-black text-[9px] uppercase tracking-widest h-8" onClick={() => handleReviewUser(u)}>View Logs</Button>
                                     </TableCell>
@@ -1009,8 +809,8 @@ export default function ReportsPage() {
                 </div>
             </TabsContent>
 
-            <TabsContent value="weekly" className="mt-0">
-                <div className="border rounded-none overflow-hidden bg-white shadow-xl ring-1 ring-border/50">
+            <TabsContent value="weekly" className="mt-0 text-left">
+                <div className="border rounded-none overflow-hidden bg-white shadow-xl ring-1 ring-border/50 text-left">
                     <ScrollArea className="w-full">
                         <Table>
                             <TableHeader className="bg-muted/10 border-b">
@@ -1031,7 +831,7 @@ export default function ReportsPage() {
                                     weeklySummaryData.map(row => (
                                         <TableRow key={row.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
                                             <TableCell className="py-6 px-8 text-left">
-                                                <div className="flex flex-col">
+                                                <div className="flex flex-col text-left">
                                                     <span className="font-black text-xs uppercase text-primary">{row.name}</span>
                                                     <span className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">{row.jobTitle}</span>
                                                 </div>
@@ -1082,13 +882,13 @@ export default function ReportsPage() {
                                                                     <DialogTitle className="text-lg font-black uppercase tracking-tighter">Call Recordings</DialogTitle>
                                                                     <DialogDescription className="text-xs font-bold uppercase tracking-widest">{row.name}'s recent recordings</DialogDescription>
                                                                 </DialogHeader>
-                                                                <ScrollArea className="max-h-[300px] py-4">
-                                                                    <div className="space-y-2">
+                                                                <ScrollArea className="max-h-[300px] py-4 text-left">
+                                                                    <div className="space-y-2 text-left">
                                                                         {row.aggregates.links.map((link: string, i: number) => (
-                                                                            <Link href={link} key={i} target="_blank" className="flex items-center justify-between p-3 rounded-none bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-primary/20">
-                                                                                <div className="flex items-center gap-3">
-                                                                                    <div className="p-2 bg-primary/10 text-primary rounded-none"><LinkIcon className="size-3.5" /></div>
-                                                                                    <span className="text-[10px] font-black uppercase truncate max-w-[200px]">Recording {i+1}</span>
+                                                                            <Link href={link} key={i} target="_blank" className="flex items-center justify-between p-3 rounded-none bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-primary/20 text-left">
+                                                                                <div className="flex items-center gap-3 text-left">
+                                                                                    <div className="p-2 bg-primary/10 text-primary rounded-none text-left"><LinkIcon className="size-3.5" /></div>
+                                                                                    <span className="text-[10px] font-black uppercase truncate max-w-[200px]">{link.includes('best') ? 'Best Call' : link.includes('worst') ? 'Worst Call' : `Recording ${i+1}`}</span>
                                                                                 </div>
                                                                                 <ExternalLink className="size-3 opacity-30" />
                                                                             </Link>
@@ -1115,17 +915,17 @@ export default function ReportsPage() {
         </Tabs>
       )}
 
-      <Dialog open={!!selectedUser} onOpenChange={o => !o && setSelectedUser(null)}><DialogContent className="max-w-2xl rounded-none border-none shadow-3xl"><DialogHeader className="text-left"><DialogTitle className="text-xl font-black uppercase tracking-tighter">Report History: {selectedUser?.firstName}</DialogTitle></DialogHeader><ScrollArea className="max-h-[60vh] pr-4"><div className="space-y-3 py-4">
+      <Dialog open={!!selectedUser} onOpenChange={o => !o && setSelectedUser(null)}><DialogContent className="max-w-2xl rounded-none border-none shadow-3xl text-left"><DialogHeader className="text-left"><DialogTitle className="text-xl font-black uppercase tracking-tighter text-left">Report History: {selectedUser?.firstName}</DialogTitle></DialogHeader><ScrollArea className="max-h-[60vh] pr-4 text-left"><div className="space-y-3 py-4 text-left">
         {isReportsLoading ? (
             <div className="py-10 text-center animate-pulse uppercase font-black text-[10px] tracking-widest">Scanning records...</div>
         ) : userReports.length > 0 ? userReports.map(r => (
-            <Card key={r.id} className="p-4 hover:bg-muted/50 rounded-none cursor-pointer flex items-center justify-between border-none ring-1 ring-border/10" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4"><div className="p-2 rounded-none bg-primary/10 text-primary"><Clock className="size-4" /></div><div><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Report</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
+            <Card key={r.id} className="p-4 hover:bg-muted/50 rounded-none cursor-pointer flex items-center justify-between border-none ring-1 ring-border/10 text-left" onClick={() => setSelectedReportForReview(r)}><div className="flex items-center gap-4 text-left"><div className="p-2 rounded-none bg-primary/10 text-primary"><Clock className="size-4" /></div><div className="text-left"><p className="font-bold text-sm">{formatIST(r.date)}</p><p className="text-[10px] font-black uppercase text-muted-foreground">{r.reportType} Report</p></div></div><ExternalLink className="size-4 opacity-30" /></Card>
         )) : (
             <div className="py-10 text-center text-muted-foreground italic text-xs uppercase font-black tracking-widest opacity-30">No reports found.</div>
         )}</div></ScrollArea></DialogContent></Dialog>
 
       <Dialog open={!!selectedReportForReview} onOpenChange={o => !o && setSelectedReportForReview(null)}>
-          <DialogContent className="max-w-3xl rounded-none border-none shadow-3xl h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogContent className="max-w-3xl rounded-none border-none shadow-3xl h-[85vh] flex flex-col p-0 overflow-hidden text-left">
               <DialogHeader className="p-8 border-b bg-white flex flex-row justify-between items-center shrink-0 text-left"><div><DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Report Audit</DialogTitle><p className="text-xs font-bold text-muted-foreground">{formatIST(selectedReportForReview?.date)} • Shift: {selectedReportForReview?.logInTime || '--'} - {selectedReportForReview?.logOutTime || '--'}</p></div><div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" className="rounded-none h-8 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary border-none shadow-sm" onClick={() => handleDownloadPdf(selectedReportForReview)}><FileDown className="size-3 mr-1.5" /> Download PDF</Button>
                   {isPrivileged && (
@@ -1146,18 +946,18 @@ export default function ReportsPage() {
                       </AlertDialog>
                   )}
                   <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest h-8 rounded-none border-primary/20 bg-primary/5 text-primary">{selectedReportForReview?.reportType}</Badge></div></DialogHeader>
-              <ScrollArea className="flex-1 p-8 bg-muted/5 text-left"><div className="space-y-8 pb-10"><div className="grid grid-cols-2 gap-6"><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personnel</p><p className="font-black text-lg uppercase tracking-tight">{selectedReportForReview?.employeeName}</p></div><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mission Sector</p><p className="font-black text-lg uppercase tracking-tight">{selectedReportForReview?.employeeDepartment}</p></div></div><Separator className="opacity-50" />
-                      {selectedReportForReview?.reportType === 'HR' && <HRAuditDetail report={selectedReportForReview} />}
-                      {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetail report={selectedReportForReview} />}
-                      {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetail report={selectedReportForReview} />}
-                      {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetail report={selectedReportForReview} />}
-                      <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm rounded-none text-left"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Target className="size-4"/> Tomorrow's Plan (T+1)</CardTitle></CardHeader><CardContent className="pt-6 space-y-4"><div className="grid grid-cols-2 gap-4"><div><p className="text-[9px] font-black uppercase text-muted-foreground">Meetings Tomorrow</p><p className="font-black text-sm">{selectedReportForReview?.meetingsTomorrow || 0}</p></div><div><p className="text-[9px] font-black uppercase text-muted-foreground">Support Status</p><p className={cn("font-black text-sm uppercase", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-emerald-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div></div><div><p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Primary Objective</p><p className="text-sm font-medium italic text-slate-700">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p></div></CardContent></Card>
+              <ScrollArea className="flex-1 p-8 bg-muted/5 text-left"><div className="space-y-8 pb-10 text-left"><div className="grid grid-cols-2 gap-6 text-left"><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personnel</p><p className="font-black text-lg uppercase tracking-tight">{selectedReportForReview?.employeeName}</p></div><div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mission Sector</p><p className="font-black text-lg uppercase tracking-tight">{selectedReportForReview?.employeeDepartment}</p></div></div><Separator className="opacity-50" />
+                      {selectedReportForReview?.reportType === 'HR' && <HRAuditDetailComp report={selectedReportForReview} />}
+                      {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetailComp report={selectedReportForReview} />}
+                      {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetailComp report={selectedReportForReview} />}
+                      {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetailComp report={selectedReportForReview} />}
+                      <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm rounded-none text-left"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Target className="size-4"/> Tomorrow's Plan (T+1)</CardTitle></CardHeader><CardContent className="pt-6 space-y-4 text-left"><div className="grid grid-cols-2 gap-4"><div><p className="text-[9px] font-black uppercase text-muted-foreground">Meetings Tomorrow</p><p className="font-black text-sm">{selectedReportForReview?.meetingsTomorrow || 0}</p></div><div><p className="text-[9px] font-black uppercase text-muted-foreground">Support Status</p><p className={cn("font-black text-sm uppercase", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-emerald-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div></div><div><p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Primary Objective</p><p className="text-sm font-medium italic text-slate-700">"{selectedReportForReview?.criticalPathTomorrow || 'NIL'}"</p></div></CardContent></Card>
                       <div className="pt-10 flex flex-col items-center text-center space-y-6"><div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">{selectedReportForReview?.signatureUrl ? (<img src={selectedReportForReview.signatureUrl} alt="E-Signature" className="h-16 object-contain" />) : (<span className="font-mono text-[10px] italic opacity-60 uppercase">Verified Digitally</span>)}</div><div className="space-y-1"><p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle} • {selectedReportForReview?.employeeDepartment}</p><Separator className="w-10 mx-auto my-2" /><p className="text-[8px] font-mono text-muted-foreground italic">Stamping Timestamp: {formatIST(selectedReportForReview?.date)}</p></div></div></div></ScrollArea></DialogContent>
       </Dialog>
 
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}><DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0 rounded-none border-none shadow-3xl overflow-hidden"><FormProvider {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 bg-muted/5">
-                    <DialogHeader className="p-8 pb-6 border-b bg-white/80 backdrop-blur-md shrink-0 text-left"><div className="flex items-center gap-3"><div className="p-3 rounded-none bg-primary/10 text-primary shadow-sm"><Briefcase className="size-6" /></div><div><DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily Strategic Log</DialogTitle><DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">{currentTemplateId} Protocol • {formatIST(new Date())}</DialogDescription></div></div></DialogHeader>
-                    <ScrollArea className="flex-1"><div className="p-8 space-y-10"><div className="space-y-6"><Label className="text-[10px] font-black uppercase tracking-widest text-primary">Mission Details</Label>
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}><DialogContent className="max-w-4xl w-[95vw] h-[90vh] flex flex-col p-0 rounded-none border-none shadow-3xl overflow-hidden text-left"><FormProvider {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 bg-muted/5 text-left">
+                    <DialogHeader className="p-8 pb-6 border-b bg-white/80 backdrop-blur-md shrink-0 text-left"><div className="flex items-center gap-3 text-left"><div className="p-3 rounded-none bg-primary/10 text-primary shadow-sm"><Briefcase className="size-6" /></div><div className="text-left"><DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Daily Strategic Log</DialogTitle><DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">{currentTemplateId} Protocol • {formatIST(new Date())}</DialogDescription></div></div></DialogHeader>
+                    <ScrollArea className="flex-1"><div className="p-8 space-y-10"><div className="space-y-6 text-left"><Label className="text-[10px] font-black uppercase tracking-widest text-primary">Mission Details</Label>
                         {currentTemplateId === 'HR' ? <HRReportFields /> : 
                          currentTemplateId === 'Technical' ? <TechnicalFields /> : 
                          currentTemplateId === 'Digital Marketing' ? <DigitalMarketingFields /> : <BusinessFields />}
@@ -1176,9 +976,9 @@ function TimelineItem({ icon: Icon, title, time, desc, color, onClick }: any) {
     return (
         <div className="flex gap-8 items-start relative group cursor-pointer text-left" onClick={onClick}>
             <div className={cn("h-12 w-12 rounded-none flex items-center justify-center shrink-0 z-10 shadow-lg transition-transform group-hover:scale-110", color)}><Icon className="size-6" /></div>
-            <div className="space-y-2 flex-1 pt-1">
+            <div className="space-y-2 flex-1 pt-1 text-left">
                 <p className="font-black text-lg uppercase tracking-tight text-foreground/90 leading-none group-hover:text-primary transition-colors">{title}</p>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 text-left">
                     <span className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">{time}</span>
                     <Badge variant="outline" className="h-6 px-4 text-[10px] font-black uppercase border-none bg-muted/40 tracking-widest rounded-none">{desc}</Badge>
                 </div>
@@ -1191,12 +991,12 @@ function TimelineItem({ icon: Icon, title, time, desc, color, onClick }: any) {
 function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any) {
     return (
         <Card className="border-none shadow-2xl rounded-none bg-white p-6 space-y-6 ring-1 ring-border/50 group hover:shadow-primary/5 transition-all text-left">
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start text-left">
                 <div className={cn("p-4 rounded-none shadow-md", color, "bg-muted/10")}><Icon className="size-6" /></div>
                 <Badge variant="outline" className="text-[10px] font-black uppercase bg-muted/20 border-none rounded-none px-3 h-6 tracking-widest">Active</Badge>
             </div>
             <div className="text-left">
-                <div className="flex items-center justify-between mb-3.5"><p className="text-[12px] font-black uppercase text-muted-foreground/70 tracking-widest">{title}</p><span className={cn("text-xl font-black tracking-tighter", color)}>{ratio}</span></div>
+                <div className="flex items-center justify-between mb-3.5 text-left"><p className="text-[12px] font-black uppercase text-muted-foreground/70 tracking-widest">{title}</p><span className={cn("text-xl font-black tracking-tighter", color)}>{ratio}</span></div>
                 {progress !== undefined && <Progress value={progress} className="h-2 rounded-none bg-muted/30" />}
                 {children}
             </div>
