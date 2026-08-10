@@ -41,6 +41,8 @@ export function getSdks(firebaseApp: FirebaseApp) {
   try {
     firestore = initializeFirestore(firebaseApp, {
       experimentalForceLongPolling: true,
+      // @ts-ignore
+      experimentalAutoDetectLongPolling: false,
     });
   } catch (e) {
     // If firestore was already initialized elsewhere, fall back to the existing instance
