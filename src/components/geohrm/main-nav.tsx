@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -102,8 +103,7 @@ const groups = [
   {
     label: "COMMUNICATION",
     links: [
-      { href: "/dashboard/announcements", label: "Announcements", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "combinedNewsCount" },
-      { href: "/dashboard/announcements?tab=events", label: "Events", icon: PartyPopper, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "todaysEventsCount" },
+      { href: "/dashboard/announcements", label: "Company Feed", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "totalFeedNotifications" },
       { href: "/dashboard/holidays", label: "Holiday Calendar", icon: CalendarDays, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/issues", label: "Support Centre", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
     ]
@@ -155,6 +155,7 @@ export function MainNav({
     pendingAttRequestsCount,
     ticketUpdateCount,
     totalNotificationsCount,
+    totalFeedNotifications: unreadAnnouncementsCount + todaysEventsCount,
   };
 
   return (
