@@ -1,4 +1,3 @@
-
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -125,20 +124,20 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
     <div className="space-y-4">
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className="flex items-center justify-center h-6 w-6 rounded-full bg-green-500 text-white">
+          <div className="flex items-center justify-center h-6 w-6 rounded-none bg-green-500 text-white">
             <Check className="h-4 w-4" />
           </div>
           <div className="h-16 w-0.5 bg-primary/20"></div>
         </div>
-        <div>
+        <div className="text-left">
           <h4 className="font-semibold text-sm uppercase font-black">Submitted</h4>
-          <p className="text-xs text-muted-foreground">Submitted on {request.createdAt ? format(request.createdAt.toDate(), "PP") : '...'}.</p>
+          <p className="text-xs text-muted-foreground">On {request.createdAt ? format(request.createdAt.toDate(), "PP") : '...'}.</p>
         </div>
       </div>
       
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className={cn("flex items-center justify-center h-6 w-6 rounded-full text-white",
+          <div className={cn("flex items-center justify-center h-6 w-6 rounded-none text-white",
             isApprovedByLead && 'bg-green-500',
             isRejectedByLead && 'bg-red-500',
             isPendingLead && 'bg-yellow-500'
@@ -149,20 +148,20 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
           </div>
           <div className={cn("h-16 w-0.5", (isApprovedByLead || isRejectedByLead) ? 'bg-primary/20' : 'bg-gray-200')}></div>
         </div>
-        <div className="flex-1">
-          <h4 className={cn("font-semibold text-sm uppercase font-black", isRejectedByLead && "text-red-500")}>Team Lead Approval</h4>
+        <div className="flex-1 text-left">
+          <h4 className={cn("font-semibold text-sm uppercase font-black", isRejectedByLead && "text-red-500")}>Team Lead</h4>
           <p className="text-xs text-muted-foreground">
-            {leadSkipped && "Skipped (Executive Override)."}
-            {!leadSkipped && isApprovedByLead && (request.approvedByTeamLeadId ? `Approved by ${teamLeadName}.` : 'Pending.')}
+            {leadSkipped && "Executive Override."}
+            {!leadSkipped && isApprovedByLead && (request.approvedByTeamLeadId ? `Approved by ${teamLeadName}.` : 'Approved.')}
             {isRejectedByLead && `Rejected.`}
-            {isPendingLead && 'Pending approval.'}
+            {isPendingLead && 'Pending.'}
           </p>
         </div>
       </div>
 
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className={cn("flex items-center justify-center h-6 w-6 rounded-full",
+          <div className={cn("flex items-center justify-center h-6 w-6 rounded-none",
             !isApprovedByLead && !isRejectedByLead && "bg-gray-300 text-white",
             isPendingHR && "bg-yellow-500 text-white",
             isApprovedByHR && "bg-green-500 text-white",
@@ -174,16 +173,16 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
             {(isPendingHR || isPendingLead) && <Clock className="h-4 w-4" />}
           </div>
         </div>
-        <div className="flex-1">
+        <div className="flex-1 text-left">
           <h4 className={cn("font-semibold text-sm uppercase font-black", 
               isRejectedByHR && "text-red-500",
               !isApprovedByLead && !isRejectedByLead && "text-muted-foreground"
-          )}>HR Approval</h4>
+          )}>HR Manager</h4>
           <p className="text-xs text-muted-foreground">
             {isApprovedByHR && `Approved by ${hrName}.`}
             {isRejectedByHR && `Rejected.`}
-            {isPendingHR && 'Pending HR approval.'}
-            {isPendingLead && 'Waiting for primary authentication.'}
+            {isPendingHR && 'Pending HR.'}
+            {isPendingLead && 'Waiting.'}
           </p>
         </div>
       </div>
@@ -224,7 +223,6 @@ export default function LeavePage() {
   const [showMissed, setShowMissed] = React.useState(false);
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   
-  // WFH Location States
   const [wfhCoords, setWfhCoords] = React.useState<{ lat: number; lng: number } | null>(null);
   const [isCapturingSignal, setIsCapturingSignal] = React.useState(false);
 
@@ -273,23 +271,11 @@ export default function LeavePage() {
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
     const baseQuery = collection(firestore, 'leave_requests');
-
-    // HR and Admins see everything
-    if (userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD') {
-      return query(baseQuery);
-    }
-
-    // Team Leads see their own + their team's + people who report to them
+    if (userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD') return query(baseQuery);
     if (userRole === 'Team Lead') {
       const ids = Array.from(new Set([user.uid, ...teamMemberIds, ...reportingSubordinateIds]));
-      if (ids.length > 0) {
-        // limit to 30 for Firestore 'in' query
-        const limitedIds = ids.slice(0, 30);
-        return query(baseQuery, where('employeeId', 'in', limitedIds));
-      }
+      if (ids.length > 0) return query(baseQuery, where('employeeId', 'in', ids.slice(0, 30)));
     }
-
-    // Members see only their own
     return query(baseQuery, where('employeeId', '==', user.uid));
   }, [firestore, user, userRole, teamMemberIds, reportingSubordinateIds]);
   
@@ -306,35 +292,25 @@ export default function LeavePage() {
     });
   }, [leaveRequests, showMissed]);
 
-  const isLoading = usersLoading || requestsLoading;
-
-  React.useEffect(() => {
-    setSelectedIds([]);
-  }, [showMissed, leaveRequests]);
-  
   const handleCaptureSignal = () => {
       setIsCapturingSignal(true);
       navigator.geolocation.getCurrentPosition(
           (p) => {
               setWfhCoords({ lat: p.coords.latitude, lng: p.coords.longitude });
               setIsCapturingSignal(false);
-              toast({ title: "Location Captured", description: "GPS coordinates anchored to request." });
+              toast({ title: "Captured", description: "GPS coordinates saved." });
           },
           () => {
               setIsCapturingSignal(false);
-              toast({ variant: 'destructive', title: "Signal Lost", description: "Please enable location services." });
+              toast({ variant: 'destructive', title: "Error", description: "Enable location services." });
           },
           { enableHighAccuracy: true }
       );
   };
 
   const handleRequestStatus = (requestId: string, newStatus: LeaveStatus, approverId: string, approvalField: string) => {
-    const requestDocRef = doc(firestore, 'leave_requests', requestId);
-    updateDocumentNonBlocking(requestDocRef, { 
-      status: newStatus,
-      [approvalField]: approverId,
-    });
-    toast({ title: `Request ${newStatus}` });
+    updateDocumentNonBlocking(doc(firestore, 'leave_requests', requestId), { status: newStatus, [approvalField]: approverId });
+    toast({ title: `Updated to ${newStatus}` });
   }
 
   const handleDeleteRequest = (requestId: string) => {
@@ -342,210 +318,67 @@ export default function LeavePage() {
     toast({ title: 'Request Deleted' });
   }
 
-  const handleBulkDelete = () => {
-    selectedIds.forEach(id => {
-      deleteDocumentNonBlocking(doc(firestore, 'leave_requests', id));
-    });
-    setSelectedIds([]);
-    toast({ title: `${selectedIds.length} Requests Deleted` });
-  };
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(displayLeaveRequests.map(r => r.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
-
-  const handleSelectRow = (id: string, checked: boolean) => {
-    if (checked) {
-      setSelectedIds(prev => [...prev, id]);
-    } else {
-      setSelectedIds(prev => prev.filter(item => item !== id));
-    }
-  };
-
-  const handleRejectionSubmit = () => {
-    if (!requestToReject) return;
-    if (!user) return;
-
-    let newStatus: LeaveStatus;
-    let approvalField: string;
-
-    if (userRole === 'Team Lead' && requestToReject.status === 'Pending') {
-        newStatus = 'Rejected by Team Lead';
-        approvalField = 'approvedByTeamLeadId';
-    } else {
-        newStatus = 'Rejected by HR';
-        approvalField = 'approvedByHRId';
-    }
-
-    const requestDocRef = doc(firestore, 'leave_requests', requestToReject.id);
-    updateDocumentNonBlocking(requestDocRef, {
-      status: newStatus,
-      [approvalField]: user.uid,
-      rejectionReason: rejectionReason.trim() || null,
-    });
-
-    toast({ title: `Request Rejected` });
-    setRequestToReject(null);
-    setRejectionReason("");
-  }
-
   const handleCreateRequest = () => {
-    if (!user || !userData || !reason || !startDay || !startMonth || !startYear) {
-        toast({ variant: "destructive", title: "Missing Info" });
+    if (!user || !userData || !reason || !startDay || !startMonth || !startYear || !leaveType) {
+        toast({ variant: "destructive", title: "Missing fields" });
         return;
     }
-
-    if (!leaveType) {
-        toast({ variant: "destructive", title: "Select request type" });
-        return;
-    }
-
     if (category === 'WFH' && !wfhCoords) {
-        toast({ variant: 'destructive', title: "Location Required", description: "Please capture your location." });
+        toast({ variant: 'destructive', title: "Location required" });
         return;
     }
-
     setIsRequesting(true);
-    
     const fromDate = new Date(parseInt(startYear), parseInt(startMonth), parseInt(startDay));
     let toDate = fromDate;
-
     if (category !== "Hour Permission") {
-        if (!endDay || !endMonth || !endYear) {
-            toast({ variant: "destructive", title: "End date required" });
-            setIsRequesting(false);
-            return;
-        }
+        if (!endDay || !endMonth || !endYear) { toast({ variant: "destructive", title: "End date required" }); setIsRequesting(false); return; }
         toDate = new Date(parseInt(endYear), parseInt(endMonth), parseInt(endDay));
-        if (toDate < fromDate) {
-            toast({ variant: "destructive", title: "Invalid date range" });
-            setIsRequesting(false);
-            return;
-        }
+        if (toDate < fromDate) { toast({ variant: "destructive", title: "Invalid range" }); setIsRequesting(false); return; }
     }
-
-    const userTeam = allTeams?.find(t => t.id === (userData as any).teamId);
-    const hasTeamLead = !!userTeam?.teamLeadId || reportingSubordinateIds.length > 0;
-    const isUserTeamLead = userRole === 'Team Lead';
     const isManagement = userRole === 'HR Manager' || userRole === 'CEO/Admin';
-
-    const initialStatus: LeaveStatus = (isUserTeamLead || !hasTeamLead || isManagement) ? 'Pending HR Approval' : 'Pending';
-
+    const initialStatus: LeaveStatus = (userRole === 'Team Lead' || isManagement) ? 'Pending HR Approval' : 'Pending';
     const newRequest: LeaveRequest = {
-        employeeId: user.uid,
-        employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
-        employeeJobTitle: (userData as any).jobTitle,
-        startDate: fromDate,
-        endDate: toDate,
-        category,
-        reason,
-        status: initialStatus,
-        createdAt: serverTimestamp(),
-        leaveType: leaveType,
+        employeeId: user.uid, employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
+        employeeJobTitle: (userData as any).jobTitle, startDate: fromDate, endDate: toDate,
+        category, reason, status: initialStatus, createdAt: serverTimestamp(), leaveType,
     }
-
-    if (category === "Hour Permission") {
-        newRequest.startTime = startTime;
-        newRequest.endTime = endTime;
-    }
-
-    if (category === 'WFH' && wfhCoords) {
-        newRequest.latitude = wfhCoords.lat;
-        newRequest.longitude = wfhCoords.lng;
-    }
-    
-    addDocumentNonBlocking(collection(firestore, 'leave_requests'), newRequest)
-      .then(() => {
+    if (category === "Hour Permission") { newRequest.startTime = startTime; newRequest.endTime = endTime; }
+    if (category === 'WFH' && wfhCoords) { newRequest.latitude = wfhCoords.lat; newRequest.longitude = wfhCoords.lng; }
+    addDocumentNonBlocking(collection(firestore, 'leave_requests'), newRequest).then(() => {
           toast({ title: "Request Submitted" });
-          setLeaveType("");
-          setReason("");
-          setCategory("Leave");
-          setWfhCoords(null);
           setIsRequesting(false);
-      })
-      .catch(() => setIsRequesting(false));
+    }).catch(() => setIsRequesting(false));
   }
-
-  const formatDateLabel = (timestamp: any) => timestamp ? format(timestamp.toDate(), 'PP') : '';
 
   return (
     <>
-      <PageHeader
-        title="Leave & WFH Requests"
-        description="Manage your absence and remote work requests."
-        className="animate-fade-in-up"
-      >
-        <div className="flex gap-2">
-          {isExecutiveTier && selectedIds.length > 0 && (
-              <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" className="gap-2 rounded-full">
-                          <Trash2 className="size-4" />
-                          Delete ({selectedIds.length})
-                      </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="rounded-3xl">
-                      <AlertDialogHeader>
-                          <AlertDialogTitle className="font-black uppercase tracking-tighter">Confirm Deletion</AlertDialogTitle>
-                          <AlertDialogDescription>This will permanently remove {selectedIds.length} records. This action cannot be undone.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                          <AlertDialogCancel className="rounded-full font-bold uppercase text-xs">Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full font-bold uppercase text-xs">Confirm Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                  </AlertDialogContent>
-              </AlertDialog>
-          )}
-          {isExecutiveTier && (
-            <Button 
-              variant={showMissed ? "secondary" : "outline"} 
-              size="sm"
-              onClick={() => setShowMissed(!showMissed)}
-              className="gap-2 rounded-full"
-            >
-              {showMissed ? <History className="size-4" /> : <Clock className="size-4" />}
-              {showMissed ? "Active View" : "Past Requests"}
-            </Button>
-          )}
-          <Dialog>
+      <PageHeader title="Leave Management" description="Submit and track your leave or WFH requests.">
+        <Dialog>
             <DialogTrigger asChild>
-              <Button size="sm" className="rounded-full shadow-lg">
-                <PlusCircle className="mr-2 size-4" />
-                New Request
-              </Button>
+              <Button size="sm" className="rounded-none h-11 shadow-lg"><PlusCircle className="mr-2 size-4" /> New Request</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden">
+            <DialogContent className="sm:max-w-md rounded-none p-0 overflow-hidden text-left">
               <DialogHeader className="p-6 pb-0">
-                <DialogTitle className="text-xl font-black uppercase tracking-tighter">New Request</DialogTitle>
-                <DialogDescription>Submit a request for leave, permission, or work from home.</DialogDescription>
+                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Submit Request</DialogTitle>
               </DialogHeader>
-              <ScrollArea className="max-h-[60vh]">
-                  <div className="grid gap-6 p-6">
+              <ScrollArea className="max-h-[60vh] p-6 pt-0 text-left">
+                  <div className="grid gap-6 pt-6">
                       <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Request Type</Label>
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Type</Label>
                           <Select value={category} onValueChange={(val: RequestCategory) => setCategory(val)}>
-                              <SelectTrigger className="rounded-xl h-11">
-                                  <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
+                              <SelectTrigger className="rounded-none h-11"><SelectValue /></SelectTrigger>
+                              <SelectContent className="rounded-none">
                                   <SelectItem value="Leave">Full Day Leave</SelectItem>
                                   <SelectItem value="Hour Permission">Hour Permission</SelectItem>
                                   <SelectItem value="WFH">Work From Home</SelectItem>
                               </SelectContent>
                           </Select>
                       </div>
-
                       <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Category</Label>
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason Category</Label>
                           <Select onValueChange={setLeaveType} value={leaveType}>
-                              <SelectTrigger className="rounded-xl h-11">
-                                  <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                              <SelectContent>
+                              <SelectTrigger className="rounded-none h-11"><SelectValue placeholder="Select" /></SelectTrigger>
+                              <SelectContent className="rounded-none">
                                   <SelectItem value="Vacation">Vacation</SelectItem>
                                   <SelectItem value="Sick Leave">Sick Leave</SelectItem>
                                   <SelectItem value="Personal">Personal</SelectItem>
@@ -554,205 +387,82 @@ export default function LeavePage() {
                               </SelectContent>
                           </Select>
                       </div>
-
                       {category === 'WFH' && (
-                          <div className="p-4 bg-primary/5 rounded-2xl border-2 border-primary/10 space-y-4 animate-fade-in-up">
-                              <div className="flex items-center justify-between">
-                                  <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                                      <Signal className="size-3" /> Location Data
-                                  </Label>
-                                  <Button 
-                                      type="button" 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      className="h-8 rounded-full text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5"
-                                      onClick={handleCaptureSignal}
-                                      disabled={isCapturingSignal}
-                                  >
-                                      {isCapturingSignal ? <Loader2 className="size-3 animate-spin mr-2"/> : <LocateFixed className="size-3 mr-2" />} 
-                                      Capture Location
-                                  </Button>
-                              </div>
-                              {wfhCoords && (
-                                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-primary/10">
-                                      <div>
-                                          <p className="text-[8px] font-bold text-muted-foreground uppercase">LAT</p>
-                                          <p className="text-xs font-mono font-bold text-primary">{wfhCoords.lat.toFixed(6)}</p>
-                                      </div>
-                                      <div>
-                                          <p className="text-[8px] font-bold text-muted-foreground uppercase">LNG</p>
-                                          <p className="text-xs font-mono font-bold text-primary">{wfhCoords.lng.toFixed(6)}</p>
-                                      </div>
-                                  </div>
-                              )}
-                              <p className="text-[9px] text-muted-foreground italic font-bold">Once approved, you can check in from this location during these dates.</p>
+                          <div className="p-4 bg-primary/5 rounded-none border-2 border-dashed border-primary/20 space-y-4">
+                              <Button type="button" variant="outline" size="sm" className="w-full rounded-none h-10 uppercase text-[10px] font-black" onClick={handleCaptureSignal} disabled={isCapturingSignal}>
+                                  {isCapturingSignal ? <Loader2 className="size-3 animate-spin mr-2"/> : <LocateFixed className="size-3 mr-2" />} Capture My Location
+                              </Button>
                           </div>
                       )}
-                      
                       <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">{category === "Hour Permission" ? "Date" : "Start Date"}</Label>
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Start Date</Label>
                           <div className="grid grid-cols-3 gap-2">
-                          <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                          <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                          <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
                           </div>
                       </div>
-
                       {category !== "Hour Permission" && (
                           <div className="space-y-2">
                               <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Date</Label>
                               <div className="grid grid-cols-3 gap-2">
-                                  <Select onValueChange={setEndYear} value={endYear}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                                  <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                                  <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                                  <Select onValueChange={setEndYear} value={endYear}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                                  <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                                  <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
                               </div>
                           </div>
                       )}
-
-                      {category === "Hour Permission" && (
-                          <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                  <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Start Time</Label>
-                                  <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="rounded-xl h-11" />
-                              </div>
-                              <div className="space-y-2">
-                                  <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Time</Label>
-                                  <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="rounded-xl h-11" />
-                              </div>
-                          </div>
-                      )}
-
                       <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason</Label>
-                          <div className="space-y-1">
-                              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Please provide a reason for this request..." className="rounded-2xl min-h-[100px]" />
-                          </div>
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Description</Label>
+                          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide details..." className="rounded-none min-h-[100px]" />
                       </div>
                   </div>
               </ScrollArea>
-              <DialogFooter className="p-6 pt-0">
-                <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Submit Request</Button>
-              </DialogFooter>
+              <DialogFooter className="p-6 pt-0"><Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-none h-14 font-black uppercase tracking-widest shadow-xl">Submit Request</Button></DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
       </PageHeader>
 
-      <Sheet open={!!selectedRequest} onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}>
-        <div className="border rounded-2xl overflow-hidden bg-white/50 backdrop-blur-sm shadow-sm">
+      <div className="border rounded-none overflow-hidden bg-white/50 shadow-sm">
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent border-none">
-                {isExecutiveTier && (
-                  <TableHead className="w-[50px] py-4 px-6">
-                    <Checkbox 
-                      checked={selectedIds.length === displayLeaveRequests.length && displayLeaveRequests.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                )}
-                {(userRole !== 'Member') && <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Employee</TableHead>}
-                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Type</TableHead>
-                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Dates & Time</TableHead>
-                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Status</TableHead>
-                <TableHead className="text-right font-black uppercase tracking-tighter text-[10px] py-4 px-6">Action</TableHead>
+                <TableHead className="text-[10px] font-black uppercase py-4">Employee</TableHead>
+                <TableHead className="text-[10px] font-black uppercase py-4">Type</TableHead>
+                <TableHead className="text-[10px] font-black uppercase py-4">Dates</TableHead>
+                <TableHead className="text-[10px] font-black uppercase py-4">Status</TableHead>
+                <TableHead className="text-right text-[10px] font-black uppercase py-4 px-6">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                  <TableRow><TableCell colSpan={6} className="h-32 text-center animate-pulse font-bold text-muted-foreground uppercase text-xs">Loading...</TableCell></TableRow>
+              {requestsLoading ? (
+                  <TableRow><TableCell colSpan={5} className="h-32 text-center animate-pulse">Loading...</TableCell></TableRow>
               ) : displayLeaveRequests.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic font-medium">{showMissed ? "No archived records found." : "No active requests."}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="h-32 text-center opacity-40">No active requests.</TableCell></TableRow>
               ) : displayLeaveRequests.map((request) => (
-                  <TableRow key={request.id} className="border-border/50 group">
-                    {isExecutiveTier && (
-                      <TableCell className="py-4 px-6">
-                        <Checkbox 
-                          checked={selectedIds.includes(request.id)}
-                          onCheckedChange={(checked) => handleSelectRow(request.id, !!checked)}
-                        />
-                      </TableCell>
-                    )}
-                    {(userRole !== 'Member') && (
-                        <TableCell className="py-4 font-bold">
-                            <div className="flex flex-col">
-                                <span>{request.employeeName}</span>
-                                <span className="text-[9px] text-muted-foreground font-medium uppercase">{request.employeeJobTitle}</span>
-                            </div>
-                        </TableCell>
-                    )}
-                    <TableCell className="py-4">
-                        <Badge variant="outline" className={cn(
-                            "rounded-full text-[9px] uppercase font-black tracking-widest gap-1 border-none",
-                            request.category === 'Hour Permission' ? 'bg-orange-100 text-orange-700' : 
-                            request.category === 'WFH' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                        )}>
-                            {request.category === 'Hour Permission' ? <Timer className="size-2.5"/> : 
-                             request.category === 'WFH' ? <MapPin className="size-2.5"/> : <Briefcase className="size-2.5"/>}
-                            {request.category}
-                        </Badge>
+                  <TableRow key={request.id} className="border-border/50">
+                    <TableCell className="py-4 font-bold">{request.employeeName}</TableCell>
+                    <TableCell className="py-4"><Badge variant="outline" className="rounded-none uppercase text-[8px] font-black">{request.category}</Badge></TableCell>
+                    <TableCell className="py-4 text-xs">
+                        {request.category === 'Hour Permission' ? format(request.startDate.toDate(), 'PP') : `${format(request.startDate.toDate(), 'dd MMM')} - ${format(request.endDate.toDate(), 'dd MMM')}`}
                     </TableCell>
                     <TableCell className="py-4">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-xs">
-                                {request.category === 'Hour Permission' ? format(request.startDate.toDate(), 'PP') : `${formatDateLabel(request.startDate)} - ${formatDateLabel(request.endDate)}`}
-                            </span>
-                            {request.category === 'Hour Permission' && (
-                                <span className="text-[9px] font-black text-primary uppercase tracking-widest">{request.startTime} - {request.endTime}</span>
-                            )}
-                        </div>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <Badge variant='outline' className={cn("rounded-full uppercase text-[9px] font-black tracking-widest", statusVariantMap[request.status])}>
-                        {request.status.replace(/ by Team Lead| by HR/g, '')}
+                      <Badge variant='outline' className={cn("rounded-none uppercase text-[8px] font-black", statusVariantMap[request.status])}>
+                        {request.status.split(' ')[0]}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right py-4 px-6">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl">
-                          <SheetTrigger asChild>
-                            <DropdownMenuItem onClick={() => setSelectedRequest(request)} className="font-bold text-xs uppercase tracking-tight"><Eye className="mr-2 h-3.5 w-3.5"/> View Details</DropdownMenuItem>
-                          </SheetTrigger>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-none"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-none">
+                          <SheetTrigger asChild><DropdownMenuItem onClick={() => setSelectedRequest(request)} className="rounded-none"><Eye className="mr-2 h-4 w-4"/> Details</DropdownMenuItem></SheetTrigger>
                            {userRole === 'Team Lead' && request.status === 'Pending' && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="text-green-600 font-bold text-xs uppercase tracking-tight"><Check className="mr-2 h-3.5 w-3.5"/> Approve</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight"><ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject</DropdownMenuItem>
-                              </>
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="text-green-600 rounded-none"><Check className="mr-2 h-4 w-4"/> Approve</DropdownMenuItem>
                           )}
                           {isExecutiveTier && (request.status === 'Pending' || request.status === 'Pending HR Approval') && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 font-bold text-xs uppercase tracking-tight">
-                                    <Check className="mr-2 h-3.5 w-3.5"/> {request.status === 'Pending' ? 'Direct Approve' : 'Finalize'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setRequestToReject(request)} className="text-red-600 font-bold text-xs uppercase tracking-tight">
-                                    <ThumbsDown className="mr-2 h-3.5 w-3.5"/> Reject</DropdownMenuItem>
-                              </>
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 rounded-none"><Check className="mr-2 h-4 w-4"/> Approve</DropdownMenuItem>
                           )}
-                          {isExecutiveTier && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive font-bold text-xs uppercase tracking-tight">
-                                  <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="rounded-3xl">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle className="font-black uppercase tracking-tighter">Delete Record</AlertDialogTitle>
-                                  <AlertDialogDescription>This will permanently remove this request from the system.</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="rounded-full font-bold uppercase text-xs">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteRequest(request.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full font-bold uppercase text-xs">
-                                    Confirm
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
+                          {isExecutiveTier && <DropdownMenuItem onClick={() => handleDeleteRequest(request.id)} className="text-destructive rounded-none"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -760,82 +470,20 @@ export default function LeavePage() {
                 ))}
             </TableBody>
           </Table>
-        </div>
+      </div>
 
-        <Dialog open={!!requestToReject} onOpenChange={(o) => !o && setRequestToReject(null)}>
-            <DialogContent className="rounded-3xl sm:max-w-md border-none shadow-2xl">
-                <DialogHeader>
-                    <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Reject Request</DialogTitle>
-                    <DialogDescription>Provide a reason for rejecting {requestToReject?.employeeName}'s request.</DialogDescription>
-                </DialogHeader>
-                <div className="py-6 space-y-4">
-                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason</Label>
-                    <Textarea 
-                        value={rejectionReason} 
-                        onChange={e => setRejectionReason(e.target.value)} 
-                        placeholder="Please explain why the request is being rejected..." 
-                        className="rounded-2xl min-h-[120px] bg-muted/20 border-muted"
-                    />
-                </div>
-                <DialogFooter className="gap-2">
-                    <Button variant="outline" onClick={() => setRequestToReject(null)} className="rounded-full h-11 flex-1 font-bold uppercase text-[10px]">Cancel</Button>
-                    <Button onClick={handleRejectionSubmit} variant="destructive" className="rounded-full h-11 flex-1 font-bold uppercase text-[10px] shadow-lg shadow-red-600/20">Confirm</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
+      <Sheet open={!!selectedRequest} onOpenChange={o => !o && setSelectedRequest(null)}>
         {selectedRequest && (
-          <SheetContent className="rounded-l-3xl border-none shadow-2xl flex flex-col sm:max-w-md p-0">
-              <SheetHeader className="p-8 pb-6 border-b shrink-0">
-                  <SheetTitle className="text-xl font-black uppercase tracking-tighter text-primary">Request Details</SheetTitle>
-                  <SheetDescription>ID: {selectedRequest.id.slice(0, 8)} • {selectedRequest.category}</SheetDescription>
+          <SheetContent className="rounded-none border-none shadow-2xl flex flex-col sm:max-w-md p-0">
+              <SheetHeader className="p-8 pb-6 border-b shrink-0 text-left">
+                  <SheetTitle className="text-xl font-black uppercase tracking-tighter">Request Details</SheetTitle>
               </SheetHeader>
               <ScrollArea className="flex-1">
-                <div className="p-8 space-y-8 pb-20">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Type</p><Badge variant="secondary" className="rounded-lg">{selectedRequest.category}</Badge></div>
-                        {selectedRequest.leaveType && <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Category</p><p className="font-bold">{selectedRequest.leaveType}</p></div>}
-                    </div>
-
-                    {selectedRequest.category === 'WFH' && selectedRequest.latitude && (
-                        <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 space-y-3">
-                            <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><MapPin className="size-3"/> Coordinates</p>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><p className="text-[8px] font-bold text-muted-foreground uppercase">LAT</p><p className="text-xs font-mono font-bold">{selectedRequest.latitude}</p></div>
-                                <div><p className="text-[8px] font-bold text-muted-foreground uppercase">LNG</p><p className="text-xs font-mono font-bold">{selectedRequest.longitude}</p></div>
-                            </div>
-                            <Button variant="outline" size="sm" className="w-full h-9 rounded-xl text-[10px] font-bold uppercase gap-2 bg-white" asChild>
-                                <Link href={`https://www.google.com/maps/search/?api=1&query=${selectedRequest.latitude},${selectedRequest.longitude}`} target="_blank">
-                                    <ExternalLink className="size-3"/> View Map
-                                </Link>
-                            </Button>
-                        </div>
-                    )}
-                    
-                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Period</p>
-                        <p className="font-bold text-sm">
-                            {selectedRequest.category === 'Hour Permission' ? format(selectedRequest.startDate.toDate(), 'PPPP') : `${formatDateLabel(selectedRequest.startDate)} — ${formatDateLabel(selectedRequest.endDate)}`}
-                        </p>
-                        {selectedRequest.category === 'Hour Permission' && (
-                            <p className="text-primary font-black uppercase text-xs tracking-widest mt-1">{selectedRequest.startTime} - {selectedRequest.endTime}</p>
-                        )}
-                    </div>
-
-                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reason</p><p className="text-sm italic leading-relaxed whitespace-pre-wrap text-foreground/80">"{selectedRequest.reason}"</p></div>
-                    
-                    {selectedRequest.rejectionReason && (
-                        <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
-                            <p className="text-[10px] font-black uppercase text-red-700 mb-1">Rejection Reason</p>
-                            <p className="text-sm font-medium italic text-red-900">"{selectedRequest.rejectionReason}"</p>
-                        </div>
-                    )}
-
-                    <Separator className="opacity-50" />
-                    
-                    <div className="space-y-4">
-                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] text-primary">Approval Status</h4>
-                        <LeaveStatusTracker request={selectedRequest} users={users} />
-                    </div>
+                <div className="p-8 space-y-8 pb-20 text-left">
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Period</p><p className="font-bold text-sm">{format(selectedRequest.startDate.toDate(), 'PP')} — {format(selectedRequest.endDate.toDate(), 'PP')}</p></div>
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Reason</p><p className="text-sm italic">"{selectedRequest.reason}"</p></div>
+                    <Separator />
+                    <div className="space-y-4 text-left"><h4 className="font-black uppercase text-[10px] tracking-widest text-primary">Approval Progress</h4><LeaveStatusTracker request={selectedRequest} users={users} /></div>
                 </div>
               </ScrollArea>
           </SheetContent>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -10,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Trash2, Ticket, CheckCircle2, Clock, Activity, ShieldCheck, UserCheck, Lock } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Ticket, CheckCircle2, Clock, Activity, ShieldCheck, UserCheck, Lock, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
@@ -37,7 +36,7 @@ type SupportTicket = {
   resolvedByName?: string;
 };
 
-const CATEGORIES = ["Mac Laptop Issue", "Windows Laptop Issue", "Chair Broken", "ID Card Broken", "Others"];
+const CATEGORIES = ["Technical Support", "Facility Issue", "Furniture Issue", "Others"];
 
 export default function TicketsPage() {
   const { user } = useUser();
@@ -79,7 +78,7 @@ export default function TicketsPage() {
         category: newCategory,
     }
     addDocumentNonBlocking(collection(firestore, 'issue_reports'), payload);
-    toast({ title: "Ticket Logged" });
+    toast({ title: "Ticket Created" });
     setIsCreateDialogOpen(false);
     setNewTitle('');
     setNewDescription('');
@@ -98,7 +97,7 @@ export default function TicketsPage() {
     }
 
     updateDocumentNonBlocking(ticketRef, updateData);
-    toast({ title: `Ticket status updated to ${newStatus}` });
+    toast({ title: `Status updated to ${newStatus}` });
   };
 
   const handleDeleteTicket = (ticketId: string) => {
@@ -110,113 +109,115 @@ export default function TicketsPage() {
 
       if ((isOwner && isResolved) || isAdminOrHR) {
           deleteDocumentNonBlocking(doc(firestore, 'issue_reports', ticketId));
-          toast({ title: "Ticket Record Deleted" });
+          toast({ title: "Ticket deleted" });
           setSelectedTicket(null);
       } else {
-          toast({ variant: 'destructive', title: 'Action Denied', description: 'Tickets can only be deleted once verified as Resolved.' });
+          toast({ variant: 'destructive', title: 'Action Denied', description: 'Tickets can only be deleted once Resolved.' });
       }
   };
 
   return (
     <>
-      <PageHeader title="Support Desk" description="Log hardware or facility tickets for rapid resolution.">
+      <PageHeader title="Support Centre" description="Need help with hardware or the office? Submit a ticket below.">
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-full shadow-lg h-11"><PlusCircle className="mr-2 size-4" /> Open New Ticket</Button>
+            <Button className="rounded-none shadow-lg h-11"><PlusCircle className="mr-2 size-4" /> New Ticket</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg rounded-none">
             <DialogHeader>
-                <DialogTitle className="text-xl font-black uppercase">Technical Support Desk</DialogTitle>
-                <DialogDescription>Submit a maintenance or hardware request.</DialogDescription>
+                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Submit Support Ticket</DialogTitle>
+                <DialogDescription>Let us know how we can help you today.</DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[60vh] -mx-6 px-6">
                 <div className="grid gap-6 py-4">
-                    <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Ticket Subject</Label>
-                        <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g., Screen flickers periodically" className="rounded-xl" />
+                    <div className="space-y-2 text-left">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Title</Label>
+                        <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g., Screen not working" className="rounded-none" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                         <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Category</Label>
                         <div className="flex flex-wrap gap-2">
                             {CATEGORIES.map(cat => (
-                                <button key={cat} onClick={() => setNewCategory(cat)} className={cn("px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all", newCategory === cat ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground border-border hover:border-primary/50")}>{cat}</button>
+                                <button key={cat} onClick={() => setNewCategory(cat)} className={cn("px-3 py-1.5 rounded-none text-[10px] font-bold border transition-all", newCategory === cat ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground border-border hover:border-primary/50")}>{cat}</button>
                             ))}
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Contextual Description</Label>
-                        <Textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Provide specific details of the issue..." className="rounded-xl min-h-[120px]" />
+                    <div className="space-y-2 text-left">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Description</Label>
+                        <Textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Explain the issue in detail..." className="rounded-none min-h-[120px]" />
                     </div>
                 </div>
             </ScrollArea>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="rounded-full">Cancel</Button>
-              <Button onClick={handleCreateTicket} className="rounded-full">Dispatch Ticket</Button>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="rounded-none">Cancel</Button>
+              <Button onClick={handleCreateTicket} className="rounded-none">Submit Ticket</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </PageHeader>
       
-      <div className="border rounded-2xl overflow-hidden shadow-sm bg-white/50">
+      <div className="border rounded-none overflow-hidden shadow-sm bg-white/50">
           <Table>
             <TableHeader className="bg-muted/30">
-              <TableRow>
-                <TableHead className="text-[10px] font-black uppercase">Ticket</TableHead>
-                <TableHead className="text-[10px] font-black uppercase">Category</TableHead>
-                <TableHead className="text-[10px] font-black uppercase">Status</TableHead>
-                <TableHead className="text-right text-[10px] font-black uppercase">Actions</TableHead>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-[10px] font-black uppercase py-4">Ticket</TableHead>
+                <TableHead className="text-[10px] font-black uppercase py-4">Category</TableHead>
+                <TableHead className="text-[10px] font-black uppercase py-4">Status</TableHead>
+                <TableHead className="text-right text-[10px] font-black uppercase py-4 px-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="h-32 text-center">Scanning dispatch log...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-32 text-center">Loading tickets...</TableCell></TableRow>
+              ) : tickets?.length === 0 ? (
+                <TableRow><TableCell colSpan={4} className="h-32 text-center opacity-40 italic">No tickets found.</TableCell></TableRow>
               ) : tickets?.map((t) => (
-                <TableRow key={t.id}>
+                <TableRow key={t.id} className="border-border/50">
                   <TableCell className="font-bold">{t.title}</TableCell>
-                  <TableCell><Badge variant="secondary" className="text-[10px] rounded-full">{t.category}</Badge></TableCell>
+                  <TableCell><Badge variant="secondary" className="text-[10px] rounded-none">{t.category}</Badge></TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={cn("rounded-full text-[10px] font-black", t.status === 'Open' ? 'text-red-600 border-red-200' : t.status === 'In Progress' ? 'text-yellow-600 border-yellow-200' : 'text-green-600 border-green-200')}>
+                    <Badge variant="outline" className={cn("rounded-none text-[10px] font-black", t.status === 'Open' ? 'text-red-600 border-red-200' : t.status === 'In Progress' ? 'text-yellow-600 border-yellow-200' : 'text-green-600 border-green-200')}>
                         {t.status.toUpperCase()}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right px-6">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelectedTicket(t)}><Ticket className="mr-2 size-4"/> View Ticket</DropdownMenuItem>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-none"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-none">
+                        <DropdownMenuItem onClick={() => setSelectedTicket(t)} className="rounded-none"><Ticket className="mr-2 size-4"/> View Ticket</DropdownMenuItem>
                         
                         {isAdminOrHR ? (
                             <>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase">Management Controls</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-black uppercase px-2 py-1">Admin Controls</DropdownMenuLabel>
                                 <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger><Activity className="mr-2 size-4" /> Change Status</DropdownMenuSubTrigger>
-                                    <DropdownMenuSubContent>
-                                        <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'Open')}>Open</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'In Progress')}>In Progress</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'Resolved')}>Resolved</DropdownMenuItem>
+                                    <DropdownMenuSubTrigger className="rounded-none"><Activity className="mr-2 size-4" /> Set Status</DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent className="rounded-none">
+                                        <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'Open')} className="rounded-none">Open</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'In Progress')} className="rounded-none">In Progress</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleUpdateStatus(t.id, 'Resolved')} className="rounded-none">Resolved</DropdownMenuItem>
                                     </DropdownMenuSubContent>
                                 </DropdownMenuSub>
                             </>
                         ) : (
-                            <DropdownMenuItem className="opacity-40 grayscale pointer-events-none text-[9px] font-black uppercase tracking-widest">
-                                <Lock className="mr-2 size-3"/> HR Managed Sector
+                            <DropdownMenuItem className="opacity-40 grayscale pointer-events-none text-[9px] font-black uppercase tracking-widest rounded-none">
+                                <Lock className="mr-2 size-3"/> Admin Managed
                             </DropdownMenuItem>
                         )}
 
                         {(isAdminOrHR || (t.employeeId === user?.uid && t.status === 'Resolved')) && (
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive"><Trash2 className="mr-2 size-4" /> Purge Record</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive rounded-none"><Trash2 className="mr-2 size-4" /> Delete</DropdownMenuItem>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
+                                <AlertDialogContent className="rounded-none border-none shadow-2xl">
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Support Ticket?</AlertDialogTitle>
-                                        <AlertDialogDescription>Resolution has been verified. This will permanently remove the ticket from the tactical log.</AlertDialogDescription>
+                                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Delete Ticket?</AlertDialogTitle>
+                                        <AlertDialogDescription>This will permanently remove the ticket record.</AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
-                                        <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteTicket(t.id)} className="bg-red-600 text-white rounded-full font-bold uppercase text-[10px]">Confirm Purge</AlertDialogAction>
+                                        <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteTicket(t.id)} className="bg-red-600 text-white rounded-none font-bold uppercase text-[10px]">Delete</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
@@ -231,26 +232,26 @@ export default function TicketsPage() {
       </div>
 
       <Sheet open={!!selectedTicket} onOpenChange={o => !o && setSelectedTicket(null)}>
-        <SheetContent className="rounded-l-3xl border-none shadow-2xl flex flex-col sm:max-w-md p-0">
-            <SheetHeader className="p-8 pb-6 border-b shrink-0">
-                <SheetTitle className="text-xl font-black uppercase tracking-tighter">Support Ticket Details</SheetTitle>
-                <SheetDescription>Reference ID: {selectedTicket?.id.slice(0,8)}</SheetDescription>
+        <SheetContent className="rounded-none border-none shadow-2xl flex flex-col sm:max-w-md p-0">
+            <SheetHeader className="p-8 pb-6 border-b shrink-0 text-left">
+                <SheetTitle className="text-xl font-black uppercase tracking-tighter">Ticket Details</SheetTitle>
+                <SheetDescription>Ref: {selectedTicket?.id.slice(0,8)}</SheetDescription>
             </SheetHeader>
             <ScrollArea className="flex-1">
-              <div className="p-8 space-y-6 pb-20">
+              <div className="p-8 space-y-6 pb-20 text-left">
                   <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Subject</p><p className="font-bold">{selectedTicket?.title}</p></div>
-                  <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Classification</p><p className="font-bold">{selectedTicket?.category}</p></div>
+                  <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Category</p><p className="font-bold">{selectedTicket?.category}</p></div>
                   <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Status</p>
-                      <Badge variant="outline" className={cn("rounded-full text-[10px] font-black", selectedTicket?.status === 'Open' ? 'text-red-600 border-red-200' : selectedTicket?.status === 'In Progress' ? 'text-yellow-600 border-yellow-200' : 'text-green-600 border-green-200')}>
+                      <Badge variant="outline" className={cn("rounded-none text-[10px] font-black", selectedTicket?.status === 'Open' ? 'text-red-600 border-red-200' : selectedTicket?.status === 'In Progress' ? 'text-yellow-600 border-yellow-200' : 'text-green-600 border-green-200')}>
                           {selectedTicket?.status.toUpperCase()}
                       </Badge>
                   </div>
                   
                   {selectedTicket?.resolvedByName && (
-                      <div className="p-4 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-3">
-                          <div className="p-2 rounded-xl bg-green-600 text-white"><ShieldCheck className="size-4" /></div>
-                          <div>
-                              <p className="text-[9px] font-black uppercase text-green-700">Resolution Authenticated By</p>
+                      <div className="p-4 bg-green-50 rounded-none border border-green-100 flex items-center gap-3">
+                          <div className="p-2 rounded-none bg-green-600 text-white"><ShieldCheck className="size-4" /></div>
+                          <div className="text-left">
+                              <p className="text-[9px] font-black uppercase text-green-700">Resolved By</p>
                               <p className="text-sm font-bold text-green-900">{selectedTicket.resolvedByName}</p>
                           </div>
                       </div>
@@ -263,7 +264,7 @@ export default function TicketsPage() {
                   <div className="space-y-1">
                       <p className="text-[10px] font-black text-muted-foreground uppercase">Submitted By</p>
                       <div className="flex items-center gap-2">
-                          <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary border border-primary/20">{selectedTicket?.submittedBy[0]}</div>
+                          <div className="size-8 rounded-none bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary border border-primary/20">{selectedTicket?.submittedBy[0]}</div>
                           <p className="text-sm font-bold">{selectedTicket?.submittedBy}</p>
                       </div>
                   </div>

@@ -74,7 +74,6 @@ type UserData = {
 
 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-// Simple number to words converter for INR
 function numberToWords(num: number): string {
     const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -84,7 +83,7 @@ function numberToWords(num: number): string {
     if (num < 100) return b[Math.floor(num / 10)] + (num % 10 !== 0 ? ' ' + a[num % 10] : '');
     if (num < 1000) return a[Math.floor(num / 100)] + ' Hundred' + (num % 100 !== 0 ? ' and ' + numberToWords(num % 100) : '');
     if (num < 100000) return numberToWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 !== 0 ? ' ' + numberToWords(num % 1000) : '');
-    return num.toString(); // Fallback for very large numbers
+    return num.toString();
 }
 
 export default function PayslipsPage() {
@@ -106,11 +105,11 @@ export default function PayslipsPage() {
     mobileAllowance: '0',
     deductions: '0',
     workedDays: 'Performance Based',
-    modeOfPayment: 'CASH',
+    modeOfPayment: 'BANK TRANSFER',
   });
 
   const usersQuery = useMemoFirebase(
-    () => isAdmin ? query(collection(firestore, 'users'), where('role', '==', 'Member')) : null,
+    () => isAdmin ? query(collection(firestore, 'users')) : null,
     [isAdmin, firestore]
   );
   const { data: users, isLoading: usersLoading } = useCollection<UserData>(usersQuery);
@@ -142,7 +141,7 @@ export default function PayslipsPage() {
 
     const { month, year, basicStipend, mobileAllowance, deductions, workedDays, modeOfPayment } = payslipData;
     if (!basicStipend) {
-      toast({ variant: 'destructive', title: 'Missing required fields' });
+      toast({ variant: 'destructive', title: 'Salary amount required' });
       return;
     }
 
@@ -162,7 +161,7 @@ export default function PayslipsPage() {
     };
     
     addDocumentNonBlocking(collection(firestore, `payslips`), newPayslip);
-    toast({ title: 'Payslip Synchronized', description: `Record added for ${monthNames[Number(month)]} ${year}.` });
+    toast({ title: 'Payslip Added' });
     setIsDialogOpen(false);
     setPayslipData({
         month: new Date().getMonth().toString(),
@@ -171,13 +170,13 @@ export default function PayslipsPage() {
         mobileAllowance: '0',
         deductions: '0',
         workedDays: 'Performance Based',
-        modeOfPayment: 'CASH',
+        modeOfPayment: 'BANK TRANSFER',
     });
   };
 
   const handleDeletePayslip = (payslipId: string) => {
     deleteDocumentNonBlocking(doc(firestore, `payslips`, payslipId));
-    toast({ title: 'Payslip Purged' });
+    toast({ title: 'Payslip Deleted' });
   };
 
   const handleDownloadPdf = async (p: Payslip, emp: UserData | null) => {
@@ -187,7 +186,6 @@ export default function PayslipsPage() {
     const pageWidth = pdfDoc.internal.pageSize.getWidth();
     const margin = 14;
 
-    // Header Branding
     pdfDoc.setFont('helvetica', 'bold');
     pdfDoc.setFontSize(22);
     pdfDoc.text("FORTUMARS", margin, 20);
@@ -199,7 +197,6 @@ export default function PayslipsPage() {
     pdfDoc.setLineWidth(0.5);
     pdfDoc.line(margin, 40, pageWidth - margin, 40);
 
-    // Employee Info Section
     pdfDoc.setFontSize(10);
     pdfDoc.setFont('helvetica', 'normal');
     
@@ -212,28 +209,27 @@ export default function PayslipsPage() {
         pdfDoc.text(`: ${val}`, x + 35, y);
     };
 
-    labelVal(emp.role === 'Intern' ? "Intern Name" : "Employee Name", `${emp.firstName} ${emp.lastName}`.toUpperCase(), leftColX, infoY);
-    labelVal(emp.role === 'Intern' ? "Intern ID" : "Employee ID", emp.id.slice(0, 10).toUpperCase(), rightColX, infoY);
+    labelVal("Name", `${emp.firstName} ${emp.lastName}`.toUpperCase(), leftColX, infoY);
+    labelVal("ID", emp.id.slice(0, 10).toUpperCase(), rightColX, infoY);
     
     infoY += 6;
-    labelVal("Date of Joining", emp.hireDate ? format(new Date(emp.hireDate), 'dd MMM yyyy').toUpperCase() : 'N/A', leftColX, infoY);
+    labelVal("Date Joined", emp.hireDate ? format(new Date(emp.hireDate), 'dd MMM yyyy').toUpperCase() : 'N/A', leftColX, infoY);
     labelVal("Designation", emp.jobTitle?.toUpperCase() || 'MEMBER', rightColX, infoY);
     
     infoY += 6;
     const lastDay = new Date(p.year, p.month, 0).getDate();
-    labelVal("Pay Period", `01/${p.month}/${p.year.toString().slice(-2)} - ${lastDay}/${p.month}/${p.year.toString().slice(-2)}`, leftColX, infoY);
+    labelVal("Period", `01/${p.month}/${p.year.toString().slice(-2)} - ${lastDay}/${p.month}/${p.year.toString().slice(-2)}`, leftColX, infoY);
     labelVal("Department", emp.department?.toUpperCase() || 'HQ', rightColX, infoY);
     
     infoY += 6;
     labelVal("Worked Days", p.workedDays.toUpperCase(), leftColX, infoY);
 
-    // Financial Table
     autoTable(pdfDoc, {
         startY: infoY + 15,
-        head: [['Earnings', 'Amount in INR', 'Deductions', 'Amount in INR']],
+        head: [['Earnings', 'Amount (INR)', 'Deductions', 'Amount (INR)']],
         body: [
-            ['Basic STIPEND', p.basicStipend.toLocaleString(), '', ''],
-            ['Mobile Allowances', p.mobileAllowance === 0 ? 'NA' : p.mobileAllowance.toLocaleString(), '', ''],
+            ['Basic Salary', p.basicStipend.toLocaleString(), '', ''],
+            ['Allowances', p.mobileAllowance === 0 ? 'NA' : p.mobileAllowance.toLocaleString(), '', ''],
             ['', '', '', ''],
             ['', '', '', ''],
             ['Total Earnings', (p.basicStipend + p.mobileAllowance).toLocaleString(), 'Total Deductions', p.deductions.toLocaleString()],
@@ -242,46 +238,23 @@ export default function PayslipsPage() {
         theme: 'grid',
         headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
         styles: { fontSize: 9, cellPadding: 4 },
-        columnStyles: {
-            0: { cellWidth: 50 },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 50 },
-            3: { cellWidth: 40 },
-        },
-        didParseCell: (data) => {
-            if (data.row.index === 4 || data.row.index === 5) {
-                data.cell.styles.fontStyle = 'bold';
-            }
-        }
+        columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: 40 }, 2: { cellWidth: 50 }, 3: { cellWidth: 40 } },
+        didParseCell: (data) => { if (data.row.index === 4 || data.row.index === 5) data.cell.styles.fontStyle = 'bold'; }
     });
 
-    // Summary Footer
     const finalY = (pdfDoc as any).lastAutoTable.finalY + 15;
     pdfDoc.setFontSize(10);
-    pdfDoc.text(`Amount in Words: ${numberToWords(p.netSalary)} INR only`, margin, finalY);
-    pdfDoc.text(`Mode of Payment: ${p.modeOfPayment}`, margin, finalY + 6);
-    pdfDoc.text(`Date of Issue: ${p.issueDate ? format(p.issueDate.toDate(), 'do MMM yyyy') : format(new Date(), 'do MMM yyyy')}`, margin, finalY + 12);
+    pdfDoc.text(`In Words: ${numberToWords(p.netSalary)} INR only`, margin, finalY);
+    pdfDoc.text(`Payment: ${p.modeOfPayment}`, margin, finalY + 6);
+    pdfDoc.text(`Date Issued: ${p.issueDate ? format(p.issueDate.toDate(), 'do MMM yyyy') : format(new Date(), 'do MMM yyyy')}`, margin, finalY + 12);
 
-    // Signatures
     const sigY = finalY + 45;
     pdfDoc.setFont('helvetica', 'bold');
-    pdfDoc.text("For Accounts Department", margin, sigY);
-    pdfDoc.text(emp.role === 'Intern' ? "Intern Signature" : "Employee Signature", pageWidth - margin - 40, sigY);
+    pdfDoc.text("Accounts Dept", margin, sigY);
+    pdfDoc.text("Employee Signature", pageWidth - margin - 40, sigY);
 
-    // Accounts Seal placeholder
-    pdfDoc.setDrawColor(200);
-    pdfDoc.circle(margin + 20, sigY + 15, 12);
-    pdfDoc.setFontSize(6);
-    pdfDoc.text("FORTUMARS", margin + 11, sigY + 14);
-    pdfDoc.text("VERIFIED", margin + 12, sigY + 17);
-
-    // User Signature if available
     if (emp.signatureUrl) {
-        try {
-            pdfDoc.addImage(emp.signatureUrl, 'PNG', pageWidth - margin - 45, sigY + 5, 40, 15);
-        } catch (e) {
-            console.warn("Could not embed signature image", e);
-        }
+        try { pdfDoc.addImage(emp.signatureUrl, 'PNG', pageWidth - margin - 45, sigY + 5, 40, 15); } catch (e) {}
     }
     pdfDoc.line(pageWidth - margin - 50, sigY + 20, pageWidth - margin, sigY + 20);
 
@@ -291,64 +264,61 @@ export default function PayslipsPage() {
   const years = Array.from({ length: 5 }, (_, i) => getYear(new Date()) - i);
 
   return (
-    <div className="space-y-8 animate-fade-in-up font-jakarta">
-      <PageHeader
-        title="Fleet Payroll Registry"
-        description={isAdmin ? "Issue high-fidelity payslips and manage fleet compensation." : "Access and archive your professional mission compensation records."}
-      >
+    <div className="space-y-6 animate-fade-in-up">
+      <PageHeader title="Payroll" description={isAdmin ? "Manage and issue monthly payslips." : "View and download your payslips."}>
         {isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button disabled={!selectedUser} className="rounded-full h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4" /> Dispatch Payslip</Button>
+              <Button disabled={!selectedUser} className="rounded-none h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4" /> Add Payslip</Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[2.5rem] sm:max-w-2xl p-8 border-none shadow-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Financial Dispatch: {selectedUser?.firstName}</DialogTitle>
-                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Generate audited payroll documentation</DialogDescription>
+            <DialogContent className="rounded-none sm:max-w-2xl p-8 border-none shadow-2xl">
+              <DialogHeader className="text-left">
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Payslip: {selectedUser?.firstName}</DialogTitle>
+                <DialogDescription>Generate a monthly payslip record.</DialogDescription>
               </DialogHeader>
-              <div className="grid gap-6 py-6">
+              <div className="grid gap-6 py-6 text-left">
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Mission Month</Label>
+                        <Label className="text-[10px] font-black uppercase text-primary">Month</Label>
                         <Select value={payslipData.month} onValueChange={(val) => setPayslipData(p => ({...p, month: val}))}>
-                            <SelectTrigger className="rounded-xl h-12"><SelectValue /></SelectTrigger>
-                            <SelectContent>{monthNames.map((name, i) => <SelectItem key={name} value={i.toString()}>{name}</SelectItem>)}</SelectContent>
+                            <SelectTrigger className="rounded-none h-12"><SelectValue /></SelectTrigger>
+                            <SelectContent className="rounded-none">{monthNames.map((name, i) => <SelectItem key={name} value={i.toString()}>{name}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
                     <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase text-primary">Year</Label>
                          <Select value={payslipData.year} onValueChange={(val) => setPayslipData(p => ({...p, year: val}))}>
-                            <SelectTrigger className="rounded-xl h-12"><SelectValue /></SelectTrigger>
-                            <SelectContent>{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
+                            <SelectTrigger className="rounded-none h-12"><SelectValue /></SelectTrigger>
+                            <SelectContent className="rounded-none">{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
                 </div>
                 
                 <div className="grid grid-cols-3 gap-6">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Basic Stipend</Label>
-                        <Input type="number" value={payslipData.basicStipend} onChange={e => setPayslipData({...payslipData, basicStipend: e.target.value})} className="rounded-xl h-12" placeholder="e.g. 10000" />
+                        <Label className="text-[10px] font-black uppercase text-primary">Salary</Label>
+                        <Input type="number" value={payslipData.basicStipend} onChange={e => setPayslipData({...payslipData, basicStipend: e.target.value})} className="rounded-none h-12" placeholder="Amount" />
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Mobile Allowance</Label>
-                        <Input type="number" value={payslipData.mobileAllowance} onChange={e => setPayslipData({...payslipData, mobileAllowance: e.target.value})} className="rounded-xl h-12" />
+                        <Label className="text-[10px] font-black uppercase text-primary">Allowances</Label>
+                        <Input type="number" value={payslipData.mobileAllowance} onChange={e => setPayslipData({...payslipData, mobileAllowance: e.target.value})} className="rounded-none h-12" />
                     </div>
                     <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase text-primary">Deductions</Label>
-                        <Input type="number" value={payslipData.deductions} onChange={e => setPayslipData({...payslipData, deductions: e.target.value})} className="rounded-xl h-12 text-red-600" />
+                        <Input type="number" value={payslipData.deductions} onChange={e => setPayslipData({...payslipData, deductions: e.target.value})} className="rounded-none h-12" />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Worked Days Context</Label>
-                        <Input value={payslipData.workedDays} onChange={e => setPayslipData({...payslipData, workedDays: e.target.value})} className="rounded-xl h-12" placeholder="e.g. Performance Based" />
+                        <Label className="text-[10px] font-black uppercase text-primary">Worked Days</Label>
+                        <Input value={payslipData.workedDays} onChange={e => setPayslipData({...payslipData, workedDays: e.target.value})} className="rounded-none h-12" placeholder="e.g. 22" />
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Mode of Payment</Label>
+                        <Label className="text-[10px] font-black uppercase text-primary">Payment Type</Label>
                         <Select value={payslipData.modeOfPayment} onValueChange={(val) => setPayslipData({...payslipData, modeOfPayment: val})}>
-                            <SelectTrigger className="rounded-xl h-12"><SelectValue /></SelectTrigger>
-                            <SelectContent>
+                            <SelectTrigger className="rounded-none h-12"><SelectValue /></SelectTrigger>
+                            <SelectContent className="rounded-none">
                                 <SelectItem value="CASH">CASH</SelectItem>
                                 <SelectItem value="BANK TRANSFER">BANK TRANSFER</SelectItem>
                                 <SelectItem value="UPI">UPI</SelectItem>
@@ -358,7 +328,7 @@ export default function PayslipsPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleAddPayslip} className="w-full h-14 rounded-full font-black uppercase tracking-widest shadow-xl shadow-primary/20">Authorize & Synchronize</Button>
+                <Button onClick={handleAddPayslip} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-xl shadow-primary/20">Save Payslip</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -366,21 +336,20 @@ export default function PayslipsPage() {
       </PageHeader>
       
       {isAdmin && (
-        <Card className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
-          <CardHeader className="p-8 pb-4">
-            <CardTitle className="text-xl font-black uppercase tracking-tighter flex items-center gap-2">
-                <Users className="size-5 text-primary" /> Target Selection
+        <Card className="border-none shadow-sm rounded-none bg-white ring-1 ring-border/50">
+          <CardHeader className="p-6 pb-2 text-left">
+            <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                <Users className="size-4 text-primary" /> Select Employee
             </CardTitle>
-            <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Select a fleet official to manage their records</CardDescription>
           </CardHeader>
-          <CardContent className="p-8 pt-2">
+          <CardContent className="p-6 pt-2">
             <Select onValueChange={(userId) => setSelectedUser(users?.find(u => u.id === userId) || null)}>
-              <SelectTrigger className="w-full md:w-1/2 h-12 rounded-xl bg-muted/20 border-none ring-1 ring-border/50 shadow-inner">
-                <SelectValue placeholder={usersLoading ? "Scanning Roster..." : "Select Fleet Official"} />
+              <SelectTrigger className="w-full md:w-1/2 h-11 rounded-none bg-muted/20 border-none ring-1 ring-border/50">
+                <SelectValue placeholder={usersLoading ? "Loading..." : "Search name..."} />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-none shadow-2xl">
+              <SelectContent className="rounded-none">
                 {users?.map(u => (
-                  <SelectItem key={u.id} value={u.id} className="rounded-lg">{u.firstName} {u.lastName} ({u.jobTitle})</SelectItem>
+                  <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -389,11 +358,11 @@ export default function PayslipsPage() {
       )}
 
       {payslipUserId && (
-        <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden ring-1 ring-border/50">
-          <CardHeader className="p-8 pb-4 bg-muted/5 border-b">
-            <CardTitle className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
-              <Banknote className="size-7 text-primary" />
-              {isAdmin && selectedUser ? `${selectedUser.firstName}'s Ledger` : 'My Financial Ledger'}
+        <Card className="border-none shadow-xl rounded-none bg-white ring-1 ring-border/50 overflow-hidden">
+          <CardHeader className="p-6 bg-muted/5 border-b text-left">
+            <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-3">
+              <Banknote className="size-5 text-primary" />
+              {isAdmin && selectedUser ? `${selectedUser.firstName}'s Payslips` : 'My Payslips'}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -401,52 +370,52 @@ export default function PayslipsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6 px-10">Audit Period</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Net Compensation</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] py-6">Stamping Date</TableHead>
-                    <TableHead className="text-right font-black uppercase tracking-widest text-[10px] py-6 px-10">Control</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Period</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4">Net Salary</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4">Date Issued</TableHead>
+                    <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-4 px-6">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payslipsLoading ? (
-                    <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Scanning Ledger...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse uppercase font-black text-xs opacity-20">Loading...</TableCell></TableRow>
                   ) : payslips && payslips.length > 0 ? (
                     payslips.map(p => {
                         const employee = isAdmin ? selectedUser : (currentUserData as UserData);
                         return (
-                            <TableRow key={p.id} className="border-border/50 group hover:bg-primary/5 transition-colors">
-                                <TableCell className="py-6 px-10">
+                            <TableRow key={p.id} className="border-border/50 hover:bg-primary/5 transition-colors">
+                                <TableCell className="py-4 px-6">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-xl bg-primary/5 text-primary"><FileText className="size-4" /></div>
-                                        <span className="font-black text-sm uppercase">{monthNames[p.month - 1]} {p.year}</span>
+                                        <div className="p-2 rounded-none bg-primary/5 text-primary"><FileText className="size-4" /></div>
+                                        <span className="font-bold text-sm uppercase">{monthNames[p.month - 1]} {p.year}</span>
                                     </div>
                                 </TableCell>
-                                <TableCell className="font-black text-sm text-green-600">INR {p.netSalary.toLocaleString()}</TableCell>
+                                <TableCell className="font-black text-sm text-green-600">₹{p.netSalary.toLocaleString()}</TableCell>
                                 <TableCell className="text-[10px] font-black uppercase text-muted-foreground opacity-60">
-                                    {p.issueDate ? format(p.issueDate.toDate(), "PP") : 'N/A'}
+                                    {p.issueDate ? format(p.issueDate.toDate(), "PP") : '—'}
                                 </TableCell>
-                                <TableCell className="text-right px-10">
-                                <div className="flex justify-end gap-3">
-                                    <Button variant="outline" size="sm" className="rounded-xl h-10 px-5 font-black uppercase text-[9px] tracking-widest bg-white shadow-sm border-none ring-1 ring-border/50 hover:shadow-md transition-all" onClick={() => handleDownloadPdf(p, employee)}>
-                                        <Download className="mr-2 h-3.5 w-3.5" /> Download Audit
+                                <TableCell className="text-right px-6">
+                                <div className="flex justify-end gap-2">
+                                    <Button variant="outline" size="sm" className="rounded-none h-8 px-4 font-bold uppercase text-[9px] bg-white border-none ring-1 ring-border/50" onClick={() => handleDownloadPdf(p, employee)}>
+                                        <Download className="mr-1.5 h-3 w-3" /> Download
                                     </Button>
                                     {isAdmin && (
                                         <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="rounded-xl h-10 w-10 text-destructive hover:bg-red-50 hover:shadow-sm">
-                                            <Trash2 className="size-4"/>
+                                            <Button variant="ghost" size="icon" className="rounded-none h-8 w-8 text-destructive hover:bg-red-50">
+                                            <Trash2 className="size-3.5"/>
                                             </Button>
                                         </AlertDialogTrigger>
-                                        <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
-                                            <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Purge financial record?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-sm font-medium">
-                                                This will permanently remove the audited record for {monthNames[p.month - 1]} {p.year} from the vertical ledger.
+                                        <AlertDialogContent className="rounded-none border-none shadow-2xl">
+                                            <AlertDialogHeader className="text-left">
+                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Delete Payslip?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-sm">
+                                                This will remove the payslip record for {monthNames[p.month - 1]} {p.year}.
                                             </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter className="mt-6 gap-3">
-                                            <AlertDialogCancel className="rounded-full font-black uppercase text-[10px]">Abort</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeletePayslip(p.id)} className="rounded-full font-black uppercase text-[10px] bg-red-600 hover:bg-red-700">Confirm Purge</AlertDialogAction>
+                                            <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeletePayslip(p.id)} className="rounded-none font-bold uppercase text-[10px] bg-red-600">Delete</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                         </AlertDialog>
@@ -457,23 +426,13 @@ export default function PayslipsPage() {
                         )
                     })
                   ) : (
-                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No financial records found in this sector.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground opacity-40 italic">No records found.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {isAdmin && !selectedUser && (
-        <div className="py-20 text-center opacity-30 grayscale flex flex-col items-center justify-center gap-6">
-            <div className="p-8 rounded-[3rem] bg-muted/20 ring-4 ring-muted/10">
-                <ShieldCheck className="size-16 text-primary/40" />
-            </div>
-            <p className="font-black uppercase text-xs tracking-[0.4em]">Ledger Authorization Required</p>
-            <p className="text-[10px] font-bold uppercase tracking-widest max-w-xs leading-relaxed">Select a fleet official from the directory to access their vertical financial records.</p>
-        </div>
       )}
     </div>
   );
