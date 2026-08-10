@@ -1,8 +1,9 @@
+
 'use client';
 
 import * as React from "react";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, where, orderBy, Timestamp, getDocs, limit } from "firebase/firestore";
+import { doc, collection, query, where, orderBy, Timestamp, getDocs, limit, or } from "firebase/firestore";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
 import { TodoWidget } from "@/components/geohrm/todo-widget";
@@ -29,14 +30,16 @@ import {
   PhoneCall, ShieldCheck, ChevronRight, FileText, Settings, UserPlus, Building2, Filter,
   Megaphone, PartyPopper, Info, History, ArrowRight, Share2, MoreHorizontal,
   TrendingDown,
-  Activity
+  Activity,
+  Video,
+  Timer
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths, isToday, isBefore, isSameDay } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths, isToday, isBefore, isSameDay, formatDistanceToNow } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,7 +47,6 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 
-// --- MOCK DATA FOR SPECIFIC REQUIREMENTS ---
 const revenueTrendData = [
   { name: 'Mon', value: 200000 },
   { name: 'Tue', value: 330000 },
@@ -54,6 +56,103 @@ const revenueTrendData = [
   { name: 'Sat', value: 430000 },
   { name: 'Sun', value: 345000 },
 ];
+
+export function UpcomingMeetingsWidget() {
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const meetingsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        const now = new Date();
+        const end = addDays(now, 7);
+        return query(
+            collection(firestore, 'meetings'),
+            and(
+                or(where('participantIds', 'array-contains', user.uid), where('createdBy', '==', user.uid)),
+                where('date', '>=', Timestamp.fromDate(now)),
+                where('date', '<=', Timestamp.fromDate(end))
+            ),
+            orderBy('date', 'asc'),
+            limit(4)
+        );
+    }, [user, firestore]);
+
+    const { data: meetings, isLoading } = useCollection<any>(meetingsQuery);
+
+    return (
+        <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden h-full flex flex-col">
+            <CardHeader className="p-4 pb-2 border-b bg-primary/5">
+                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <Video className="size-3.5" /> Upcoming Briefings
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 flex-1">
+                <ScrollArea className="h-[200px]">
+                    {isLoading ? (
+                        <div className="p-4 space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-12 bg-muted/20 animate-pulse rounded-none" />)}</div>
+                    ) : meetings && meetings.length > 0 ? (
+                        <div className="divide-y divide-border/50">
+                            {meetings.map((m: any) => (
+                                <Link href="/dashboard/meetings" key={m.id} className="block p-4 hover:bg-muted/10 transition-all group">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="space-y-1 text-left">
+                                            <p className="font-black text-xs uppercase tracking-tight truncate max-w-[180px]">{m.title}</p>
+                                            <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase opacity-40">
+                                                <Clock className="size-2.5" />
+                                                {format(m.date.toDate(), 'PPP p')}
+                                            </div>
+                                        </div>
+                                        <Badge className="bg-emerald-50 text-emerald-700 border-none rounded-none text-[7px] font-black uppercase px-2 h-4 shrink-0 flex gap-1">
+                                            <Timer className="size-2" />
+                                            {formatDistanceToNow(m.date.toDate())}
+                                        </Badge>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-20 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No Briefings Scheduled</div>
+                    )}
+                </ScrollArea>
+            </CardContent>
+            <div className="p-3 border-t bg-muted/5">
+                <Button variant="ghost" size="sm" className="w-full h-7 rounded-none font-black uppercase text-[8px] tracking-widest text-primary hover:bg-primary/5" asChild>
+                    <Link href="/dashboard/meetings">Manage Roster <ChevronRight className="size-2.5 ml-1" /></Link>
+                </Button>
+            </div>
+        </Card>
+    );
+}
+
+function KPICard({ title, value, trend, color, bg, sparkline }: any) {
+  return (
+    <Card className="border-none shadow-sm rounded-none bg-white group hover:shadow-md transition-all p-3 space-y-2 ring-1 ring-border/50">
+      <div className="flex items-center justify-between">
+        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
+        <div className={cn("px-1 py-0.5 rounded-none text-[6px] font-black uppercase", bg, color)}>{trend}</div>
+      </div>
+      <h3 className="text-lg font-black tracking-tighter leading-none">{value}</h3>
+      <div className="h-4 w-full opacity-40">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={sparkline.map((v: number, i: number) => ({ v, i }))}>
+            <Area type="monotone" dataKey="v" stroke={color.includes('rose') ? '#EF4444' : '#6D28D9'} fill={color.includes('rose') ? '#EF444410' : '#6D28D910'} strokeWidth={1} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
+function ActionButton({ icon: Icon, label, href }: { icon: any, label: string, href: string }) {
+  return (
+    <Button asChild variant="outline" className="h-10 rounded-none border-dashed border flex flex-col gap-1 hover:bg-primary/5 hover:border-primary/40 group transition-all p-1">
+      <Link href={href}>
+        <Icon className="size-3 text-muted-foreground group-hover:text-primary transition-colors" />
+        <span className="text-[7px] font-black uppercase tracking-tight">{label}</span>
+      </Link>
+    </Button>
+  );
+}
 
 export default function DashboardPage() {
   const { user: currentUser } = useUser();
@@ -84,8 +183,8 @@ export default function DashboardPage() {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-            <div className="lg:col-span-4">
-                <Card className="h-full border-none shadow-sm rounded-none bg-white overflow-hidden">
+            <div className="lg:col-span-4 space-y-3">
+                <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden">
                     <CardHeader className="p-4 pb-2 border-b bg-muted/5">
                         <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                             <Clock className="size-3.5" /> Shift Control
@@ -95,6 +194,7 @@ export default function DashboardPage() {
                         <AttendanceWidget />
                     </CardContent>
                 </Card>
+                <UpcomingMeetingsWidget />
             </div>
             <div className="lg:col-span-8">
                 <DailyMonitorWidget />
@@ -164,8 +264,8 @@ export default function DashboardPage() {
 
       {/* OPERATIONAL HUB - PARALLEL LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 animate-fade-in-up">
-        <div className="lg:col-span-4">
-            <Card className="h-full border-none shadow-sm rounded-none bg-white overflow-hidden">
+        <div className="lg:col-span-4 space-y-3">
+            <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden">
                 <CardHeader className="p-4 pb-2 border-b bg-muted/5">
                     <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <Clock className="size-3.5" /> Shift Control
@@ -175,6 +275,7 @@ export default function DashboardPage() {
                     <AttendanceWidget />
                 </CardContent>
             </Card>
+            <UpcomingMeetingsWidget />
         </div>
         <div className="lg:col-span-8">
             <DailyMonitorWidget />
@@ -267,35 +368,5 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function KPICard({ title, value, trend, color, bg, sparkline }: any) {
-  return (
-    <Card className="border-none shadow-sm rounded-none bg-white group hover:shadow-md transition-all p-3 space-y-2 ring-1 ring-border/50">
-      <div className="flex items-center justify-between">
-        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
-        <div className={cn("px-1 py-0.5 rounded-none text-[6px] font-black uppercase", bg, color)}>{trend}</div>
-      </div>
-      <h3 className="text-lg font-black tracking-tighter leading-none">{value}</h3>
-      <div className="h-4 w-full opacity-40">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={sparkline.map((v: number, i: number) => ({ v, i }))}>
-            <Area type="monotone" dataKey="v" stroke={color.includes('rose') ? '#EF4444' : '#6D28D9'} fill={color.includes('rose') ? '#EF444410' : '#6D28D910'} strokeWidth={1} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    </Card>
-  );
-}
-
-function ActionButton({ icon: Icon, label, href }: { icon: any, label: string, href: string }) {
-  return (
-    <Button asChild variant="outline" className="h-10 rounded-none border-dashed border flex flex-col gap-1 hover:bg-primary/5 hover:border-primary/40 group transition-all p-1">
-      <Link href={href}>
-        <Icon className="size-3 text-muted-foreground group-hover:text-primary transition-colors" />
-        <span className="text-[7px] font-black uppercase tracking-tight">{label}</span>
-      </Link>
-    </Button>
   );
 }
