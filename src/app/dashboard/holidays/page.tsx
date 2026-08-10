@@ -54,68 +54,68 @@ export default function HolidaysPage() {
                     });
                 }
             });
-            toast({ title: 'Import Complete' });
+            toast({ title: 'Import Finished' });
         };
         reader.readAsText(file);
     };
 
     return (
-        <div className="space-y-6">
-            <PageHeader title="Holidays" description="Company holidays and special events.">
+        <div className="space-y-6 animate-fade-in-up">
+            <PageHeader title="Holidays" description="Manage company holidays and special events.">
                 <div className="flex gap-2">
                     <Input type="file" className="hidden" id="csv-h" accept=".csv" onChange={handleCsv} />
-                    <Button variant="outline" className="rounded-none h-11" onClick={() => document.getElementById('csv-h')?.click()}>
+                    <Button variant="outline" className="rounded-none h-11 bg-white shadow-sm ring-1 ring-border/50 border-none font-black uppercase text-[10px] tracking-widest px-6" onClick={() => document.getElementById('csv-h')?.click()}>
                         <Upload className="size-4 mr-2" /> Import CSV
                     </Button>
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                        <DialogTrigger asChild><Button className="rounded-none h-11"><Plus className="size-4 mr-2"/> Add Holiday</Button></DialogTrigger>
-                        <DialogContent className="rounded-none">
+                        <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><Plus className="size-4 mr-2"/> Add Holiday</Button></DialogTrigger>
+                        <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                             <DialogHeader className="text-left">
-                                <DialogTitle className="font-black uppercase tracking-tighter">Add Holiday</DialogTitle>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Add Holiday</DialogTitle>
                             </DialogHeader>
-                            <div className="space-y-4 py-4 text-left">
+                            <div className="space-y-6 py-6 text-left">
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Date</Label>
-                                    <Input type="date" value={newH.date} onChange={e => setNewH({...newH, date: e.target.value})} className="rounded-none" />
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Date</Label>
+                                    <Input type="date" value={newH.date} onChange={e => setNewH({...newH, date: e.target.value})} className="rounded-none h-12 font-bold" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Title</Label>
-                                    <Input value={newH.title} onChange={e => setNewH({...newH, title: e.target.value})} placeholder="Holiday name..." className="rounded-none" />
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Title</Label>
+                                    <Input value={newH.title} onChange={e => setNewH({...newH, title: e.target.value})} placeholder="Holiday name..." className="rounded-none h-12 font-bold" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Description</Label>
-                                    <Input value={newH.description} onChange={e => setNewH({...newH, description: e.target.value})} placeholder="Optional details..." className="rounded-none" />
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Description</Label>
+                                    <Input value={newH.description} onChange={e => setNewH({...newH, description: e.target.value})} placeholder="Optional details..." className="rounded-none h-12 font-bold" />
                                 </div>
                             </div>
-                            <Button onClick={handleAdd} className="w-full h-12 rounded-none font-black uppercase tracking-widest">Save Holiday</Button>
+                            <Button onClick={handleAdd} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Save Holiday</Button>
                         </DialogContent>
                     </Dialog>
                 </div>
             </PageHeader>
 
-            <Card className="border-none ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden bg-white">
+            <Card className="border-none ring-1 ring-border/50 shadow-xl rounded-none overflow-hidden bg-white">
                 <CardContent className="p-0">
                     <Table>
-                        <TableHeader className="bg-muted/30">
+                        <TableHeader className="bg-muted/10 border-b">
                             <TableRow className="hover:bg-transparent">
-                                <TableHead className="text-[10px] font-black uppercase py-4">Date</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase py-4">Holiday</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase py-4">Details</TableHead>
-                                <TableHead className="text-right text-[10px] font-black uppercase py-4 pr-6">Action</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-8">Date</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Holiday</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Details</TableHead>
+                                <TableHead className="text-right text-[10px] font-black uppercase tracking-widest py-6 px-8">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={4} className="h-32 text-center animate-pulse">Loading...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse uppercase font-black text-xs opacity-20">Scanning Registry...</TableCell></TableRow>
                             ) : holidays?.length === 0 ? (
-                                <TableRow><TableCell colSpan={4} className="h-32 text-center opacity-40">No holidays added.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No holidays found.</TableCell></TableRow>
                             ) : holidays?.map(h => (
-                                <TableRow key={h.id} className="border-border/50">
-                                    <TableCell className="font-bold">{h.date && isValid(h.date.toDate()) ? format(h.date.toDate(), 'PPP') : '...'}</TableCell>
-                                    <TableCell className="font-bold uppercase text-xs">{h.title}</TableCell>
-                                    <TableCell className="text-xs text-muted-foreground">{h.description || '—'}</TableCell>
-                                    <TableCell className="text-right pr-6">
-                                        <Button variant="ghost" size="icon" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'holidays', h.id))} className="text-destructive rounded-none"><Trash2 className="size-4" /></Button>
+                                <TableRow key={h.id} className="border-border/50 hover:bg-primary/5 transition-colors">
+                                    <TableCell className="font-black text-sm uppercase px-8 py-6">{h.date && isValid(h.date.toDate()) ? format(h.date.toDate(), 'PPP') : '...'}</TableCell>
+                                    <TableCell className="font-black text-xs uppercase text-primary">{h.title}</TableCell>
+                                    <TableCell className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 max-w-[200px] truncate">{h.description || '—'}</TableCell>
+                                    <TableCell className="text-right px-8">
+                                        <Button variant="ghost" size="icon" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'holidays', h.id))} className="text-rose-500 hover:bg-rose-50 rounded-none h-9 w-9"><Trash2 className="size-4" /></Button>
                                     </TableCell>
                                 </TableRow>
                             ))}

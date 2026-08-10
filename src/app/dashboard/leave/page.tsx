@@ -124,20 +124,20 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
     <div className="space-y-4">
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className="flex items-center justify-center h-6 w-6 rounded-none bg-green-500 text-white">
+          <div className="flex items-center justify-center h-6 w-6 rounded-none bg-green-500 text-white shadow-sm">
             <Check className="h-4 w-4" />
           </div>
           <div className="h-16 w-0.5 bg-primary/20"></div>
         </div>
         <div className="text-left">
-          <h4 className="font-semibold text-sm uppercase font-black">Submitted</h4>
-          <p className="text-xs text-muted-foreground">On {request.createdAt ? format(request.createdAt.toDate(), "PP") : '...'}.</p>
+          <h4 className="font-black text-sm uppercase tracking-widest">Submitted</h4>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">On {request.createdAt ? format(request.createdAt.toDate(), "PP") : '...'}.</p>
         </div>
       </div>
       
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className={cn("flex items-center justify-center h-6 w-6 rounded-none text-white",
+          <div className={cn("flex items-center justify-center h-6 w-6 rounded-none text-white shadow-sm",
             isApprovedByLead && 'bg-green-500',
             isRejectedByLead && 'bg-red-500',
             isPendingLead && 'bg-yellow-500'
@@ -149,24 +149,24 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
           <div className={cn("h-16 w-0.5", (isApprovedByLead || isRejectedByLead) ? 'bg-primary/20' : 'bg-gray-200')}></div>
         </div>
         <div className="flex-1 text-left">
-          <h4 className={cn("font-semibold text-sm uppercase font-black", isRejectedByLead && "text-red-500")}>Team Lead</h4>
-          <p className="text-xs text-muted-foreground">
+          <h4 className={cn("font-black text-sm uppercase tracking-widest", isRejectedByLead && "text-red-500")}>Team Lead</h4>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">
             {leadSkipped && "Executive Override."}
             {!leadSkipped && isApprovedByLead && (request.approvedByTeamLeadId ? `Approved by ${teamLeadName}.` : 'Approved.')}
             {isRejectedByLead && `Rejected.`}
-            {isPendingLead && 'Pending.'}
+            {isPendingLead && 'Waiting.'}
           </p>
         </div>
       </div>
 
       <div className="flex items-center">
         <div className="flex flex-col items-center mr-4">
-          <div className={cn("flex items-center justify-center h-6 w-6 rounded-none",
-            !isApprovedByLead && !isRejectedByLead && "bg-gray-300 text-white",
+          <div className={cn("flex items-center justify-center h-6 w-6 rounded-none shadow-sm",
+            !isApprovedByLead && !isRejectedByLead && "bg-gray-200 text-white",
             isPendingHR && "bg-yellow-500 text-white",
             isApprovedByHR && "bg-green-500 text-white",
             isRejectedByHR && "bg-red-500 text-white",
-            isRejectedByLead && "bg-gray-300 text-white"
+            isRejectedByLead && "bg-gray-200 text-white"
           )}>
             {isApprovedByHR && <Check className="h-4 w-4" />}
             {(isRejectedByHR || isRejectedByLead) && <X className="h-4 w-4" />}
@@ -174,15 +174,15 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
           </div>
         </div>
         <div className="flex-1 text-left">
-          <h4 className={cn("font-semibold text-sm uppercase font-black", 
+          <h4 className={cn("font-black text-sm uppercase tracking-widest", 
               isRejectedByHR && "text-red-500",
-              !isApprovedByLead && !isRejectedByLead && "text-muted-foreground"
+              !isApprovedByLead && !isRejectedByLead && "text-muted-foreground/30"
           )}>HR Manager</h4>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">
             {isApprovedByHR && `Approved by ${hrName}.`}
             {isRejectedByHR && `Rejected.`}
-            {isPendingHR && 'Pending HR.'}
-            {isPendingLead && 'Waiting.'}
+            {isPendingHR && 'Waiting.'}
+            {isPendingLead && 'Pending Lead.'}
           </p>
         </div>
       </div>
@@ -191,12 +191,12 @@ const LeaveStatusTracker = ({ request, users }: { request: LeaveRequestWithId; u
 }
 
 const statusVariantMap: { [key in LeaveStatus]: string } = {
-    'Approved': 'bg-green-500/20 text-green-700 border-transparent',
-    'Pending': 'bg-yellow-500/20 text-yellow-700 border-transparent',
-    'Pending HR Approval': 'bg-blue-500/20 text-blue-700 border-transparent',
-    'Rejected by Team Lead': 'bg-red-500/20 text-red-700 border-transparent',
-    'Rejected by HR': 'bg-red-500/20 text-red-700 border-transparent',
-    'Rejected': 'bg-red-500/20 text-red-700 border-transparent'
+    'Approved': 'bg-green-50 text-green-700 border-none shadow-sm',
+    'Pending': 'bg-yellow-50 text-yellow-700 border-none shadow-sm',
+    'Pending HR Approval': 'bg-blue-50 text-blue-700 border-none shadow-sm',
+    'Rejected by Team Lead': 'bg-red-50 text-red-700 border-none shadow-sm',
+    'Rejected by HR': 'bg-red-50 text-red-700 border-none shadow-sm',
+    'Rejected': 'bg-red-50 text-red-700 border-none shadow-sm'
 };
 
 export default function LeavePage() {
@@ -218,10 +218,7 @@ export default function LeavePage() {
   const [isRequesting, setIsRequesting] = React.useState(false);
   const [selectedRequest, setSelectedRequest] = React.useState<LeaveRequestWithId | null>(null);
   
-  const [rejectionReason, setRejectionReason] = React.useState("");
-  const [requestToReject, setRequestToReject] = React.useState<LeaveRequestWithId | null>(null);
   const [showMissed, setShowMissed] = React.useState(false);
-  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   
   const [wfhCoords, setWfhCoords] = React.useState<{ lat: number; lng: number } | null>(null);
   const [isCapturingSignal, setIsCapturingSignal] = React.useState(false);
@@ -265,9 +262,6 @@ export default function LeavePage() {
       return users.filter(u => u.reportingHeadIds?.includes(user.uid)).map(u => u.id);
   }, [user, users]);
 
-  const allTeamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
-  const { data: allTeams } = useCollection<Team>(allTeamsQuery);
-
   const leaveRequestsQuery = useMemoFirebase(() => {
     if (!user || !userRole) return null;
     const baseQuery = collection(firestore, 'leave_requests');
@@ -298,11 +292,11 @@ export default function LeavePage() {
           (p) => {
               setWfhCoords({ lat: p.coords.latitude, lng: p.coords.longitude });
               setIsCapturingSignal(false);
-              toast({ title: "Captured", description: "GPS coordinates saved." });
+              toast({ title: "Captured", description: "GPS signal synced." });
           },
           () => {
               setIsCapturingSignal(false);
-              toast({ variant: 'destructive', title: "Error", description: "Enable location services." });
+              toast({ variant: 'destructive', title: "Signal Error", description: "Enable location." });
           },
           { enableHighAccuracy: true }
       );
@@ -310,30 +304,30 @@ export default function LeavePage() {
 
   const handleRequestStatus = (requestId: string, newStatus: LeaveStatus, approverId: string, approvalField: string) => {
     updateDocumentNonBlocking(doc(firestore, 'leave_requests', requestId), { status: newStatus, [approvalField]: approverId });
-    toast({ title: `Updated to ${newStatus}` });
+    toast({ title: `Status: ${newStatus}` });
   }
 
   const handleDeleteRequest = (requestId: string) => {
     deleteDocumentNonBlocking(doc(firestore, 'leave_requests', requestId));
-    toast({ title: 'Request Deleted' });
+    toast({ title: 'Request Removed' });
   }
 
   const handleCreateRequest = () => {
     if (!user || !userData || !reason || !startDay || !startMonth || !startYear || !leaveType) {
-        toast({ variant: "destructive", title: "Missing fields" });
+        toast({ variant: "destructive", title: "Missing Fields" });
         return;
     }
     if (category === 'WFH' && !wfhCoords) {
-        toast({ variant: 'destructive', title: "Location required" });
+        toast({ variant: 'destructive', title: "Signal Required" });
         return;
     }
     setIsRequesting(true);
     const fromDate = new Date(parseInt(startYear), parseInt(startMonth), parseInt(startDay));
     let toDate = fromDate;
     if (category !== "Hour Permission") {
-        if (!endDay || !endMonth || !endYear) { toast({ variant: "destructive", title: "End date required" }); setIsRequesting(false); return; }
+        if (!endDay || !endMonth || !endYear) { toast({ variant: "destructive", title: "End Date Required" }); setIsRequesting(false); return; }
         toDate = new Date(parseInt(endYear), parseInt(endMonth), parseInt(endDay));
-        if (toDate < fromDate) { toast({ variant: "destructive", title: "Invalid range" }); setIsRequesting(false); return; }
+        if (toDate < fromDate) { toast({ variant: "destructive", title: "Invalid Range" }); setIsRequesting(false); return; }
     }
     const isManagement = userRole === 'HR Manager' || userRole === 'CEO/Admin';
     const initialStatus: LeaveStatus = (userRole === 'Team Lead' || isManagement) ? 'Pending HR Approval' : 'Pending';
@@ -352,21 +346,22 @@ export default function LeavePage() {
 
   return (
     <>
-      <PageHeader title="Leave Management" description="Submit and track your leave or WFH requests.">
+      <PageHeader title="Leave Management" description="Submit and track your requests.">
         <Dialog>
             <DialogTrigger asChild>
-              <Button size="sm" className="rounded-none h-11 shadow-lg"><PlusCircle className="mr-2 size-4" /> New Request</Button>
+              <Button size="sm" className="rounded-none h-11 px-6 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest"><PlusCircle className="mr-2 size-4" /> New Request</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md rounded-none p-0 overflow-hidden text-left">
-              <DialogHeader className="p-6 pb-0">
-                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Submit Request</DialogTitle>
+            <DialogContent className="sm:max-w-md rounded-none p-0 overflow-hidden text-left border-none shadow-3xl">
+              <DialogHeader className="p-8 border-b bg-white">
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Submit Request</DialogTitle>
+                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Submit a leave or WFH notification</DialogDescription>
               </DialogHeader>
-              <ScrollArea className="max-h-[60vh] p-6 pt-0 text-left">
-                  <div className="grid gap-6 pt-6">
+              <ScrollArea className="max-h-[60vh] p-8 bg-muted/5 text-left">
+                  <div className="grid gap-6 text-left">
                       <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Type</Label>
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Request Type</Label>
                           <Select value={category} onValueChange={(val: RequestCategory) => setCategory(val)}>
-                              <SelectTrigger className="rounded-none h-11"><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="rounded-none h-11 font-bold"><SelectValue /></SelectTrigger>
                               <SelectContent className="rounded-none">
                                   <SelectItem value="Leave">Full Day Leave</SelectItem>
                                   <SelectItem value="Hour Permission">Hour Permission</SelectItem>
@@ -377,7 +372,7 @@ export default function LeavePage() {
                       <div className="space-y-2">
                           <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason Category</Label>
                           <Select onValueChange={setLeaveType} value={leaveType}>
-                              <SelectTrigger className="rounded-none h-11"><SelectValue placeholder="Select" /></SelectTrigger>
+                              <SelectTrigger className="rounded-none h-11 font-bold"><SelectValue placeholder="Select" /></SelectTrigger>
                               <SelectContent className="rounded-none">
                                   <SelectItem value="Vacation">Vacation</SelectItem>
                                   <SelectItem value="Sick Leave">Sick Leave</SelectItem>
@@ -388,81 +383,89 @@ export default function LeavePage() {
                           </Select>
                       </div>
                       {category === 'WFH' && (
-                          <div className="p-4 bg-primary/5 rounded-none border-2 border-dashed border-primary/20 space-y-4">
-                              <Button type="button" variant="outline" size="sm" className="w-full rounded-none h-10 uppercase text-[10px] font-black" onClick={handleCaptureSignal} disabled={isCapturingSignal}>
-                                  {isCapturingSignal ? <Loader2 className="size-3 animate-spin mr-2"/> : <LocateFixed className="size-3 mr-2" />} Capture My Location
+                          <div className="p-6 bg-primary/5 rounded-none border-2 border-dashed border-primary/20 space-y-4 text-center">
+                              <p className="text-[10px] font-bold uppercase text-muted-foreground opacity-60">Authorize residential coordinates</p>
+                              <Button type="button" variant="outline" size="sm" className="w-full rounded-none h-11 uppercase text-[10px] font-black bg-white shadow-sm border-none ring-1 ring-border" onClick={handleCaptureSignal} disabled={isCapturingSignal}>
+                                  {isCapturingSignal ? <Loader2 className="size-4 animate-spin mr-2"/> : <LocateFixed className="size-4 mr-2 text-primary" />} Capture GPS Signal
                               </Button>
                           </div>
                       )}
                       <div className="space-y-2">
                           <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Start Date</Label>
                           <div className="grid grid-cols-3 gap-2">
-                            <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                            <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                            <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setStartYear} value={startYear}><SelectTrigger className="rounded-none font-bold h-11"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setStartMonth} value={startMonth}><SelectTrigger className="rounded-none font-bold h-11"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                            <Select onValueChange={setStartDay} value={startDay} disabled={!startMonth}><SelectTrigger className="rounded-none font-bold h-11"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{startDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
                           </div>
                       </div>
                       {category !== "Hour Permission" && (
                           <div className="space-y-2">
                               <Label className="text-[10px] font-black uppercase text-primary tracking-widest">End Date</Label>
                               <div className="grid grid-cols-3 gap-2">
-                                  <Select onValueChange={setEndYear} value={endYear}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
-                                  <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
-                                  <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
+                                  <Select onValueChange={setEndYear} value={endYear}><SelectTrigger className="rounded-none font-bold h-11"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent></Select>
+                                  <Select onValueChange={setEndMonth} value={endMonth}><SelectTrigger className="rounded-none font-bold h-11"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{months.map(m => <SelectItem key={m.value} value={m.value.toString()}>{m.name}</SelectItem>)}</SelectContent></Select>
+                                  <Select onValueChange={setEndDay} value={endDay} disabled={!endMonth}><SelectTrigger className="rounded-none font-bold h-11"><SelectValue /></SelectTrigger><SelectContent className="rounded-none">{endDays.map(d => <SelectItem key={d} value={d.toString()}>{d}</SelectItem>)}</SelectContent></Select>
                               </div>
                           </div>
                       )}
                       <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Description</Label>
-                          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide details..." className="rounded-none min-h-[100px]" />
+                          <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Mission Context / Reason</Label>
+                          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Provide specific details..." className="rounded-none min-h-[100px] font-medium text-sm" />
                       </div>
                   </div>
               </ScrollArea>
-              <DialogFooter className="p-6 pt-0"><Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-none h-14 font-black uppercase tracking-widest shadow-xl">Submit Request</Button></DialogFooter>
+              <div className="p-8 border-t bg-white">
+                <Button onClick={handleCreateRequest} disabled={isRequesting} className="w-full rounded-none h-14 font-black uppercase tracking-widest shadow-2xl">Submit Request</Button>
+              </div>
             </DialogContent>
           </Dialog>
       </PageHeader>
 
-      <div className="border rounded-none overflow-hidden bg-white/50 shadow-sm">
+      <div className="border-none ring-1 ring-border/50 rounded-none overflow-hidden bg-white shadow-xl">
           <Table>
-            <TableHeader className="bg-muted/30">
+            <TableHeader className="bg-muted/10 border-b">
               <TableRow className="hover:bg-transparent border-none">
-                <TableHead className="text-[10px] font-black uppercase py-4">Employee</TableHead>
-                <TableHead className="text-[10px] font-black uppercase py-4">Type</TableHead>
-                <TableHead className="text-[10px] font-black uppercase py-4">Dates</TableHead>
-                <TableHead className="text-[10px] font-black uppercase py-4">Status</TableHead>
-                <TableHead className="text-right text-[10px] font-black uppercase py-4 px-6">Action</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-8">Employee</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Mission Type</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Range</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Approval</TableHead>
+                <TableHead className="text-right text-[10px] font-black uppercase tracking-widest py-6 px-8">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {requestsLoading ? (
-                  <TableRow><TableCell colSpan={5} className="h-32 text-center animate-pulse">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="h-48 text-center animate-pulse uppercase font-black text-xs opacity-20">Scanning Registry...</TableCell></TableRow>
               ) : displayLeaveRequests.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="h-32 text-center opacity-40">No active requests.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No active requests.</TableCell></TableRow>
               ) : displayLeaveRequests.map((request) => (
-                  <TableRow key={request.id} className="border-border/50">
-                    <TableCell className="py-4 font-bold">{request.employeeName}</TableCell>
-                    <TableCell className="py-4"><Badge variant="outline" className="rounded-none uppercase text-[8px] font-black">{request.category}</Badge></TableCell>
-                    <TableCell className="py-4 text-xs">
-                        {request.category === 'Hour Permission' ? format(request.startDate.toDate(), 'PP') : `${format(request.startDate.toDate(), 'dd MMM')} - ${format(request.endDate.toDate(), 'dd MMM')}`}
+                  <TableRow key={request.id} className="border-border/50 hover:bg-primary/5 transition-colors group">
+                    <TableCell className="py-6 px-8 font-black text-sm uppercase tracking-tight">{request.employeeName}</TableCell>
+                    <TableCell className="py-6"><Badge variant="outline" className="rounded-none uppercase text-[8px] font-black bg-muted/20 border-none px-2.5 h-5">{request.category}</Badge></TableCell>
+                    <TableCell className="py-6 text-xs font-bold uppercase text-muted-foreground">
+                        {request.category === 'Hour Permission' ? format(request.startDate.toDate(), 'PP') : `${format(request.startDate.toDate(), 'dd MMM')} — ${format(request.endDate.toDate(), 'dd MMM')}`}
                     </TableCell>
-                    <TableCell className="py-4">
-                      <Badge variant='outline' className={cn("rounded-none uppercase text-[8px] font-black", statusVariantMap[request.status])}>
+                    <TableCell className="py-6">
+                      <Badge className={cn("rounded-none uppercase text-[8px] font-black px-3 h-6", statusVariantMap[request.status])}>
                         {request.status.split(' ')[0]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right py-4 px-6">
+                    <TableCell className="text-right py-6 px-8">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-none"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-none">
-                          <SheetTrigger asChild><DropdownMenuItem onClick={() => setSelectedRequest(request)} className="rounded-none"><Eye className="mr-2 h-4 w-4"/> Details</DropdownMenuItem></SheetTrigger>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-none h-9 w-9 hover:bg-muted/50 transition-colors"><MoreHorizontal className="h-4.5 w-4.5" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-56 text-left">
+                          <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-60 px-3 py-2">Oversight</DropdownMenuLabel>
+                          <SheetTrigger asChild><DropdownMenuItem onClick={() => setSelectedRequest(request)} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5"><Eye className="size-4 text-primary"/> Details</DropdownMenuItem></SheetTrigger>
+                           
                            {userRole === 'Team Lead' && request.status === 'Pending' && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="text-green-600 rounded-none"><Check className="mr-2 h-4 w-4"/> Approve</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 text-emerald-600 hover:bg-emerald-50"><Check className="size-4"/> Approve</DropdownMenuItem>
                           )}
                           {isExecutiveTier && (request.status === 'Pending' || request.status === 'Pending HR Approval') && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="text-green-600 rounded-none"><Check className="mr-2 h-4 w-4"/> Approve</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 text-emerald-600 hover:bg-emerald-50"><Check className="size-4"/> Approve</DropdownMenuItem>
                           )}
-                          {isExecutiveTier && <DropdownMenuItem onClick={() => handleDeleteRequest(request.id)} className="text-destructive rounded-none"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>}
+                          
+                          <DropdownMenuSeparator />
+                          
+                          {(isExecutiveTier || request.employeeId === user?.uid) && <DropdownMenuItem onClick={() => handleDeleteRequest(request.id)} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 text-rose-600 hover:bg-rose-50"><Trash2 className="size-4" /> Remove</DropdownMenuItem>}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -474,16 +477,26 @@ export default function LeavePage() {
 
       <Sheet open={!!selectedRequest} onOpenChange={o => !o && setSelectedRequest(null)}>
         {selectedRequest && (
-          <SheetContent className="rounded-none border-none shadow-2xl flex flex-col sm:max-w-md p-0">
-              <SheetHeader className="p-8 pb-6 border-b shrink-0 text-left">
-                  <SheetTitle className="text-xl font-black uppercase tracking-tighter">Request Details</SheetTitle>
+          <SheetContent className="rounded-none border-none shadow-3xl flex flex-col sm:max-w-md p-0 overflow-hidden">
+              <SheetHeader className="p-8 pb-6 border-b shrink-0 text-left bg-white">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3 border-primary/20 bg-primary/5 text-primary">{selectedRequest.category}</Badge>
+                  </div>
+                  <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900">Request Hub</SheetTitle>
+                  <SheetDescription className="text-[10px] font-bold uppercase tracking-widest opacity-40">Ref: {selectedRequest.id.slice(0,8).toUpperCase()}</SheetDescription>
               </SheetHeader>
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 bg-muted/5">
                 <div className="p-8 space-y-8 pb-20 text-left">
-                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Period</p><p className="font-bold text-sm">{format(selectedRequest.startDate.toDate(), 'PP')} — {format(selectedRequest.endDate.toDate(), 'PP')}</p></div>
-                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase">Reason</p><p className="text-sm italic">"{selectedRequest.reason}"</p></div>
-                    <Separator />
-                    <div className="space-y-4 text-left"><h4 className="font-black uppercase text-[10px] tracking-widest text-primary">Approval Progress</h4><LeaveStatusTracker request={selectedRequest} users={users} /></div>
+                    <div className="space-y-1"><p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Active Period</p><p className="font-black text-lg uppercase tracking-tight text-slate-800">{format(selectedRequest.startDate.toDate(), 'PP')} — {format(selectedRequest.endDate.toDate(), 'PP')}</p></div>
+                    <div className="space-y-2 p-6 bg-white ring-1 ring-border shadow-sm rounded-none border-l-4 border-primary">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mission Context</p>
+                        <p className="text-sm font-medium text-slate-700 italic leading-relaxed">"{selectedRequest.reason}"</p>
+                    </div>
+                    <Separator className="opacity-50" />
+                    <div className="space-y-6 text-left">
+                        <h4 className="font-black uppercase text-[10px] tracking-[0.2em] text-primary">Approval Pipeline</h4>
+                        <LeaveStatusTracker request={selectedRequest} users={users} />
+                    </div>
                 </div>
               </ScrollArea>
           </SheetContent>

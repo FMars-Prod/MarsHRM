@@ -141,7 +141,7 @@ export default function PayslipsPage() {
 
     const { month, year, basicStipend, mobileAllowance, deductions, workedDays, modeOfPayment } = payslipData;
     if (!basicStipend) {
-      toast({ variant: 'destructive', title: 'Salary amount required' });
+      toast({ variant: 'destructive', title: 'Amount required' });
       return;
     }
 
@@ -264,31 +264,31 @@ export default function PayslipsPage() {
   const years = Array.from({ length: 5 }, (_, i) => getYear(new Date()) - i);
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-6 animate-fade-in-up font-jakarta">
       <PageHeader title="Payroll" description={isAdmin ? "Manage and issue monthly payslips." : "View and download your payslips."}>
         {isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button disabled={!selectedUser} className="rounded-none h-11 px-6 shadow-lg"><PlusCircle className="mr-2 h-4 w-4" /> Add Payslip</Button>
+              <Button disabled={!selectedUser} className="rounded-none h-11 px-6 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest"><PlusCircle className="mr-2 h-4 w-4" /> Add Payslip</Button>
             </DialogTrigger>
             <DialogContent className="rounded-none sm:max-w-2xl p-8 border-none shadow-2xl">
               <DialogHeader className="text-left">
                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Payslip: {selectedUser?.firstName}</DialogTitle>
-                <DialogDescription>Generate a monthly payslip record.</DialogDescription>
+                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Generate a monthly payroll record</DialogDescription>
               </DialogHeader>
               <div className="grid gap-6 py-6 text-left">
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Month</Label>
+                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Month</Label>
                         <Select value={payslipData.month} onValueChange={(val) => setPayslipData(p => ({...p, month: val}))}>
-                            <SelectTrigger className="rounded-none h-12"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
                             <SelectContent className="rounded-none">{monthNames.map((name, i) => <SelectItem key={name} value={i.toString()}>{name}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Year</Label>
+                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Year</Label>
                          <Select value={payslipData.year} onValueChange={(val) => setPayslipData(p => ({...p, year: val}))}>
-                            <SelectTrigger className="rounded-none h-12"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
                             <SelectContent className="rounded-none">{years.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
@@ -296,28 +296,28 @@ export default function PayslipsPage() {
                 
                 <div className="grid grid-cols-3 gap-6">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Salary</Label>
-                        <Input type="number" value={payslipData.basicStipend} onChange={e => setPayslipData({...payslipData, basicStipend: e.target.value})} className="rounded-none h-12" placeholder="Amount" />
+                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Basic Amount</Label>
+                        <Input type="number" value={payslipData.basicStipend} onChange={e => setPayslipData({...payslipData, basicStipend: e.target.value})} className="rounded-none h-12 font-bold" placeholder="0.00" />
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Allowances</Label>
-                        <Input type="number" value={payslipData.mobileAllowance} onChange={e => setPayslipData({...payslipData, mobileAllowance: e.target.value})} className="rounded-none h-12" />
+                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Allowances</Label>
+                        <Input type="number" value={payslipData.mobileAllowance} onChange={e => setPayslipData({...payslipData, mobileAllowance: e.target.value})} className="rounded-none h-12 font-bold" />
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Deductions</Label>
-                        <Input type="number" value={payslipData.deductions} onChange={e => setPayslipData({...payslipData, deductions: e.target.value})} className="rounded-none h-12" />
+                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Deductions</Label>
+                        <Input type="number" value={payslipData.deductions} onChange={e => setPayslipData({...payslipData, deductions: e.target.value})} className="rounded-none h-12 font-bold" />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Worked Days</Label>
-                        <Input value={payslipData.workedDays} onChange={e => setPayslipData({...payslipData, workedDays: e.target.value})} className="rounded-none h-12" placeholder="e.g. 22" />
+                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Days Worked</Label>
+                        <Input value={payslipData.workedDays} onChange={e => setPayslipData({...payslipData, workedDays: e.target.value})} className="rounded-none h-12 font-bold" placeholder="e.g. 22" />
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-primary">Payment Type</Label>
+                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Payment Mode</Label>
                         <Select value={payslipData.modeOfPayment} onValueChange={(val) => setPayslipData({...payslipData, modeOfPayment: val})}>
-                            <SelectTrigger className="rounded-none h-12"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="rounded-none h-12 font-bold bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
                             <SelectContent className="rounded-none">
                                 <SelectItem value="CASH">CASH</SelectItem>
                                 <SelectItem value="BANK TRANSFER">BANK TRANSFER</SelectItem>
@@ -328,7 +328,7 @@ export default function PayslipsPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleAddPayslip} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-xl shadow-primary/20">Save Payslip</Button>
+                <Button onClick={handleAddPayslip} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl shadow-primary/20">Save Payslip</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -338,18 +338,18 @@ export default function PayslipsPage() {
       {isAdmin && (
         <Card className="border-none shadow-sm rounded-none bg-white ring-1 ring-border/50">
           <CardHeader className="p-6 pb-2 text-left">
-            <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                <Users className="size-4 text-primary" /> Select Employee
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                <Users className="size-3.5" /> Select Personnel
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 pt-2">
             <Select onValueChange={(userId) => setSelectedUser(users?.find(u => u.id === userId) || null)}>
-              <SelectTrigger className="w-full md:w-1/2 h-11 rounded-none bg-muted/20 border-none ring-1 ring-border/50">
-                <SelectValue placeholder={usersLoading ? "Loading..." : "Search name..."} />
+              <SelectTrigger className="w-full md:w-1/2 h-11 rounded-none bg-muted/10 border-none ring-1 ring-border/50 font-bold uppercase text-xs">
+                <SelectValue placeholder={usersLoading ? "Scanning..." : "Search member name..."} />
               </SelectTrigger>
               <SelectContent className="rounded-none">
                 {users?.map(u => (
-                  <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
+                  <SelectItem key={u.id} value={u.id} className="uppercase font-bold text-xs">{u.firstName} {u.lastName}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -360,9 +360,9 @@ export default function PayslipsPage() {
       {payslipUserId && (
         <Card className="border-none shadow-xl rounded-none bg-white ring-1 ring-border/50 overflow-hidden">
           <CardHeader className="p-6 bg-muted/5 border-b text-left">
-            <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-3">
-              <Banknote className="size-5 text-primary" />
-              {isAdmin && selectedUser ? `${selectedUser.firstName}'s Payslips` : 'My Payslips'}
+            <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-3 text-primary">
+              <Banknote className="size-5" />
+              {isAdmin && selectedUser ? `${selectedUser.firstName}'s History` : 'My History'}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -370,52 +370,52 @@ export default function PayslipsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Period</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Mission Period</TableHead>
                     <TableHead className="font-black uppercase tracking-widest text-[9px] py-4">Net Salary</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4">Date Issued</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4">Status Date</TableHead>
                     <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-4 px-6">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payslipsLoading ? (
-                    <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse uppercase font-black text-xs opacity-20">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse uppercase font-black text-xs opacity-20">Scanning...</TableCell></TableRow>
                   ) : payslips && payslips.length > 0 ? (
                     payslips.map(p => {
                         const employee = isAdmin ? selectedUser : (currentUserData as UserData);
                         return (
                             <TableRow key={p.id} className="border-border/50 hover:bg-primary/5 transition-colors">
-                                <TableCell className="py-4 px-6">
+                                <TableCell className="py-4 px-6 text-left">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 rounded-none bg-primary/5 text-primary"><FileText className="size-4" /></div>
-                                        <span className="font-bold text-sm uppercase">{monthNames[p.month - 1]} {p.year}</span>
+                                        <span className="font-black text-xs uppercase tracking-tight">{monthNames[p.month - 1]} {p.year}</span>
                                     </div>
                                 </TableCell>
-                                <TableCell className="font-black text-sm text-green-600">₹{p.netSalary.toLocaleString()}</TableCell>
+                                <TableCell className="font-black text-sm text-emerald-600">₹{p.netSalary.toLocaleString()}</TableCell>
                                 <TableCell className="text-[10px] font-black uppercase text-muted-foreground opacity-60">
                                     {p.issueDate ? format(p.issueDate.toDate(), "PP") : '—'}
                                 </TableCell>
                                 <TableCell className="text-right px-6">
                                 <div className="flex justify-end gap-2">
-                                    <Button variant="outline" size="sm" className="rounded-none h-8 px-4 font-bold uppercase text-[9px] bg-white border-none ring-1 ring-border/50" onClick={() => handleDownloadPdf(p, employee)}>
+                                    <Button variant="outline" size="sm" className="rounded-none h-8 px-4 font-black uppercase text-[9px] tracking-widest bg-white border-none ring-1 ring-border/50" onClick={() => handleDownloadPdf(p, employee)}>
                                         <Download className="mr-1.5 h-3 w-3" /> Download
                                     </Button>
                                     {isAdmin && (
                                         <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="rounded-none h-8 w-8 text-destructive hover:bg-red-50">
+                                            <Button variant="ghost" size="icon" className="rounded-none h-8 w-8 text-rose-500 hover:bg-rose-50 transition-colors">
                                             <Trash2 className="size-3.5"/>
                                             </Button>
                                         </AlertDialogTrigger>
-                                        <AlertDialogContent className="rounded-none border-none shadow-2xl">
+                                        <AlertDialogContent className="rounded-none border-none shadow-3xl">
                                             <AlertDialogHeader className="text-left">
-                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">Delete Payslip?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-sm">
-                                                This will remove the payslip record for {monthNames[p.month - 1]} {p.year}.
+                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Delete Entry?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+                                                This will remove the payslip record for {monthNames[p.month - 1]} {p.year} from the registry.
                                             </AlertDialogDescription>
                                             </AlertDialogHeader>
-                                            <AlertDialogFooter className="mt-6 gap-3">
-                                            <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px]">Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeletePayslip(p.id)} className="rounded-none font-bold uppercase text-[10px] bg-red-600">Delete</AlertDialogAction>
+                                            <AlertDialogFooter className="mt-8 gap-3">
+                                            <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeletePayslip(p.id)} className="rounded-none font-bold uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                         </AlertDialog>
@@ -426,7 +426,7 @@ export default function PayslipsPage() {
                         )
                     })
                   ) : (
-                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground opacity-40 italic">No records found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground opacity-30 italic uppercase font-black text-[10px] tracking-widest">No records found.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
