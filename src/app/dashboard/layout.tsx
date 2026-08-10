@@ -1,3 +1,4 @@
+
 'use client';
 import {
   SidebarProvider,
@@ -69,7 +70,7 @@ const SEARCHABLE_LINKS = [
     { label: "Asset Management", href: "/dashboard/assets", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Approvals", href: "/dashboard/attendance-requests", roles: ['Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Documents", href: "/dashboard/documents", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-    { label: "Compliance", href: "/dashboard/compliance", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Complaints", href: "/dashboard/compliance", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Activity Monitor", href: "/dashboard/monitor", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Company Feed", href: "/dashboard/announcements", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Meetings", href: "/dashboard/meetings", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
