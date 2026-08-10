@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -62,7 +61,7 @@ const groups = [
   {
     label: "BUSINESS",
     links: [
-      { href: "/dashboard/clients", label: "Clients", icon: Users, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+      { href: "/dashboard/clients", label: "Client Management", icon: Users, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/meetings", label: "Meetings", icon: Video, roles: ['Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/projects", label: "Projects", icon: Briefcase, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/pipeline", label: "Sales Pipeline", icon: TrendingUp, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },

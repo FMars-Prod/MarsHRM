@@ -1,4 +1,3 @@
-
 'use client';
 import {
   SidebarProvider,
@@ -52,7 +51,7 @@ const SEARCHABLE_LINKS = [
     { label: "Admin Desk", href: "https://studio--studio-6104224101-c3e7e.us-central1.hosted.app/", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Workforce Reports", href: "/dashboard/reports", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Task Centre", href: "/dashboard/todo", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-    { label: "Clients", href: "/dashboard/clients", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Client Management", href: "/dashboard/clients", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Projects", href: "/dashboard/projects", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Sales Pipeline", href: "/dashboard/pipeline", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Marketing", href: "/dashboard/marketing", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },

@@ -178,7 +178,7 @@ export default function MonitorPage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up font-jakarta">
-      <PageHeader title="Daily Status" description="Real-time operational status oversight and tactical fleet geolocation monitoring.">
+      <PageHeader title="Daily Status">
         <div className="flex gap-3">
             <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground opacity-50" />
