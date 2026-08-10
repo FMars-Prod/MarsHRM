@@ -47,7 +47,7 @@ type VaultAsset = {
     isInvoice?: boolean;
     clientId?: string;
     clientName?: string;
-    authorizedUids?: string[]; // Specifically for Project Heads/Admins
+    authorizedUids?: string[];
 };
 
 const FOLDER_COLORS = {
@@ -64,15 +64,11 @@ export default function DocumentsPage() {
     const storage = useStorage();
     const { toast } = useToast();
     
-    // Navigation State
     const [currentFolderId, setCurrentFolderId] = React.useState<string | null>(null);
-
-    // Dialog States
     const [isFolderDialogOpen, setIsFolderDialogOpen] = React.useState(false);
     const [isAssetDialogOpen, setIsAssetDialogOpen] = React.useState(false);
     const [isShareDialogOpen, setIsShareDialogOpen] = React.useState(false);
 
-    // Form States
     const [folderName, setFolderName] = React.useState("");
     const [folderColor, setFolderColor] = React.useState<FolderData['color']>('blue');
     const [assetTitle, setAssetTitle] = React.useState("");
@@ -80,11 +76,9 @@ export default function DocumentsPage() {
     const [activeTab, setActiveTab] = React.useState<string>("link");
     const [isUploading, setIsUploading] = React.useState(false);
     
-    // Invoice State
     const [isInvoice, setIsInvoice] = React.useState(false);
     const [selectedClientId, setSelectedClientId] = React.useState("");
 
-    // Sharing States
     const [sharingFolder, setSharingFolder] = React.useState<FolderData | null>(null);
     const [selectedTeamIds, setSelectedTeamIds] = React.useState<string[]>([]);
     const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
@@ -94,7 +88,6 @@ export default function DocumentsPage() {
     const userRole = userData?.role;
     const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
-    // Fetch Global Data for Selection
     const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);
     const { data: allTeams } = useCollection<any>(teamsQuery);
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
@@ -102,25 +95,21 @@ export default function DocumentsPage() {
     const clientsQuery = useMemoFirebase(() => query(collection(firestore, 'clients'), orderBy('companyName', 'asc')), [firestore]);
     const { data: clients } = useCollection<any>(clientsQuery);
 
-    // Fetch Folders
     const foldersQuery = useMemoFirebase(() => {
         if (!user) return null;
         return query(collection(firestore, 'folders'), orderBy('createdAt', 'desc'));
     }, [firestore, user]);
     const { data: rawFolders, isLoading: foldersLoading } = useCollection<FolderData>(foldersQuery);
 
-    // Fetch Assets
     const assetsQuery = useMemoFirebase(() => {
         if (!user) return null;
         return query(collection(firestore, 'vault_assets'), orderBy('uploadedAt', 'desc'));
     }, [firestore, user]);
     const { data: rawAssets, isLoading: assetsLoading } = useCollection<VaultAsset>(assetsQuery);
 
-    // Local Filtering for permissions and current path
     const filteredFolders = React.useMemo(() => {
         if (!rawFolders || !user || !userData) return [];
         return rawFolders.filter(f => {
-            // ADMINS see everything. OTHERS see only what is shared with them or their team.
             const isSharedWithMe = f.sharedWithUids?.includes(user.uid);
             const isSharedWithMyTeam = userData.teamId && f.sharedWithTeams?.includes(userData.teamId);
             return isPrivileged || isSharedWithMe || isSharedWithMyTeam;
@@ -135,14 +124,10 @@ export default function DocumentsPage() {
     const displayAssets = React.useMemo(() => {
         if (!rawAssets || !user) return [];
         const folderFiltered = rawAssets.filter(a => a.folderId === currentFolderId);
-        
         return folderFiltered.filter(a => {
             if (isPrivileged) return true;
             if (a.ownerId === user.uid) return true;
             if (a.isInvoice && a.authorizedUids?.includes(user.uid)) return true;
-            
-            // If in a folder, permission is inherited from folder (handled by displayFolders navigation)
-            // but we double check for safety in the final list
             return true; 
         });
     }, [rawAssets, currentFolderId, isPrivileged, user]);
@@ -163,14 +148,14 @@ export default function DocumentsPage() {
             createdAt: serverTimestamp(),
         };
         await addDocumentNonBlocking(collection(firestore, 'folders'), payload);
-        toast({ title: 'Tactical Folder Provisioned' });
+        toast({ title: 'Folder Created' });
         setIsFolderDialogOpen(false);
         setFolderName("");
     };
 
     const handleSaveAsset = async () => {
         if (!assetTitle || (!assetLink && activeTab === 'link') || !user || !userData || !isPrivileged) {
-            toast({ variant: 'destructive', title: 'Action Restricted', description: 'Administrative authorization required.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Fill all required fields.' });
             return;
         }
 
@@ -196,7 +181,7 @@ export default function DocumentsPage() {
         };
 
         await addDocumentNonBlocking(collection(firestore, 'vault_assets'), payload);
-        toast({ title: isInvoice ? 'Client Invoice Logged' : 'Mission Asset Synchronized' });
+        toast({ title: isInvoice ? 'Invoice Saved' : 'Document Saved' });
         setIsAssetDialogOpen(false);
         resetAssetForm();
     };
@@ -210,9 +195,9 @@ export default function DocumentsPage() {
             const url = await getDownloadURL(snapshot.ref);
             setAssetLink(url);
             if (!assetTitle) setAssetTitle(file.name);
-            toast({ title: "Binary Transmitted", description: "File encrypted and stored." });
+            toast({ title: "File Uploaded" });
         } catch (error: any) {
-            toast({ variant: "destructive", title: "Transmission Failed", description: error.message });
+            toast({ variant: "destructive", title: "Upload Failed", description: error.message });
         } finally {
             setIsUploading(false);
         }
@@ -225,7 +210,7 @@ export default function DocumentsPage() {
             sharedWithTeams: selectedTeamIds,
             sharedWithUids: selectedUserIds
         });
-        toast({ title: "Fleet Access Updated" });
+        toast({ title: "Sharing Updated" });
         setIsShareDialogOpen(false);
     };
 
@@ -239,36 +224,35 @@ export default function DocumentsPage() {
 
     return (
         <div className="space-y-6 animate-fade-in-up">
-            <PageHeader title="Digital Document Vault" description="Manage secure project folders and audited client invoices.">
+            <PageHeader title="Documents" description="Store and manage company documents and invoices.">
                 <div className="flex gap-2">
                     {isPrivileged ? (
                         <>
                             {!currentFolderId && (
                                 <Dialog open={isFolderDialogOpen} onOpenChange={setIsFolderDialogOpen}>
                                     <DialogTrigger asChild>
-                                        <Button variant="outline" className="rounded-full h-11 bg-white/50 border-none ring-1 ring-border/50 shadow-sm">
+                                        <Button variant="outline" className="rounded-none h-11 bg-white shadow-sm ring-1 ring-border/50">
                                             <FolderPlus className="size-4 mr-2" /> New Folder
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="rounded-3xl sm:max-w-md">
+                                    <DialogContent className="rounded-none sm:max-w-md p-8">
                                         <DialogHeader>
-                                            <DialogTitle className="text-xl font-black uppercase tracking-tighter">Create Tactical Folder</DialogTitle>
-                                            <DialogDescription>Establish a new intelligence container.</DialogDescription>
+                                            <DialogTitle className="text-xl font-black uppercase tracking-tighter">Create Folder</DialogTitle>
                                         </DialogHeader>
                                         <div className="grid gap-6 py-4">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase text-primary">Project Designation</Label>
-                                                <Input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="e.g., Project Alpha Development" className="rounded-xl h-11" />
+                                                <Label className="text-[10px] font-black uppercase text-primary">Folder Name</Label>
+                                                <Input value={folderName} onChange={e => setFolderName(e.target.value)} placeholder="e.g., Marketing Files" className="rounded-none h-11" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase text-primary">Visual Identity</Label>
+                                                <Label className="text-[10px] font-black uppercase text-primary">Color</Label>
                                                 <div className="grid grid-cols-5 gap-2">
                                                     {(Object.keys(FOLDER_COLORS) as Array<keyof typeof FOLDER_COLORS>).map(c => (
                                                         <button
                                                             key={c}
                                                             onClick={() => setFolderColor(c)}
                                                             className={cn(
-                                                                "h-10 rounded-xl transition-all border-2",
+                                                                "h-10 rounded-none transition-all border-2",
                                                                 folderColor === c ? "border-primary scale-105" : "border-transparent",
                                                                 FOLDER_COLORS[c].split(' ')[0]
                                                             )}
@@ -278,44 +262,41 @@ export default function DocumentsPage() {
                                             </div>
                                         </div>
                                         <DialogFooter>
-                                            <Button onClick={handleCreateFolder} className="w-full rounded-full h-12 font-black uppercase shadow-xl shadow-primary/20">Initialize Container</Button>
+                                            <Button onClick={handleCreateFolder} className="w-full rounded-none h-12 font-black uppercase shadow-xl shadow-primary/20">Create Folder</Button>
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
                             )}
                             <Dialog open={isAssetDialogOpen} onOpenChange={setIsAssetDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button className="rounded-full h-11 shadow-lg">
-                                        <Plus className="size-4 mr-2" /> Submit Asset
+                                    <Button className="rounded-none h-11 shadow-lg font-black uppercase text-[10px] tracking-widest px-6">
+                                        <Plus className="size-4 mr-2" /> Add Document
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="rounded-3xl sm:max-w-md">
-                                    <DialogHeader>
-                                        <DialogTitle className="text-xl font-black uppercase tracking-tighter">Sync Mission Intelligence</DialogTitle>
-                                        <DialogDescription>
-                                            {currentFolderId ? `Uploading to Sector: ${currentFolder?.name}` : "Global Asset Upload"}
-                                        </DialogDescription>
+                                <DialogContent className="rounded-none sm:max-w-md p-0 overflow-hidden">
+                                    <DialogHeader className="p-8 border-b bg-white">
+                                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Add Document</DialogTitle>
                                     </DialogHeader>
-                                    <div className="grid gap-6 py-4">
+                                    <div className="grid gap-6 p-8 bg-muted/5">
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-primary">Asset Title</Label>
-                                            <Input value={assetTitle} onChange={e => setAssetTitle(e.target.value)} placeholder="e.g., Tactical Briefing PDF" className="rounded-xl h-11" />
+                                            <Label className="text-[10px] font-black uppercase text-primary">Document Title</Label>
+                                            <Input value={assetTitle} onChange={e => setAssetTitle(e.target.value)} placeholder="e.g., Project PDF" className="rounded-none h-11" />
                                         </div>
                                         
-                                        <div className="p-4 bg-muted/20 rounded-2xl flex items-center justify-between border border-dashed">
+                                        <div className="p-4 bg-white ring-1 ring-border rounded-none flex items-center justify-between">
                                             <div className="space-y-0.5">
-                                                <Label className="text-xs font-black uppercase">Client Invoice?</Label>
-                                                <p className="text-[10px] text-muted-foreground uppercase font-bold">Restrict to Admin & Project Head</p>
+                                                <Label className="text-xs font-black uppercase">Is this an Invoice?</Label>
+                                                <p className="text-[10px] text-muted-foreground uppercase font-bold">Restrict to Admin only</p>
                                             </div>
                                             <Switch checked={isInvoice} onCheckedChange={setIsInvoice} />
                                         </div>
 
                                         {isInvoice && (
                                             <div className="space-y-2 animate-fade-in-up">
-                                                <Label className="text-[10px] font-black uppercase text-primary">Target Client</Label>
+                                                <Label className="text-[10px] font-black uppercase text-primary">Select Client</Label>
                                                 <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                                                    <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select Client Account" /></SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectTrigger className="rounded-none h-11"><SelectValue placeholder="Which client?" /></SelectTrigger>
+                                                    <SelectContent className="rounded-none">
                                                         {clients?.map(c => <SelectItem key={c.id} value={c.id}>{c.companyName}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
@@ -323,29 +304,29 @@ export default function DocumentsPage() {
                                         )}
 
                                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                                            <TabsList className="grid w-full grid-cols-2 h-11 rounded-xl bg-muted/30 p-1">
-                                                <TabsTrigger value="link" className="text-[10px] font-black uppercase rounded-lg">Cloud Link</TabsTrigger>
-                                                <TabsTrigger value="file" className="text-[10px] font-black uppercase rounded-lg">Binary Upload</TabsTrigger>
+                                            <TabsList className="grid w-full grid-cols-2 h-11 rounded-none bg-muted/30 p-1">
+                                                <TabsTrigger value="link" className="text-[10px] font-black uppercase rounded-none">Link</TabsTrigger>
+                                                <TabsTrigger value="file" className="text-[10px] font-black uppercase rounded-none">Upload File</TabsTrigger>
                                             </TabsList>
                                             <TabsContent value="link" className="pt-4 space-y-4">
                                                 <div className="space-y-2">
-                                                    <Label className="text-[10px] font-black uppercase text-muted-foreground">Repository URL</Label>
-                                                    <Input value={assetLink} onChange={e => setAssetLink(e.target.value)} placeholder="https://drive.google.com/..." className="rounded-xl h-11" />
+                                                    <Label className="text-[10px] font-black uppercase text-muted-foreground">URL</Label>
+                                                    <Input value={assetLink} onChange={e => setAssetLink(e.target.value)} placeholder="https://..." className="rounded-none h-11" />
                                                 </div>
                                             </TabsContent>
                                             <TabsContent value="file" className="pt-4 space-y-4">
                                                 <div className="relative group">
                                                     <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} disabled={isUploading} />
-                                                    <Button variant="outline" className="w-full h-14 rounded-xl border-dashed border-primary/40 font-bold uppercase text-[10px] gap-2" disabled={isUploading}>
+                                                    <Button variant="outline" className="w-full h-14 rounded-none border-dashed border-primary/40 font-bold uppercase text-[10px] gap-2" disabled={isUploading}>
                                                         {isUploading ? <Loader2 className="size-4 animate-spin"/> : <FileUp className="size-4" />}
-                                                        {assetLink && activeTab === 'file' ? "Asset Selected" : "Select Binary Mission Data"}
+                                                        {assetLink && activeTab === 'file' ? "File Selected" : "Select File"}
                                                     </Button>
                                                 </div>
                                             </TabsContent>
                                         </Tabs>
                                     </div>
-                                    <DialogFooter>
-                                        <Button onClick={handleSaveAsset} disabled={isUploading || !assetLink || (isInvoice && !selectedClientId)} className="w-full rounded-full h-12 font-black uppercase">Finalize Synchronization</Button>
+                                    <DialogFooter className="p-8 border-t bg-white">
+                                        <Button onClick={handleSaveAsset} disabled={isUploading || !assetLink || (isInvoice && !selectedClientId)} className="w-full rounded-none h-12 font-black uppercase shadow-xl shadow-primary/20">Save Document</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
@@ -353,49 +334,47 @@ export default function DocumentsPage() {
                     ) : (
                         <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-full border border-amber-100 shadow-sm animate-fade-in-up">
                             <AlertCircle className="size-4 text-amber-600" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Audit Only</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">View Only</span>
                         </div>
                     )}
                 </div>
             </PageHeader>
 
-            {/* Breadcrumb Navigation */}
             <div className="flex items-center gap-2 px-2">
                 <Button 
                     variant="ghost" 
                     size="sm" 
-                    className={cn("rounded-full text-[10px] font-black uppercase tracking-widest", !currentFolderId && "text-primary")}
+                    className={cn("rounded-none text-[10px] font-black uppercase tracking-widest", !currentFolderId && "text-primary")}
                     onClick={() => setCurrentFolderId(null)}
                 >
-                    Tactical Vault
+                    Documents
                 </Button>
                 {currentFolderId && (
                     <>
                         <ChevronRight className="size-3 opacity-30" />
-                        <Badge variant="secondary" className="rounded-full px-3 py-1 font-black text-[10px] uppercase bg-primary/10 text-primary border-none">
-                            {currentFolder?.name} Sector
+                        <Badge variant="secondary" className="rounded-none px-3 py-1 font-black text-[10px] uppercase bg-primary/10 text-primary border-none">
+                            {currentFolder?.name}
                         </Badge>
                         <Separator className="flex-1 opacity-0" />
-                        <Button variant="ghost" size="icon" onClick={() => setCurrentFolderId(null)} className="h-8 w-8 rounded-full hover:bg-primary/5">
+                        <Button variant="ghost" size="icon" onClick={() => setCurrentFolderId(null)} className="h-8 w-8 rounded-none hover:bg-primary/5">
                             <ArrowLeft className="size-4" />
                         </Button>
                     </>
                 )}
             </div>
 
-            {/* Main Content Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {!currentFolderId && displayFolders.map(f => {
                     const assetCount = rawAssets?.filter(a => a.folderId === f.id).length || 0;
                     return (
                         <Card 
                             key={f.id} 
-                            className="group border-none ring-1 ring-border/50 shadow-sm hover:shadow-xl transition-all duration-300 rounded-[2rem] overflow-hidden cursor-pointer bg-white"
+                            className="group border-none ring-1 ring-border/50 shadow-sm hover:shadow-xl transition-all duration-300 rounded-none overflow-hidden cursor-pointer bg-white"
                             onClick={() => setCurrentFolderId(f.id)}
                         >
                             <div className={cn("h-12 flex items-end justify-between px-6", FOLDER_COLORS[f.color] || FOLDER_COLORS.blue)}>
-                                <div className="w-16 h-4 bg-white/40 rounded-t-xl" />
-                                <Badge variant="secondary" className="mb-2 rounded-full px-2 py-0 h-5 font-black text-[8px] uppercase tracking-widest bg-white/50 border-none flex gap-1 items-center">
+                                <div className="w-16 h-4 bg-white/40 rounded-t-lg" />
+                                <Badge variant="secondary" className="mb-2 rounded-none px-2 py-0 h-5 font-black text-[8px] uppercase tracking-widest bg-white/50 border-none flex gap-1 items-center">
                                     <Files className="size-2" />
                                     {assetCount}
                                 </Badge>
@@ -404,19 +383,19 @@ export default function DocumentsPage() {
                                 <div className="flex items-start justify-between">
                                     <div className="space-y-1">
                                         <CardTitle className="text-lg font-black uppercase tracking-tighter truncate max-w-[180px]">{f.name}</CardTitle>
-                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Modified: {format(f.createdAt?.toDate() || new Date(), 'dd MMM yyyy')}</p>
+                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Date: {format(f.createdAt?.toDate() || new Date(), 'dd MMM yyyy')}</p>
                                     </div>
                                     {isPrivileged && (
                                         <div className="flex items-center gap-1">
                                             <Button 
                                                 variant="ghost" 
                                                 size="icon" 
-                                                className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
+                                                className="h-8 w-8 rounded-none opacity-0 group-hover:opacity-100 transition-opacity" 
                                                 onClick={(e) => { e.stopPropagation(); setSharingFolder(f); setSelectedTeamIds(f.sharedWithTeams || []); setSelectedUserIds(f.sharedWithUids || []); setIsShareDialogOpen(true); }}
                                             >
                                                 <Share2 className="size-3.5" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={(e) => { e.stopPropagation(); deleteDocumentNonBlocking(doc(firestore, 'folders', f.id)); }}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={(e) => { e.stopPropagation(); deleteDocumentNonBlocking(doc(firestore, 'folders', f.id)); }}>
                                                 <Trash2 className="size-3.5" />
                                             </Button>
                                         </div>
@@ -424,9 +403,9 @@ export default function DocumentsPage() {
                                 </div>
                             </CardHeader>
                             <CardContent className="p-6 pt-0 flex items-center justify-between">
-                                <div className="flex -space-x-2">
-                                    <div className="size-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">{f.ownerName[0]}</div>
-                                    {(f.sharedWithUids?.length || 0) > 0 && <div className="size-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">+{f.sharedWithUids.length}</div>}
+                                <div className="flex -space-x-1">
+                                    <div className="size-6 rounded-none bg-primary/20 flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">{f.ownerName[0]}</div>
+                                    {(f.sharedWithUids?.length || 0) > 0 && <div className="size-6 rounded-none bg-muted flex items-center justify-center text-[10px] font-black border-2 border-white ring-1 ring-border/50">+{f.sharedWithUids.length}</div>}
                                 </div>
                                 <Folder className="size-5 opacity-20" />
                             </CardContent>
@@ -435,36 +414,36 @@ export default function DocumentsPage() {
                 })}
 
                 {displayAssets.map(a => (
-                    <Card key={a.id} className="group border-none ring-1 ring-border/50 shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden">
+                    <Card key={a.id} className="group border-none ring-1 ring-border/50 shadow-sm hover:shadow-md transition-all rounded-none bg-white overflow-hidden">
                         <CardHeader className="p-6">
                             <div className="flex items-center gap-4">
-                                <div className={cn("p-3 rounded-2xl", a.isInvoice ? "bg-emerald-50 text-emerald-600" : a.sourceType === 'file' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600")}>
+                                <div className={cn("p-3 rounded-none", a.isInvoice ? "bg-emerald-50 text-emerald-600" : a.sourceType === 'file' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600")}>
                                     {a.isInvoice ? <ReceiptIndianRupee className="size-5" /> : a.sourceType === 'file' ? <FileText className="size-5" /> : <LinkIcon className="size-5" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <CardTitle className="text-sm font-bold truncate">{a.title}</CardTitle>
                                     <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                                        {a.isInvoice ? `Invoice: ${a.clientName}` : a.sourceType === 'file' ? 'Secure File' : 'Cloud Link'}
+                                        {a.isInvoice ? `Invoice: ${a.clientName}` : a.sourceType === 'file' ? 'File' : 'Link'}
                                     </p>
                                 </div>
                             </div>
                         </CardHeader>
                         <CardContent className="px-6 pb-6 pt-0 space-y-4">
-                            <div className="p-3 bg-muted/20 rounded-2xl border border-dashed border-border/50 space-y-2">
+                            <div className="p-3 bg-muted/20 rounded-none border border-dashed border-border/50 space-y-2">
                                 <div className="flex justify-between items-center text-[8px] font-black uppercase text-muted-foreground">
-                                    <span>Source: {a.ownerName}</span>
-                                    <span>{format(a.uploadedAt?.toDate() || new Date(), 'dd/MM/yy')}</span>
+                                    <span>By: {a.ownerName}</span>
+                                    <span>{format(a.uploadedAt?.toDate() || new Date(), 'dd MMM')}</span>
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button asChild className="flex-1 rounded-xl h-10 font-bold uppercase text-[9px] tracking-widest">
+                                <Button asChild className="flex-1 rounded-none h-10 font-bold uppercase text-[9px] tracking-widest shadow-sm">
                                     <Link href={a.link} target="_blank" download={a.sourceType === 'file'}>
                                         {a.sourceType === 'file' ? <Download className="size-3 mr-2" /> : <ExternalLink className="size-3 mr-2" />}
-                                        {a.sourceType === 'file' ? 'Download' : 'Access Link'}
+                                        {a.sourceType === 'file' ? 'Download' : 'Open'}
                                     </Link>
                                 </Button>
                                 {isPrivileged && (
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-destructive hover:bg-red-50" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'vault_assets', a.id))}>
+                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-none text-destructive hover:bg-red-50" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'vault_assets', a.id))}>
                                         <Trash2 className="size-4" />
                                     </Button>
                                 )}
@@ -474,30 +453,29 @@ export default function DocumentsPage() {
                 ))}
 
                 {(foldersLoading || assetsLoading) && [...Array(4)].map((_, i) => (
-                    <Card key={i} className="h-48 rounded-[2rem] bg-muted animate-pulse border-none shadow-none" />
+                    <Card key={i} className="h-48 rounded-none bg-muted animate-pulse border-none shadow-none" />
                 ))}
 
                 {!foldersLoading && !assetsLoading && displayFolders.length === 0 && displayAssets.length === 0 && (
                     <div className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-30">
                         <Folder className="size-16 mb-4" />
-                        <p className="font-black uppercase text-xs tracking-[0.3em]">Operational Grid Clear</p>
+                        <p className="font-black uppercase text-xs tracking-[0.3em]">No documents found</p>
                     </div>
                 )}
             </div>
 
             <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-                <DialogContent className="rounded-3xl sm:max-w-lg">
+                <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                     <DialogHeader>
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Fleet Distribution Protocol</DialogTitle>
-                        <DialogDescription>Select tactical teams or specific officials.</DialogDescription>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Share Folder</DialogTitle>
                     </DialogHeader>
                     <ScrollArea className="max-h-[60vh] py-4">
                         <div className="space-y-8 px-1">
                             <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Users className="size-3" /> Team Authorization</Label>
+                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Users className="size-3" /> Teams</Label>
                                 <div className="grid grid-cols-1 gap-2">
                                     {allTeams?.map(t => (
-                                        <div key={t.id} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-colors border border-border/50">
+                                        <div key={t.id} className="flex items-center gap-3 p-3 rounded-none bg-muted/20 hover:bg-muted/40 transition-colors border border-border/50">
                                             <Checkbox id={`team-${t.id}`} checked={selectedTeamIds.includes(t.id)} onCheckedChange={c => setSelectedTeamIds(prev => c ? [...prev, t.id] : prev.filter(id => id !== t.id))} />
                                             <Label htmlFor={`team-${t.id}`} className="font-bold text-xs uppercase cursor-pointer flex-1">{t.name}</Label>
                                         </div>
@@ -506,10 +484,10 @@ export default function DocumentsPage() {
                             </div>
                             <Separator className="opacity-50" />
                             <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><UserCircle className="size-3" /> Personnel Access</Label>
+                                <Label className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><UserCircle className="size-3" /> People</Label>
                                 <div className="grid grid-cols-1 gap-2">
                                     {allUsers?.filter(u => u.id !== user?.uid).map(u => (
-                                        <div key={u.id} className="flex items-center gap-3 p-3 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-colors border border-border/50">
+                                        <div key={u.id} className="flex items-center gap-3 p-3 rounded-none bg-muted/20 hover:bg-muted/40 transition-colors border border-border/50">
                                             <Checkbox id={`user-${u.id}`} checked={selectedUserIds.includes(u.id)} onCheckedChange={c => setSelectedUserIds(prev => c ? [...prev, u.id] : prev.filter(id => id !== u.id))} />
                                             <div className="flex-1 cursor-pointer" onClick={() => setSelectedUserIds(prev => selectedUserIds.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id])}>
                                                 <p className="font-bold text-xs uppercase">{u.firstName} {u.lastName}</p>
@@ -522,7 +500,7 @@ export default function DocumentsPage() {
                         </div>
                     </ScrollArea>
                     <DialogFooter>
-                        <Button onClick={handleUpdateSharing} className="w-full rounded-full h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Authorize Distribution</Button>
+                        <Button onClick={handleUpdateSharing} className="w-full rounded-none h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20">Save Sharing</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

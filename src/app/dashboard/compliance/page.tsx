@@ -52,7 +52,7 @@ export default function CompliancePage() {
 
     const handleFileReport = () => {
         if (!selectedUserId || !reason || !user || !currentUserData) {
-            toast({ variant: 'destructive', title: 'Missing Information' });
+            toast({ variant: 'destructive', title: 'Missing Info' });
             return;
         }
 
@@ -68,7 +68,7 @@ export default function CompliancePage() {
         };
 
         addDocumentNonBlocking(collection(firestore, 'compliance_reports'), payload);
-        toast({ title: 'Compliance Report Filed', description: 'The CEO has been notified of this high-priority alert.' });
+        toast({ title: 'Complaint Filed', description: 'The record has been added to the system.' });
         setIsDialogOpen(false);
         setReason("");
         setSelectedUserId("");
@@ -76,88 +76,87 @@ export default function CompliancePage() {
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Compliance Matrix" description="Internal oversight and professional standards auditing.">
-                {isHR && (
+            <PageHeader title="Complaints" description="Manage and track internal complaints and staff issues." />
+
+            {isHR && (
+                <div className="flex justify-end">
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button className="rounded-full h-11 shadow-lg bg-red-600 hover:bg-red-700">
-                                <Plus className="mr-2 h-4 w-4" /> File Protocol Alert
+                            <Button className="rounded-none h-11 shadow-lg bg-red-600 hover:bg-red-700 font-black uppercase text-[10px] tracking-widest px-6">
+                                <Plus className="mr-2 h-4 w-4" /> File Complaint
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-3xl sm:max-w-lg">
-                            <DialogHeader>
-                                <DialogTitle className="text-xl font-black uppercase tracking-tighter">Protocol Violation Filing</DialogTitle>
-                                <DialogDescription>Formally document an internal compliance issue.</DialogDescription>
+                        <DialogContent className="rounded-none sm:max-w-lg p-8 border-none shadow-3xl">
+                            <DialogHeader className="text-left">
+                                <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">New Complaint</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Record a staff issue or complaint</DialogDescription>
                             </DialogHeader>
-                            <div className="grid gap-6 py-4">
+                            <div className="grid gap-6 py-6 text-left">
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Subject Employee</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Employee</Label>
                                     <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                                        <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select staff member" /></SelectTrigger>
-                                        <SelectContent>
+                                        <SelectTrigger className="rounded-none h-11 bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="Select staff member" /></SelectTrigger>
+                                        <SelectContent className="rounded-none">
                                             {users?.filter(u => u.id !== user?.uid).map(u => (
-                                                <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
+                                                <SelectItem key={u.id} value={u.id} className="uppercase font-bold text-xs">{u.firstName} {u.lastName}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Priority Tier</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Priority</Label>
                                     <Select value={severity} onValueChange={setSeverity}>
-                                        <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Low">Low (Procedural)</SelectItem>
-                                            <SelectItem value="Medium">Medium (Standard)</SelectItem>
-                                            <SelectItem value="High">High (Urgent)</SelectItem>
-                                            <SelectItem value="Critical">Critical (Immediate)</SelectItem>
+                                        <SelectTrigger className="rounded-none h-11 bg-muted/20 border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
+                                        <SelectContent className="rounded-none">
+                                            <SelectItem value="Low">Low</SelectItem>
+                                            <SelectItem value="Medium">Medium</SelectItem>
+                                            <SelectItem value="High">High</SelectItem>
+                                            <SelectItem value="Critical">Critical</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary">Detailed Justification</Label>
-                                    <Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Describe the violation in detail..." className="rounded-2xl min-h-[120px]" />
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Description</Label>
+                                    <Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Provide details..." className="rounded-none min-h-[120px] bg-muted/20 border-none ring-1 ring-border/50" />
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button onClick={handleFileReport} className="w-full rounded-full h-12 font-black uppercase bg-red-600 shadow-xl shadow-red-600/20">Transmit to CEO</Button>
+                                <Button onClick={handleFileReport} className="w-full rounded-none h-12 font-black uppercase tracking-widest shadow-xl bg-red-600 hover:bg-red-700 text-white">Save Complaint</Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-                )}
-            </PageHeader>
+                </div>
+            )}
 
-            <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
-                <CardHeader className="bg-muted/10 border-b">
-                    <CardTitle className="text-lg font-headline flex items-center gap-2">
-                        <FileWarning className="size-5 text-red-600" />
-                        Executive Compliance Log
+            <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm rounded-none">
+                <CardHeader className="bg-muted/10 border-b p-6">
+                    <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter text-primary">
+                        <FileWarning className="size-5" />
+                        Complaints Log
                     </CardTitle>
-                    <CardDescription>Consolidated record of internal procedural alerts.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow className="hover:bg-transparent border-none">
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Date</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Subject</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Priority</TableHead>
-                                <TableHead className="font-black uppercase tracking-tighter text-[10px] py-4">Auditor</TableHead>
-                                <TableHead className="text-right font-black uppercase tracking-tighter text-[10px] py-4">Action</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-6">Date</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-4">Employee</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-4">Priority</TableHead>
+                                <TableHead className="font-black uppercase tracking-widest text-[9px] py-4">By</TableHead>
+                                <TableHead className="text-right font-black uppercase tracking-widest text-[9px] py-4 px-6">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={5} className="h-32 text-center animate-pulse font-bold uppercase text-xs">Scanning registry...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="h-32 text-center animate-pulse font-black uppercase text-xs opacity-20">Scanning...</TableCell></TableRow>
                             ) : reports && reports.length > 0 ? (
                                 reports.map(r => (
-                                    <TableRow key={r.id} className="border-border/50">
-                                        <TableCell className="py-4">
-                                            <span className="font-bold text-xs">{r.timestamp ? format(r.timestamp.toDate(), 'MMM d, p') : '...'}</span>
-                                        </TableCell>
-                                        <TableCell className="font-bold py-4">{r.employeeName}</TableCell>
+                                    <TableRow key={r.id} className="border-border/50 hover:bg-primary/5 transition-colors">
+                                        <TableCell className="py-4 px-6 text-xs font-bold">{r.timestamp ? format(r.timestamp.toDate(), 'MMM d, p') : '...'}</TableCell>
+                                        <TableCell className="font-black text-xs uppercase text-slate-800">{r.employeeName}</TableCell>
                                         <TableCell className="py-4">
                                             <Badge className={cn(
-                                                "rounded-full text-[9px] uppercase font-black tracking-widest border-none",
+                                                "rounded-none text-[8px] uppercase font-black tracking-widest border-none h-6 px-3 shadow-sm",
                                                 r.severity === 'Critical' ? "bg-red-600 text-white" :
                                                 r.severity === 'High' ? "bg-orange-500 text-white" :
                                                 r.severity === 'Medium' ? "bg-yellow-500 text-black" : "bg-blue-500 text-white"
@@ -165,16 +164,18 @@ export default function CompliancePage() {
                                                 {r.severity}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="py-4 text-xs font-medium text-muted-foreground">{r.filedByName}</TableCell>
-                                        <TableCell className="text-right py-4">
-                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'compliance_reports', r.id))}>
-                                                <Trash2 className="size-4" />
-                                            </Button>
+                                        <TableCell className="py-4 text-[10px] font-bold text-muted-foreground uppercase opacity-60">{r.filedByName}</TableCell>
+                                        <TableCell className="text-right py-4 px-6">
+                                            {isHR && (
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:bg-red-50 rounded-none h-8 w-8" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'compliance_reports', r.id))}>
+                                                    <Trash2 className="size-4" />
+                                                </Button>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
-                                <TableRow><TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">No compliance alerts found.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="h-48 text-center text-muted-foreground italic font-black text-[10px] uppercase opacity-30">No complaints found.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>
