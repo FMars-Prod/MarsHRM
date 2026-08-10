@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -42,7 +43,8 @@ export default function CompliancePage() {
     const currentUserDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
     const { data: currentUserData } = useDoc<any>(currentUserDocRef);
     const userRole = currentUserData?.role;
-    const isHR = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+    // Standardize Executive Tier access
+    const isExecutive = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
     const { data: users } = useCollection<any>(usersQuery);
@@ -78,7 +80,7 @@ export default function CompliancePage() {
         <div className="space-y-6">
             <PageHeader title="Complaints" description="Manage and track internal complaints and staff issues." />
 
-            {isHR && (
+            {isExecutive && (
                 <div className="flex justify-end">
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogTrigger asChild>
@@ -166,7 +168,7 @@ export default function CompliancePage() {
                                         </TableCell>
                                         <TableCell className="py-4 text-[10px] font-bold text-muted-foreground uppercase opacity-60">{r.filedByName}</TableCell>
                                         <TableCell className="text-right py-4 px-6">
-                                            {isHR && (
+                                            {isExecutive && (
                                                 <Button variant="ghost" size="icon" className="text-destructive hover:bg-red-50 rounded-none h-8 w-8" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'compliance_reports', r.id))}>
                                                     <Trash2 className="size-4" />
                                                 </Button>

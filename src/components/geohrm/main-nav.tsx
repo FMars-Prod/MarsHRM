@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -49,77 +50,82 @@ import {
 } from "lucide-react";
 import React from "react";
 
+// Define Tactical Role Tiers
+const EXEC_ROLES = ['HR Manager', 'CEO/MD', 'CEO/Admin'];
+const LEAD_ROLES = ['Team Lead', ...EXEC_ROLES];
+const ALL_ROLES = ['Member', ...LEAD_ROLES];
+
 const groups = [
   {
     label: "HOME",
     links: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "totalNotificationsCount" },
-      { href: "https://studio--studio-6104224101-c3e7e.us-central1.hosted.app/", label: "Admin Desk", icon: ShieldCheck, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/reports", label: "Workforce Reports", icon: FileText, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/todo", label: "Task Centre", icon: ListTodo, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ALL_ROLES, badgeKey: "totalNotificationsCount" },
+      { href: "https://studio--studio-6104224101-c3e7e.us-central1.hosted.app/", label: "Admin Desk", icon: ShieldCheck, roles: EXEC_ROLES },
+      { href: "/dashboard/reports", label: "Workforce Reports", icon: FileText, roles: ALL_ROLES },
+      { href: "/dashboard/todo", label: "Task Centre", icon: ListTodo, roles: ALL_ROLES },
     ]
   },
   {
     label: "BUSINESS",
     links: [
-      { href: "/dashboard/clients", label: "Client Management", icon: Users, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/projects", label: "Projects", icon: Briefcase, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/pipeline", label: "Sales Pipeline", icon: TrendingUp, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/marketing", label: "Marketing", icon: Zap, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/finance", label: "Finance", icon: DollarSign, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/training", label: "Training", icon: Beaker, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+      { href: "/dashboard/clients", label: "Client Management", icon: Users, roles: EXEC_ROLES },
+      { href: "/dashboard/projects", label: "Projects", icon: Briefcase, roles: EXEC_ROLES },
+      { href: "/dashboard/pipeline", label: "Sales Pipeline", icon: TrendingUp, roles: EXEC_ROLES },
+      { href: "/dashboard/marketing", label: "Marketing", icon: Zap, roles: EXEC_ROLES },
+      { href: "/dashboard/finance", label: "Finance", icon: DollarSign, roles: EXEC_ROLES },
+      { href: "/dashboard/training", label: "Training", icon: Beaker, roles: ALL_ROLES },
     ]
   },
   {
     label: "WORKFORCE",
     links: [
-      { href: "/dashboard/users", label: "Employees", icon: UserIcon, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/leave", label: "Leave Management", icon: CalendarOff, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "pendingLeaveCount" },
-      { href: "/dashboard/payslips", label: "Payroll", icon: Banknote, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/analytics", label: "Performance", icon: BarChart3, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+      { href: "/dashboard/users", label: "Employees", icon: UserIcon, roles: EXEC_ROLES },
+      { href: "/dashboard/attendance", label: "Attendance", icon: Clock, roles: ALL_ROLES },
+      { href: "/dashboard/leave", label: "Leave Management", icon: CalendarOff, roles: ALL_ROLES, badgeKey: "pendingLeaveCount" },
+      { href: "/dashboard/payslips", label: "Payroll", icon: Banknote, roles: ALL_ROLES },
+      { href: "/dashboard/analytics", label: "Performance", icon: BarChart3, roles: EXEC_ROLES },
     ]
   },
   {
     label: "ORGANIZATION",
     links: [
-      { href: "/dashboard/branches", label: "Offices", icon: Building2, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/departments", label: "Departments", icon: Building, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/org-structure", label: "Organization Chart", icon: Network, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/assets", label: "Asset Management", icon: Laptop, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+      { href: "/dashboard/branches", label: "Offices", icon: Building2, roles: EXEC_ROLES },
+      { href: "/dashboard/departments", label: "Departments", icon: Building, roles: EXEC_ROLES },
+      { href: "/dashboard/teams", label: "Teams", icon: Users, roles: ALL_ROLES },
+      { href: "/dashboard/org-structure", label: "Organization Chart", icon: Network, roles: ALL_ROLES },
+      { href: "/dashboard/assets", label: "Asset Management", icon: Laptop, roles: ALL_ROLES },
     ]
   },
   {
     label: "OPERATIONS",
     links: [
-      { href: "/dashboard/attendance-requests", label: "Approvals", icon: CheckCircle2, roles: ['Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "pendingAttRequestsCount" },
-      { href: "/dashboard/documents", label: "Documents", icon: FileBox, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/monitor", label: "Activity Monitor", icon: Activity, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+      { href: "/dashboard/attendance-requests", label: "Approvals", icon: CheckCircle2, roles: LEAD_ROLES, badgeKey: "pendingAttRequestsCount" },
+      { href: "/dashboard/documents", label: "Documents", icon: FileBox, roles: ALL_ROLES },
+      { href: "/dashboard/compliance", label: "Complaints", icon: ShieldCheck, roles: EXEC_ROLES },
+      { href: "/dashboard/monitor", label: "Activity Monitor", icon: Activity, roles: EXEC_ROLES },
     ]
   },
   {
     label: "COMMUNICATION",
     links: [
-      { href: "/dashboard/announcements", label: "Company Feed", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "totalFeedNotifications" },
-      { href: "/dashboard/meetings", label: "Meetings", icon: Video, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/holidays", label: "Holiday Calendar", icon: CalendarDays, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/issues", label: "Support Centre", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
+      { href: "/dashboard/announcements", label: "Company Feed", icon: Megaphone, roles: ALL_ROLES, badgeKey: "totalFeedNotifications" },
+      { href: "/dashboard/meetings", label: "Meetings", icon: Video, roles: ALL_ROLES },
+      { href: "/dashboard/holidays", label: "Holiday Calendar", icon: CalendarDays, roles: EXEC_ROLES },
+      { href: "/dashboard/issues", label: "Support Centre", icon: MessageSquareWarning, roles: ALL_ROLES, badgeKey: "ticketUpdateCount" },
     ]
   },
   {
     label: "ADMINISTRATION",
     links: [
-      { href: "/dashboard/users", label: "User Management", icon: Settings, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/report-templates", label: "Reports", icon: LayoutTemplate, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/settings", label: "System Settings", icon: Settings, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+      { href: "/dashboard/users", label: "User Management", icon: Settings, roles: EXEC_ROLES },
+      { href: "/dashboard/report-templates", label: "Reports", icon: LayoutTemplate, roles: EXEC_ROLES },
+      { href: "/dashboard/settings", label: "System Settings", icon: Settings, roles: EXEC_ROLES },
     ]
   },
   {
     label: "ACCOUNT",
     links: [
-      { href: "/dashboard/profile", label: "My Profile", icon: User, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+      { href: "/dashboard/profile", label: "My Profile", icon: User, roles: ALL_ROLES },
     ]
   }
 ];

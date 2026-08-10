@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -86,6 +87,7 @@ export default function DocumentsPage() {
     const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
     const { data: userData } = useDoc<any>(userDocRef);
     const userRole = userData?.role;
+    // HR is privileged for document management
     const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
     const teamsQuery = useMemoFirebase(() => query(collection(firestore, 'teams')), [firestore]);

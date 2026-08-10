@@ -55,7 +55,8 @@ export default function AttendanceRequestsPage() {
     const userDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
     const { data: userData } = useDoc<any>(userDocRef);
     const userRole = userData?.role || 'Member';
-    const isPrivileged = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+    // HR is definitely in the executive tier
+    const isExecutive = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
     const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
     const { data: allUsers } = useCollection<UserData>(usersQuery);
@@ -92,14 +93,15 @@ export default function AttendanceRequestsPage() {
             ? query(base, where("status", "==", "Pending"), orderBy("requestTimestamp", "desc"))
             : query(base, where("status", "!=", "Pending"), orderBy("requestTimestamp", "desc"));
         
-        if (userRole === 'Team Lead' && !isPrivileged) {
+        // HR/Admins see ALL requests, Leads see only their subordinates
+        if (userRole === 'Team Lead' && !isExecutive) {
             if (subordinateIds.length > 0) {
                 return query(base, where("status", "==", filter === 'Pending' ? "Pending" : "Approved"), where("employeeId", "in", subordinateIds.slice(0, 30)));
             }
             return null;
         }
         return q;
-    }, [firestore, filter, userRole, isPrivileged, subordinateIds]);
+    }, [firestore, filter, userRole, isExecutive, subordinateIds]);
 
     const { data: requests, isLoading } = useCollection<AttendanceApprovalRequest>(requestsQuery);
 
@@ -182,7 +184,7 @@ export default function AttendanceRequestsPage() {
         <div className="animate-fade-in-up space-y-6">
             <PageHeader title="Range Approval Desk" description="Verify and approve remote clock-in/out requests.">
                 <div className="flex gap-2 items-center">
-                    {selectedIds.length > 0 && isPrivileged && (
+                    {selectedIds.length > 0 && isExecutive && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm" className="rounded-none px-4 h-9 font-bold uppercase text-[10px] gap-2 shadow-lg shadow-red-600/20">
@@ -214,7 +216,7 @@ export default function AttendanceRequestsPage() {
                         </Button>
                         <Button 
                             variant={filter === 'Processed' ? 'default' : 'ghost'} 
-                            size="sm"
+                            size="sm" 
                             className="rounded-none px-6 font-bold uppercase text-[10px]"
                             onClick={() => { setFilter('Processed'); setSelectedIds([]); }}
                         >
