@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, where, orderBy, Timestamp, getDocs, limit, or } from "firebase/firestore";
+import { doc, collection, query, where, orderBy, Timestamp, getDocs, limit, or, and } from "firebase/firestore";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
 import { TodoWidget } from "@/components/geohrm/todo-widget";
@@ -39,7 +39,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths, isToday, isBefore, isSameDay, formatDistanceToNow } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, addDays, subWeeks, startOfMonth, endOfMonth, subMonths, isToday, isBefore, isSameDay, formatDistanceToNow } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
