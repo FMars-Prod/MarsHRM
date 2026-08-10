@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, getDocs, collectionGroup, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isValid } from 'date-fns';
-import { UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, AlertTriangle, Activity, Clock, Map as MapIcon, List, Search, MapPin, Phone, ShieldAlert, Download, Plus, Edit, Timer, ShieldCheck, ChevronRight } from 'lucide-react';
+import { UserCheck, UserX, UserRoundX, Calendar as CalendarIcon, AlertTriangle, Activity, Clock, Map as MapIcon, List, Search, MapPin, Phone, ShieldAlert, Download, Plus, Edit, Timer, ShieldCheck, ChevronRight, Signal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
