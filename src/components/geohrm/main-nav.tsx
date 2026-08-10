@@ -22,6 +22,7 @@ import {
   Users,
   Building,
   BarChart2,
+  PlusCircle,
   FileText,
   Activity,
   LayoutTemplate,
@@ -62,7 +63,6 @@ const groups = [
     label: "BUSINESS",
     links: [
       { href: "/dashboard/clients", label: "Client Management", icon: Users, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
-      { href: "/dashboard/meetings", label: "Meetings", icon: Video, roles: ['Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/projects", label: "Projects", icon: Briefcase, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/pipeline", label: "Sales Pipeline", icon: TrendingUp, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/marketing", label: "Marketing", icon: Zap, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
@@ -103,6 +103,7 @@ const groups = [
     label: "COMMUNICATION",
     links: [
       { href: "/dashboard/announcements", label: "Company Feed", icon: Megaphone, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "totalFeedNotifications" },
+      { href: "/dashboard/meetings", label: "Meetings", icon: Video, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/holidays", label: "Holiday Calendar", icon: CalendarDays, roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
       { href: "/dashboard/issues", label: "Support Centre", icon: MessageSquareWarning, roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'], badgeKey: "ticketUpdateCount" },
     ]

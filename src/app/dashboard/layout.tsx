@@ -72,6 +72,7 @@ const SEARCHABLE_LINKS = [
     { label: "Compliance", href: "/dashboard/compliance", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Activity Monitor", href: "/dashboard/monitor", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Company Feed", href: "/dashboard/announcements", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Meetings", href: "/dashboard/meetings", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Holiday Calendar", href: "/dashboard/holidays", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Support Centre", href: "/dashboard/issues", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Reports", href: "/dashboard/report-templates", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
