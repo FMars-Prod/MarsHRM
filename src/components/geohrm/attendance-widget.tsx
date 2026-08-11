@@ -91,7 +91,7 @@ export function AttendanceWidget() {
   
   const activeGeofence = React.useMemo(() => {
     if (activeWfhToday && typeof activeWfhToday.latitude === 'number') {
-        return { name: "WFH", lat: Number(activeWfhToday.latitude), lng: Number(activeWfhToday.longitude), radius: 0.5, type: 'wfh' };
+        return { name: "Home (WFH)", lat: Number(activeWfhToday.latitude), lng: Number(activeWfhToday.longitude), radius: 0.5, type: 'wfh' };
     }
     if (userData?.isWfhAllowed && typeof userData.homeLatitude === 'number') {
         return { name: "Home", lat: Number(userData.homeLatitude), lng: Number(userData.homeLongitude), radius: Number(userData.homeRadius || 0.5), type: 'wfh' };
@@ -259,21 +259,28 @@ export function AttendanceWidget() {
 
   const isBreak = status === 'lunch' || status === 'short_break';
   const progress = Math.min(100, (workTimer / (9 * 3600)) * 100);
-  const strokeDasharray = 2 * Math.PI * 45;
-  const strokeDashoffset = strokeDasharray - (progress / 100) * strokeDasharray;
+  const circumference = 2 * Math.PI * 45;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   if (isUserDocLoading || userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD') return null;
 
   return (
     <div className="flex flex-col items-center gap-4 py-4 animate-fade-in-up font-jakarta w-full">
         <div className="relative size-48 sm:size-56 flex items-center justify-center">
-            <svg className="size-full -rotate-90">
-                <circle cx="50%" cy="50%" r="45%" className="fill-none stroke-muted/20" strokeWidth="6" />
-                <circle cx="50%" cy="50%" r="45%" className={cn("fill-none transition-all duration-500", isBreak ? "stroke-orange-500" : "stroke-primary")} strokeWidth="8" strokeDasharray={strokeDasharray} strokeDashoffset={strokeDashoffset} strokeLinecap="square" />
+            <svg viewBox="0 0 100 100" className="size-full -rotate-90">
+                <circle cx="50" cy="50" r="45" className="fill-none stroke-muted/20" strokeWidth="4" />
+                <circle 
+                    cx="50" cy="50" r="45" 
+                    className={cn("fill-none transition-all duration-500", isBreak ? "stroke-orange-500" : "stroke-primary")} 
+                    strokeWidth="6" 
+                    strokeDasharray={circumference} 
+                    strokeDashoffset={strokeDashoffset} 
+                    strokeLinecap="round" 
+                />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-40 mb-1", isBreak ? "text-orange-600" : "text-primary")}>
-                    {isBreak ? "On Break" : "Mission Timer"}
+                    {isBreak ? "On Break" : "Work Timer"}
                 </p>
                 <h1 className={cn("text-3xl sm:text-4xl font-black font-mono tabular-nums leading-none tracking-tighter", isBreak ? "text-orange-600" : "text-slate-900")}>
                     {formatTime(workTimer)}
@@ -306,22 +313,22 @@ export function AttendanceWidget() {
             ) : status === 'short_break' ? (
                 <Button onClick={handleShortBreakIn} className="h-10 rounded-none px-8 bg-primary text-white font-black uppercase text-[10px]">End Break</Button>
             ) : (
-                <Badge className="bg-emerald-50 text-emerald-700 rounded-none border-none font-black text-[9px] uppercase px-4 h-8 flex items-center">Duty Finished</Badge>
+                <Badge className="bg-emerald-50 text-emerald-700 rounded-none border-none font-black text-[9px] uppercase px-4 h-8 flex items-center">Shift Done</Badge>
             )}
         </div>
 
         <Dialog open={isOutOfRangeDialogOpen} onOpenChange={setIsOutOfRangeDialogOpen}>
             <DialogContent className="rounded-none sm:max-w-md p-6">
                 <DialogHeader className="text-left">
-                    <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Out of Range</DialogTitle>
-                    <DialogDescription className="text-[11px] font-bold uppercase opacity-60">Outside authorized {activeGeofence.name} sector</DialogDescription>
+                    <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Outside Area</DialogTitle>
+                    <DialogDescription className="text-[11px] font-bold uppercase opacity-60">Outside authorized {activeGeofence.name} location</DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Provide Justification</Label>
-                    <Textarea value={outOfRangeReason} onChange={e => setOutOfRangeReason(e.target.value)} placeholder="Reason for remote check-in..." className="rounded-none min-h-[100px] text-xs font-bold bg-muted/20" />
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Why are you outside?</Label>
+                    <Textarea value={outOfRangeReason} onChange={e => setOutOfRangeReason(e.target.value)} placeholder="Provide a reason..." className="rounded-none min-h-[100px] text-xs font-bold bg-muted/20" />
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim() || isSubmittingApproval} className="w-full rounded-none h-12 font-black uppercase shadow-xl">{isSubmittingApproval ? <Loader2 className="animate-spin mr-2 size-4"/> : null} Submit for Approval</Button>
+                    <Button onClick={handleSubmitOutOfRangeRequest} disabled={!outOfRangeReason.trim() || isSubmittingApproval} className="w-full rounded-none h-12 font-black uppercase shadow-xl">{isSubmittingApproval ? <Loader2 className="animate-spin mr-2 size-4"/> : null} Submit Request</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
