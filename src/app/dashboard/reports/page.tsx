@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -8,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList } from "lucide-react";
+import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -33,19 +32,129 @@ import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 
-const formatIST = (date: any) => {
-    if (!date) return "N/A";
-    const d = date instanceof Timestamp ? date.toDate() : new Date(date);
-    return new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    }).format(d) + " IST";
+const BusinessAuditDetailComp = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
+    const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0);
+    const potential = Number(report.potentialClients || 0);
+    const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
+    
+    return (
+        <div className="space-y-8">
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach & Results</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest opacity-80">Efficiency Rate</span><span className="text-4xl font-black">{efficiency.toFixed(2)}%</span></div>
+                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Potential Clients</span><span className="text-3xl font-black">{potential}</span></div>
+                    <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Follow-ups</span><span className="text-3xl font-black">{report.followUps || 0}</span></div>
+                </div>
+            </div>
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-green-600 font-black uppercase text-[10px] tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue & Impact</div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-green-50 rounded-none border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Revenue Collected</p><p className="text-xl font-black text-green-900">${report.revenueCollected || 0}</p></div>
+                    <div className="p-4 bg-green-50 rounded-none border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed Revenue</p><p className="text-xl font-black text-green-900">${report.committedRevenue || 0}</p></div>
+                </div>
+            </div>
+            <div className="p-4 bg-primary/5 rounded-none space-y-4">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4" /> 4️⃣ Call Intelligence</p>
+                <div className="grid gap-4">
+                    {report.totalCallRecordings && <Button variant="outline" className="h-10 text-[10px] uppercase font-bold rounded-none bg-white w-full text-primary" asChild><Link href={report.totalCallRecordings} target="_blank"><Download className="size-3 mr-2" /> View Recordings</Link></Button>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[['Best Call', report.bestCallRecording, 'text-green-600'], ['Worst Call', report.worstCallRecording, 'text-red-600']].map(([l, v, c], i) => v && (
+                            <div key={i} className="p-3 bg-white rounded-none ring-1 ring-border/50 space-y-2"><p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", c)}><Mic className="size-3"/> {l}</p><audio controls className="w-full h-8 scale-90 -ml-2"><source src={v as string} /></audio></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
+
+const MarketingAuditDetailComp = ({ report }: { report: any }) => {
+    const deliverables = [{ label: 'Content', key: 'dmContent' }, { label: 'Poster', key: 'dmPoster' }, { label: 'Reel', key: 'dmReel' }, { label: 'Shoot', key: 'dmShoot' }];
+    return (
+        <div className="space-y-6">
+            <BusinessAuditDetailComp report={report} isNested />
+            <div className="border rounded-none overflow-hidden bg-white shadow-sm">
+                <Table>
+                    <TableHeader className="bg-muted/30"><TableRow><TableHead className="text-[10px] font-black uppercase">Status</TableHead>{deliverables.map(d => <TableHead key={d.key} className="text-[10px] font-black uppercase text-center">{d.label}</TableHead>)}</TableRow></TableHeader>
+                    <TableBody>
+                        {['Approved', 'Pending', 'Rejected'].map(status => (
+                            <TableRow key={status}><TableCell className="text-xs font-black uppercase py-4">{status}</TableCell>{deliverables.map(d => (<TableCell key={d.key} className="text-center font-bold">{report[`${d.key}${status}`] || 0}</TableCell>))}</TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
+    );
+};
+
+const TechnicalAuditDetailComp = ({ report }: { report: any }) => (
+    <div className="space-y-8">
+        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><PhoneCall className="size-4"/> Client Engagements</p>
+            <div className="grid grid-cols-1 gap-3">{report.technicalMeetings?.map((m: any, i: number) => (
+                <div key={i} className="p-3 bg-white rounded-none border flex items-center justify-between"><div><p className="font-bold text-sm">{m.clientName}</p><p className="text-[10px] uppercase text-muted-foreground">{m.productName}</p></div><Badge variant="outline" className="text-[8px] uppercase font-black">{m.status}</Badge></div>
+            )) || <p className="text-xs italic text-muted-foreground">No engagements logged.</p>}</div>
+        </div>
+        <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Briefcase className="size-4"/> Task Progress</p>
+            <div className="grid grid-cols-1 gap-4">{report.technicalProjects?.map((p: any, i: number) => (
+                <Card key={i} className="p-4 border-none ring-1 ring-border/50 bg-white"><div className="flex justify-between items-start mb-3"><div><p className="font-bold text-sm">{p.projectName}</p><p className="text-[10px] uppercase text-muted-foreground">{p.type}</p></div><div className="text-right"><p className="text-lg font-black text-primary">{p.statusPercent}%</p><p className="text-[8px] uppercase font-bold text-muted-foreground">Progress</p></div></div><p className="text-xs italic text-muted-foreground mb-3">"{p.description}"</p>{p.isCompleted && p.liveLink && <Button variant="ghost" size="sm" className="w-full h-8 text-[9px] font-bold uppercase gap-2 bg-primary/5 text-primary" asChild><Link href={p.liveLink} target="_blank"><ExternalLink className="size-3"/> View Project</Link></Button>}</Card>
+            )) || <p className="text-xs italic text-muted-foreground">No projects logged.</p>}</div>
+        </div>
+        <div className="space-y-3"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Brain className="size-4"/> Notes & Learnings</p>
+            <div className="flex flex-wrap gap-2">{report.learnedToday?.map((l: string, i: number) => <Badge key={i} variant="secondary" className="px-3 py-1.5 rounded-none text-[10px] font-bold">{l}</Badge>) || <p className="text-xs italic text-muted-foreground">No learnings recorded.</p>}</div>
+        </div>
+    </div>
+);
+
+const HRAuditDetailComp = ({ report }: { report: any }) => (
+    <div className="space-y-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest opacity-60">Sourced</span><span className="text-3xl font-black">{report.resumesSourced || 0}</span></div>
+            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Interviews</span><span className="text-3xl font-black text-emerald-600">{report.interviewsScheduled || 0}</span></div>
+            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Hired</span><span className="text-3xl font-black text-indigo-600">{report.hiredToday || 0}</span></div>
+            <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Docs Done</span><span className="text-3xl font-black">{report.documentationCompleted || 0}</span></div>
+        </div>
+
+        {report.campusDrives?.length > 0 && (
+            <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><GraduationCap className="size-4"/> Campus Drive Protocol</p>
+                <div className="grid gap-2">{report.campusDrives.map((c: any, i: number) => (
+                    <div key={i} className="p-4 bg-white border border-border/50 flex justify-between items-center rounded-none shadow-sm"><span className="font-bold text-sm uppercase">{c.instituteName}</span><Badge variant="outline" className="rounded-none text-[8px] font-black uppercase">{c.status}</Badge></div>
+                ))}</div>
+            </div>
+        )}
+
+        {report.consultancies?.length > 0 && (
+            <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Building2 className="size-4"/> Consultancies Contacted</p>
+                <div className="grid gap-2">{report.consultancies.map((c: any, i: number) => (
+                    <div key={i} className="p-4 bg-white border border-border/50 flex items-center gap-3 rounded-none shadow-sm">
+                        <div className="size-1.5 rounded-none bg-primary shadow-sm" />
+                        <span className="font-bold text-sm uppercase">{c.name}</span>
+                    </div>
+                ))}</div>
+            </div>
+        )}
+
+        {report.othersSourcedSwitch && report.othersSourced?.length > 0 && (
+            <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Users className="size-4"/> Staff Contributions</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{report.othersSourced.map((s: any, i: number) => (
+                    <div key={i} className="p-3 bg-muted/20 border border-transparent rounded-none flex justify-between items-center"><span className="font-bold text-xs uppercase">{s.staffName}</span><span className="font-black text-primary">{s.count} Resumes</span></div>
+                ))}</div>
+            </div>
+        )}
+
+        {report.otherTasks?.length > 0 && (
+            <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><ClipboardList className="size-4"/> Other Objectives</p>
+                <div className="space-y-2">{report.otherTasks.map((t: any, i: number) => (
+                    <div key={i} className="flex gap-3 items-start"><div className="size-1.5 rounded-none bg-primary mt-1.5 shadow-sm" /><p className="text-sm font-medium text-slate-700 uppercase">{t.content}</p></div>
+                ))}</div>
+            </div>
+        )}
+
+        {report.callRecordingsLink && (
+            <div className="p-4 bg-primary/5 rounded-none border border-dashed border-primary/20"><p className="text-[9px] font-black uppercase text-primary mb-3">Call Intelligence Assets</p><Button asChild variant="outline" className="w-full h-11 rounded-none bg-white font-black uppercase text-[10px]"><Link href={report.callRecordingsLink} target="_blank"><Share2 className="size-3 mr-2"/> Access Recordings Folder</Link></Button></div>
+        )}
+    </div>
+);
 
 const ShiftHeaderFields = () => {
     const { control } = useFormContext();
@@ -396,8 +505,20 @@ const HRReportFields = () => {
     const { fields: campusFields, append: addCampus, remove: removeCampus } = useFieldArray({ control, name: "campusDrives" });
     const { fields: sourcedFields, append: addSourced, remove: removeSourced } = useFieldArray({ control, name: "othersSourced" });
     const { fields: taskFields, append: addTask, remove: removeTask } = useFieldArray({ control, name: "otherTasks" });
+    const { fields: consultancyFields, append: addConsultancy, remove: removeConsultancy } = useFieldArray({ control, name: "consultancies" });
 
     const othersSourcedSwitch = useWatch({ control, name: "othersSourcedSwitch" });
+    const consultancyCount = useWatch({ control, name: "consultancyCount" });
+
+    React.useEffect(() => {
+        const count = parseInt(consultancyCount) || 0;
+        const current = consultancyFields.length;
+        if (count > current) {
+            for (let i = 0; i < count - current; i++) addConsultancy({ name: "" });
+        } else if (count < current) {
+            for (let i = 0; i < current - count; i++) removeConsultancy(current - 1 - i);
+        }
+    }, [consultancyCount, addConsultancy, removeConsultancy, consultancyFields.length]);
 
     return (
         <div className="space-y-8 text-left">
@@ -438,11 +559,34 @@ const HRReportFields = () => {
                 </CardContent>
             </Card>
 
+            <Card className="border-none ring-1 ring-border/50 rounded-none shadow-sm bg-white overflow-hidden text-left">
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Building2 className="size-4"/> Job Consultancy Outreach</CardTitle></CardHeader>
+                <CardContent className="pt-6 space-y-6 text-left">
+                    <FormField control={control} name="consultancyCount" render={({ field }) => (
+                        <FormItem className="max-w-[200px] text-left">
+                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">No. of Consultancies Contacted</FormLabel>
+                            <FormControl><Input type="number" min="0" {...field} className="h-10 rounded-none" /></FormControl>
+                        </FormItem>
+                    )} />
+                    
+                    {consultancyFields.length > 0 && (
+                        <div className="grid gap-3 animate-fade-in-up">
+                            {consultancyFields.map((field, index) => (
+                                <div key={field.id} className="space-y-1.5 text-left">
+                                    <Label className="text-[8px] font-black uppercase opacity-40">Consultancy #{index + 1} Name</Label>
+                                    <FormField control={control} name={`consultancies.${index}.name`} render={({ field }) => (<FormControl><Input {...field} placeholder="Official Agency Name" className="h-10 rounded-none" /></FormControl>)} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
             <div className="space-y-4 text-left">
                 <div className="p-4 bg-muted/20 border border-dashed border-border/50 flex items-center justify-between text-left">
                     <div className="space-y-0.5">
                         <Label className="text-sm font-black uppercase tracking-tight">Staff Resume Sourcing</Label>
-                        <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">Did other staff members source resumes today?</p>
+                        <p className="text-[8px] font-bold text-muted-foreground uppercase font-bold opacity-60">Did other staff members source resumes today?</p>
                     </div>
                     <FormField control={control} name="othersSourcedSwitch" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />
                 </div>
@@ -636,7 +780,7 @@ export default function ReportsPage() {
         dmReelApproved: "0", dmReelPending: "0", dmReelRejected: "0",
         dmShootApproved: "0", dmShootPending: "0", dmShootRejected: "0",
         hiredToday: "0", campusDrives: [], documentationCompleted: "0", resumesSourced: "0", 
-        othersSourcedSwitch: false, othersSourced: [], interviewsScheduled: "0", callRecordingsLink: "", 
+        othersSourcedSwitch: false, othersSourced: [], consultancyCount: "0", consultancies: [], interviewsScheduled: "0", callRecordingsLink: "", 
         otherTasks: [],
         declaration: false
     },
