@@ -32,6 +32,20 @@ import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 
+const formatIST = (date: any) => {
+  if (!date) return "N/A";
+  const d = date instanceof Timestamp ? date.toDate() : new Date(date);
+  return new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+  }).format(d) + " IST";
+};
+
 const BusinessAuditDetailComp = ({ report, isNested = false }: { report: any, isNested?: boolean }) => {
     const totalOutreach = Number(report.coldCalls || 0) + Number(report.linkedinOutreach || 0) + Number(report.emailsSent || 0);
     const potential = Number(report.potentialClients || 0);
@@ -586,13 +600,13 @@ const HRReportFields = () => {
                 <div className="p-4 bg-muted/20 border border-dashed border-border/50 flex items-center justify-between text-left">
                     <div className="space-y-0.5">
                         <Label className="text-sm font-black uppercase tracking-tight">Staff Resume Sourcing</Label>
-                        <p className="text-[8px] font-bold text-muted-foreground uppercase font-bold opacity-60">Did other staff members source resumes today?</p>
+                        <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-60">Did other staff members source resumes today?</p>
                     </div>
                     <FormField control={control} name="othersSourcedSwitch" render={({ field }) => (<Switch checked={field.value} onCheckedChange={field.onChange} />)} />
                 </div>
 
                 {othersSourcedSwitch && (
-                    <div className="p-6 bg-primary/5 border-2 border-dashed border-primary/20 space-y-4 animate-fade-in-up text-left">
+                    <div className="p-6 bg-primary/5 rounded-none border-2 border-dashed border-primary/10 space-y-4 animate-fade-in-up text-left">
                         {sourcedFields.map((field, index) => (
                             <div key={field.id} className="flex gap-2 items-end group text-left">
                                 <div className="flex-1 space-y-1.5"><Label className="text-[8px] font-black uppercase opacity-40">Staff Name</Label><FormField control={control} name={`othersSourced.${index}.staffName`} render={({ field }) => (<FormControl><Input {...field} className="h-10 rounded-none bg-white" /></FormControl>)} /></div>
