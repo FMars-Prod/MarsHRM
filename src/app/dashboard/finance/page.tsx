@@ -392,11 +392,11 @@ export default function FinancePage() {
 
             {/* Core KPI Matrix */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <KPICard title="Money Got" value={`₹${(stats.totalRevenue / 100000).toFixed(2)}L`} trend="+22.4%" up={true} icon={DollarSign} color="text-primary" bg="bg-primary/5" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('revenue')} />
+                <KPICard title="Money Got" value={`₹${(stats.totalRevenue / 100000).toFixed(2)}L`} trend="Confirmed" up={true} icon={DollarSign} color="text-primary" bg="bg-primary/5" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('revenue')} />
                 <KPICard title="In Pipeline" value={`₹${(stats.totalPipeline / 100000).toFixed(2)}L`} trend="Pending" up={true} icon={Clock} color="text-amber-600" bg="bg-amber-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('pipeline')} />
-                <KPICard title="Money Spent" value={`₹${((stats.workforceCost + stats.marketingSpent) / 100000).toFixed(2)}L`} trend="+7.8%" up={false} icon={TrendingDown} color="text-rose-600" bg="bg-rose-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
-                <KPICard title="Leftover" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Deficit" : "+18.7%"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
-                <KPICard title="Profit %" value={`${stats.margin.toFixed(1)}%`} trend="+2.1pp" up={true} icon={Target} color="text-indigo-600" bg="bg-indigo-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('margin')} />
+                <KPICard title="Money Spent" value={`₹${((stats.workforceCost + stats.marketingSpent) / 100000).toFixed(2)}L`} trend="Current" up={false} icon={TrendingDown} color="text-rose-600" bg="bg-rose-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
+                <KPICard title="Leftover" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Deficit" : "Surplus"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
+                <KPICard title="Profit %" value={`${stats.margin.toFixed(1)}%`} trend="Verified" up={true} icon={Target} color="text-indigo-600" bg="bg-indigo-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('margin')} />
             </div>
 
             {/* Row 2: Portfolio & ROI Matrix */}
