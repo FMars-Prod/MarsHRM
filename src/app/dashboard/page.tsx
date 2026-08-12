@@ -1,9 +1,8 @@
-
 'use client';
 
 import * as React from "react";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, where, orderBy, Timestamp, getDocs, limit, or, and } from "firebase/firestore";
+import { doc, collection, query, where, orderBy, Timestamp, getDocs, limit, or, and, collectionGroup } from "firebase/firestore";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
 import { TodoWidget } from "@/components/geohrm/todo-widget";
@@ -47,16 +46,6 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 
-const revenueTrendData = [
-  { name: 'Mon', value: 200000 },
-  { name: 'Tue', value: 330000 },
-  { name: 'Wed', value: 360000 },
-  { name: 'Thu', value: 300000 },
-  { name: 'Fri', value: 360000 },
-  { name: 'Sat', value: 430000 },
-  { name: 'Sun', value: 345000 },
-];
-
 export function UpcomingMeetingsWidget() {
     const { user } = useUser();
     const firestore = useFirestore();
@@ -83,7 +72,7 @@ export function UpcomingMeetingsWidget() {
         <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden h-full flex flex-col">
             <CardHeader className="p-4 pb-2 border-b bg-primary/5">
                 <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                    <Video className="size-3.5" /> Upcoming Briefings
+                    <Video className="size-3.5" /> Upcoming Meetings
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-0 flex-1">
@@ -111,13 +100,13 @@ export function UpcomingMeetingsWidget() {
                             ))}
                         </div>
                     ) : (
-                        <div className="py-20 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No Briefings Scheduled</div>
+                        <div className="py-20 text-center opacity-20 uppercase font-black text-[9px] tracking-widest">No Meetings Scheduled</div>
                     )}
                 </ScrollArea>
             </CardContent>
             <div className="p-3 border-t bg-muted/5">
                 <Button variant="ghost" size="sm" className="w-full h-7 rounded-none font-black uppercase text-[8px] tracking-widest text-primary hover:bg-primary/5" asChild>
-                    <Link href="/dashboard/meetings">Manage Roster <ChevronRight className="size-2.5 ml-1" /></Link>
+                    <Link href="/dashboard/meetings">View All <ChevronRight className="size-2.5 ml-1" /></Link>
                 </Button>
             </div>
         </Card>
@@ -166,6 +155,71 @@ export default function DashboardPage() {
   const userRole = currentUserData?.role;
   const isExecutive = userRole === 'CEO/Admin' || userRole === 'CEO/MD' || userRole === 'HR Manager';
 
+  // --- Real Stats Aggregation ---
+  const clientsQuery = useMemoFirebase(() => query(collection(firestore, 'clients')), [firestore]);
+  const { data: clients } = useCollection<any>(clientsQuery);
+
+  const transactionsQuery = useMemoFirebase(() => query(collection(firestore, 'financial_transactions')), [firestore]);
+  const { data: manualTransactions } = useCollection<any>(transactionsQuery);
+
+  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'marketing_sessions')), [firestore]);
+  const { data: marketingSessions } = useCollection<any>(sessionsQuery);
+
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+  const { data: allUsers } = useCollection<any>(usersQuery);
+
+  const { stats, funnelData } = React.useMemo(() => {
+    let collected = 0;
+    let pending = 0;
+    let workforceCost = 0;
+    let marketingSpent = 0;
+
+    // Revenue from client payments
+    clients?.forEach(c => {
+        (c.payments || []).forEach((p: any) => {
+            collected += parseFloat(p.amountReceived || '0');
+            if (p.status !== 'Paid') pending += (parseFloat(p.amount) - parseFloat(p.amountReceived || '0'));
+        });
+    });
+
+    // Manual Transactions
+    manualTransactions?.forEach(t => {
+        if (t.type === 'income') collected += (t.amount || 0);
+        else collected -= (t.amount || 0); // treating as immediate deduction if not specifically workforce/marketing
+    });
+
+    // Workforce & Marketing
+    allUsers?.forEach(u => workforceCost += (u.payrollAmount || 0));
+    marketingSessions?.forEach(s => {
+        if (s.type === 'spend') {
+            marketingSpent += (s.adSpends?.reduce((a: number, c: any) => a + (c.amount || 0), 0) || 0);
+        }
+    });
+
+    const netProfit = collected - workforceCost - marketingSpent;
+    const leadsCount = clients?.filter((c: any) => c.status === 'Prospect' || c.status === 'Lead').length || 0;
+    const projectsCount = clients?.filter((c: any) => c.status === 'Active').length || 0;
+    const completedCount = clients?.filter((c: any) => c.completionPercent === 100).length || 0;
+
+    const data = [
+        { value: (clients?.length || 0), name: 'Total Prospects', fill: '#6D28D9' },
+        { value: (clients?.filter((c: any) => c.status === 'Active' || c.completionPercent > 0).length || 0), name: 'Qualified Leads', fill: '#8B5CF6' },
+        { value: projectsCount, name: 'Active Projects', fill: '#A78BFA' },
+        { value: completedCount, name: 'Completed Deals', fill: '#C4B5FD' },
+    ];
+
+    return {
+        stats: {
+            revenue: collected,
+            profit: netProfit,
+            leads: leadsCount,
+            projects: projectsCount,
+            utilization: 84 // Defaulting for now
+        },
+        funnelData: data
+    };
+  }, [clients, manualTransactions, allUsers, marketingSessions]);
+
   if (!isExecutive) {
     return (
       <div className="space-y-3 max-w-full mx-auto pb-4 font-jakarta">
@@ -173,9 +227,9 @@ export default function DashboardPage() {
         <WfhSetupReminder />
         <div className="flex flex-col gap-0.5 mb-1 animate-fade-in-up">
             <h1 className="text-xl sm:text-2xl font-black tracking-tighter leading-none text-primary uppercase">
-                {new Date().getHours() < 12 ? "Good Morning" : new Date().getHours() < 17 ? "Good Afternoon" : "Good Evening"}, {currentUserData?.firstName || 'Strategist'}
+                {new Date().getHours() < 12 ? "Good Morning" : new Date().getHours() < 17 ? "Good Afternoon" : "Good Evening"}, {currentUserData?.firstName || 'User'}
             </h1>
-            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{currentUserData?.jobTitle || 'Fleet Member'}</p>
+            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{currentUserData?.jobTitle || 'Team Member'}</p>
         </div>
         <DashboardReminder />
         <div className="w-full animate-fade-in-up">
@@ -236,7 +290,7 @@ export default function DashboardPage() {
                 </SelectTrigger>
                 <SelectContent className="rounded-none">
                     <SelectGroup>
-                        <SelectLabel className="text-[8px] font-black uppercase opacity-40">Tactical Range</SelectLabel>
+                        <SelectLabel className="text-[8px] font-black uppercase opacity-40">Range</SelectLabel>
                         <SelectItem value="today" className="text-[10px] font-bold uppercase">Today</SelectItem>
                         <SelectItem value="yesterday" className="text-[10px] font-bold uppercase">Yesterday</SelectItem>
                         <SelectItem value="this-week" className="text-[10px] font-bold uppercase">This Week</SelectItem>
@@ -255,14 +309,14 @@ export default function DashboardPage() {
 
       {/* TOP KPI CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 animate-fade-in-up">
-        <KPICard title="Revenue" value="₹18.45L" trend="↑ 22.4%" color="text-primary" bg="bg-primary/5" sparkline={[30, 45, 35, 50, 48, 65, 55]} />
-        <KPICard title="Net Profit" value="₹4.32L" trend="↑ 18.7%" color="text-emerald-600" bg="bg-emerald-50" sparkline={[40, 35, 55, 45, 60, 58, 65]} />
-        <KPICard title="New Leads" value="142" trend="↑ 31.5%" color="text-blue-600" bg="bg-blue-50" sparkline={[20, 30, 25, 40, 38, 50, 45]} />
-        <KPICard title="Projects" value="24" trend="↑ 9.1%" color="text-amber-600" bg="bg-amber-50" sparkline={[15, 18, 17, 22, 21, 25, 24]} />
-        <KPICard title="Utilization" value="84%" trend="↑ 6.3%" color="text-indigo-600" bg="bg-indigo-50" sparkline={[75, 78, 80, 82, 81, 84, 84]} />
+        <KPICard title="Revenue" value={`₹${(stats.revenue/100000).toFixed(2)}L`} trend="Live" color="text-primary" bg="bg-primary/5" sparkline={[30, 45, 35, 50, 48, 65, 55]} />
+        <KPICard title="Net Profit" value={`₹${(stats.profit/100000).toFixed(2)}L`} trend={stats.profit >= 0 ? "↑ Positive" : "↓ Deficit"} color={stats.profit >= 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.profit >= 0 ? "bg-emerald-50" : "bg-rose-50"} sparkline={[40, 35, 55, 45, 60, 58, 65]} />
+        <KPICard title="Leads" value={stats.leads} trend="Current" color="text-blue-600" bg="bg-blue-50" sparkline={[20, 30, 25, 40, 38, 50, 45]} />
+        <KPICard title="Projects" value={stats.projects} trend="Active" color="text-amber-600" bg="bg-amber-50" sparkline={[15, 18, 17, 22, 21, 25, 24]} />
+        <KPICard title="Utilization" value={`${stats.utilization}%`} trend="Target 85%" color="text-indigo-600" bg="bg-indigo-50" sparkline={[75, 78, 80, 82, 81, 84, 84]} />
       </div>
 
-      {/* OPERATIONAL HUB - PARALLEL LAYOUT */}
+      {/* OPERATIONAL HUB */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 animate-fade-in-up">
         <div className="lg:col-span-4 space-y-3">
             <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden">
@@ -283,53 +337,47 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 animate-fade-in-up">
-        {/* REVENUE TREND */}
-        <Card className="lg:col-span-8 border-none shadow-sm rounded-none bg-white overflow-hidden">
+        {/* PIPELINE FUNNEL */}
+        <Card className="lg:col-span-6 border-none shadow-sm rounded-none bg-white overflow-hidden">
           <CardHeader className="p-3 border-b flex flex-row items-center justify-between bg-muted/5">
-            <div className="space-y-0.5">
-              <CardTitle className="text-[9px] font-black uppercase tracking-widest text-slate-800">Revenue Trend</CardTitle>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-black text-primary">₹18.45L</p>
-            </div>
+            <CardTitle className="text-[9px] font-black uppercase tracking-widest text-slate-800">Sales Pipeline</CardTitle>
           </CardHeader>
           <CardContent className="p-3">
-            <div className="h-[160px] w-full">
+            <div className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueTrendData}>
-                  <CartesianGrid vertical={false} stroke="#F1F5F9" strokeDasharray="3 3" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} className="text-[8px] font-black uppercase fill-slate-400" />
-                  <YAxis hide />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '0px', border: '1px solid #eee', fontSize: '9px', fontWeight: '900' }}
-                    formatter={(v) => [`₹${(Number(v)/100000).toFixed(2)}L`, 'Revenue']}
-                  />
-                  <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 2, fill: 'hsl(var(--primary))', strokeWidth: 0 }} />
-                </LineChart>
+                <FunnelChart>
+                  <Tooltip contentStyle={{ borderRadius: '0px', fontSize: '10px' }} />
+                  <Funnel
+                    dataKey="value"
+                    data={funnelData}
+                    isAnimationActive
+                  >
+                    <LabelList position="right" fill="#64748b" stroke="none" dataKey="name" style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
+                  </Funnel>
+                </FunnelChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
         {/* ALERTS & PRIORITIES */}
-        <Card className="lg:col-span-4 border-none shadow-sm rounded-none bg-white overflow-hidden flex flex-col">
+        <Card className="lg:col-span-6 border-none shadow-sm rounded-none bg-white overflow-hidden flex flex-col">
           <CardHeader className="p-3 border-b flex flex-row items-center justify-between bg-rose-50/30">
-            <CardTitle className="text-[9px] font-black uppercase tracking-widest text-rose-700">Alerts</CardTitle>
-            <Badge className="bg-rose-500 text-white rounded-none font-black text-[8px] px-1.5 h-3.5">5</Badge>
+            <CardTitle className="text-[9px] font-black uppercase tracking-widest text-rose-700">Priority Alerts</CardTitle>
           </CardHeader>
           <CardContent className="p-0 flex-1">
-            <ScrollArea className="h-[160px]">
+            <ScrollArea className="h-[250px]">
               <div className="divide-y">
                 {[
-                  { t: 'Project Delay', d: '2 units', time: '20m', icon: Briefcase, color: 'text-rose-600' },
-                  { t: 'Revenue Risk', d: 'Below target', time: '1h', icon: TrendingUp, color: 'text-amber-600' },
-                  { t: 'Escalation', d: 'Priority ticket', time: '2h', icon: AlertCircle, color: 'text-red-600' },
+                  { t: 'High Spend Alert', d: 'Marketing budget usage > 80%', time: 'Just Now', icon: Zap, color: 'text-amber-600' },
+                  { t: 'Project Blocked', d: 'Resource required for Technical Sprint', time: '1h', icon: Briefcase, color: 'text-rose-600' },
+                  { t: 'Pending Approval', d: '3 Leave requests waiting HR action', time: '2h', icon: Clock, color: 'text-blue-600' },
                 ].map((alert, i) => (
-                  <div key={i} className="p-2 hover:bg-muted/10 transition-all flex items-start gap-2">
-                    <div className={cn("p-1 rounded-none bg-muted/20", alert.color)}><alert.icon className="size-3" /></div>
+                  <div key={i} className="p-4 hover:bg-muted/10 transition-all flex items-start gap-4">
+                    <div className={cn("p-2 rounded-none bg-muted/20", alert.color)}><alert.icon className="size-4" /></div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center"><p className="font-black text-[10px] uppercase truncate">{alert.t}</p><span className="text-[7px] font-bold text-muted-foreground uppercase opacity-40">{alert.time}</span></div>
-                      <p className="text-[8px] font-bold text-muted-foreground uppercase">{alert.d}</p>
+                      <div className="flex justify-between items-center"><p className="font-black text-[11px] uppercase truncate">{alert.t}</p><span className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">{alert.time}</span></div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">{alert.d}</p>
                     </div>
                   </div>
                 ))}

@@ -20,7 +20,7 @@ type AttendanceRecord = {
 
 const chartConfig = {
   hours: {
-    label: "Work Volume",
+    label: "Hours",
     color: "hsl(var(--primary))",
   },
 } satisfies React.ComponentProps<typeof ChartContainer>['config'];
@@ -120,14 +120,14 @@ export function WorkHoursSummaryWidget() {
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
                             <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">
-                                Mission Intensity
+                                Work Hours
                             </CardTitle>
                             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[8px] font-black uppercase rounded-none px-2">
-                                <Zap className="size-2 mr-1 fill-primary" /> Tactical Pulse
+                                <Zap className="size-2 mr-1 fill-primary" /> Activity
                             </Badge>
                         </div>
                         <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">
-                            {viewMode === 'weekly' ? 'Current operational week audit' : 'Monthly fleet engagement summary'}
+                            {viewMode === 'weekly' ? 'Current week summary' : 'Monthly work summary'}
                         </CardDescription>
                     </div>
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'weekly' | 'monthly')}>
@@ -140,14 +140,14 @@ export function WorkHoursSummaryWidget() {
 
                 <div className="grid grid-cols-2 gap-4 mt-6">
                     <div className="p-4 bg-primary/5 rounded-none border border-primary/10">
-                        <p className="text-[8px] font-black uppercase text-primary/60 tracking-widest mb-1">Total Effort</p>
+                        <p className="text-[8px] font-black uppercase text-primary/60 tracking-widest mb-1">Total Hours</p>
                         <div className="flex items-baseline gap-1">
                             <span className="text-2xl font-black tracking-tighter text-primary">{totalHours}</span>
                             <span className="text-[10px] font-bold text-primary/40 uppercase">hrs</span>
                         </div>
                     </div>
                     <div className="p-4 bg-muted/20 rounded-none border border-border/50">
-                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest mb-1">Peak Intensity</p>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground/60 tracking-widest mb-1">Max Hours</p>
                         <div className="flex items-baseline gap-1">
                             <span className="text-2xl font-black tracking-tighter text-foreground/80">{peakHours}</span>
                             <span className="text-[10px] font-bold text-muted-foreground/40 uppercase">hrs</span>
@@ -160,7 +160,7 @@ export function WorkHoursSummaryWidget() {
                 {isLoading ? (
                     <div className="h-full flex flex-col items-center justify-center py-10 opacity-30">
                         <Clock className="size-8 animate-spin mb-4" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Syncing Records...</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Loading...</p>
                     </div>
                 ) : (
                     <ChartContainer config={chartConfig} className="h-full w-full">
@@ -191,7 +191,7 @@ export function WorkHoursSummaryWidget() {
                             <ChartTooltip
                                 cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }}
                                 content={<ChartTooltipContent 
-                                    formatter={(value) => `${value} Tactical Hours`}
+                                    formatter={(value) => `${value} Hours`}
                                     indicator="line"
                                 />}
                             />
@@ -200,6 +200,7 @@ export function WorkHoursSummaryWidget() {
                                 dataKey="hours"
                                 stroke="hsl(var(--primary))"
                                 strokeWidth={3}
+                                find-color="primary"
                                 fillOpacity={1}
                                 fill="url(#colorHours)"
                                 activeDot={{ r: 6, strokeWidth: 0, fill: 'hsl(var(--primary))' }}
@@ -211,7 +212,7 @@ export function WorkHoursSummaryWidget() {
             
             <div className="px-8 pb-8 pt-0 flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
-                    <TrendingUp className="size-3" /> Mission Velocity Audit
+                    <TrendingUp className="size-3" /> Work Summary
                 </div>
                 <div className="h-1.5 w-1.5 rounded-none bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse" />
             </div>
