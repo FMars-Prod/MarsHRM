@@ -113,9 +113,9 @@ export function UpcomingMeetingsWidget() {
     );
 }
 
-function KPICard({ title, value, trend, color, bg, sparkline }: any) {
-  return (
-    <Card className="border-none shadow-sm rounded-none bg-white group hover:shadow-md transition-all p-3 space-y-2 ring-1 ring-border/50">
+function KPICard({ title, value, trend, color, bg, sparkline, href }: any) {
+  const content = (
+    <Card className="border-none shadow-sm rounded-none bg-white group hover:shadow-md transition-all p-3 space-y-2 ring-1 ring-border/50 cursor-pointer h-full">
       <div className="flex items-center justify-between">
         <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
         <div className={cn("px-1 py-0.5 rounded-none text-[6px] font-black uppercase", bg, color)}>{trend}</div>
@@ -130,6 +130,16 @@ function KPICard({ title, value, trend, color, bg, sparkline }: any) {
       </div>
     </Card>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block h-full">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
 function ActionButton({ icon: Icon, label, href }: { icon: any, label: string, href: string }) {
@@ -309,11 +319,11 @@ export default function DashboardPage() {
 
       {/* TOP KPI CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 animate-fade-in-up">
-        <KPICard title="Revenue" value={`₹${(stats.revenue/100000).toFixed(2)}L`} trend="Live" color="text-primary" bg="bg-primary/5" sparkline={[30, 45, 35, 50, 48, 65, 55]} />
-        <KPICard title="Net Profit" value={`₹${(stats.profit/100000).toFixed(2)}L`} trend={stats.profit >= 0 ? "↑ Positive" : "↓ Deficit"} color={stats.profit >= 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.profit >= 0 ? "bg-emerald-50" : "bg-rose-50"} sparkline={[40, 35, 55, 45, 60, 58, 65]} />
-        <KPICard title="Leads" value={stats.leads} trend="Current" color="text-blue-600" bg="bg-blue-50" sparkline={[20, 30, 25, 40, 38, 50, 45]} />
-        <KPICard title="Projects" value={stats.projects} trend="Active" color="text-amber-600" bg="bg-amber-50" sparkline={[15, 18, 17, 22, 21, 25, 24]} />
-        <KPICard title="Utilization" value={`${stats.utilization}%`} trend="Target 85%" color="text-indigo-600" bg="bg-indigo-50" sparkline={[75, 78, 80, 82, 81, 84, 84]} />
+        <KPICard title="Revenue" value={`₹${(stats.revenue/100000).toFixed(2)}L`} trend="Live" color="text-primary" bg="bg-primary/5" sparkline={[30, 45, 35, 50, 48, 65, 55]} href="/dashboard/finance" />
+        <KPICard title="Net Profit" value={`₹${(stats.profit/100000).toFixed(2)}L`} trend={stats.profit >= 0 ? "↑ Positive" : "↓ Deficit"} color={stats.profit >= 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.profit >= 0 ? "bg-emerald-50" : "bg-rose-50"} sparkline={[40, 35, 55, 45, 60, 58, 65]} href="/dashboard/finance" />
+        <KPICard title="Leads" value={stats.leads} trend="Current" color="text-blue-600" bg="bg-blue-50" sparkline={[20, 30, 25, 40, 38, 50, 45]} href="/dashboard/clients" />
+        <KPICard title="Projects" value={stats.projects} trend="Active" color="text-amber-600" bg="bg-amber-50" sparkline={[15, 18, 17, 22, 21, 25, 24]} href="/dashboard/projects" />
+        <KPICard title="Utilization" value={`${stats.utilization}%`} trend="Target 85%" color="text-indigo-600" bg="bg-indigo-50" sparkline={[75, 78, 80, 82, 81, 84, 84]} href="/dashboard/analytics" />
       </div>
 
       {/* OPERATIONAL HUB */}
