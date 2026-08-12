@@ -459,7 +459,7 @@ export default function FinancePage() {
                     <CardContent className="p-0 flex-1">
                         <ScrollArea className="h-[300px]">
                             <div className="divide-y divide-border/50">
-                                {clients?.flatMap(c => (c.payments || []).map(p => ({ ...p, clientName: c.companyName })))
+                                {clients?.flatMap(c => (c.payments || []).map(p => ({ ...p, clientName: c.companyName, clientId: c.id })))
                                     .filter(p => p && p.status !== 'Paid')
                                     .sort((a, b) => {
                                         if (!a.dueDate) return 1;
@@ -468,7 +468,7 @@ export default function FinancePage() {
                                     })
                                     .slice(0, 10)
                                     .map((p, i) => (
-                                    <div key={i} className="p-4 hover:bg-white transition-all flex items-center justify-between group">
+                                    <Link href={`/dashboard/clients?clientId=${p.clientId}`} key={i} className="p-4 hover:bg-white transition-all flex items-center justify-between group cursor-pointer block">
                                         <div className="flex items-center gap-4">
                                             <div className="p-2 rounded-none bg-primary/5 text-primary"><ListChecks className="size-4" /></div>
                                             <div className="space-y-0.5 text-left">
@@ -480,7 +480,7 @@ export default function FinancePage() {
                                             <p className="text-sm font-black tabular-nums">₹{(parseFloat(p.amount) / 1000).toFixed(1)}K</p>
                                             <p className="text-[9px] font-bold uppercase text-muted-foreground">{p.dueDate || 'Date Pending'}</p>
                                         </div>
-                                    </div>
+                                    </Link>
                                 ))}
                             </div>
                         </ScrollArea>
