@@ -431,11 +431,11 @@ export default function ClientsPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <MetricCard label="Total Clients" value={filteredClients.length} trend="+12%" up={true} icon={Users} color="text-blue-600" bg="bg-blue-50" onClick={() => setTableFilter('all')} active={tableFilter === 'all'} />
-                <MetricCard label="Revenue Got" value={`₹${stats.collected.toLocaleString()}`} trend="+8.4%" up={true} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" valueColor="text-emerald-600" onClick={() => setTableFilter('revenue')} active={tableFilter === 'revenue'} />
-                <MetricCard label="In Pipeline" value={`₹${stats.pending.toLocaleString()}`} trend="-2.1%" up={false} icon={Clock} color="text-amber-600" bg="bg-amber-50" onClick={() => setTableFilter('pipeline')} active={tableFilter === 'pipeline'} />
-                <MetricCard label="Technical Val" value={`₹${stats.technicalVal.toLocaleString()}`} trend="+5.0%" up={true} icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" />
-                <MetricCard label="Marketing Val" value={`₹${stats.marketingVal.toLocaleString()}`} trend="+1.5%" up={true} icon={Zap} color="text-purple-600" bg="bg-purple-50" />
+                <MetricCard label="Total Clients" value={filteredClients.length} trend="Total" up={true} icon={Users} color="text-blue-600" bg="bg-blue-50" onClick={() => setTableFilter('all')} active={tableFilter === 'all'} />
+                <MetricCard label="Revenue Got" value={`₹${stats.collected.toLocaleString()}`} trend="Collected" up={true} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" valueColor="text-emerald-600" onClick={() => setTableFilter('revenue')} active={tableFilter === 'revenue'} />
+                <MetricCard label="In Pipeline" value={`₹${stats.pending.toLocaleString()}`} trend="Pending" up={false} icon={Clock} color="text-amber-600" bg="bg-amber-50" onClick={() => setTableFilter('pipeline')} active={tableFilter === 'pipeline'} />
+                <MetricCard label="Technical Val" value={`₹${stats.technicalVal.toLocaleString()}`} trend="Active" up={true} icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" />
+                <MetricCard label="Marketing Val" value={`₹${stats.marketingVal.toLocaleString()}`} trend="Active" up={true} icon={Zap} color="text-purple-600" bg="bg-purple-50" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -852,7 +852,7 @@ function MetricCard({ label, value, trend, up, icon: Icon, color, bg, valueColor
                 <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}><Icon className="size-4" /></div>
                 <div className="min-w-0 flex-1">
                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
-                    <h3 className={cn("text-lg font-black tracking-tight truncate leading-none", valueColor || "text-slate-900")}>{value}</h3>
+                    <h3 className={cn("text-lg font-black tracking-tighter truncate leading-none", valueColor || "text-slate-900")}>{value}</h3>
                 </div>
             </div>
             <div className="pt-3 border-t border-dashed border-border/50 flex items-center justify-between">
@@ -881,5 +881,4 @@ function StatBox({ label, value, icon: Icon, color }: { label: string, value: st
             <div className={cn("p-1.5 rounded-lg inline-block shadow-sm", color)}><Icon className="size-3.5" /></div>
             <div><p className="text-base font-black text-slate-900 leading-none">{value}</p><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{label}</p></div>
         </div>
-    );
 }
