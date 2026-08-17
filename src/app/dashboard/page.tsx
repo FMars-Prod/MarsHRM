@@ -15,6 +15,7 @@ import { AnnouncementsWidget } from "@/components/geohrm/announcements-widget";
 import { EventsWidget } from "@/components/geohrm/events-widget";
 import { MonthlyReviewBanner } from "@/components/geohrm/monthly-review-banner";
 import { WfhSetupReminder } from "@/components/geohrm/wfh-setup-reminder";
+import { MeetingStatusBanner } from "@/components/geohrm/meeting-status-banner";
 import { 
   AreaChart, Area, PieChart, Pie, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, 
@@ -234,6 +235,7 @@ export default function DashboardPage() {
     return (
       <div className="space-y-3 max-w-full mx-auto pb-4 font-jakarta">
         <MonthlyReviewBanner />
+        <MeetingStatusBanner />
         <WfhSetupReminder />
         <div className="flex flex-col gap-0.5 mb-1 animate-fade-in-up">
             <h1 className="text-xl sm:text-2xl font-black tracking-tighter leading-none text-primary uppercase">
@@ -280,6 +282,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen space-y-3 pb-6 font-jakarta bg-gradient-to-br from-primary/5 via-[#F8FAFC] to-indigo-500/5 px-2 md:px-4">
       <MonthlyReviewBanner />
+      <MeetingStatusBanner />
       <WfhSetupReminder />
       {/* Header Section */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pt-2 animate-fade-in-up">
