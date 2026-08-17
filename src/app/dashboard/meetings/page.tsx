@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -31,6 +30,17 @@ import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const MEETING_TYPES = [
   "Daily Stand-up",
@@ -79,6 +89,7 @@ export default function MeetingsPage() {
     const [statusFilter, setStatusFilter] = React.useState<string>("all");
     const [typeFilter, setTypeFilter] = React.useState<string>("all");
     const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(null);
+    const [attendeesMeeting, setAttendeesMeeting] = React.useState<Meeting | null>(null);
     const [meetingForm, setMeetingForm] = React.useState<Partial<Meeting>>({
         title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm")
     });
@@ -274,7 +285,7 @@ export default function MeetingsPage() {
                                 </div>
                             </ScrollArea>
                             <div className="p-10 border-t bg-white shrink-0">
-                                <Button onClick={handleCreateMeeting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Schedule Meeting</Button>
+                                <Button onClick={handleCreateMeeting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-xl shadow-primary/20">Schedule Meeting</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
@@ -370,11 +381,26 @@ export default function MeetingsPage() {
                                         <TableCell className="text-right px-8" onClick={e => e.stopPropagation()}>
                                             <div className="flex justify-end gap-2">
                                                 {!isPast && m.link && <Button variant="outline" size="sm" className="rounded-none h-9 bg-white font-black uppercase text-[9px] border-none ring-1 ring-border/50" asChild><Link href={m.link} target="_blank"><ExternalLink className="size-3 mr-1.5"/> Join</Link></Button>}
+                                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none hover:bg-primary/5 text-primary" onClick={() => setAttendeesMeeting(m)}><Users className="size-4" /></Button>
                                                 <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none hover:bg-primary/5 text-primary" onClick={() => setSelectedMeeting(m)}><Eye className="size-4" /></Button>
                                                 {(isExecutive || m.createdBy === user?.uid) && (
-                                                    <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50 rounded-none h-9 w-9" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'meetings', m.id))}>
-                                                        <Trash2 className="size-4" />
-                                                    </Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50 rounded-none h-9 w-9">
+                                                                <Trash2 className="size-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent className="rounded-none border-none shadow-2xl">
+                                                            <AlertDialogHeader className="text-left">
+                                                                <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Meeting?</AlertDialogTitle>
+                                                                <AlertDialogDescription className="text-sm font-medium leading-relaxed">This will permanently remove the record for "{m.title}" from the registry. This action cannot be undone.</AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter className="mt-8 gap-3">
+                                                                <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => deleteDocumentNonBlocking(doc(firestore, 'meetings', m.id))} className="rounded-none font-black uppercase text-[10px] h-11 px-6 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Delete Record</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 )}
                                             </div>
                                         </TableCell>
@@ -532,6 +558,42 @@ export default function MeetingsPage() {
                     </ScrollArea>
                 </SheetContent>
             </Sheet>
+
+            <Dialog open={!!attendeesMeeting} onOpenChange={o => !o && setAttendeesMeeting(null)}>
+                <DialogContent className="rounded-none border-none shadow-3xl sm:max-w-md p-0 overflow-hidden flex flex-col">
+                    <DialogHeader className="p-8 border-b bg-white shrink-0 text-left">
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
+                            <Users className="size-5" /> Attendee Hub
+                        </DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Verified participant list</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[50vh] p-8 bg-muted/5">
+                        <div className="space-y-3">
+                            {attendeesMeeting?.participantIds.map((id, i) => {
+                                const member = allUsers?.find(u => u.id === id);
+                                return (
+                                    <div key={id} className="flex items-center gap-4 p-4 bg-white border border-border/50 rounded-none shadow-sm group hover:bg-primary/5 transition-all">
+                                        <Avatar className="size-10 rounded-none border ring-1 ring-border/50 group-hover:ring-primary/20 transition-all">
+                                            <AvatarImage src={member?.avatar} />
+                                            <AvatarFallback className="text-[10px] font-black bg-muted">{attendeesMeeting.participantNames[i]?.[0]}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className="font-black text-sm uppercase tracking-tight truncate">{attendeesMeeting.participantNames[i]}</p>
+                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60 truncate">{member?.jobTitle || 'Team Member'}</p>
+                                        </div>
+                                        {id === attendeesMeeting.createdBy && (
+                                            <Badge variant="outline" className="rounded-none border-none bg-primary/10 text-primary font-black text-[7px] uppercase h-4 px-1.5">Host</Badge>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </ScrollArea>
+                    <div className="p-8 border-t bg-white shrink-0">
+                        <Button className="w-full rounded-none h-12 font-black uppercase text-[10px] tracking-widest" onClick={() => setAttendeesMeeting(null)}>Close Hub</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
