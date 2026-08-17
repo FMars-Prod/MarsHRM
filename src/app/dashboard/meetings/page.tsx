@@ -299,13 +299,15 @@ export default function MeetingsPage() {
                                                         const current = meetingForm.participantIds || [];
                                                         setMeetingForm({...meetingForm, participantIds: c ? [...current, u.id] : current.filter(id => id !== u.id)});
                                                     }} />
-                                                    <Label htmlFor={`u-${u.id}`} className="flex-1 font-bold text-xs uppercase cursor-pointer flex items-center gap-2">
+                                                    <Label htmlFor={`u-${u.id}`} className="flex-1 font-bold text-xs uppercase cursor-pointer flex items-center gap-3">
                                                         <Avatar className="size-6">
                                                             <AvatarImage src={u.avatar} />
                                                             <AvatarFallback className="text-[8px] font-black bg-primary/10 text-primary">{u.firstName[0]}</AvatarFallback>
                                                         </Avatar>
-                                                        {u.firstName} {u.lastName}
-                                                        <span className="text-[8px] opacity-40 ml-auto">{u.jobTitle}</span>
+                                                        <div className="flex flex-col">
+                                                            <span>{u.firstName} {u.lastName}</span>
+                                                            <span className="text-[8px] opacity-40">{u.jobTitle}</span>
+                                                        </div>
                                                     </Label>
                                                 </div>
                                             ))}
@@ -357,7 +359,7 @@ export default function MeetingsPage() {
 
             <div className="space-y-4">
                 <div className="flex flex-col md:flex-row gap-3 items-center">
-                    <div className="relative flex-1 w-full">
+                    <div className="relative flex-1 w-full text-left">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                         <Input 
                             placeholder="Search meetings..." 
@@ -426,13 +428,13 @@ export default function MeetingsPage() {
                                                 {getTypeIcon(m.type)}
                                             </div>
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="text-left">
                                             <div className="text-left">
                                                 <p className="text-xs font-bold text-slate-700">{format(m.date.toDate(), 'dd MMM yyyy')}</p>
                                                 <p className="text-[10px] font-medium text-slate-400 mt-0.5">{format(m.date.toDate(), 'p')}</p>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="text-left">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="size-8 rounded-full border border-white shadow-sm">
                                                     <AvatarImage src={organizer?.avatar} className="object-cover" />

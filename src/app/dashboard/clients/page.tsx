@@ -879,7 +879,10 @@ function StatBox({ label, value, icon: Icon, color }: { label: string, value: st
     return (
         <div className="p-3 bg-white rounded-none ring-1 ring-border shadow-sm space-y-2 transition-transform hover:scale-105 text-left">
             <div className={cn("p-1.5 rounded-lg inline-block shadow-sm", color)}><Icon className="size-3.5" /></div>
-            <div className="text-left"><p className="text-base font-black text-slate-900 leading-none text-left">{value}</p><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-0.5 text-left">{label}</p></div>
+            <div className="text-left">
+                <p className="text-base font-black text-slate-900 leading-none text-left">{value}</p>
+                <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-0.5 text-left">{label}</p>
+            </div>
         </div>
     );
 }

@@ -76,18 +76,18 @@ export function UpcomingMeetingsWidget() {
                     <Video className="size-3.5" /> Upcoming Meetings
                 </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 flex-1">
+            <CardContent className="p-0 flex-1 text-left">
                 <ScrollArea className="h-[200px]">
                     {isLoading ? (
                         <div className="p-4 space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-12 bg-muted/20 animate-pulse rounded-none" />)}</div>
                     ) : meetings && meetings.length > 0 ? (
-                        <div className="divide-y divide-border/50">
+                        <div className="divide-y divide-border/50 text-left">
                             {meetings.map((m: any) => (
                                 <Link href="/dashboard/meetings" key={m.id} className="block p-4 hover:bg-muted/10 transition-all group">
-                                    <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-start justify-between gap-3 text-left">
                                         <div className="space-y-1 text-left">
-                                            <p className="font-black text-xs uppercase tracking-tight truncate max-w-[180px]">{m.title}</p>
-                                            <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase opacity-40">
+                                            <p className="font-black text-xs uppercase tracking-tight truncate max-w-[180px] text-left">{m.title}</p>
+                                            <div className="flex items-center gap-2 text-[8px] font-black text-muted-foreground uppercase opacity-40 text-left">
                                                 <Clock className="size-2.5" />
                                                 {format(m.date.toDate(), 'PPP p')}
                                             </div>
@@ -116,7 +116,7 @@ export function UpcomingMeetingsWidget() {
 
 function KPICard({ title, value, trend, color, bg, sparkline, href }: any) {
   const content = (
-    <Card className="border-none shadow-sm rounded-none bg-white group hover:shadow-md transition-all p-3 space-y-2 ring-1 ring-border/50 cursor-pointer h-full">
+    <Card className="border-none shadow-sm rounded-none bg-white group hover:shadow-md transition-all p-3 space-y-2 ring-1 ring-border/50 cursor-pointer h-full text-left">
       <div className="flex items-center justify-between">
         <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{title}</p>
         <div className={cn("px-1 py-0.5 rounded-none text-[6px] font-black uppercase", bg, color)}>{trend}</div>
@@ -196,7 +196,7 @@ export default function DashboardPage() {
     // Manual Transactions
     manualTransactions?.forEach(t => {
         if (t.type === 'income') collected += (t.amount || 0);
-        else collected -= (t.amount || 0); // treating as immediate deduction if not specifically workforce/marketing
+        else collected -= (t.amount || 0); 
     });
 
     // Workforce & Marketing
@@ -225,7 +225,7 @@ export default function DashboardPage() {
             profit: netProfit,
             leads: leadsCount,
             projects: projectsCount,
-            utilization: 84 // Defaulting for now
+            utilization: 84 
         },
         funnelData: data
     };
@@ -233,15 +233,15 @@ export default function DashboardPage() {
 
   if (!isExecutive) {
     return (
-      <div className="space-y-3 max-w-full mx-auto pb-4 font-jakarta">
+      <div className="space-y-3 max-w-full mx-auto pb-4 font-jakarta text-left">
         <MonthlyReviewBanner />
         <MeetingStatusBanner />
         <WfhSetupReminder />
-        <div className="flex flex-col gap-0.5 mb-1 animate-fade-in-up">
-            <h1 className="text-xl sm:text-2xl font-black tracking-tighter leading-none text-primary uppercase">
+        <div className="flex flex-col gap-0.5 mb-1 animate-fade-in-up text-left">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter leading-none text-primary uppercase text-left">
                 {new Date().getHours() < 12 ? "Good Morning" : new Date().getHours() < 17 ? "Good Afternoon" : "Good Evening"}, {currentUserData?.firstName || 'User'}
             </h1>
-            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{currentUserData?.jobTitle || 'Team Member'}</p>
+            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] text-left">{currentUserData?.jobTitle || 'Team Member'}</p>
         </div>
         <DashboardReminder />
         <div className="w-full animate-fade-in-up">
@@ -252,11 +252,11 @@ export default function DashboardPage() {
             <div className="lg:col-span-4 space-y-3">
                 <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden">
                     <CardHeader className="p-4 pb-2 border-b bg-muted/5">
-                        <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2 text-left">
                             <Clock className="size-3.5" /> Shift Control
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 text-left">
                         <AttendanceWidget />
                     </CardContent>
                 </Card>
@@ -280,17 +280,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen space-y-3 pb-6 font-jakarta bg-gradient-to-br from-primary/5 via-[#F8FAFC] to-indigo-500/5 px-2 md:px-4">
+    <div className="min-h-screen space-y-3 pb-6 font-jakarta bg-gradient-to-br from-primary/5 via-[#F8FAFC] to-indigo-50/5 px-2 md:px-4 text-left">
       <MonthlyReviewBanner />
       <MeetingStatusBanner />
       <WfhSetupReminder />
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pt-2 animate-fade-in-up">
-        <div className="space-y-0.5">
-          <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pt-2 animate-fade-in-up text-left">
+        <div className="space-y-0.5 text-left">
+          <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none text-left">
             Good Morning, {currentUserData?.firstName || 'Executive'} 👋
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{currentUserData?.jobTitle || 'Executive Portal'}</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-left">{currentUserData?.jobTitle || 'Executive Portal'}</p>
         </div>
         
         <div className="flex flex-wrap items-center bg-white rounded-none ring-1 ring-slate-200 p-0.5 shadow-sm h-8">
@@ -322,11 +322,11 @@ export default function DashboardPage() {
 
       {/* TOP KPI CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 animate-fade-in-up">
-        <KPICard title="Revenue" value={`₹${(stats.revenue/100000).toFixed(2)}L`} trend="Live" color="text-primary" bg="bg-primary/5" sparkline={[30, 45, 35, 50, 48, 65, 55]} href="/dashboard/finance" />
-        <KPICard title="Net Profit" value={`₹${(stats.profit/100000).toFixed(2)}L`} trend={stats.profit >= 0 ? "↑ Positive" : "↓ Deficit"} color={stats.profit >= 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.profit >= 0 ? "bg-emerald-50" : "bg-rose-50"} sparkline={[40, 35, 55, 45, 60, 58, 65]} href="/dashboard/finance" />
-        <KPICard title="Leads" value={stats.leads} trend="Current" color="text-blue-600" bg="bg-blue-50" sparkline={[20, 30, 25, 40, 38, 50, 45]} href="/dashboard/clients" />
+        <KPICard title="Revenue" value={`₹${(stats.revenue/100000).toFixed(2)}L`} trend="Confirmed" color="text-primary" bg="bg-primary/5" sparkline={[30, 45, 35, 50, 48, 65, 55]} href="/dashboard/finance" />
+        <KPICard title="Surplus" value={`₹${(stats.profit/100000).toFixed(2)}L`} trend={stats.profit >= 0 ? "Surplus" : "Deficit"} color={stats.profit >= 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.profit >= 0 ? "bg-emerald-50" : "bg-rose-50"} sparkline={[40, 35, 55, 45, 60, 58, 65]} href="/dashboard/finance" />
+        <KPICard title="Leads" value={stats.leads} trend="Active" color="text-blue-600" bg="bg-blue-50" sparkline={[20, 30, 25, 40, 38, 50, 45]} href="/dashboard/clients" />
         <KPICard title="Projects" value={stats.projects} trend="Active" color="text-amber-600" bg="bg-amber-50" sparkline={[15, 18, 17, 22, 21, 25, 24]} href="/dashboard/projects" />
-        <KPICard title="Utilization" value={`${stats.utilization}%`} trend="Target 85%" color="text-indigo-600" bg="bg-indigo-50" sparkline={[75, 78, 80, 82, 81, 84, 84]} href="/dashboard/analytics" />
+        <KPICard title="Utilization" value={`${stats.utilization}%`} trend="Verified" color="text-indigo-600" bg="bg-indigo-50" sparkline={[75, 78, 80, 82, 81, 84, 84]} href="/dashboard/analytics" />
       </div>
 
       {/* OPERATIONAL HUB */}
@@ -334,11 +334,11 @@ export default function DashboardPage() {
         <div className="lg:col-span-4 space-y-3">
             <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden">
                 <CardHeader className="p-4 pb-2 border-b bg-muted/5">
-                    <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2 text-left">
                         <Clock className="size-3.5" /> Shift Control
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 text-left">
                     <AttendanceWidget />
                 </CardContent>
             </Card>
@@ -349,14 +349,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 animate-fade-in-up">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 animate-fade-in-up text-left">
         {/* PIPELINE FUNNEL */}
-        <Card className="lg:col-span-6 border-none shadow-sm rounded-none bg-white overflow-hidden">
-          <CardHeader className="p-3 border-b flex flex-row items-center justify-between bg-muted/5">
-            <CardTitle className="text-[9px] font-black uppercase tracking-widest text-slate-800">Sales Pipeline</CardTitle>
+        <Card className="lg:col-span-6 border-none shadow-sm rounded-none bg-white overflow-hidden text-left">
+          <CardHeader className="p-3 border-b flex flex-row items-center justify-between bg-muted/5 text-left">
+            <CardTitle className="text-[9px] font-black uppercase tracking-widest text-slate-800 text-left">Sales Pipeline</CardTitle>
           </CardHeader>
-          <CardContent className="p-3">
-            <div className="h-[250px] w-full">
+          <CardContent className="p-3 text-left">
+            <div className="h-[250px] w-full text-left">
               <ResponsiveContainer width="100%" height="100%">
                 <FunnelChart>
                   <Tooltip contentStyle={{ borderRadius: '0px', fontSize: '10px' }} />
@@ -374,23 +374,23 @@ export default function DashboardPage() {
         </Card>
 
         {/* ALERTS & PRIORITIES */}
-        <Card className="lg:col-span-6 border-none shadow-sm rounded-none bg-white overflow-hidden flex flex-col">
-          <CardHeader className="p-3 border-b flex flex-row items-center justify-between bg-rose-50/30">
-            <CardTitle className="text-[9px] font-black uppercase tracking-widest text-rose-700">Priority Alerts</CardTitle>
+        <Card className="lg:col-span-6 border-none shadow-sm rounded-none bg-white overflow-hidden flex flex-col text-left">
+          <CardHeader className="p-3 border-b flex flex-row items-center justify-between bg-rose-50/30 text-left">
+            <CardTitle className="text-[9px] font-black uppercase tracking-widest text-rose-700 text-left">Priority Alerts</CardTitle>
           </CardHeader>
-          <CardContent className="p-0 flex-1">
-            <ScrollArea className="h-[250px]">
-              <div className="divide-y">
+          <CardContent className="p-0 flex-1 text-left">
+            <ScrollArea className="h-[250px] text-left">
+              <div className="divide-y text-left">
                 {[
                   { t: 'High Spend Alert', d: 'Marketing budget usage > 80%', time: 'Just Now', icon: Zap, color: 'text-amber-600' },
                   { t: 'Project Blocked', d: 'Resource required for Technical Sprint', time: '1h', icon: Briefcase, color: 'text-rose-600' },
                   { t: 'Pending Approval', d: '3 Leave requests waiting HR action', time: '2h', icon: Clock, color: 'text-blue-600' },
                 ].map((alert, i) => (
-                  <div key={i} className="p-4 hover:bg-muted/10 transition-all flex items-start gap-4">
+                  <div key={i} className="p-4 hover:bg-muted/10 transition-all flex items-start gap-4 text-left">
                     <div className={cn("p-2 rounded-none bg-muted/20", alert.color)}><alert.icon className="size-4" /></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center"><p className="font-black text-[11px] uppercase truncate">{alert.t}</p><span className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">{alert.time}</span></div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">{alert.d}</p>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex justify-between items-center text-left"><p className="font-black text-[11px] uppercase truncate text-left">{alert.t}</p><span className="text-[8px] font-bold text-muted-foreground uppercase opacity-40 text-left">{alert.time}</span></div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1 text-left">{alert.d}</p>
                     </div>
                   </div>
                 ))}
@@ -400,25 +400,25 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 animate-fade-in-up">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 animate-fade-in-up text-left">
         <AnnouncementsWidget />
         <EventsWidget />
         <ActionItemsWidget />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 animate-fade-in-up">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 animate-fade-in-up text-left">
         <TodoWidget />
         <WorkHoursSummaryWidget />
         <MissionHeatmapWidget />
       </div>
 
       {/* QUICK ACTIONS */}
-      <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden animate-fade-in-up">
-        <CardHeader className="p-3 border-b bg-primary/5">
-          <CardTitle className="text-[9px] font-black uppercase tracking-widest text-primary">Quick Actions</CardTitle>
+      <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden animate-fade-in-up text-left">
+        <CardHeader className="p-3 border-b bg-primary/5 text-left">
+          <CardTitle className="text-[9px] font-black uppercase tracking-widest text-primary text-left">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="p-3">
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+        <CardContent className="p-3 text-left">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-left">
             <ActionButton icon={Briefcase} label="Project" href="/dashboard/projects" />
             <ActionButton icon={MousePointer2} label="Lead" href="/dashboard/clients" />
             <ActionButton icon={UserPlus} label="Staff" href="/dashboard/users" />
