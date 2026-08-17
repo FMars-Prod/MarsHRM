@@ -124,6 +124,7 @@ export default function ClientsPage() {
 
     const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
     const { data: userData } = useDoc<any>(userDocRef);
+    const isPrivileged = userData?.role === 'HR Manager' || userData?.role === 'CEO/Admin' || userData?.role === 'CEO/MD';
 
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('firstName', 'asc')), [firestore]);
     const { data: allUsers } = useCollection<any>(usersQuery);
@@ -242,7 +243,7 @@ export default function ClientsPage() {
 
     const handleSaveClient = async () => {
         if (!clientForm.companyName) {
-            toast({ variant: 'destructive', title: 'Organization Name Required' });
+            toast({ variant: 'destructive', title: 'Name Required' });
             return;
         }
 
@@ -255,10 +256,10 @@ export default function ClientsPage() {
 
         if (editingClient) {
             updateDocumentNonBlocking(doc(firestore, 'clients', editingClient.id), payload);
-            toast({ title: 'Record Updated' });
+            toast({ title: 'Client Updated' });
         } else {
             addDocumentNonBlocking(collection(firestore, 'clients'), payload);
-            toast({ title: 'Client Provisioned' });
+            toast({ title: 'Client Added' });
         }
         setIsAddOpen(false);
         setEditingClient(null);
@@ -302,7 +303,7 @@ export default function ClientsPage() {
             toast({ variant: 'destructive', title: 'No Data' });
             return;
         }
-        const headers = ["Organization", "Client Name", "Email", "Phone", "Status", "Priority", "Project Value", "Service Type", "Joined At"];
+        const headers = ["Client", "Contact", "Email", "Phone", "Status", "Priority", "Project Value", "Type", "Joined"];
         const rows = filteredClients.map(c => [
             `"${c.companyName}"`, `"${c.clientName || ''}"`, c.email, c.phone, c.status, c.priority || 'Medium',
             `${c.currencyType}${c.projectTotalCost || 0}`, c.serviceType || 'N/A',
@@ -313,7 +314,7 @@ export default function ClientsPage() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `MarsHRM_Clients_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        link.setAttribute("download", `Clients_${format(new Date(), 'yyyy-MM-dd')}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -338,7 +339,7 @@ export default function ClientsPage() {
             events.push({
                 date: selectedClient.createdAt.toDate ? selectedClient.createdAt.toDate() : new Date(selectedClient.createdAt),
                 type: 'INITIATED',
-                label: 'Partnership Started',
+                label: 'Started',
                 color: 'bg-slate-900'
             });
         }
@@ -376,7 +377,7 @@ export default function ClientsPage() {
                 events.push({
                     date: pDate,
                     type: 'PAYMENT',
-                    label: `Payment Received: ${selectedClient.currencyType}${parseFloat(p.amountReceived || '0').toLocaleString()}`,
+                    label: `Payment: ${selectedClient.currencyType}${parseFloat(p.amountReceived || '0').toLocaleString()}`,
                     color: 'bg-emerald-500'
                 });
             }
@@ -406,7 +407,7 @@ export default function ClientsPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 text-left">
                 <div>
                     <h1 className="text-3xl font-black tracking-tighter text-slate-900 leading-none mb-1">Clients</h1>
-                    <p className="text-sm font-medium text-muted-foreground">Strategic partnership and account directory</p>
+                    <p className="text-sm font-medium text-muted-foreground">Account directory</p>
                 </div>
                 
                 <div className="flex flex-wrap gap-2 items-center">
@@ -432,7 +433,7 @@ export default function ClientsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <MetricCard label="Total Clients" value={filteredClients.length} trend="Total" up={true} icon={Users} color="text-blue-600" bg="bg-blue-50" onClick={() => setTableFilter('all')} active={tableFilter === 'all'} />
-                <MetricCard label="Revenue Got" value={`₹${stats.collected.toLocaleString()}`} trend="Confirmed" up={true} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" valueColor="text-emerald-600" onClick={() => setTableFilter('revenue')} active={tableFilter === 'revenue'} />
+                <MetricCard label="Money Got" value={`₹${stats.collected.toLocaleString()}`} trend="Confirmed" up={true} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" valueColor="text-emerald-600" onClick={() => setTableFilter('revenue')} active={tableFilter === 'revenue'} />
                 <MetricCard label="In Pipeline" value={`₹${stats.pending.toLocaleString()}`} trend="Pending" up={false} icon={Clock} color="text-amber-600" bg="bg-amber-50" onClick={() => setTableFilter('pipeline')} active={tableFilter === 'pipeline'} />
                 <MetricCard label="Technical Val" value={`₹${stats.technicalVal.toLocaleString()}`} trend="Active" up={true} icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" />
                 <MetricCard label="Marketing Val" value={`₹${stats.marketingVal.toLocaleString()}`} trend="Active" up={true} icon={Zap} color="text-purple-600" bg="bg-purple-50" />
@@ -444,7 +445,7 @@ export default function ClientsPage() {
                         <div className="flex flex-1 w-full gap-2">
                             <div className="relative flex-1">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
-                                <Input placeholder="Search clients..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12 h-11 bg-muted/20 border-none ring-1 ring-border/50 rounded-none text-left" />
+                                <Input placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12 h-11 bg-muted/20 border-none ring-1 ring-border/50 rounded-none text-left" />
                             </div>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger className="w-[140px] h-11 rounded-none bg-muted/20 border-none ring-1 ring-border/50"><SelectValue placeholder="All Status" /></SelectTrigger>
@@ -460,30 +461,30 @@ export default function ClientsPage() {
                         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                             <DialogTrigger asChild>
                                 <Button className="h-11 px-8 rounded-none font-black uppercase text-[11px] tracking-widest gap-2 shadow-xl shadow-primary/20">
-                                    <Plus className="size-4" /> Add a Client!
+                                    <Plus className="size-4" /> Add Client
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-4xl rounded-none p-0 overflow-hidden border-none shadow-3xl h-[90vh] flex flex-col text-left">
                                 <DialogHeader className="p-10 border-b bg-white text-left">
-                                    <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">Client Provisioning Form</DialogTitle>
-                                    <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-left">Register new strategic account and financial milestones</DialogDescription>
+                                    <DialogTitle className="text-3xl font-black uppercase tracking-tighter text-primary">New Client Form</DialogTitle>
+                                    <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-left">Register new account</DialogDescription>
                                 </DialogHeader>
                                 <ScrollArea className="flex-1 bg-muted/5 p-10">
                                     <div className="space-y-12">
                                         <div className="space-y-6 text-left">
-                                            <div className="flex items-center gap-3 text-primary"><UserCircle className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Client Information</h4></div>
+                                            <div className="flex items-center gap-3 text-primary"><UserCircle className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Client Info</h4></div>
                                             <div className="grid grid-cols-2 gap-8 text-left">
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Organization Name</Label><Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} className="h-11 rounded-none" /></div>
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Client Name</Label><Input value={clientForm.clientName} onChange={e => setClientForm({...clientForm, clientName: e.target.value})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Organization</Label><Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Contact Name</Label><Input value={clientForm.clientName} onChange={e => setClientForm({...clientForm, clientName: e.target.value})} className="h-11 rounded-none" /></div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-8 text-left">
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Industry Type</Label>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Industry</Label>
                                                     <Select value={clientForm.industryType} onValueChange={v => setClientForm({...clientForm, industryType: v})}>
                                                         <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
                                                         <SelectContent>{INDUSTRY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                                                     </Select>
                                                 </div>
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Service Type</Label>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Service</Label>
                                                     <Select value={clientForm.serviceType} onValueChange={v => setClientForm({...clientForm, serviceType: v as any})}>
                                                         <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
                                                         <SelectContent><SelectItem value="Technical">Technical</SelectItem><SelectItem value="Digital Marketing">Digital Marketing</SelectItem></SelectContent>
@@ -491,8 +492,8 @@ export default function ClientsPage() {
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-8 text-left">
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Phone Number</Label><Input value={clientForm.phone} onChange={e => setClientForm({...clientForm, phone: e.target.value})} className="h-11 rounded-none" /></div>
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Email Address</Label><Input value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Phone</Label><Input value={clientForm.phone} onChange={e => setClientForm({...clientForm, phone: e.target.value})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Email</Label><Input value={clientForm.email} onChange={e => setClientForm({...clientForm, email: e.target.value})} className="h-11 rounded-none" /></div>
                                             </div>
                                             <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Logo URL</Label><Input value={clientForm.logoUrl} onChange={e => setClientForm({...clientForm, logoUrl: e.target.value})} placeholder="https://..." className="h-11 rounded-none" /></div>
                                         </div>
@@ -506,12 +507,12 @@ export default function ClientsPage() {
                                                         <SelectContent>{COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                                                     </Select>
                                                 </div>
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">State/Province</Label><Input value={clientForm.state} onChange={e => setClientForm({...clientForm, state: e.target.value})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">State</Label><Input value={clientForm.state} onChange={e => setClientForm({...clientForm, state: e.target.value})} className="h-11 rounded-none" /></div>
                                                 <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">City</Label><Input value={clientForm.city} onChange={e => setClientForm({...clientForm, city: e.target.value})} className="h-11 rounded-none" /></div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-8 text-left">
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Organization Address</Label><Textarea value={clientForm.address} onChange={e => setClientForm({...clientForm, address: e.target.value})} className="rounded-none min-h-[80px]" /></div>
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Account Status</Label>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Address</Label><Textarea value={clientForm.address} onChange={e => setClientForm({...clientForm, address: e.target.value})} className="rounded-none min-h-[80px]" /></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Status</Label>
                                                     <Select value={clientForm.status} onValueChange={v => setClientForm({...clientForm, status: v as any})}>
                                                         <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
                                                         <SelectContent><SelectItem value="Active">Active</SelectItem><SelectItem value="Prospect">Prospect</SelectItem><SelectItem value="On Hold">On Hold</SelectItem><SelectItem value="Inactive">Inactive</SelectItem></SelectContent>
@@ -521,9 +522,9 @@ export default function ClientsPage() {
                                         </div>
 
                                         <div className="p-8 bg-white border-2 border-dashed border-primary/20 rounded-none space-y-8 text-left">
-                                            <div className="flex items-center gap-3 text-emerald-600"><DollarSign className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Financial Matrix</h4></div>
+                                            <div className="flex items-center gap-3 text-emerald-600"><DollarSign className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Financials</h4></div>
                                             <div className="grid grid-cols-3 gap-6 text-left">
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Total Project Value</Label><Input type="number" value={clientForm.totalProjectValue} onChange={e => setClientForm({...clientForm, totalProjectValue: parseFloat(e.target.value) || 0})} className="h-11 rounded-none font-bold text-emerald-600" /></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Project Value</Label><Input type="number" value={clientForm.totalProjectValue} onChange={e => setClientForm({...clientForm, totalProjectValue: parseFloat(e.target.value) || 0})} className="h-11 rounded-none font-bold text-emerald-600" /></div>
                                                 <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Currency</Label>
                                                     <Select value={clientForm.currencyType} onValueChange={v => setClientForm({...clientForm, currencyType: v})}>
                                                         <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
@@ -533,9 +534,9 @@ export default function ClientsPage() {
                                                 <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Expected Revenue</Label><Input type="number" value={clientForm.expectedAnnualRevenue} onChange={e => setClientForm({...clientForm, expectedAnnualRevenue: parseFloat(e.target.value) || 0})} className="h-11 rounded-none" /></div>
                                             </div>
                                             <div className="grid grid-cols-3 gap-6 text-left">
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Discount Offered (%)</Label><Input type="number" value={clientForm.discountOffered} onChange={e => setClientForm({...clientForm, discountOffered: parseFloat(e.target.value) || 0})} className="h-11 rounded-none" /></div>
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Final Cost (Calculated)</Label><div className="h-11 bg-muted/20 border flex items-center px-3 font-black text-emerald-700">{clientForm.currencyType}{clientForm.projectTotalCost?.toLocaleString()}</div></div>
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Contract Start Date</Label><Input type="date" value={clientForm.contractStartDate} onChange={e => setClientForm({...clientForm, contractStartDate: e.target.value})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Discount (%)</Label><Input type="number" value={clientForm.discountOffered} onChange={e => setClientForm({...clientForm, discountOffered: parseFloat(e.target.value) || 0})} className="h-11 rounded-none" /></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Final Cost</Label><div className="h-11 bg-muted/20 border flex items-center px-3 font-black text-emerald-700">{clientForm.currencyType}{clientForm.projectTotalCost?.toLocaleString()}</div></div>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Start Date</Label><Input type="date" value={clientForm.contractStartDate} onChange={e => setClientForm({...clientForm, contractStartDate: e.target.value})} className="h-11 rounded-none" /></div>
                                             </div>
                                         </div>
 
@@ -548,7 +549,7 @@ export default function ClientsPage() {
                                                         <SelectContent>{allUsers?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}</SelectContent>
                                                     </Select>
                                                 </div>
-                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Assign to Team</Label>
+                                                <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Team</Label>
                                                     <Select value={clientForm.assignedTeamId} onValueChange={v => setClientForm({...clientForm, assignedTeamId: v})}>
                                                         <SelectTrigger className="h-11 rounded-none"><SelectValue placeholder="Select Team" /></SelectTrigger>
                                                         <SelectContent>{allTeams?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
@@ -565,8 +566,8 @@ export default function ClientsPage() {
 
                                         <div className="space-y-6 text-left">
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3 text-primary text-left"><ListChecks className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Payment Milestones</h4></div>
-                                                <Button type="button" onClick={handleAddMilestone} size="sm" variant="outline" className="rounded-none h-8 font-black uppercase text-[8px] tracking-widest gap-2"><Plus className="size-3"/> Add Milestone</Button>
+                                                <div className="flex items-center gap-3 text-primary text-left"><ListChecks className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Payments</h4></div>
+                                                <Button type="button" onClick={handleAddMilestone} size="sm" variant="outline" className="rounded-none h-8 font-black uppercase text-[8px] tracking-widest gap-2"><Plus className="size-3"/> Add Payment</Button>
                                             </div>
                                             <div className="space-y-4 text-left">
                                                 {(clientForm.payments || []).map((p) => (
@@ -581,24 +582,16 @@ export default function ClientsPage() {
                                                                     <SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Partially Paid">Partially Paid</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Overdue">Overdue</SelectItem></SelectContent>
                                                                 </Select>
                                                             </div>
-                                                            <div className="space-y-1.5 text-left"><Label className="text-[9px] uppercase opacity-60">Amount Received</Label><Input type="number" value={p.amountReceived} onChange={e => updateMilestone(p.id, { amountReceived: e.target.value })} className="h-9 rounded-none font-bold text-emerald-600" /></div>
+                                                            <div className="space-y-1.5 text-left"><Label className="text-[9px] uppercase opacity-60">Got</Label><Input type="number" value={p.amountReceived} onChange={e => updateMilestone(p.id, { amountReceived: e.target.value })} className="h-9 rounded-none font-bold text-emerald-600" /></div>
                                                         </div>
                                                     </Card>
                                                 ))}
-                                            </div>
-                                            <div className="p-4 bg-muted/30 border-t border-b flex justify-between items-center text-left">
-                                                <div className="space-y-0.5 text-left">
-                                                    <p className="text-[8px] font-black uppercase text-muted-foreground">Audit Synchronization</p>
-                                                    <p className={cn("text-xs font-black", scheduledTotal === calculatedTotalCost ? "text-emerald-600" : "text-rose-600")}>
-                                                        Scheduled: {clientForm.currencyType}{scheduledTotal.toLocaleString()} / Final Cost: {clientForm.currencyType}{calculatedTotalCost.toLocaleString()}
-                                                    </p>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </ScrollArea>
                                 <div className="p-10 border-t bg-white shrink-0 text-left">
-                                    <Button onClick={handleSaveClient} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Finalize Registry</Button>
+                                    <Button onClick={handleSaveClient} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Save Client</Button>
                                 </div>
                             </DialogContent>
                         </Dialog>
@@ -608,15 +601,15 @@ export default function ClientsPage() {
                         <Table>
                             <TableHeader className="bg-muted/10 border-y">
                                 <TableRow>
-                                    <TableHead className="font-black text-[10px] uppercase h-16 px-8 tracking-widest">Client Identity</TableHead>
-                                    <TableHead className="font-black text-[10px] uppercase h-16 tracking-widest">Project Value</TableHead>
+                                    <TableHead className="font-black text-[10px] uppercase h-16 px-8 tracking-widest">Client</TableHead>
+                                    <TableHead className="font-black text-[10px] uppercase h-16 tracking-widest">Value</TableHead>
                                     <TableHead className="font-black text-[10px] uppercase h-16 tracking-widest">Status</TableHead>
                                     <TableHead className="font-black text-[10px] uppercase h-16 tracking-widest text-right px-8">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse text-xs font-black text-muted-foreground uppercase">Scanning Registry...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse text-xs font-black text-muted-foreground uppercase">Loading...</TableCell></TableRow>
                                 ) : filteredClients.map(client => (
                                     <TableRow key={client.id} className="border-b group hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedClient(client)}>
                                         <TableCell className="py-8 px-8">
@@ -646,14 +639,14 @@ export default function ClientsPage() {
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-10"><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-56 rounded-none p-2 border-none shadow-3xl text-left">
                                                     <DropdownMenuItem className="font-black text-[11px] uppercase gap-3 py-4 px-4 text-left" asChild>
-                                                        <Link href={`/dashboard/meetings?clientId=${client.id}`}><Video className="size-4 text-primary" /> Schedule Meeting</Link>
+                                                        <Link href={`/dashboard/meetings?clientId=${client.id}`}><Video className="size-4 text-primary" /> Meet</Link>
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => { setEditingClient(client); setClientForm(client); setIsAddOpen(true); }} className="font-black text-[11px] uppercase gap-3 py-4 px-4 text-left">
-                                                        <Edit className="size-4 text-primary" /> Edit Record
+                                                        <Edit className="size-4 text-primary" /> Edit
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem className="font-black text-[11px] uppercase gap-3 py-4 px-4 text-rose-600 text-left" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'clients', client.id))}>
-                                                        <Trash2 className="size-4" /> Purge Partner
+                                                        <Trash2 className="size-4" /> Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -684,7 +677,7 @@ export default function ClientsPage() {
                                         </div>
                                         <p className="font-bold text-xs uppercase truncate max-w-[120px] text-left">{c.companyName}</p>
                                     </div>
-                                    <span className="text-[10px] font-black text-emerald-600 text-left">{rankBy === 'price' ? `${c.currencyType}${c.projectTotalCost?.toLocaleString()}` : `${c.payments?.length || 0} Milestones`}</span>
+                                    <span className="text-[10px] font-black text-emerald-600 text-left">{rankBy === 'price' ? `${c.currencyType}${c.projectTotalCost?.toLocaleString()}` : `${c.payments?.length || 0}`}</span>
                                 </div>
                             ))}
                         </CardContent>
@@ -719,9 +712,9 @@ export default function ClientsPage() {
                         <div className="p-4 bg-emerald-50/50 rounded-none ring-1 ring-emerald-100/50 space-y-3 text-left">
                             <div className="flex justify-between items-end text-left">
                                 <div className="space-y-0.5 text-left">
-                                    <p className="text-[8px] font-black uppercase text-emerald-700 opacity-60 tracking-widest text-left">Collection Pulse</p>
+                                    <p className="text-[8px] font-black uppercase text-emerald-700 opacity-60 tracking-widest text-left">Paid</p>
                                     <p className="text-base font-black text-emerald-900 text-left">
-                                        {selectedClient?.currencyType}{moneyCollected.toLocaleString()} <span className="text-[9px] font-bold text-emerald-600/50 mx-1">/</span> {selectedClient?.currencyType}{totalProjectValue.toLocaleString()}
+                                        {selectedClient?.currencyType}{moneyCollected.toLocaleString()} / {selectedClient?.currencyType}{totalProjectValue.toLocaleString()}
                                     </p>
                                 </div>
                                 <div className="text-right">
@@ -733,7 +726,7 @@ export default function ClientsPage() {
                         </div>
 
                         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-dashed text-left">
-                            <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest text-left">Account Manager</p><div className="flex items-center gap-2 text-left"><Avatar className="size-6"><AvatarFallback className="text-[7px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback></Avatar><p className="text-[10px] font-black text-slate-800 uppercase truncate text-left">{selectedClient?.managerName}</p></div></div>
+                            <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest text-left">Manager</p><div className="flex items-center gap-2 text-left"><Avatar className="size-6"><AvatarFallback className="text-[7px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback></Avatar><p className="text-[10px] font-black text-slate-800 uppercase truncate text-left">{selectedClient?.managerName}</p></div></div>
                             <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest text-left">Email</p><p className="text-[10px] font-black text-slate-800 uppercase truncate text-left">{selectedClient?.email}</p></div>
                             <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest text-left">Phone</p><p className="text-[10px] font-black text-slate-800 uppercase truncate text-left">{selectedClient?.phone}</p></div>
                         </div>
@@ -742,7 +735,7 @@ export default function ClientsPage() {
                     <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0 text-left">
                         <div className="px-6 bg-white border-b shrink-0 overflow-x-auto no-scrollbar text-left">
                             <TabsList className="w-full justify-start bg-transparent h-auto p-0 gap-8 border-none rounded-none text-left">
-                                {['Overview', 'Invoices', 'Meetings', 'Audit'].map(tab => (
+                                {['Overview', 'Invoices', 'Meetings', 'Notes'].map(tab => (
                                     <TabsTrigger key={tab} value={tab.toLowerCase()} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-black text-[10px] uppercase px-0 pb-3 tracking-widest text-left">
                                         {tab}
                                     </TabsTrigger>
@@ -755,7 +748,7 @@ export default function ClientsPage() {
                                 <TabsContent value="overview" className="mt-0 space-y-8 text-left">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
                                         <div className="space-y-4 text-left">
-                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">About Client</h4>
+                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Details</h4>
                                             <div className="space-y-4 text-left">
                                                 <DetailLine label="Value" value={`${selectedClient?.currencyType}${selectedClient?.projectTotalCost?.toLocaleString()}`} isPrice />
                                                 <DetailLine label="Size" value={selectedClient?.companySize || 'N/A'} />
@@ -763,12 +756,12 @@ export default function ClientsPage() {
                                                 <DetailLine label="Website" value={selectedClient?.website || 'N/A'} />
                                                 <div className="pt-1 text-left">
                                                     <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-2 text-left">Address</p>
-                                                    <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase text-left">{selectedClient?.address || 'No physical address registered.'}</p>
+                                                    <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase text-left">{selectedClient?.address || 'N/A'}</p>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="space-y-4 text-left">
-                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Stats</h4>
+                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Summary</h4>
                                             <div className="grid grid-cols-2 gap-3 text-left">
                                                 <StatBox label="Meetings" value={clientMeetings.length.toString()} icon={Users} color="bg-blue-50 text-blue-600" />
                                                 <StatBox label="Invoices" value={clientInvoices.length.toString()} icon={DollarSign} color="bg-purple-50 text-purple-600" />
@@ -778,7 +771,7 @@ export default function ClientsPage() {
                                     </div>
 
                                     <div className="space-y-4 text-left">
-                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Strategic Timeline</h4>
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Timeline</h4>
                                         <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50 relative overflow-hidden text-left">
                                             <div className="absolute left-8 top-8 bottom-8 w-px bg-border border-dashed text-left" />
                                             <div className="space-y-6 relative z-10 text-left">
@@ -794,13 +787,6 @@ export default function ClientsPage() {
                                                     </div>
                                                 ))}
                                             </div>
-                                        </Card>
-                                    </div>
-
-                                    <div className="space-y-4 text-left">
-                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Account Executive Intelligence</h4>
-                                        <Card className="border-none shadow-sm rounded-none bg-white p-4 ring-1 ring-border/50 text-left">
-                                            <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase italic text-left">"{selectedClient?.notes || 'Partnership started.'}"</p>
                                         </Card>
                                     </div>
                                 </TabsContent>
@@ -836,6 +822,13 @@ export default function ClientsPage() {
                                         ))}
                                     </div>
                                 </TabsContent>
+
+                                <TabsContent value="notes" className="mt-0 space-y-4 text-left">
+                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Notes</h4>
+                                    <Card className="border-none shadow-sm rounded-none bg-white p-4 ring-1 ring-border/50 text-left">
+                                        <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase italic text-left">"{selectedClient?.notes || 'No notes.'}"</p>
+                                    </Card>
+                                </TabsContent>
                             </div>
                         </ScrollArea>
                     </Tabs>
@@ -860,7 +853,6 @@ function MetricCard({ label, value, trend, up, icon: Icon, color, bg, valueColor
                     {up ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
                     {trend}
                 </div>
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em] text-left">Performance</p>
             </div>
         </Card>
     );

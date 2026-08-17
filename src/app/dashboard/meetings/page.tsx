@@ -40,7 +40,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -165,7 +164,7 @@ export default function MeetingsPage() {
         };
 
         await addDocumentNonBlocking(collection(firestore, 'meetings'), payload);
-        toast({ title: 'Meeting Scheduled', description: 'Participants have been notified.' });
+        toast({ title: 'Meeting Scheduled' });
         setIsAddOpen(false);
         setMeetingForm({ title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm") });
     };
@@ -177,7 +176,7 @@ export default function MeetingsPage() {
             await updateDocumentNonBlocking(doc(firestore, 'meetings', selectedMeeting.id), {
                 minutesOfMeeting: momText.trim()
             });
-            toast({ title: "Minutes Saved" });
+            toast({ title: "Notes Saved" });
             setSelectedMeeting({ ...selectedMeeting, minutesOfMeeting: momText.trim() });
             setMomText("");
         } finally {
@@ -230,25 +229,25 @@ export default function MeetingsPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="text-left">
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">Meetings</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Schedule and manage team or client calls.</p>
+                    <p className="text-sm text-muted-foreground mt-1">Manage team and client calls.</p>
                 </div>
                 {canSchedule && (
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
                             <Button className="h-10 px-6 rounded-lg font-bold bg-[#6D28D9] hover:bg-[#5B21B6] text-white gap-2 shadow-sm">
-                                <Plus className="size-4" /> Schedule Meeting
+                                <Plus className="size-4" /> New Meeting
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl rounded-2xl border-none shadow-3xl p-0 overflow-hidden">
                             <DialogHeader className="p-10 border-b bg-white text-left">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Schedule Meeting</DialogTitle>
-                                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Fill in the meeting details below</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Meeting</DialogTitle>
+                                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Fill in the details below</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="max-h-[70vh] p-10 bg-muted/5">
                                 <div className="space-y-8 text-left">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Title</Label>
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Title</Label>
                                             <Input value={meetingForm.title} onChange={e => setMeetingForm({...meetingForm, title: e.target.value})} placeholder="e.g., Weekly Sync" className="h-12 rounded-xl font-bold" />
                                         </div>
                                         <div className="space-y-2">
@@ -260,12 +259,12 @@ export default function MeetingsPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Agenda</Label>
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Topics</Label>
                                         <Textarea value={meetingForm.agendas} onChange={e => setMeetingForm({...meetingForm, agendas: e.target.value})} placeholder="What will be discussed?" className="rounded-xl min-h-[100px]" />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Meeting Type</Label>
+                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Type</Label>
                                             <Select value={meetingForm.type} onValueChange={v => setMeetingForm({...meetingForm, type: v as any})}>
                                                 <SelectTrigger className="h-12 rounded-xl font-bold"><SelectValue /></SelectTrigger>
                                                 <SelectContent className="rounded-xl">
@@ -288,7 +287,7 @@ export default function MeetingsPage() {
                                         </div>
                                     )}
 
-                                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Link</Label><Input value={meetingForm.link} onChange={e => setMeetingForm({...meetingForm, link: e.target.value})} placeholder="https://..." className="h-12 rounded-xl" /></div>
+                                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Link</Label><Input value={meetingForm.link} onChange={e => setMeetingForm({...meetingForm, link: e.target.value})} placeholder="https://..." className="h-12 rounded-xl" /></div>
                                     
                                     <div className="space-y-4">
                                         <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Participants</Label>
@@ -329,10 +328,10 @@ export default function MeetingsPage() {
                         <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl"><Video className="size-5" /></div>
                         <ChevronRight className="size-4 text-slate-300" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Upcoming Meetings</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Upcoming</p>
                     <h3 className="text-3xl font-bold text-slate-900 mt-1">{upcomingCount}</h3>
                     <p className="text-[11px] text-muted-foreground mt-2 font-medium">
-                        Next: {nextMeeting ? `${isToday(nextMeeting.date.toDate()) ? 'Today' : format(nextMeeting.date.toDate(), 'dd MMM')}, ${format(nextMeeting.date.toDate(), 'p')}` : 'No sessions'}
+                        Next: {nextMeeting ? `${isToday(nextMeeting.date.toDate()) ? 'Today' : format(nextMeeting.date.toDate(), 'dd MMM')}, ${format(nextMeeting.date.toDate(), 'p')}` : 'None'}
                     </p>
                 </Card>
 
@@ -341,9 +340,9 @@ export default function MeetingsPage() {
                         <div className="p-3 bg-blue-100 text-blue-600 rounded-xl"><Users className="size-5" /></div>
                         <ChevronRight className="size-4 text-slate-300" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Total Meetings</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Total</p>
                     <h3 className="text-3xl font-bold text-slate-900 mt-1">{meetings?.length || 0}</h3>
-                    <p className="text-[11px] text-muted-foreground mt-2 font-medium">This Month</p>
+                    <p className="text-[11px] text-muted-foreground mt-2 font-medium">All Records</p>
                 </Card>
 
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left">
@@ -353,7 +352,7 @@ export default function MeetingsPage() {
                     </div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">This Month</p>
                     <h3 className="text-2xl font-bold text-slate-900 mt-1">{format(new Date(), 'MMMM yyyy')}</h3>
-                    <p className="text-[11px] text-muted-foreground mt-2 font-medium">All Meetings</p>
+                    <p className="text-[11px] text-muted-foreground mt-2 font-medium">Scheduled Calls</p>
                 </Card>
             </div>
 
@@ -408,7 +407,7 @@ export default function MeetingsPage() {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse opacity-20">Loading meetings...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse opacity-20">Loading...</TableCell></TableRow>
                             ) : filteredMeetings.length === 0 ? (
                                 <TableRow><TableCell colSpan={6} className="h-48 text-center text-slate-400 font-medium italic">No meetings found.</TableCell></TableRow>
                             ) : filteredMeetings.map(m => {
@@ -457,14 +456,14 @@ export default function MeetingsPage() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-56 rounded-2xl border-none shadow-2xl p-2">
                                                     <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-indigo-50 text-slate-700">
-                                                        <Eye className="size-4 text-indigo-600" /> View Details
+                                                        <Eye className="size-4 text-indigo-600" /> Details
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => setAttendeesMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-indigo-50 text-slate-700">
-                                                        <Users className="size-4 text-indigo-600" /> Attendee Hub
+                                                        <Users className="size-4 text-indigo-600" /> People
                                                     </DropdownMenuItem>
                                                     {m.link && (
                                                         <DropdownMenuItem onClick={() => window.open(m.link, '_blank')} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-emerald-50 text-slate-700">
-                                                            <ExternalLink className="size-4 text-emerald-600" /> Join Meeting
+                                                            <ExternalLink className="size-4 text-emerald-600" /> Join Call
                                                         </DropdownMenuItem>
                                                     )}
                                                     {(isExecutive || m.createdBy === user?.uid) && (
@@ -473,14 +472,14 @@ export default function MeetingsPage() {
                                                             <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
                                                                     <DropdownMenuItem onSelect={e => e.preventDefault()} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600">
-                                                                        <Trash2 className="size-4" /> Purge Meeting
+                                                                        <Trash2 className="size-4" /> Delete Meeting
                                                                     </DropdownMenuItem>
                                                                 </AlertDialogTrigger>
                                                                 <AlertDialogContent className="rounded-3xl border-none shadow-3xl">
                                                                     <AlertDialogHeader className="text-left">
                                                                         <AlertDialogTitle className="text-xl font-bold text-slate-900">Delete Meeting?</AlertDialogTitle>
                                                                         <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-                                                                            This will permanently remove "{m.title}" from the registry. This action cannot be undone.
+                                                                            This will permanently remove "{m.title}" from the registry.
                                                                         </AlertDialogDescription>
                                                                     </AlertDialogHeader>
                                                                     <AlertDialogFooter className="mt-8 gap-3">
@@ -502,15 +501,14 @@ export default function MeetingsPage() {
                 </div>
             </div>
 
-            {/* Attendance Hub Dialog */}
             <Dialog open={!!attendeesMeeting} onOpenChange={o => !o && setAttendeesMeeting(null)}>
                 <DialogContent className="rounded-3xl border-none shadow-3xl sm:max-w-md p-0 overflow-hidden flex flex-col">
                     <DialogHeader className="p-8 border-b bg-white shrink-0 text-left">
                         <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-3">
                             <div className="p-2 bg-indigo-100 text-[#6D28D9] rounded-lg"><Users className="size-5" /></div>
-                            Attendee Hub
+                            People
                         </DialogTitle>
-                        <DialogDescription className="text-xs font-medium text-slate-400 mt-1">Verified participant list for tracking attendance.</DialogDescription>
+                        <DialogDescription className="text-xs font-medium text-slate-400 mt-1">Attendance tracking.</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1 max-h-[50vh] bg-slate-50/50">
                         <div className="p-4 space-y-2">
@@ -554,12 +552,11 @@ export default function MeetingsPage() {
                         </div>
                     </ScrollArea>
                     <div className="p-8 border-t bg-white shrink-0">
-                        <Button className="w-full h-12 rounded-xl font-bold bg-slate-900 text-white text-sm" onClick={() => setAttendeesMeeting(null)}>Close Hub</Button>
+                        <Button className="w-full h-12 rounded-xl font-bold bg-slate-900 text-white text-sm" onClick={() => setAttendeesMeeting(null)}>Close</Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
-            {/* Details Sheet */}
             <Sheet open={!!selectedMeeting} onOpenChange={o => !o && setSelectedMeeting(null)}>
                 <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
                     <SheetHeader className="p-8 border-b bg-white shrink-0 text-left">
@@ -568,11 +565,11 @@ export default function MeetingsPage() {
                                 {selectedMeeting?.type}
                             </Badge>
                             {selectedMeeting && isBefore(selectedMeeting.date.toDate(), now) && (
-                                <Badge className="bg-slate-100 text-slate-500 border-none rounded-md text-[9px] font-bold uppercase px-3 h-6">Archived Session</Badge>
+                                <Badge className="bg-slate-100 text-slate-500 border-none rounded-md text-[9px] font-bold uppercase px-3 h-6">Archived</Badge>
                             )}
                         </div>
                         <SheetTitle className="text-3xl font-bold tracking-tight text-slate-900 leading-tight text-left">{selectedMeeting?.title}</SheetTitle>
-                        <p className="text-sm font-medium text-slate-400 mt-2">Briefing Terminal</p>
+                        <p className="text-sm font-medium text-slate-400 mt-2">Details</p>
                     </SheetHeader>
                     
                     <ScrollArea className="flex-1">
@@ -590,7 +587,7 @@ export default function MeetingsPage() {
                                         </div>
                                         {selectedMeeting?.link && !isBefore(selectedMeeting.date.toDate(), now) && (
                                             <Button className="w-full h-11 rounded-xl font-bold bg-[#6D28D9] hover:bg-[#5B21B6] text-white text-xs gap-2 shadow-lg shadow-indigo-100" onClick={() => window.open(selectedMeeting.link, '_blank')}>
-                                                <ExternalLink className="size-4" /> Open Meeting Link
+                                                <ExternalLink className="size-4" /> Open Call
                                             </Button>
                                         )}
                                     </div>
@@ -604,7 +601,7 @@ export default function MeetingsPage() {
                                         </Avatar>
                                         <div className="text-left">
                                             <p className="text-sm font-bold text-slate-900">{selectedMeeting?.createdByName}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Host Organizer</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Organizer</p>
                                         </div>
                                     </div>
                                 </div>
@@ -613,10 +610,10 @@ export default function MeetingsPage() {
                             <div className="space-y-6">
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2 text-[#6D28D9] font-black uppercase text-[10px] tracking-widest">
-                                        <ClipboardList className="size-4" /> Meeting Agenda
+                                        <ClipboardList className="size-4" /> Topics
                                     </div>
                                     <div className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                        <p className="text-sm font-medium text-slate-600 leading-relaxed italic">"{selectedMeeting?.agendas || 'Standard review.'}"</p>
+                                        <p className="text-sm font-medium text-slate-600 leading-relaxed italic">"{selectedMeeting?.agendas || 'Not set.'}"</p>
                                     </div>
                                 </div>
                             </div>
@@ -624,7 +621,7 @@ export default function MeetingsPage() {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Participants</h4>
-                                    <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[9px] font-bold uppercase rounded-md h-5 px-2">{selectedMeeting?.participantIds.length} Members</Badge>
+                                    <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-[9px] font-bold uppercase rounded-md h-5 px-2">{selectedMeeting?.participantIds.length} People</Badge>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {selectedMeeting?.participantIds.map((id, i) => (
@@ -642,7 +639,7 @@ export default function MeetingsPage() {
                             <div className="space-y-6 pt-6 border-t border-slate-100 text-left">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-emerald-600 font-black uppercase text-[10px] tracking-widest">
-                                        <FileCheck className="size-4" /> Meeting Minutes (MOM)
+                                        <FileCheck className="size-4" /> Meeting Notes
                                     </div>
                                 </div>
 
@@ -667,13 +664,13 @@ export default function MeetingsPage() {
                                                 className="w-full h-12 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-100"
                                             >
                                                 {isSavingMom ? <Loader2 className="animate-spin size-4 mr-2"/> : <FileCheck className="size-4 mr-2"/>}
-                                                Save Minutes
+                                                Save Notes
                                             </Button>
                                         </div>
                                     ) : (
                                         <div className="py-12 flex flex-col items-center justify-center opacity-20 text-center space-y-4">
                                             <Clock className="size-10" />
-                                            <p className="text-[10px] font-black uppercase tracking-widest">Minutes Pending Update</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Pending Update</p>
                                         </div>
                                     )
                                 )}
