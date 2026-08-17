@@ -264,7 +264,7 @@ export default function FinancePage() {
                     if (spend > 0) {
                         masterHistory.push({
                             id: `mkt-${s.id}`,
-                            title: 'Ad Spend Portfolio',
+                            title: 'Ad Spend',
                             amount: spend,
                             type: 'expense',
                             category: 'Marketing',
@@ -318,7 +318,7 @@ export default function FinancePage() {
             createdAt: serverTimestamp()
         };
         await addDocumentNonBlocking(collection(firestore, 'financial_transactions'), payload);
-        toast({ title: 'Transaction Logged', description: `${manualForm.type === 'income' ? 'Money In' : 'Money Out'} recorded.` });
+        toast({ title: 'Record Saved', description: `${manualForm.type === 'income' ? 'Income' : 'Expense'} recorded.` });
         setIsManualEntryOpen(false);
         setManualForm({
             title: '', amount: '', type: 'income', category: 'General', teamId: 'unassigned', date: format(new Date(), 'yyyy-MM-dd')
@@ -330,7 +330,7 @@ export default function FinancePage() {
             <div className="flex h-[80vh] items-center justify-center">
                 <div className="flex flex-col items-center gap-4 text-primary opacity-20">
                     <Loader2 className="size-12 animate-spin" />
-                    <p className="font-black uppercase text-xs tracking-[0.3em]">Syncing Ledger...</p>
+                    <p className="font-black uppercase text-xs tracking-[0.3em]">Loading Ledger...</p>
                 </div>
             </div>
         );
@@ -344,15 +344,15 @@ export default function FinancePage() {
             {/* Header Terminal */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-1">
                 <div className="space-y-0.5 text-left w-full md:w-auto">
-                    <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-slate-900">Money Ledger</h1>
+                    <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-slate-900">Finance</h1>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-                        {dateFilter === 'custom-range' ? `${format(dateRange.start!, 'PP')} - ${format(dateRange.end, 'PP')}` : `Verified Audit • ${format(new Date(), 'MMMM yyyy')}`}
+                        {dateFilter === 'custom-range' ? `${format(dateRange.start!, 'PP')} - ${format(dateRange.end, 'PP')}` : `Financial Audit • ${format(new Date(), 'MMMM yyyy')}`}
                     </p>
                 </div>
                 
                 <div className="flex flex-wrap gap-2 items-center">
                     <Button onClick={() => setIsManualEntryOpen(true)} className="rounded-full h-9 px-6 bg-primary text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
-                        <Plus className="size-4 mr-2" /> Record Entry
+                        <Plus className="size-4 mr-2" /> New Entry
                     </Button>
 
                     <Select value={dateFilter} onValueChange={setDateFilter}>
@@ -395,7 +395,7 @@ export default function FinancePage() {
                 <KPICard title="Money Got" value={`₹${(stats.totalRevenue / 100000).toFixed(2)}L`} trend="Confirmed" up={true} icon={DollarSign} color="text-primary" bg="bg-primary/5" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('revenue')} />
                 <KPICard title="In Pipeline" value={`₹${(stats.totalPipeline / 100000).toFixed(2)}L`} trend="Pending" up={true} icon={Clock} color="text-amber-600" bg="bg-amber-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('pipeline')} />
                 <KPICard title="Money Spent" value={`₹${((stats.workforceCost + stats.marketingSpent) / 100000).toFixed(2)}L`} trend="Current" up={false} icon={TrendingDown} color="text-rose-600" bg="bg-rose-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('expenses')} />
-                <KPICard title="Leftover" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Deficit" : "Surplus"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
+                <KPICard title="Leftover" value={`₹${(stats.netProfit / 100000).toFixed(2)}L`} trend={stats.netProfitRaw < 0 ? "Loss" : "Profit"} up={stats.netProfitRaw > 0} icon={TrendingUp} color={stats.netProfitRaw > 0 ? "text-emerald-600" : "text-rose-600"} bg={stats.netProfitRaw > 0 ? "bg-emerald-50" : "bg-rose-50"} lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('profit')} />
                 <KPICard title="Profit %" value={`${stats.margin.toFixed(1)}%`} trend="Verified" up={true} icon={Target} color="text-indigo-600" bg="bg-indigo-50" lastUpdate={stats.lastUpdate} onClick={() => setSelectedMetric('margin')} />
             </div>
 
@@ -406,11 +406,11 @@ export default function FinancePage() {
                         <div className="flex items-center justify-between">
                             <div className="space-y-1 text-left">
                                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                    <Package className="size-4" /> Service Portfolio
+                                    <Package className="size-4" /> Services
                                 </CardTitle>
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Revenue distribution by sector</p>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Revenue by category</p>
                             </div>
-                            <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase px-2">Live Audit</Badge>
+                            <Badge className="bg-primary text-white rounded-none font-black text-[8px] h-4 uppercase px-2">Live</Badge>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -420,8 +420,8 @@ export default function FinancePage() {
                                     <TableHead className="font-black text-[8px] uppercase py-3 px-6 tracking-widest">Category</TableHead>
                                     <TableHead className="font-black text-[8px] uppercase py-3 text-center">Money Received</TableHead>
                                     <TableHead className="font-black text-[8px] uppercase py-3 text-center">Planned Money</TableHead>
-                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">Workload</TableHead>
-                                    <TableHead className="text-right px-6 font-black text-[8px] uppercase py-3">Audit</TableHead>
+                                    <TableHead className="font-black text-[8px] uppercase py-3 text-center">Projects</TableHead>
+                                    <TableHead className="text-right px-6 font-black text-[8px] uppercase py-3">View</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -437,7 +437,7 @@ export default function FinancePage() {
                                         <TableCell className="text-center">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-xs font-black">{data.count}</span>
-                                                <span className="text-[7px] font-bold text-muted-foreground uppercase">Tasks</span>
+                                                <span className="text-[7px] font-bold text-muted-foreground uppercase">Count</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right px-6">
@@ -488,19 +488,19 @@ export default function FinancePage() {
                 </Card>
             </div>
 
-            {/* Master History Terminal (GPay Style) */}
+            {/* Transaction History Terminal */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <Card className="lg:col-span-12 bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/5 border-b p-6 flex flex-row items-center justify-between text-left">
                         <div className="space-y-1 text-left">
                             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                <HistoryIcon className="size-4" /> Master Ledger History
+                                <HistoryIcon className="size-4" /> Transaction History
                             </CardTitle>
-                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Chronological financial feed</p>
+                            <p className="text-[8px] font-bold text-muted-foreground uppercase opacity-40">Record of all payments and expenses</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Badge className="bg-emerald-50 text-emerald-700 font-black text-[8px] rounded-none border-none">Money In</Badge>
-                            <Badge className="bg-rose-50 text-rose-700 font-black text-[8px] rounded-none border-none">Money Out</Badge>
+                            <Badge className="bg-emerald-50 text-emerald-700 font-black text-[8px] rounded-none border-none">Income</Badge>
+                            <Badge className="bg-rose-50 text-rose-700 font-black text-[8px] rounded-none border-none">Expense</Badge>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -529,14 +529,14 @@ export default function FinancePage() {
                                             </p>
                                             <div className="flex items-center justify-end gap-1 opacity-30">
                                                 <CheckCircle2 className="size-2.5" />
-                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-tighter">Verified Audit</p>
+                                                <p className="text-[8px] font-black uppercase text-slate-400 tracking-tighter">Verified</p>
                                             </div>
                                         </div>
                                     </div>
                                 )) : (
                                     <div className="py-32 text-center opacity-20 uppercase font-black text-[10px] tracking-widest flex flex-col items-center gap-4">
                                         <HistoryIcon className="size-12" />
-                                        <span>No transactions in this period</span>
+                                        <span>No history found</span>
                                     </div>
                                 )}
                             </div>
@@ -550,14 +550,14 @@ export default function FinancePage() {
                 <DialogContent className="rounded-none border-none shadow-3xl p-0 overflow-hidden sm:max-w-md">
                     <DialogHeader className="p-8 bg-white border-b shrink-0 text-left">
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
-                            <Plus className="size-5" /> New Transaction
+                            <Plus className="size-5" /> New Entry
                         </DialogTitle>
-                        <DialogDescription className="text-[9px] font-bold uppercase tracking-widest opacity-60 text-left">Record miscellaneous income or expenses</DialogDescription>
+                        <DialogDescription className="text-[9px] font-bold uppercase tracking-widest opacity-60 text-left">Record income or expenses manually</DialogDescription>
                     </DialogHeader>
                     <div className="p-8 space-y-6 bg-muted/5 text-left">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Transaction Title</Label>
-                            <Input value={manualForm.title} onChange={e => setManualForm({...manualForm, title: e.target.value})} placeholder="e.g., Office Rent, Laptop Buy..." className="h-11 rounded-none border-none ring-1 ring-border" />
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Title</Label>
+                            <Input value={manualForm.title} onChange={e => setManualForm({...manualForm, title: e.target.value})} placeholder="e.g., Office Rent, Asset Purchase..." className="h-11 rounded-none border-none ring-1 ring-border" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -565,12 +565,12 @@ export default function FinancePage() {
                                 <Input type="number" value={manualForm.amount} onChange={e => setManualForm({...manualForm, amount: e.target.value})} placeholder="0.00" className="h-11 rounded-none border-none ring-1 ring-border font-bold" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Entry Type</Label>
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Type</Label>
                                 <Select value={manualForm.type} onValueChange={(v: any) => setManualForm({...manualForm, type: v})}>
                                     <SelectTrigger className="h-11 rounded-none font-bold"><SelectValue /></SelectTrigger>
                                     <SelectContent className="rounded-none">
-                                        <SelectItem value="income">Money In (Income)</SelectItem>
-                                        <SelectItem value="expense">Money Out (Expense)</SelectItem>
+                                        <SelectItem value="income">Income</SelectItem>
+                                        <SelectItem value="expense">Expense</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -590,12 +590,12 @@ export default function FinancePage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Stamping Date</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Date</Label>
                             <Input type="date" value={manualForm.date} onChange={e => setManualForm({...manualForm, date: e.target.value})} className="h-11 rounded-none border-none ring-1 ring-border" />
                         </div>
                     </div>
                     <div className="p-8 border-t bg-white">
-                        <Button onClick={handleSaveManualEntry} className="w-full h-12 rounded-none font-black uppercase tracking-widest shadow-2xl">Confirm Stamping</Button>
+                        <Button onClick={handleSaveManualEntry} className="w-full h-12 rounded-none font-black uppercase tracking-widest shadow-2xl">Save</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -605,7 +605,7 @@ export default function FinancePage() {
                 <Card className="bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm p-6">
                     <CardHeader className="p-0 pb-6 flex flex-row items-center justify-between space-y-0 text-left">
                         <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 text-left">
-                            <TrendingUp className="size-4" /> Team Revenue Performance
+                            <TrendingUp className="size-4" /> Team Performance
                         </CardTitle>
                         {topTeam && (
                             <Badge className="bg-emerald-100 text-emerald-700 border-none text-[8px] font-black uppercase rounded-none px-2 h-5 flex items-center">
@@ -633,7 +633,7 @@ export default function FinancePage() {
                 <Card className="bg-white/50 border-none ring-1 ring-border/50 rounded-none shadow-sm p-6">
                     <CardHeader className="p-0 pb-6 text-left">
                         <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 text-left">
-                            <PieChartIcon className="size-4" /> Sector Distribution
+                            <PieChartIcon className="size-4" /> Category Distribution
                         </CardTitle>
                     </CardHeader>
                     <div className="h-[300px]">
@@ -665,15 +665,15 @@ export default function FinancePage() {
                 <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-md p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
                     <SheetHeader className="p-8 border-b bg-white shrink-0 text-left">
                         <div className="flex items-center justify-between mb-2">
-                            <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Sector Detail</Badge>
+                            <Badge className="bg-primary text-white font-black text-[8px] h-4 uppercase rounded-none border-none px-2">Details</Badge>
                         </div>
                         <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-primary text-left">{selectedPortfolio?.name}</SheetTitle>
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest text-left">Received Funds Analysis</p>
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest text-left">Revenue Analysis</p>
                     </SheetHeader>
                     <ScrollArea className="flex-1">
                         <div className="p-8 space-y-10 pb-32">
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Transaction Log</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Payments</h4>
                                 <div className="space-y-3">
                                     {selectedPortfolio?.transactions?.length > 0 ? selectedPortfolio.transactions.map((t: any, i: number) => (
                                         <div key={i} className="p-5 bg-white ring-1 ring-border shadow-sm space-y-3 hover:border-primary transition-all">
@@ -685,11 +685,11 @@ export default function FinancePage() {
                                                 <span className="text-sm font-black text-emerald-600">₹{t.amount.toLocaleString()}</span>
                                             </div>
                                             <div className="pt-2 border-t border-dashed flex items-center justify-between text-[8px] font-black uppercase text-muted-foreground/50">
-                                                <span>Updated on: {t.date}</span>
+                                                <span>Date: {t.date}</span>
                                                 <CheckCircle2 className="size-2.5" />
                                             </div>
                                         </div>
-                                    )) : <p className="py-10 text-center text-xs italic text-muted-foreground uppercase opacity-40">No confirmed payments in this window.</p>}
+                                    )) : <p className="py-10 text-center text-xs italic text-muted-foreground uppercase opacity-40">No confirmed payments.</p>}
                                 </div>
                             </div>
                         </div>
@@ -697,12 +697,17 @@ export default function FinancePage() {
                 </SheetContent>
             </Sheet>
 
-            {/* KPI Audit Dialog */}
+            {/* Details Dialog */}
             <Dialog open={!!selectedMetric} onOpenChange={o => !o && setSelectedMetric(null)}>
                 <DialogContent className="rounded-none border-none shadow-3xl sm:max-w-2xl p-0 overflow-hidden">
                     <DialogHeader className="p-8 border-b bg-white text-left">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary text-left">Audit: {selectedMetric === 'revenue' ? 'Money Got' : selectedMetric === 'pipeline' ? 'In Pipeline' : selectedMetric?.toUpperCase()}</DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-40 text-left">Verified historical logs</DialogDescription>
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary text-left">
+                            {selectedMetric === 'revenue' ? 'Revenue Details' : 
+                             selectedMetric === 'pipeline' ? 'Pipeline Details' : 
+                             selectedMetric === 'profit' ? 'Profit Details' : 
+                             selectedMetric === 'expenses' ? 'Expense Details' : 'Details'}
+                        </DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 text-left">Historical records</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[60vh]">
                         <div className="p-8 space-y-6">
@@ -714,7 +719,7 @@ export default function FinancePage() {
                                                 <div key={i} className="flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100 text-left">
                                                     <div>
                                                         <p className="font-bold text-xs uppercase">{h.title}</p>
-                                                        <p className="text-[9px] text-emerald-600 font-bold uppercase">Confirmed: {format(h.date, 'PP')}</p>
+                                                        <p className="text-[9px] text-emerald-600 font-bold uppercase">Date: {format(h.date, 'PP')}</p>
                                                     </div>
                                                     <p className="text-sm font-black text-emerald-900">₹{h.amount.toLocaleString()}</p>
                                                 </div>
@@ -742,7 +747,7 @@ export default function FinancePage() {
                                                 <div key={i} className="flex items-center justify-between p-4 bg-rose-50/50 border border-rose-100 text-left">
                                                     <div>
                                                         <p className="font-bold text-xs uppercase">{h.title}</p>
-                                                        <p className="text-[9px] text-rose-600 font-bold uppercase">Confirmed: {format(h.date, 'PP')}</p>
+                                                        <p className="text-[9px] text-rose-600 font-bold uppercase">Date: {format(h.date, 'PP')}</p>
                                                     </div>
                                                     <p className="text-sm font-black text-rose-900">₹{h.amount.toLocaleString()}</p>
                                                 </div>
@@ -755,22 +760,22 @@ export default function FinancePage() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div onClick={() => setSelectedMetric('revenue')} className="p-6 bg-muted/20 border rounded-none cursor-pointer hover:bg-emerald-50 transition-all group text-left">
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Inflow</p>
+                                                    <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Income</p>
                                                     <ChevronRight className="size-3 opacity-0 group-hover:opacity-40" />
                                                 </div>
                                                 <p className="text-xl font-black text-emerald-600">₹{stats.totalRevenue.toLocaleString()}</p>
                                             </div>
                                             <div onClick={() => setSelectedMetric('expenses')} className="p-6 bg-muted/20 border rounded-none cursor-pointer hover:bg-rose-50 transition-all group text-left">
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Outflow</p>
+                                                    <p className="text-[9px] font-bold uppercase text-muted-foreground">Total Expenses</p>
                                                     <ChevronRight className="size-3 opacity-0 group-hover:opacity-40" />
                                                 </div>
                                                 <p className="text-xl font-black text-rose-600">₹{(stats.totalRevenue - stats.netProfitRaw).toLocaleString()}</p>
                                             </div>
                                         </div>
-                                        <div className={cn("p-10 text-center shadow-2xl ring-1 ring-border/50", stats.netProfitRaw > 0 ? "bg-primary text-white" : "bg-rose-600 text-white")}>
-                                            <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">{stats.netProfitRaw > 0 ? "Operational Gain" : "Operational Deficit"}</p>
-                                            <p className="text-5xl font-black tracking-tighter">₹{stats.netProfit.toLocaleString()}</p>
+                                        <div className={cn("p-10 text-center shadow-2xl ring-1 ring-border/50", stats.netProfitRaw >= 0 ? "bg-primary text-white" : "bg-rose-600 text-white")}>
+                                            <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">{stats.netProfitRaw >= 0 ? "Profit" : "Loss"}</p>
+                                            <p className="text-5xl font-black tracking-tighter">₹{Math.abs(stats.netProfitRaw).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 </TabsContent>
@@ -778,7 +783,7 @@ export default function FinancePage() {
                         </div>
                     </ScrollArea>
                     <div className="p-8 border-t bg-white">
-                        <Button className="w-full rounded-none h-12 font-black uppercase text-[10px]" onClick={() => setSelectedMetric(null)}>Acknowledge Audit</Button>
+                        <Button className="w-full rounded-none h-12 font-black uppercase text-[10px]" onClick={() => setSelectedMetric(null)}>Close</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -816,7 +821,7 @@ function KPICard({ title, value, trend, up, icon: Icon, color, bg, lastUpdate, o
                 <div className="flex items-center gap-1 opacity-20">
                     <CheckCircle2 className="size-2" />
                     <p className="text-[7px] font-black uppercase text-muted-foreground/80 tracking-tight">
-                        {lastUpdate ? `Last Sync: ${format(lastUpdate.toDate(), 'HH:mm')}` : 'Live Audit'}
+                        {lastUpdate ? `Last Updated: ${format(lastUpdate.toDate(), 'HH:mm')}` : 'Live'}
                     </p>
                 </div>
             </div>

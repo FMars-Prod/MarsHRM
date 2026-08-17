@@ -165,7 +165,7 @@ export default function MonitorPage() {
     };
 
     setDocumentNonBlocking(attRef, payload, { merge: true });
-    toast({ title: "Ledger Updated", description: "Record stamped successfully." });
+    toast({ title: "Log Saved" });
     setIsManualLogOpen(false);
     fetchMonitorData();
   };
@@ -178,7 +178,7 @@ export default function MonitorPage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up font-jakarta">
-      <PageHeader title="Daily Status">
+      <PageHeader title="Today's Attendance">
         <div className="flex gap-3">
             <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground opacity-50" />
@@ -202,20 +202,20 @@ export default function MonitorPage() {
                 <Dialog open={isManualLogOpen} onOpenChange={setIsManualLogOpen}>
                     <DialogTrigger asChild>
                         <Button className="rounded-none h-10 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6">
-                            <Plus className="size-4 mr-2" /> Manual Log
+                            <Plus className="size-4 mr-2" /> Manual Entry
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="rounded-none sm:max-w-md p-0 border-none shadow-3xl overflow-hidden text-left">
                         <DialogHeader className="p-8 border-b bg-white text-left">
-                            <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Attendance Override</DialogTitle>
-                            <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Manual stamp for tactical mission ledger</DialogDescription>
+                            <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">Attendance Update</DialogTitle>
+                            <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Add a manual log entry</DialogDescription>
                         </DialogHeader>
                         <ScrollArea className="max-h-[60vh] p-8 bg-muted/5">
                             <div className="space-y-8 text-left">
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Personnel</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Select Person</Label>
                                     <Select value={targetUserId} onValueChange={setTargetUserId}>
-                                        <SelectTrigger className="h-11 rounded-none font-bold bg-white border-none ring-1 ring-border/50"><SelectValue placeholder="Which official?" /></SelectTrigger>
+                                        <SelectTrigger className="h-11 rounded-none font-bold bg-white border-none ring-1 ring-border/50"><SelectValue placeholder="Select name..." /></SelectTrigger>
                                         <SelectContent className="rounded-none">
                                             {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                                         </SelectContent>
@@ -223,11 +223,11 @@ export default function MonitorPage() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Target Date</Label>
+                                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Date</Label>
                                         <Input type="date" value={manualDate} onChange={e => setManualLogDate(e.target.value)} className="h-11 rounded-none font-bold" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Mission Status</Label>
+                                        <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Status</Label>
                                         <Select value={manualStatus} onValueChange={setManualStatus}>
                                             <SelectTrigger className="h-11 rounded-none font-bold bg-white border-none ring-1 ring-border/50"><SelectValue /></SelectTrigger>
                                             <SelectContent className="rounded-none">
@@ -239,22 +239,22 @@ export default function MonitorPage() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">In Time</Label>
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Clock In</Label>
                                         <Input type="time" value={manualIn} onChange={e => setManualIn(e.target.value)} className="h-11 rounded-none font-mono" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Out Time</Label>
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Clock Out</Label>
                                         <Input type="time" value={manualOut} onChange={e => setManualOut(e.target.value)} className="h-11 rounded-none font-mono" />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Cumulative Break (Minutes)</Label>
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Break Time (Minutes)</Label>
                                     <Input type="number" value={manualBreakMin} onChange={e => setManualBreakMin(e.target.value)} className="h-11 rounded-none font-bold" />
                                 </div>
                             </div>
                         </ScrollArea>
                         <div className="p-8 border-t bg-white shrink-0">
-                            <Button onClick={handleManualSave} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Acknowledge & Stamp</Button>
+                            <Button onClick={handleManualSave} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Save Log</Button>
                         </div>
                     </DialogContent>
                 </Dialog>
@@ -277,27 +277,27 @@ export default function MonitorPage() {
                   <CardHeader className="bg-muted/5 border-b py-4 px-8 flex flex-row items-center justify-between text-left">
                       <div className="space-y-0.5">
                         <CardTitle className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary">
-                            <Activity className="size-4" /> Operational Oversight
+                            <Activity className="size-4" /> Today's Attendance
                         </CardTitle>
                       </div>
-                      <Badge variant="outline" className="rounded-none border-none bg-primary/5 text-primary font-black uppercase text-[8px] tracking-widest px-3 h-6">Live Fleet Sync</Badge>
+                      <Badge variant="outline" className="rounded-none border-none bg-primary/5 text-primary font-black uppercase text-[8px] tracking-widest px-3 h-6">Live Updates</Badge>
                   </CardHeader>
                   <CardContent className="p-0">
                       <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent border-b">
-                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-8">Fleet Member</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] py-4 px-8">Staff Member</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px]">Status</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px]">In</TableHead>
-                                    <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Break Logs</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] text-center">Breaks</TableHead>
                                     <TableHead className="font-black uppercase tracking-widest text-[9px]">Out</TableHead>
-                                    <TableHead className="font-black uppercase tracking-widest text-[9px] text-right px-8">Admin Action</TableHead>
+                                    <TableHead className="font-black uppercase tracking-widest text-[9px] text-right px-8">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse font-black text-xs uppercase opacity-20 tracking-[0.3em]">Scanning Roster...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse font-black text-xs uppercase opacity-20 tracking-[0.3em]">Loading...</TableCell></TableRow>
                                 ) : filteredData.length > 0 ? (
                                     filteredData.map((row, i) => (
                                         <TableRow key={i} className="border-border/50 group hover:bg-primary/5 transition-colors">
@@ -329,7 +329,7 @@ export default function MonitorPage() {
                                                     </div>
                                                     {row.att?.totalBreakDuration > 0 && (
                                                         <Badge variant="outline" className="text-[7px] font-black uppercase rounded-none border-none bg-muted h-4 px-1.5">
-                                                            Vol: {Math.floor(row.att.totalBreakDuration / 60)}m
+                                                            Time: {Math.floor(row.att.totalBreakDuration / 60)}m
                                                         </Badge>
                                                     )}
                                                 </div>
@@ -367,7 +367,7 @@ export default function MonitorPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic font-black text-[10px] uppercase opacity-20 tracking-widest">No signals detected for this sector.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic font-black text-[10px] uppercase opacity-20 tracking-widest">No data for this day.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -376,10 +376,10 @@ export default function MonitorPage() {
                   <div className="p-8 bg-primary/5 border-t border-dashed border-primary/20 space-y-4">
                       <div className="flex items-center gap-3 text-primary text-left">
                           <ShieldAlert className="size-4" />
-                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Oversight Protocol</h4>
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">About Attendance Tracking</h4>
                       </div>
                       <p className="text-[10px] font-bold text-muted-foreground uppercase leading-relaxed tracking-tight text-left">
-                          All attendance data is timestamped and verified against tactical geofencing sectors. Administrative overrides are logged in the master audit ledger.
+                          All attendance data is timestamped and verified against office locations. Manual entries are logged in the historical records.
                       </p>
                   </div>
               </Card>
@@ -392,13 +392,13 @@ export default function MonitorPage() {
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 bg-muted/10 opacity-30 grayscale">
                             <MapPin className="size-20 text-primary/40 mb-4" />
-                            <h3 className="text-xl font-black uppercase tracking-tighter">Signal Offline</h3>
-                            <p className="text-[10px] text-muted-foreground max-w-xs mt-2 font-black uppercase tracking-widest opacity-60">Maps key required in System Settings.</p>
+                            <h3 className="text-xl font-black uppercase tracking-tighter">Maps Offline</h3>
+                            <p className="text-[10px] text-muted-foreground max-w-xs mt-2 font-black uppercase tracking-widest opacity-60">Maps key required in Settings.</p>
                         </div>
                     )}
                     <div className="absolute top-6 left-6 flex flex-col gap-2">
                         <Badge className="bg-white/90 backdrop-blur-md text-primary font-black text-[8px] border-none shadow-lg h-7 px-4 rounded-none uppercase tracking-widest flex items-center gap-2">
-                            <Signal className="size-3 animate-pulse" /> Live Tracking Active
+                            <Signal className="size-3 animate-pulse" /> Live Updates Active
                         </Badge>
                     </div>
                 </Card>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -145,8 +144,8 @@ export default function ProjectsPage() {
         const csr = projectMatrix.filter(p => p.type === 'CSR').length;
         return [
             { name: 'Client Projects', value: active, color: '#6D28D9' },
-            { name: 'In-House/R&D', value: rAndD, color: '#3B82F6' },
-            { name: 'CSR Initiatives', value: csr, color: '#22C55E' }
+            { name: 'Internal Projects', value: rAndD, color: '#3B82F6' },
+            { name: 'CSR Projects', value: csr, color: '#22C55E' }
         ];
     }, [projectMatrix]);
 
@@ -162,7 +161,7 @@ export default function ProjectsPage() {
         }
         const clientRef = doc(firestore, 'clients', selectedProject.id);
         updateDocumentNonBlocking(clientRef, { completionPercent: manualProgress });
-        toast({ title: "Progress Updated", description: "Project completion synchronized." });
+        toast({ title: "Progress Updated" });
         setSelectedProject({ ...selectedProject, completion: manualProgress });
     };
 
@@ -210,7 +209,7 @@ export default function ProjectsPage() {
                     });
                 }
             } else {
-                toast({ title: "Internal Project Created", description: "Project added to registry." });
+                toast({ title: "Internal Project Created" });
             }
 
             toast({ title: "Project Created" });
@@ -270,7 +269,7 @@ export default function ProjectsPage() {
 
     return (
         <div className="space-y-8 animate-fade-in-up font-jakarta pb-20">
-            <PageHeader title="Project Portfolio" description="Operational status of all active missions.">
+            <PageHeader title="Projects" description="Status of all active project missions.">
                 <div className="flex gap-2">
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
                         <SelectTrigger className="w-[180px] h-11 rounded-none bg-white border-none ring-1 ring-border/50">
@@ -290,22 +289,22 @@ export default function ProjectsPage() {
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                         <DialogTrigger asChild>
                             <Button className="h-11 px-8 rounded-none font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl shadow-primary/20">
-                                <PlusCircle className="size-4" /> Create Project
+                                <PlusCircle className="size-4" /> New Project
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl rounded-none border-none shadow-3xl p-0 overflow-hidden h-[85vh] flex flex-col">
                             <DialogHeader className="p-10 border-b bg-white shrink-0 text-left">
                                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">New Project</DialogTitle>
-                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Create project and assign team</DialogDescription>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Define the project scope and team</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="flex-1 bg-muted/5">
                                 <div className="p-10 space-y-8">
                                     <div className="space-y-2 text-left">
                                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Project Name</Label>
-                                        <Input value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="e.g., Marketing Website" className="h-12 rounded-none" />
+                                        <Input value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="e.g., Q4 Marketing Campaign" className="h-12 rounded-none" />
                                     </div>
                                     <div className="space-y-2 text-left">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Classification</Label>
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Category</Label>
                                         <Select value={newProjectType} onValueChange={setNewProjectType}>
                                             <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue /></SelectTrigger>
                                             <SelectContent>
@@ -319,14 +318,14 @@ export default function ProjectsPage() {
                                     {newProjectType === 'Client Project' && (
                                         <div className="space-y-6 p-6 bg-white border-2 border-dashed border-border/50 rounded-none text-left">
                                             <div className="flex items-center justify-between">
-                                                <Label className="text-[10px] font-black uppercase text-primary">Client Assignment</Label>
+                                                <Label className="text-[10px] font-black uppercase text-primary">Account Assignment</Label>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] font-bold uppercase text-muted-foreground">New Client?</span>
                                                     <Switch checked={isNewClient} onCheckedChange={setIsNewClient} />
                                                 </div>
                                             </div>
                                             {isNewClient ? (
-                                                <Input value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="Organization Name..." className="h-12 rounded-none" />
+                                                <Input value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="Company Name..." className="h-12 rounded-none" />
                                             ) : (
                                                 <Select value={selectedClientId} onValueChange={setSelectedClientId}>
                                                     <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Client" /></SelectTrigger>
@@ -351,7 +350,7 @@ export default function ProjectsPage() {
                                         <div className="space-y-2">
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground">Lead Manager</Label>
                                             <Select value={newProjectLeadId} onValueChange={setNewProjectLeadId}>
-                                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Manager" /></SelectTrigger>
+                                                <SelectTrigger className="h-12 rounded-none font-bold"><SelectValue placeholder="Select Leader" /></SelectTrigger>
                                                 <SelectContent>
                                                     {users?.map(u => <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>)}
                                                 </SelectContent>
@@ -361,7 +360,7 @@ export default function ProjectsPage() {
                                 </div>
                             </ScrollArea>
                             <div className="p-10 border-t bg-white shrink-0">
-                                <Button onClick={handleCreateProject} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Create Project</Button>
+                                <Button onClick={handleCreateProject} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-xl">Start Project</Button>
                             </div>
                         </DialogContent>
                     </Dialog>
@@ -380,7 +379,7 @@ export default function ProjectsPage() {
                     <CardHeader className="bg-muted/5 border-b p-8 flex flex-row items-center justify-between">
                         <div className="space-y-1 text-left">
                             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                <Layers className="size-4" /> Project Registry
+                                <Layers className="size-4" /> All Projects
                             </CardTitle>
                         </div>
                     </CardHeader>
@@ -388,15 +387,15 @@ export default function ProjectsPage() {
                         <Table>
                             <TableHeader className="bg-muted/10 border-b">
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Project Name</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 px-8 tracking-widest">Name</TableHead>
                                     <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Category</TableHead>
                                     <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-center">Progress</TableHead>
-                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Project Lead</TableHead>
+                                    <TableHead className="font-black text-[9px] uppercase h-14 tracking-widest text-right px-8">Leader</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {clientsLoading ? (
-                                    <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Syncing Records...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={4} className="h-64 text-center animate-pulse uppercase font-black text-xs text-muted-foreground tracking-[0.3em]">Loading...</TableCell></TableRow>
                                 ) : projectMatrix.length === 0 ? (
                                     <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground italic uppercase font-black text-[10px] tracking-widest opacity-30">No projects found.</TableCell></TableRow>
                                 ) : projectMatrix.map(project => (
@@ -419,7 +418,7 @@ export default function ProjectsPage() {
                                         <TableCell className="min-w-[140px] px-6 text-center">
                                             <div className="flex flex-col gap-2">
                                                 <div className="flex justify-between text-[9px] font-black uppercase">
-                                                    <span className="text-muted-foreground/40">{project.phase}</span>
+                                                    <span className="text-muted-foreground/40">{project.status}</span>
                                                     <span className="text-primary">{project.completion}%</span>
                                                 </div>
                                                 <Progress value={project.completion} className="h-1.5 rounded-none bg-muted/30" indicatorClassName="bg-primary" />
@@ -447,7 +446,7 @@ export default function ProjectsPage() {
                     <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden ring-1 ring-border/50">
                         <CardHeader className="p-8 pb-4 text-left">
                             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                <PieChartIcon className="size-4" /> Portfolio Breakdown
+                                <PieChartIcon className="size-4" /> Category Breakdown
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-8 pt-0 space-y-8">
@@ -472,7 +471,7 @@ export default function ProjectsPage() {
                                     </ResponsiveContainer>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                         <span className="text-3xl font-black">{projectMatrix.length}</span>
-                                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Aggregate</span>
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Total</span>
                                     </div>
                                 </div>
                             </div>
@@ -485,12 +484,12 @@ export default function ProjectsPage() {
                         </div>
                         <div className="relative z-10 space-y-4">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">System Performance</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Performance</p>
                                 <h3 className="text-4xl font-black tracking-tighter">94.2%</h3>
                             </div>
-                            <p className="text-xs font-medium opacity-60 uppercase leading-relaxed">Performance is audited against real-time member activity logs.</p>
+                            <p className="text-xs font-medium opacity-60 uppercase leading-relaxed">Overall progress calculated from active project logs.</p>
                             <Button variant="outline" className="w-full h-11 rounded-none border-white/20 bg-white/10 hover:bg-white/20 text-white font-black uppercase text-[10px] tracking-widest relative z-10" asChild>
-                                <Link href="/dashboard/analytics">View Analytics</Link>
+                                <Link href="/dashboard/analytics">Performance Stats</Link>
                             </Button>
                         </div>
                     </Card>
@@ -518,7 +517,7 @@ export default function ProjectsPage() {
                             {selectedProject && (isExecutive || user?.uid === selectedProject.leaderId) && (
                                 <div className="space-y-6 bg-white p-8 ring-1 ring-border/50 rounded-none shadow-sm animate-fade-in-up">
                                     <div className="space-y-4 text-left">
-                                        <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Project Control</h4>
+                                        <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Project Settings</h4>
                                         <div className="space-y-2">
                                             <Label className="text-[9px] font-bold text-muted-foreground uppercase">Rename Project</Label>
                                             <div className="flex gap-2">
@@ -532,20 +531,20 @@ export default function ProjectsPage() {
                                     
                                     <div className="space-y-6 text-left">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Manual Progress</h4>
+                                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Update Progress</h4>
                                             <span className="text-2xl font-black text-primary">{manualProgress}%</span>
                                         </div>
                                         <Slider value={[manualProgress]} min={0} max={100} step={5} onValueChange={v => setManualProgress(v[0])} />
                                         <div className="flex justify-between items-center pt-2">
-                                            <p className="text-[8px] font-bold text-muted-foreground uppercase italic tracking-widest leading-relaxed">Only the Project Lead can update completion.</p>
-                                            <Button variant="outline" size="sm" className="rounded-none h-8 font-black uppercase text-[8px] px-4" onClick={handleUpdateProgress}>Lock Progress</Button>
+                                            <p className="text-[8px] font-bold text-muted-foreground uppercase italic tracking-widest leading-relaxed">Only leaders can update completion.</p>
+                                            <Button variant="outline" size="sm" className="rounded-none h-8 font-black uppercase text-[8px] px-4" onClick={handleUpdateProgress}>Save Progress</Button>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
                             <div className="space-y-4 text-left">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Description</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">About Project</h4>
                                 <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50">
                                     <p className="text-xs font-medium text-slate-600 leading-relaxed uppercase italic text-left">"{selectedProject?.description}"</p>
                                 </Card>
@@ -557,7 +556,7 @@ export default function ProjectsPage() {
                                 </Button>
                                 <Button variant="outline" className="h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2 bg-white" asChild>
                                     <Link href={`/dashboard/documents`}>
-                                        <FileBox className="size-4" /> Project Vault
+                                        <FileBox className="size-4" /> Documents
                                     </Link>
                                 </Button>
                             </div>
@@ -589,7 +588,7 @@ export default function ProjectsPage() {
                             </div>
 
                             <div className="space-y-4 pt-6 border-t border-dashed text-left">
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Management Actions</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Actions</h4>
                                 <Button variant="outline" className="w-full h-12 rounded-none font-black uppercase text-[10px] tracking-widest gap-2 bg-white" onClick={() => setIsAssignOpen(true)}>
                                     <Settings2 className="size-4" /> Change Team
                                 </Button>
@@ -615,15 +614,6 @@ export default function ProjectsPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="p-4 bg-muted/20 border border-dashed rounded-none flex items-center justify-between">
-                            <div className="space-y-0.5 text-left">
-                                <p className="text-[9px] font-black uppercase">No teams?</p>
-                                <p className="text-[8px] font-bold text-muted-foreground uppercase">Create a new unit</p>
-                            </div>
-                            <Button size="sm" variant="ghost" asChild className="text-[9px] font-black uppercase text-primary hover:bg-primary/5">
-                                <Link href="/dashboard/teams"><Plus className="size-3 mr-1" /> Create Team</Link>
-                            </Button>
-                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -636,7 +626,7 @@ export default function ProjectsPage() {
                     </DialogHeader>
                     <div className="py-6 space-y-6 text-left">
                         <div className="space-y-2 text-left">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Subject</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Title</Label>
                             <Input value={meetingTitle} onChange={e => setMeetingTitle(e.target.value)} placeholder="e.g., Progress Review" className="h-12 rounded-none" />
                         </div>
                         <div className="space-y-2 text-left">
@@ -658,7 +648,7 @@ export default function ProjectsPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={handleScheduleMeeting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Schedule Meeting</Button>
+                        <Button onClick={handleScheduleMeeting} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Schedule</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
