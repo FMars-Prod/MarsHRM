@@ -23,10 +23,11 @@ The application uses `collectionGroup` and composite queries for organization-wi
 - Field: `checkInTime` (Descending)
 - Query Scope: **Collection group**
 
-#### 3.2 Reports Collection Group
+#### 3.2 Reports Collection Group (Tactical Logs)
 - Collection ID: `reports`
-- Field: `date` (Descending)
+- Field: `date` (Ascending or Descending)
 - Query Scope: **Collection group**
+- [Direct Creation Link](https://console.firebase.google.com/v1/r/project/studio-6661404512-7e22c/firestore/indexes?create_exemption=Cllwcm9qZWN0cy9zdHVkaW8tNjY2MTQwNDUxMi03ZTIyYy9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvcmVwb3J0cy9maWVsZHMvZGF0ZRACGggKBGRhdGUQAQ)
 
 #### 3.3 Remote Approvals Composite Index
 - Collection ID: `attendanceApprovalRequests`
