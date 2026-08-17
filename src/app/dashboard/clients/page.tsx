@@ -148,7 +148,7 @@ export default function ClientsPage() {
         switch (dateFilter) {
             case 'today': start = startOfDay(now); end = endOfDay(now); break;
             case 'this-week': start = startOfWeek(now, { weekStartsOn: 1 }); end = endOfDay(now); break;
-            case 'this-month': start = startOfMonth(now); end = endOfMonth(now); break;
+            case 'this-month': start = startOfMonth(now); end = endOfDay(now); break;
             case 'all-time': start = null; break;
             default: start = null; break;
         }
@@ -574,7 +574,7 @@ export default function ClientsPage() {
                                                         <Button type="button" onClick={() => removeMilestone(p.id)} variant="ghost" size="icon" className="absolute top-2 right-2 text-rose-500 h-6 w-6"><X className="size-4" /></Button>
                                                         <div className="grid grid-cols-4 gap-4">
                                                             <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Amount</Label><Input type="number" value={p.amount} onChange={e => updateMilestone(p.id, { amount: e.target.value })} className="h-9 rounded-none font-bold" /></div>
-                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Due Date</Label><Input type="date" value={p.dueDate} onChange={updateMilestone.bind(null, p.id, { dueDate: '' })} className="h-9 rounded-none" /></div>
+                                                            <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Due Date</Label><Input type="date" value={p.dueDate} onChange={(e) => updateMilestone(p.id, { dueDate: e.target.value })} className="h-9 rounded-none" /></div>
                                                             <div className="space-y-1.5"><Label className="text-[9px] uppercase opacity-60">Status</Label>
                                                                 <Select value={p.status} onValueChange={v => updateMilestone(p.id, { status: v as any })}>
                                                                     <SelectTrigger className="h-9 rounded-none text-xs"><SelectValue /></SelectTrigger>
@@ -881,4 +881,5 @@ function StatBox({ label, value, icon: Icon, color }: { label: string, value: st
             <div className={cn("p-1.5 rounded-lg inline-block shadow-sm", color)}><Icon className="size-3.5" /></div>
             <div><p className="text-base font-black text-slate-900 leading-none">{value}</p><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{label}</p></div>
         </div>
+    );
 }
