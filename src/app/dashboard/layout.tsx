@@ -1,4 +1,3 @@
-
 'use client';
 import {
   SidebarProvider,
@@ -393,8 +392,8 @@ export default function DashboardLayout({
                            )}
                        </Button>
                    </PopoverTrigger>
-                   <PopoverContent className="w-[340px] p-0 rounded-none border-none shadow-3xl" align="end" sideOffset={12}>
-                       <div className="p-6 border-b bg-white">
+                   <PopoverContent className="w-[340px] p-0 rounded-3xl border border-white/20 shadow-3xl bg-white/80 backdrop-blur-xl overflow-hidden" align="end" sideOffset={12}>
+                       <div className="p-6 border-b bg-white/50 backdrop-blur-md">
                            <h4 className="text-lg font-black uppercase tracking-tighter text-primary text-left">Notifications</h4>
                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 text-left">Latest Updates</p>
                        </div>
@@ -414,7 +413,7 @@ export default function DashboardLayout({
                                                   href="/dashboard/todo" 
                                                   key={todo.id}
                                                   onClick={() => setIsNotificationsOpen(false)}
-                                                  className="flex items-start gap-3 p-4 bg-emerald-50 hover:bg-emerald-100 transition-all border border-emerald-100 shadow-sm"
+                                                  className="flex items-start gap-3 p-4 bg-emerald-50/60 backdrop-blur-sm hover:bg-emerald-100/80 transition-all border border-emerald-100/50 shadow-sm rounded-2xl"
                                                >
                                                    <Avatar className="size-10 rounded-none border border-emerald-200 ring-2 ring-white">
                                                         <AvatarImage src={completedBy?.avatar} className="object-cover" />
@@ -446,9 +445,9 @@ export default function DashboardLayout({
                                               href="/dashboard/todo" 
                                               key={todo.id}
                                               onClick={() => setIsNotificationsOpen(false)}
-                                              className="flex items-center gap-3 p-3 bg-red-50 hover:bg-red-100 transition-all border border-red-100"
+                                              className="flex items-center gap-3 p-3 bg-red-50/60 backdrop-blur-sm hover:bg-red-100/80 transition-all border border-red-100/50 rounded-2xl"
                                            >
-                                               <div className="size-8 bg-red-500 text-white flex items-center justify-center rounded-none"><Clock className="size-4"/></div>
+                                               <div className="size-8 bg-red-500 text-white flex items-center justify-center rounded-xl"><Clock className="size-4"/></div>
                                                <div className="flex-1 min-w-0 text-left">
                                                    <p className="text-[10px] font-bold uppercase text-red-700 text-left">Task Reminder</p>
                                                    <p className="text-xs font-black truncate">{todo.task}</p>
@@ -460,12 +459,12 @@ export default function DashboardLayout({
                                               href="/dashboard/leave" 
                                               key={i}
                                               onClick={() => setIsNotificationsOpen(false)}
-                                              className="flex items-center gap-3 p-3 bg-muted/20 hover:bg-primary/5 transition-all group"
+                                              className="flex items-center gap-3 p-3 bg-indigo-50/60 backdrop-blur-sm hover:bg-indigo-100/80 transition-all border border-indigo-100/50 rounded-2xl group"
                                            >
-                                               <div className="size-8 bg-sky-500 text-white flex items-center justify-center rounded-none"><Command className="size-4"/></div>
+                                               <div className="size-8 bg-indigo-600 text-white flex items-center justify-center rounded-xl"><Command className="size-4"/></div>
                                                <div className="flex-1 min-w-0 text-left">
-                                                   <p className="text-[10px] font-bold uppercase">Leave Request</p>
-                                                   <p className="text-xs font-semibold truncate">{req.employeeName} submitted a request</p>
+                                                   <p className="text-[10px] font-bold uppercase text-indigo-700">Leave Request</p>
+                                                   <p className="text-xs font-semibold truncate text-slate-800">{req.employeeName} submitted a request</p>
                                                </div>
                                            </Link>
                                        ))}
@@ -519,7 +518,7 @@ export default function DashboardLayout({
                         {isLoggingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
                     </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-none border-none shadow-2xl">
+                <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
                     <AlertDialogHeader className="text-left">
                         <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
                             <ShieldAlert className="size-5" /> Log Out?
@@ -529,8 +528,8 @@ export default function DashboardLayout({
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-8 gap-3">
-                        <AlertDialogCancel className="rounded-none font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleLogout} className="rounded-none font-bold uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                        <AlertDialogCancel className="rounded-full font-bold uppercase text-[10px] h-11 px-6">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleLogout} className="rounded-full font-bold uppercase text-[10px] h-11 px-6 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
                             Log Out
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -541,7 +540,7 @@ export default function DashboardLayout({
           <AutomatedReportSender />
         </header>
 
-        <main className="flex-1 p-4 md:p-6 overflow-x-hidden pointer-events-auto bg-gradient-to-br from-purple-500/5 via-[#F8FAFC] to-indigo-500/5">
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden pointer-events-auto bg-gradient-to-br from-primary/5 via-[#F8FAFC] to-indigo-500/5">
           {children}
         </main>
         <footer className="border-t py-4 px-6 bg-white/50 backdrop-blur-sm pointer-events-auto">

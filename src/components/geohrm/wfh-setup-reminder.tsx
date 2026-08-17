@@ -71,26 +71,26 @@ export function WfhSetupReminder() {
     return (
         <>
             <Alert className={cn(
-                "mb-4 animate-fade-in-up rounded-none ring-1 shadow-md", 
-                !hasLocation ? "bg-amber-50 border-amber-300 ring-amber-100" : "bg-primary/5 border-primary/20 ring-primary/5"
+                "mb-4 animate-fade-in-up rounded-2xl border-none ring-1 shadow-xl backdrop-blur-xl", 
+                !hasLocation ? "bg-amber-50/60 ring-amber-200" : "bg-white/60 ring-primary/20"
             )}>
                 <MapPin className={cn("h-4 w-4", !hasLocation ? "text-amber-600" : "text-primary")} />
                 <AlertTitle className={cn("font-black uppercase tracking-widest text-[10px] mb-1", !hasLocation ? "text-amber-700" : "text-primary")}>
                     {!hasLocation ? "WFH Setup Required" : "WFH Location Status"}
                 </AlertTitle>
                 <AlertDescription className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <p className="text-[11px] font-bold uppercase tracking-tight text-slate-700 leading-relaxed">
+                    <p className="text-[11px] font-bold uppercase tracking-tight text-slate-700 leading-relaxed text-left">
                         {!hasLocation 
                             ? "Remote authorization is active but no location is registered. You must define a check-in point." 
                             : "Your remote check-in coordinates are active. Use this terminal if you need to relocate."}
                     </p>
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
                         <DialogTrigger asChild>
-                            <Button size="sm" variant={!hasLocation ? "default" : "outline"} className="rounded-none h-8 px-6 font-black uppercase text-[9px] tracking-widest shadow-sm">
+                            <Button size="sm" variant={!hasLocation ? "default" : "outline"} className="rounded-full h-8 px-6 font-black uppercase text-[9px] tracking-widest shadow-sm">
                                 {!hasLocation ? "Set WFH Point" : "Relocate Point"}
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-none sm:max-w-md p-0 border-none shadow-3xl overflow-hidden">
+                        <DialogContent className="rounded-3xl sm:max-w-md p-0 border-none shadow-3xl overflow-hidden">
                             <DialogHeader className="p-8 border-b bg-white text-left">
                                 <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
                                     <Signal className="size-5" /> Location Stamping
@@ -98,14 +98,14 @@ export function WfhSetupReminder() {
                                 <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Authorize your residential mission sector</DialogDescription>
                             </DialogHeader>
                             <div className="p-8 space-y-8 bg-muted/5 text-left">
-                                <div className="p-6 bg-white ring-1 ring-border rounded-none shadow-sm space-y-6">
+                                <div className="p-6 bg-white ring-1 ring-border rounded-2xl shadow-sm space-y-6">
                                     <div className="flex items-center justify-between">
                                         <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Tactical Coordinates</Label>
                                         <Button 
                                             type="button" 
                                             variant="ghost" 
                                             size="sm" 
-                                            className="h-8 rounded-none text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5" 
+                                            className="h-8 rounded-full text-[9px] font-black uppercase tracking-widest px-4 border border-primary/20 hover:bg-primary/5" 
                                             onClick={handleCapture} 
                                             disabled={isCapturing}
                                         >
@@ -114,22 +114,22 @@ export function WfhSetupReminder() {
                                         </Button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 text-left">
                                             <Label className="text-[9px] uppercase font-black opacity-40">Latitude</Label>
                                             <Input 
                                                 value={coords.lat} 
                                                 onChange={e => setCoords({...coords, lat: e.target.value})} 
                                                 placeholder="0.000000"
-                                                className="rounded-none h-11 font-mono text-sm font-bold border-none ring-1 ring-border focus-visible:ring-primary" 
+                                                className="rounded-xl h-11 font-mono text-sm font-bold border-none ring-1 ring-border focus-visible:ring-primary" 
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 text-left">
                                             <Label className="text-[9px] uppercase font-black opacity-40">Longitude</Label>
                                             <Input 
                                                 value={coords.lng} 
                                                 onChange={e => setCoords({...coords, lng: e.target.value})} 
                                                 placeholder="0.000000"
-                                                className="rounded-none h-11 font-mono text-sm font-bold border-none ring-1 ring-border focus-visible:ring-primary" 
+                                                className="rounded-xl h-11 font-mono text-sm font-bold border-none ring-1 ring-border focus-visible:ring-primary" 
                                             />
                                         </div>
                                     </div>
@@ -140,7 +140,7 @@ export function WfhSetupReminder() {
                                         value={reason} 
                                         onChange={e => setReason(e.target.value)} 
                                         placeholder="e.g., Setting permanent remote office" 
-                                        className="h-12 rounded-none bg-white border-none ring-1 ring-border" 
+                                        className="h-12 rounded-xl bg-white border-none ring-1 ring-border" 
                                     />
                                 </div>
                             </div>
@@ -148,7 +148,7 @@ export function WfhSetupReminder() {
                                 <Button 
                                     onClick={handleRequest} 
                                     disabled={!coords.lat || !coords.lng} 
-                                    className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl"
+                                    className="w-full h-14 rounded-full font-black uppercase tracking-widest shadow-2xl"
                                 >
                                     Transmit to HQ
                                 </Button>

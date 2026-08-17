@@ -67,7 +67,7 @@ export function MeetingStatusBanner() {
 
     const config = {
         ongoing: {
-            bg: "bg-emerald-50 border-emerald-200 ring-emerald-50 shadow-emerald-500/5",
+            bg: "bg-emerald-50/60 border-emerald-100/50 ring-emerald-50/30 shadow-emerald-500/5",
             text: "text-emerald-900",
             icon: <Activity className="h-4 w-4 text-emerald-600 animate-pulse" />,
             label: "Meeting Ongoing",
@@ -75,7 +75,7 @@ export function MeetingStatusBanner() {
             btn: "bg-emerald-600 hover:bg-emerald-700 text-white"
         },
         upcoming: {
-            bg: "bg-indigo-50 border-indigo-200 ring-indigo-50 shadow-indigo-500/5",
+            bg: "bg-indigo-50/60 border-indigo-100/50 ring-indigo-50/30 shadow-indigo-500/5",
             text: "text-indigo-900",
             icon: <Timer className="h-4 w-4 text-indigo-600" />,
             label: "Upcoming Meeting",
@@ -83,7 +83,7 @@ export function MeetingStatusBanner() {
             btn: "bg-indigo-600 hover:bg-indigo-700 text-white"
         },
         completed: {
-            bg: "bg-slate-50 border-slate-300 ring-slate-50 opacity-80",
+            bg: "bg-slate-100/60 border-slate-200/50 ring-slate-50 opacity-80",
             text: "text-slate-700",
             icon: <CheckCircle2 className="h-4 w-4 text-slate-500" />,
             label: "Meeting Over",
@@ -93,7 +93,7 @@ export function MeetingStatusBanner() {
     }[activeMeeting.status as 'ongoing' | 'upcoming' | 'completed'];
 
     return (
-        <Alert className={cn("mb-4 animate-fade-in-up rounded-none ring-1 shadow-md transition-all duration-500", config.bg)}>
+        <Alert className={cn("mb-4 animate-fade-in-up rounded-2xl border-none ring-1 shadow-xl backdrop-blur-xl transition-all duration-500", config.bg)}>
             {config.icon}
             <AlertTitle className={cn("font-black uppercase tracking-widest text-[10px] mb-1", config.text)}>
                 {config.label}
@@ -110,7 +110,7 @@ export function MeetingStatusBanner() {
                 {activeMeeting.link && activeMeeting.status !== 'completed' && (
                     <Button 
                         size="sm" 
-                        className={cn("rounded-none h-8 px-6 font-black uppercase text-[9px] tracking-widest shadow-lg transition-transform active:scale-95", config.btn)}
+                        className={cn("rounded-full h-8 px-6 font-black uppercase text-[9px] tracking-widest shadow-lg transition-transform active:scale-95", config.btn)}
                         onClick={() => window.open(activeMeeting.link, '_blank')}
                     >
                         <Video className="size-3 mr-2" /> Join Session
