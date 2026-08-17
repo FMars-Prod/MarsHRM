@@ -42,6 +42,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const MEETING_TYPES = [
   "Daily Stand-up",
@@ -676,4 +683,3 @@ export default function MeetingsPage() {
         </div>
     );
 }
-
