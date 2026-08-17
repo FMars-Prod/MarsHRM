@@ -795,3 +795,16 @@ function MetricCard({ icon: Icon, title, ratio, progress, color, children }: any
         </Card>
     );
 }
+
+function MetricStat({ label, val, color }: any) {
+    return <div className="text-center"><p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-tighter">{label}</p><p className={cn("text-sm font-black", color)}>{val}</p></div>;
+}
+
+function InfoRow({ label, value }: { label: string, value: string }) {
+    return (
+        <div className="flex items-center justify-between py-4 border-b border-dashed border-border/50 last:border-none group gap-4">
+            <span className="text-[11px] font-black uppercase text-muted-foreground/40 tracking-[0.2em] shrink-0">{label}</span>
+            <span className="text-base font-black text-foreground/80 uppercase text-right leading-tight">{value}</span>
+        </div>
+    );
+}

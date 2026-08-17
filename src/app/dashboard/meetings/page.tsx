@@ -499,7 +499,7 @@ export default function MeetingsPage() {
                                     {selectedMeeting?.participantIds.map((id, i) => (
                                         <div key={id} className="flex items-center gap-3 p-3 bg-white ring-1 ring-border rounded-none group hover:bg-slate-50 transition-colors">
                                             <Avatar className="size-8 rounded-none border ring-1 ring-border/50 group-hover:ring-primary/20 transition-all">
-                                                <AvatarFallback className="text-[9px] font-black bg-muted">{selectedMeeting.participantNames[i]?.[0]}</AvatarFallback>
+                                                <AvatarFallback className="text-[10px] font-bold uppercase tracking-tight text-slate-800">{selectedMeeting.participantNames[i]?.[0]}</AvatarFallback>
                                             </Avatar>
                                             <span className="text-[10px] font-bold uppercase tracking-tight text-slate-800">{selectedMeeting.participantNames[i]}</span>
                                             {id === selectedMeeting.createdBy && <div className="size-2 rounded-full bg-primary ml-auto" />}
@@ -567,8 +567,8 @@ export default function MeetingsPage() {
                         </DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Verified participant list</DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="max-h-[50vh] p-8 bg-muted/5">
-                        <div className="space-y-3">
+                    <ScrollArea className="max-h-[50vh] bg-muted/5">
+                        <div className="p-8 space-y-3">
                             {attendeesMeeting?.participantIds.map((id, i) => {
                                 const member = allUsers?.find(u => u.id === id);
                                 return (
