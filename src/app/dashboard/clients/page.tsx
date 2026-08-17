@@ -432,7 +432,7 @@ export default function ClientsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <MetricCard label="Total Clients" value={filteredClients.length} trend="Total" up={true} icon={Users} color="text-blue-600" bg="bg-blue-50" onClick={() => setTableFilter('all')} active={tableFilter === 'all'} />
-                <MetricCard label="Revenue Got" value={`₹${stats.collected.toLocaleString()}`} trend="Collected" up={true} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" valueColor="text-emerald-600" onClick={() => setTableFilter('revenue')} active={tableFilter === 'revenue'} />
+                <MetricCard label="Revenue Got" value={`₹${stats.collected.toLocaleString()}`} trend="Confirmed" up={true} icon={CheckCircle2} color="text-emerald-600" bg="bg-emerald-50" valueColor="text-emerald-600" onClick={() => setTableFilter('revenue')} active={tableFilter === 'revenue'} />
                 <MetricCard label="In Pipeline" value={`₹${stats.pending.toLocaleString()}`} trend="Pending" up={false} icon={Clock} color="text-amber-600" bg="bg-amber-50" onClick={() => setTableFilter('pipeline')} active={tableFilter === 'pipeline'} />
                 <MetricCard label="Technical Val" value={`₹${stats.technicalVal.toLocaleString()}`} trend="Active" up={true} icon={BriefcaseBusiness} color="text-indigo-600" bg="bg-indigo-50" />
                 <MetricCard label="Marketing Val" value={`₹${stats.marketingVal.toLocaleString()}`} trend="Active" up={true} icon={Zap} color="text-purple-600" bg="bg-purple-50" />
@@ -470,13 +470,13 @@ export default function ClientsPage() {
                                 </DialogHeader>
                                 <ScrollArea className="flex-1 bg-muted/5 p-10">
                                     <div className="space-y-12">
-                                        <div className="space-y-6">
+                                        <div className="space-y-6 text-left">
                                             <div className="flex items-center gap-3 text-primary"><UserCircle className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Client Information</h4></div>
-                                            <div className="grid grid-cols-2 gap-8">
+                                            <div className="grid grid-cols-2 gap-8 text-left">
                                                 <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Organization Name</Label><Input value={clientForm.companyName} onChange={e => setClientForm({...clientForm, companyName: e.target.value})} className="h-11 rounded-none" /></div>
                                                 <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Client Name</Label><Input value={clientForm.clientName} onChange={e => setClientForm({...clientForm, clientName: e.target.value})} className="h-11 rounded-none" /></div>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-8">
+                                            <div className="grid grid-cols-2 gap-8 text-left">
                                                 <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Industry Type</Label>
                                                     <Select value={clientForm.industryType} onValueChange={v => setClientForm({...clientForm, industryType: v})}>
                                                         <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
@@ -497,7 +497,7 @@ export default function ClientsPage() {
                                             <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Logo URL</Label><Input value={clientForm.logoUrl} onChange={e => setClientForm({...clientForm, logoUrl: e.target.value})} placeholder="https://..." className="h-11 rounded-none" /></div>
                                         </div>
 
-                                        <div className="space-y-6">
+                                        <div className="space-y-6 text-left">
                                             <div className="flex items-center gap-3 text-indigo-600"><MapPin className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Location & Status</h4></div>
                                             <div className="grid grid-cols-3 gap-6 text-left">
                                                 <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Country</Label>
@@ -520,7 +520,7 @@ export default function ClientsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="p-8 bg-white border-2 border-dashed border-primary/20 rounded-none space-y-8">
+                                        <div className="p-8 bg-white border-2 border-dashed border-primary/20 rounded-none space-y-8 text-left">
                                             <div className="flex items-center gap-3 text-emerald-600"><DollarSign className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Financial Matrix</h4></div>
                                             <div className="grid grid-cols-3 gap-6 text-left">
                                                 <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Total Project Value</Label><Input type="number" value={clientForm.totalProjectValue} onChange={e => setClientForm({...clientForm, totalProjectValue: parseFloat(e.target.value) || 0})} className="h-11 rounded-none font-bold text-emerald-600" /></div>
@@ -539,7 +539,7 @@ export default function ClientsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-6">
+                                        <div className="space-y-6 text-left">
                                             <div className="flex items-center gap-3 text-purple-600"><Users className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Team Assignment</h4></div>
                                             <div className="grid grid-cols-3 gap-6 text-left">
                                                 <div className="space-y-2 text-left"><Label className="text-[10px] font-black uppercase">Handled By</Label>
@@ -563,12 +563,12 @@ export default function ClientsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-6">
+                                        <div className="space-y-6 text-left">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3 text-primary text-left"><ListChecks className="size-4" /><h4 className="text-[11px] font-black uppercase tracking-widest">Payment Milestones</h4></div>
                                                 <Button type="button" onClick={handleAddMilestone} size="sm" variant="outline" className="rounded-none h-8 font-black uppercase text-[8px] tracking-widest gap-2"><Plus className="size-3"/> Add Milestone</Button>
                                             </div>
-                                            <div className="space-y-4">
+                                            <div className="space-y-4 text-left">
                                                 {(clientForm.payments || []).map((p) => (
                                                     <Card key={p.id} className="p-6 rounded-none border-2 border-dashed border-border/50 bg-white relative space-y-6 text-left">
                                                         <Button type="button" onClick={() => removeMilestone(p.id)} variant="ghost" size="icon" className="absolute top-2 right-2 text-rose-500 h-6 w-6"><X className="size-4" /></Button>
@@ -587,7 +587,7 @@ export default function ClientsPage() {
                                                 ))}
                                             </div>
                                             <div className="p-4 bg-muted/30 border-t border-b flex justify-between items-center text-left">
-                                                <div className="space-y-0.5">
+                                                <div className="space-y-0.5 text-left">
                                                     <p className="text-[8px] font-black uppercase text-muted-foreground">Audit Synchronization</p>
                                                     <p className={cn("text-xs font-black", scheduledTotal === calculatedTotalCost ? "text-emerald-600" : "text-rose-600")}>
                                                         Scheduled: {clientForm.currencyType}{scheduledTotal.toLocaleString()} / Final Cost: {clientForm.currencyType}{calculatedTotalCost.toLocaleString()}
@@ -597,7 +597,7 @@ export default function ClientsPage() {
                                         </div>
                                     </div>
                                 </ScrollArea>
-                                <div className="p-10 border-t bg-white shrink-0">
+                                <div className="p-10 border-t bg-white shrink-0 text-left">
                                     <Button onClick={handleSaveClient} className="w-full h-14 rounded-none font-black uppercase tracking-widest shadow-2xl">Finalize Registry</Button>
                                 </div>
                             </DialogContent>
@@ -627,8 +627,8 @@ export default function ClientsPage() {
                                                     ) : client.companyName.slice(0,2).toUpperCase()}
                                                 </div>
                                                 <div className="space-y-1 text-left">
-                                                    <span className="font-black text-[15px] uppercase tracking-tight block">{client.companyName}</span>
-                                                    <span className="text-[10px] font-bold text-muted-foreground uppercase">{client.industryType}</span>
+                                                    <span className="font-black text-[15px] uppercase tracking-tight block text-left">{client.companyName}</span>
+                                                    <span className="text-[10px] font-bold text-muted-foreground uppercase text-left">{client.industryType}</span>
                                                 </div>
                                             </div>
                                         </TableCell>
@@ -645,14 +645,14 @@ export default function ClientsPage() {
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-10"><MoreHorizontal className="size-5" /></Button></DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-56 rounded-none p-2 border-none shadow-3xl text-left">
-                                                    <DropdownMenuItem className="font-black text-[11px] uppercase gap-3 py-4 px-4" asChild>
+                                                    <DropdownMenuItem className="font-black text-[11px] uppercase gap-3 py-4 px-4 text-left" asChild>
                                                         <Link href={`/dashboard/meetings?clientId=${client.id}`}><Video className="size-4 text-primary" /> Schedule Meeting</Link>
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => { setEditingClient(client); setClientForm(client); setIsAddOpen(true); }} className="font-black text-[11px] uppercase gap-3 py-4 px-4">
+                                                    <DropdownMenuItem onClick={() => { setEditingClient(client); setClientForm(client); setIsAddOpen(true); }} className="font-black text-[11px] uppercase gap-3 py-4 px-4 text-left">
                                                         <Edit className="size-4 text-primary" /> Edit Record
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="font-black text-[11px] uppercase gap-3 py-4 px-4 text-rose-600" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'clients', client.id))}>
+                                                    <DropdownMenuItem className="font-black text-[11px] uppercase gap-3 py-4 px-4 text-rose-600 text-left" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'clients', client.id))}>
                                                         <Trash2 className="size-4" /> Purge Partner
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -665,26 +665,26 @@ export default function ClientsPage() {
                     </div>
                 </div>
 
-                <div className="lg:col-span-4 space-y-6">
+                <div className="lg:col-span-4 space-y-6 text-left">
                     <Card className="border-none shadow-xl rounded-none bg-white overflow-hidden ring-1 ring-border/50 text-left">
                         <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between text-left">
-                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-4" /> Top Clients</CardTitle>
-                            <div className="flex bg-muted/30 p-1 rounded-none">
+                            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 text-left"><Users className="size-4" /> Top Clients</CardTitle>
+                            <div className="flex bg-muted/30 p-1 rounded-none text-left">
                                 <button onClick={() => setRankBy('price')} className={cn("px-3 py-1 rounded-none text-[9px] font-black uppercase transition-all", rankBy === 'price' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Price</button>
                                 <button onClick={() => setRankBy('services')} className={cn("px-3 py-1 rounded-none text-[9px] font-black uppercase transition-all", rankBy === 'services' ? "bg-white text-primary shadow-sm" : "text-muted-foreground")}>Services</button>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-8 pt-0 space-y-4">
+                        <CardContent className="p-8 pt-0 space-y-4 text-left">
                             {topRankedClients.map((c, i) => (
-                                <div key={c.id} className="flex items-center justify-between group">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-[10px] font-black text-muted-foreground/30 w-4">#0{i+1}</span>
+                                <div key={c.id} className="flex items-center justify-between group text-left">
+                                    <div className="flex items-center gap-3 text-left">
+                                        <span className="text-[10px] font-black text-muted-foreground/30 w-4 text-left">#0{i+1}</span>
                                         <div className="size-9 rounded-none bg-muted/20 flex items-center justify-center font-black text-[10px] overflow-hidden">
                                             {c.logoUrl ? <img src={c.logoUrl} className="size-full object-contain" /> : c.companyName[0]}
                                         </div>
-                                        <p className="font-bold text-xs uppercase truncate max-w-[120px]">{c.companyName}</p>
+                                        <p className="font-bold text-xs uppercase truncate max-w-[120px] text-left">{c.companyName}</p>
                                     </div>
-                                    <span className="text-[10px] font-black text-emerald-600">{rankBy === 'price' ? `${c.currencyType}${c.projectTotalCost?.toLocaleString()}` : `${c.payments?.length || 0} Milestones`}</span>
+                                    <span className="text-[10px] font-black text-emerald-600 text-left">{rankBy === 'price' ? `${c.currencyType}${c.projectTotalCost?.toLocaleString()}` : `${c.payments?.length || 0} Milestones`}</span>
                                 </div>
                             ))}
                         </CardContent>
@@ -693,9 +693,9 @@ export default function ClientsPage() {
             </div>
 
             <Sheet open={!!selectedClient} onOpenChange={o => !o && setSelectedClient(null)}>
-                <SheetContent className="w-full sm:max-w-[480px] p-0 border-none shadow-3xl flex flex-col bg-[#F8FAFC]">
+                <SheetContent className="w-full sm:max-w-[480px] p-0 border-none shadow-3xl flex flex-col bg-[#F8FAFC] text-left">
                     <SheetHeader className="p-6 pb-2 bg-white border-b shadow-sm shrink-0 text-left">
-                        <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start justify-between mb-4 text-left">
                             <div className="flex items-center gap-4 text-left">
                                 <div className="size-14 rounded-none bg-primary/5 flex items-center justify-center text-primary font-black text-lg border-2 border-primary/10 shadow-inner overflow-hidden">
                                     {selectedClient?.logoUrl ? (
@@ -703,8 +703,8 @@ export default function ClientsPage() {
                                     ) : selectedClient?.companyName.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div className="text-left">
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                        <SheetTitle className="text-xl font-black tracking-tighter text-slate-900 uppercase leading-none">{selectedClient?.companyName}</SheetTitle>
+                                    <div className="flex items-center gap-2 mb-0.5 text-left">
+                                        <SheetTitle className="text-xl font-black tracking-tighter text-slate-900 uppercase leading-none text-left">{selectedClient?.companyName}</SheetTitle>
                                         <Badge className="bg-emerald-50 text-emerald-700 border-none text-[8px] font-black h-4 uppercase px-2 shadow-sm">{selectedClient?.status}</Badge>
                                     </div>
                                     <div className="flex items-center gap-3 text-[9px] font-bold text-muted-foreground uppercase tracking-widest text-left">
@@ -716,11 +716,11 @@ export default function ClientsPage() {
                             </div>
                         </div>
 
-                        <div className="p-4 bg-emerald-50/50 rounded-none ring-1 ring-emerald-100/50 space-y-3">
-                            <div className="flex justify-between items-end">
+                        <div className="p-4 bg-emerald-50/50 rounded-none ring-1 ring-emerald-100/50 space-y-3 text-left">
+                            <div className="flex justify-between items-end text-left">
                                 <div className="space-y-0.5 text-left">
-                                    <p className="text-[8px] font-black uppercase text-emerald-700 opacity-60 tracking-widest">Collection Pulse</p>
-                                    <p className="text-base font-black text-emerald-900">
+                                    <p className="text-[8px] font-black uppercase text-emerald-700 opacity-60 tracking-widest text-left">Collection Pulse</p>
+                                    <p className="text-base font-black text-emerald-900 text-left">
                                         {selectedClient?.currencyType}{moneyCollected.toLocaleString()} <span className="text-[9px] font-bold text-emerald-600/50 mx-1">/</span> {selectedClient?.currencyType}{totalProjectValue.toLocaleString()}
                                     </p>
                                 </div>
@@ -733,9 +733,9 @@ export default function ClientsPage() {
                         </div>
 
                         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-dashed text-left">
-                            <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Account Manager</p><div className="flex items-center gap-2"><Avatar className="size-6"><AvatarFallback className="text-[7px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback></Avatar><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.managerName}</p></div></div>
-                            <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Email</p><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.email}</p></div>
-                            <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Phone</p><p className="text-[10px] font-black text-slate-800 uppercase truncate">{selectedClient?.phone}</p></div>
+                            <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest text-left">Account Manager</p><div className="flex items-center gap-2 text-left"><Avatar className="size-6"><AvatarFallback className="text-[7px] font-black bg-muted">{selectedClient?.managerName?.[0]}</AvatarFallback></Avatar><p className="text-[10px] font-black text-slate-800 uppercase truncate text-left">{selectedClient?.managerName}</p></div></div>
+                            <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest text-left">Email</p><p className="text-[10px] font-black text-slate-800 uppercase truncate text-left">{selectedClient?.email}</p></div>
+                            <div className="space-y-1 text-left"><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest text-left">Phone</p><p className="text-[10px] font-black text-slate-800 uppercase truncate text-left">{selectedClient?.phone}</p></div>
                         </div>
                     </SheetHeader>
 
@@ -755,20 +755,20 @@ export default function ClientsPage() {
                                 <TabsContent value="overview" className="mt-0 space-y-8 text-left">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
                                         <div className="space-y-4 text-left">
-                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">About Client</h4>
+                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">About Client</h4>
                                             <div className="space-y-4 text-left">
                                                 <DetailLine label="Value" value={`${selectedClient?.currencyType}${selectedClient?.projectTotalCost?.toLocaleString()}`} isPrice />
                                                 <DetailLine label="Size" value={selectedClient?.companySize || 'N/A'} />
                                                 <DetailLine label="GST" value={selectedClient?.gstNumber || 'N/A'} />
                                                 <DetailLine label="Website" value={selectedClient?.website || 'N/A'} />
                                                 <div className="pt-1 text-left">
-                                                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-2">Address</p>
-                                                    <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase">{selectedClient?.address || 'No physical address registered.'}</p>
+                                                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-2 text-left">Address</p>
+                                                    <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase text-left">{selectedClient?.address || 'No physical address registered.'}</p>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="space-y-4 text-left">
-                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Stats</h4>
+                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Stats</h4>
                                             <div className="grid grid-cols-2 gap-3 text-left">
                                                 <StatBox label="Meetings" value={clientMeetings.length.toString()} icon={Users} color="bg-blue-50 text-blue-600" />
                                                 <StatBox label="Invoices" value={clientInvoices.length.toString()} icon={DollarSign} color="bg-purple-50 text-purple-600" />
@@ -778,9 +778,9 @@ export default function ClientsPage() {
                                     </div>
 
                                     <div className="space-y-4 text-left">
-                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Strategic Timeline</h4>
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Strategic Timeline</h4>
                                         <Card className="border-none shadow-sm rounded-none bg-white p-6 ring-1 ring-border/50 relative overflow-hidden text-left">
-                                            <div className="absolute left-8 top-8 bottom-8 w-px bg-border border-dashed" />
+                                            <div className="absolute left-8 top-8 bottom-8 w-px bg-border border-dashed text-left" />
                                             <div className="space-y-6 relative z-10 text-left">
                                                 {timelineEvents.map((event, i) => (
                                                     <div key={i} className="flex gap-4 items-start text-left">
@@ -788,8 +788,8 @@ export default function ClientsPage() {
                                                             <div className="size-1 bg-white rounded-none" />
                                                         </div>
                                                         <div className="space-y-0.5 text-left">
-                                                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none">{format(event.date, 'MMM dd, yyyy')}</p>
-                                                            <p className="text-[10px] font-bold text-slate-800 uppercase leading-tight">{event.label}</p>
+                                                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none text-left">{format(event.date, 'MMM dd, yyyy')}</p>
+                                                            <p className="text-[10px] font-bold text-slate-800 uppercase leading-tight text-left">{event.label}</p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -798,7 +798,7 @@ export default function ClientsPage() {
                                     </div>
 
                                     <div className="space-y-4 text-left">
-                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Account Executive Intelligence</h4>
+                                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Account Executive Intelligence</h4>
                                         <Card className="border-none shadow-sm rounded-none bg-white p-4 ring-1 ring-border/50 text-left">
                                             <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase italic text-left">"{selectedClient?.notes || 'Partnership started.'}"</p>
                                         </Card>
@@ -806,11 +806,11 @@ export default function ClientsPage() {
                                 </TabsContent>
                                 
                                 <TabsContent value="invoices" className="mt-0 space-y-4 text-left">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Invoices</h4>
+                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Invoices</h4>
                                     <div className="space-y-3 text-left">
                                         {clientInvoices.map((inv: any) => (
-                                            <div key={inv.id} className="p-4 rounded-none bg-white ring-1 ring-border shadow-sm flex items-center justify-between hover:bg-slate-50 transition-all group">
-                                                <div className="flex items-center gap-3"><div className="p-2 rounded-xl bg-purple-50 text-purple-600"><DollarSign className="size-4" /></div><div><p className="font-bold text-xs uppercase">{inv.title}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{format(inv.uploadedAt.toDate(), 'PPP')}</p></div></div>
+                                            <div key={inv.id} className="p-4 rounded-none bg-white ring-1 ring-border shadow-sm flex items-center justify-between hover:bg-slate-50 transition-all group text-left">
+                                                <div className="flex items-center gap-3 text-left"><div className="p-2 rounded-xl bg-purple-50 text-purple-600"><DollarSign className="size-4" /></div><div className="text-left"><p className="font-bold text-xs uppercase text-left">{inv.title}</p><p className="text-[9px] font-bold text-muted-foreground uppercase text-left">{format(inv.uploadedAt.toDate(), 'PPP')}</p></div></div>
                                                 <Button variant="ghost" size="icon" asChild><Link href={inv.link} target="_blank"><ExternalLink className="size-3" /></Link></Button>
                                             </div>
                                         ))}
@@ -818,16 +818,16 @@ export default function ClientsPage() {
                                 </TabsContent>
 
                                 <TabsContent value="meetings" className="mt-0 space-y-4 text-left">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Meetings</h4>
+                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] text-left">Meetings</h4>
                                     <div className="space-y-3 text-left">
                                         {clientMeetings.map((m: any) => (
                                             <div key={m.id} className="p-4 rounded-none bg-white ring-1 ring-border shadow-sm space-y-3 hover:bg-slate-50 transition-all group text-left">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
+                                                <div className="flex items-center justify-between text-left">
+                                                    <div className="flex items-center gap-3 text-left">
                                                         <div className="p-2 rounded-xl bg-sky-50 text-sky-600"><Video className="size-4" /></div>
                                                         <div className="text-left">
-                                                            <p className="font-bold text-xs uppercase">{m.title}</p>
-                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">{format(m.date.toDate(), 'PPP p')}</p>
+                                                            <p className="font-bold text-xs uppercase text-left">{m.title}</p>
+                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase text-left">{format(m.date.toDate(), 'PPP p')}</p>
                                                         </div>
                                                     </div>
                                                     <Button variant="ghost" size="icon" asChild><Link href={m.link || '#'} target="_blank"><ExternalLink className="size-3" /></Link></Button>
@@ -851,16 +851,16 @@ function MetricCard({ label, value, trend, up, icon: Icon, color, bg, valueColor
             <div className="flex items-center gap-4 text-left">
                 <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}><Icon className="size-4" /></div>
                 <div className="min-w-0 flex-1 text-left">
-                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
-                    <h3 className={cn("text-lg font-black tracking-tighter truncate leading-none", valueColor || "text-slate-900")}>{value}</h3>
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5 text-left">{label}</p>
+                    <h3 className={cn("text-lg font-black tracking-tighter truncate leading-none text-left", valueColor || "text-slate-900")}>{value}</h3>
                 </div>
             </div>
-            <div className="pt-3 border-t border-dashed border-border/50 flex items-center justify-between">
+            <div className="pt-3 border-t border-dashed border-border/50 flex items-center justify-between text-left">
                 <div className={cn("flex items-center gap-1 text-[10px] font-black text-left", up ? "text-emerald-600" : "text-rose-600")}>
                     {up ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
                     {trend}
                 </div>
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em]">Performance</p>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.1em] text-left">Performance</p>
             </div>
         </Card>
     );
@@ -879,7 +879,7 @@ function StatBox({ label, value, icon: Icon, color }: { label: string, value: st
     return (
         <div className="p-3 bg-white rounded-none ring-1 ring-border shadow-sm space-y-2 transition-transform hover:scale-105 text-left">
             <div className={cn("p-1.5 rounded-lg inline-block shadow-sm", color)}><Icon className="size-3.5" /></div>
-            <div><p className="text-base font-black text-slate-900 leading-none">{value}</p><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{label}</p></div>
+            <div className="text-left"><p className="text-base font-black text-slate-900 leading-none text-left">{value}</p><p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mt-0.5 text-left">{label}</p></div>
         </div>
     );
 }

@@ -72,6 +72,7 @@ type Meeting = {
     clientName?: string;
     participantIds: string[];
     participantNames: string[];
+    attendedIds?: string[];
     createdBy: string;
     createdByName: string;
     createdAt: any;
@@ -151,7 +152,8 @@ export default function MeetingsPage() {
             createdByName: `${userData.firstName} ${userData.lastName}`,
             createdAt: serverTimestamp(),
             agendas: meetingForm.agendas || 'Standard review.',
-            decisionsOutcomes: meetingForm.decisionsOutcomes || 'Pending discussion.'
+            decisionsOutcomes: meetingForm.decisionsOutcomes || 'Pending discussion.',
+            attendedIds: []
         };
 
         await addDocumentNonBlocking(collection(firestore, 'meetings'), payload);
@@ -567,21 +569,40 @@ export default function MeetingsPage() {
                         </DialogTitle>
                         <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Verified participant list</DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="max-h-[50vh] bg-muted/5">
+                    <ScrollArea className="flex-1 max-h-[50vh] bg-muted/5">
                         <div className="p-8 space-y-3">
-                            {attendeesMeeting?.participantIds.map((id, i) => {
+                            {(meetings?.find(m => m.id === attendeesMeeting?.id) || attendeesMeeting)?.participantIds.map((id, i) => {
+                                const currentMeeting = meetings?.find(m => m.id === attendeesMeeting?.id) || attendeesMeeting!;
                                 const member = allUsers?.find(u => u.id === id);
+                                const isHost = currentMeeting.createdBy === user?.uid;
+                                const isAttending = currentMeeting.attendedIds?.includes(id);
+
                                 return (
                                     <div key={id} className="flex items-center gap-4 p-4 bg-white border border-border/50 rounded-none shadow-sm group hover:bg-primary/5 transition-all">
+                                        {isHost && (
+                                            <Checkbox 
+                                                checked={isAttending} 
+                                                onCheckedChange={(checked) => {
+                                                    const currentAttended = currentMeeting.attendedIds || [];
+                                                    const updated = checked 
+                                                        ? [...currentAttended, id] 
+                                                        : currentAttended.filter(aid => aid !== id);
+                                                    updateDocumentNonBlocking(doc(firestore, 'meetings', currentMeeting.id), {
+                                                        attendedIds: updated
+                                                    });
+                                                }}
+                                                className="rounded-none size-5 border-primary/20 data-[state=checked]:bg-primary"
+                                            />
+                                        )}
                                         <Avatar className="size-10 rounded-none border ring-1 ring-border/50 group-hover:ring-primary/20 transition-all">
                                             <AvatarImage src={member?.avatar} />
-                                            <AvatarFallback className="text-[10px] font-black bg-muted">{attendeesMeeting.participantNames[i]?.[0]}</AvatarFallback>
+                                            <AvatarFallback className="text-[10px] font-black bg-muted">{currentMeeting.participantNames[i]?.[0]}</AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 min-w-0 text-left">
-                                            <p className="font-black text-sm uppercase tracking-tight truncate">{attendeesMeeting.participantNames[i]}</p>
+                                            <p className="font-black text-sm uppercase tracking-tight truncate">{currentMeeting.participantNames[i]}</p>
                                             <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60 truncate">{member?.jobTitle || 'Team Member'}</p>
                                         </div>
-                                        {id === attendeesMeeting.createdBy && (
+                                        {id === currentMeeting.createdBy && (
                                             <Badge variant="outline" className="rounded-none border-none bg-primary/10 text-primary font-black text-[7px] uppercase h-4 px-1.5">Host</Badge>
                                         )}
                                     </div>
