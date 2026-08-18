@@ -12,7 +12,8 @@ import {
     Loader2, CheckCircle2, UserCheck, Timer, Building2, MapPin,
     Eye, BellRing, Info, MoreHorizontal, UserPlus, X, FileText,
     ChevronRight, Filter, ClipboardList, Target, AlertCircle, FileCheck,
-    ChevronLeft, ListFilter, CalendarDays, Copy, PenLine, FileEdit, MessageSquareText
+    ChevronLeft, ListFilter, CalendarDays, Copy, PenLine, FileEdit, MessageSquareText,
+    History, Repeat, AlertTriangle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -22,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { format, isAfter, isBefore, isToday, startOfDay, addMinutes, formatDistanceToNow } from 'date-fns';
+import { format, isAfter, isBefore, isToday, startOfDay, addMinutes, formatDistanceToNow, addDays, addWeeks, endOfMonth, setDate } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -48,6 +49,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 
 const MEETING_TYPES = [
@@ -84,6 +86,9 @@ type Meeting = {
     createdBy: string;
     createdByName: string;
     createdAt: any;
+    status: 'active' | 'cancelled';
+    cancellationReason?: string;
+    durationMinutes: number;
 };
 
 export default function MeetingsPage() {
@@ -101,8 +106,22 @@ export default function MeetingsPage() {
     const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(null);
     const [attendeesMeeting, setAttendeesMeeting] = React.useState<Meeting | null>(null);
     const [meetingForm, setMeetingForm] = React.useState<Partial<Meeting>>({
-        title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm")
+        title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), durationMinutes: 60
     });
+
+    // Cancellation State
+    const [cancellingMeeting, setCancellingMeeting] = React.useState<Meeting | null>(null);
+    const [cancelReason, setCancelReason] = React.useState("");
+
+    // Duplication State
+    const [duplicatingMeeting, setDuplicationMeeting] = React.useState<Meeting | null>(null);
+    const [dupOptions, setDupOptions] = React.useState({
+        samePeople: true,
+        sameTitle: true,
+        sameDate: false,
+        recurrence: 'once' as 'once' | 'daily' | 'weekly' | 'month-end'
+    });
+
     const [momText, setMomText] = React.useState("");
     const [decisionsText, setDecisionsText] = React.useState("");
     const [isSavingNotes, setIsSavingNotes] = React.useState(false);
@@ -164,7 +183,9 @@ export default function MeetingsPage() {
             createdAt: editingMeeting ? editingMeeting.createdAt : serverTimestamp(),
             agendas: meetingForm.agendas || 'Standard review.',
             decisionsOutcomes: meetingForm.decisionsOutcomes || 'Pending discussion.',
-            attendedIds: editingMeeting ? editingMeeting.attendedIds || [] : []
+            attendedIds: editingMeeting ? editingMeeting.attendedIds || [] : [],
+            status: 'active',
+            durationMinutes: Number(meetingForm.durationMinutes) || 60
         };
 
         if (editingMeeting) {
@@ -177,23 +198,57 @@ export default function MeetingsPage() {
         
         setIsAddOpen(false);
         setEditingMeeting(null);
-        setMeetingForm({ title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm") });
+        setMeetingForm({ title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), durationMinutes: 60 });
     };
 
-    const handleDuplicateMeeting = (m: Meeting) => {
-        const payload = {
-            ...m,
-            title: `${m.title} (Copy)`,
-            date: Timestamp.fromDate(addMinutes(new Date(), 60)), // Default to 1 hour from now
-            createdAt: serverTimestamp(),
-            createdBy: user?.uid,
-            createdByName: userData ? `${userData.firstName} ${userData.lastName}` : 'System',
-            attendedIds: [],
-            minutesOfMeeting: ""
-        };
-        delete (payload as any).id;
-        addDocumentNonBlocking(collection(firestore, 'meetings'), payload);
-        toast({ title: "Meeting Duplicated", description: "New draft added to schedule." });
+    const handleDuplicateFinal = async () => {
+        if (!duplicatingMeeting || !user) return;
+
+        const baseDate = dupOptions.sameDate ? duplicatingMeeting.date.toDate() : addMinutes(new Date(), 60);
+        const datesToCreate = [];
+
+        if (dupOptions.recurrence === 'once') {
+            datesToCreate.push(baseDate);
+        } else if (dupOptions.recurrence === 'daily') {
+            for (let i = 0; i < 5; i++) datesToCreate.push(addDays(baseDate, i));
+        } else if (dupOptions.recurrence === 'weekly') {
+            for (let i = 0; i < 4; i++) datesToCreate.push(addWeeks(baseDate, i));
+        } else if (dupOptions.recurrence === 'month-end') {
+            datesToCreate.push(endOfMonth(baseDate));
+        }
+
+        for (const targetDate of datesToCreate) {
+            const payload = {
+                ...duplicatingMeeting,
+                title: dupOptions.sameTitle ? duplicatingMeeting.title : `${duplicatingMeeting.title} (Recurring)`,
+                date: Timestamp.fromDate(targetDate),
+                createdAt: serverTimestamp(),
+                createdBy: user.uid,
+                createdByName: userData ? `${userData.firstName} ${userData.lastName}` : 'System',
+                attendedIds: [],
+                minutesOfMeeting: "",
+                status: 'active',
+                participantIds: dupOptions.samePeople ? duplicatingMeeting.participantIds : [user.uid],
+                participantNames: dupOptions.samePeople ? duplicatingMeeting.participantNames : [userData?.firstName + ' ' + userData?.lastName]
+            };
+            delete (payload as any).id;
+            await addDocumentNonBlocking(collection(firestore, 'meetings'), payload);
+        }
+
+        toast({ title: "Mission Duplicated", description: `${datesToCreate.length} briefings added to roster.` });
+        setDuplicationMeeting(null);
+    };
+
+    const handleCancelMeeting = async () => {
+        if (!cancellingMeeting || !cancelReason.trim()) return;
+        await updateDocumentNonBlocking(doc(firestore, 'meetings', cancellingMeeting.id), {
+            status: 'cancelled',
+            cancellationReason: cancelReason.trim(),
+            lastUpdated: serverTimestamp()
+        });
+        toast({ title: "Mission Aborted", description: "Cancellation broadcasted to participants." });
+        setCancellingMeeting(null);
+        setCancelReason("");
     };
 
     const handleSaveNotes = async () => {
@@ -225,7 +280,7 @@ export default function MeetingsPage() {
             
             const isPast = isBefore(m.date.toDate(), now);
             const matchesStatus = statusFilter === 'all' || 
-                                 (statusFilter === 'upcoming' && !isPast) || 
+                                 (statusFilter === 'upcoming' && !isPast && m.status !== 'cancelled') || 
                                  (statusFilter === 'past' && isPast);
                                  
             const matchesType = typeFilter === 'all' || m.type === typeFilter;
@@ -234,10 +289,15 @@ export default function MeetingsPage() {
         });
     }, [meetings, searchQuery, statusFilter, typeFilter, now]);
 
-    const upcomingCount = meetings?.filter(m => isAfter(m.date.toDate(), now)).length || 0;
-    const nextMeeting = meetings?.filter(m => isAfter(m.date.toDate(), now)).sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime())[0];
+    const totalDuration = React.useMemo(() => {
+        return filteredMeetings.reduce((acc, curr) => acc + (curr.durationMinutes || 0), 0);
+    }, [filteredMeetings]);
 
-    const getStatusInfo = (date: Timestamp) => {
+    const upcomingCount = meetings?.filter(m => isAfter(m.date.toDate(), now) && m.status !== 'cancelled').length || 0;
+    const nextMeeting = meetings?.filter(m => isAfter(m.date.toDate(), now) && m.status !== 'cancelled').sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime())[0];
+
+    const getStatusInfo = (date: Timestamp, mStatus?: string) => {
+        if (mStatus === 'cancelled') return { label: 'Cancelled', color: 'bg-rose-50 text-rose-600' };
         const d = date.toDate();
         if (isBefore(d, now)) return { label: 'Completed', color: 'bg-emerald-50 text-emerald-600' };
         if (isBefore(d, addMinutes(now, 60))) return { label: 'Scheduled', color: 'bg-blue-50 text-blue-600' };
@@ -260,8 +320,8 @@ export default function MeetingsPage() {
         <div className="space-y-8 animate-fade-in-up pb-20 font-jakarta max-w-7xl mx-auto px-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="text-left">
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none">Meetings</h1>
-                    <p className="text-sm text-muted-foreground mt-1.5 uppercase font-black text-[10px] tracking-widest opacity-60">Manage team and client briefings.</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none uppercase">Briefings</h1>
+                    <p className="text-sm text-muted-foreground mt-1.5 uppercase font-black text-[10px] tracking-widest opacity-60">Manage operational briefs and strategic debriefs.</p>
                 </div>
                 {canSchedule && (
                     <Dialog open={isAddOpen} onOpenChange={(o) => { if(!o) setEditingMeeting(null); setIsAddOpen(o); }}>
@@ -285,10 +345,8 @@ export default function MeetingsPage() {
                                             <Input value={meetingForm.title} onChange={e => setMeetingForm({...meetingForm, title: e.target.value})} placeholder="e.g., Weekly Sync" className="h-12 rounded-xl font-bold uppercase text-xs" required />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Organizer</Label>
-                                            <div className="h-12 bg-muted/30 border border-border flex items-center px-4 font-bold text-xs uppercase text-slate-500 rounded-xl">
-                                                {editingMeeting ? editingMeeting.createdByName : `${userData?.firstName} ${userData?.lastName}`}
-                                            </div>
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Duration (Minutes)</Label>
+                                            <Input type="number" step="15" value={meetingForm.durationMinutes} onChange={e => setMeetingForm({...meetingForm, durationMinutes: Number(e.target.value)})} className="h-12 rounded-xl font-bold" />
                                         </div>
                                     </div>
 
@@ -359,7 +417,7 @@ export default function MeetingsPage() {
             </div>
 
             {/* Tactical Stat Matrix */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left ring-1 ring-border/50">
                     <div className="flex items-center justify-between mb-4">
                         <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl"><Video className="size-5" /></div>
@@ -367,8 +425,8 @@ export default function MeetingsPage() {
                     </div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Upcoming Briefings</p>
                     <h3 className="text-3xl font-black text-slate-900 mt-1">{upcomingCount}</h3>
-                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">
-                        Next: {nextMeeting ? `${isToday(nextMeeting.date.toDate()) ? 'Today' : format(nextMeeting.date.toDate(), 'dd MMM')}, ${format(nextMeeting.date.toDate(), 'p')}` : 'None Scheduled'}
+                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60 truncate">
+                        Next: {nextMeeting ? format(nextMeeting.date.toDate(), 'p, dd MMM') : 'None'}
                     </p>
                 </Card>
 
@@ -384,12 +442,24 @@ export default function MeetingsPage() {
 
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left ring-1 ring-border/50">
                     <div className="flex items-center justify-between mb-4">
-                        <div className="p-3 bg-purple-100 text-purple-600 rounded-xl"><CalendarDays className="size-5" /></div>
+                        <div className="p-3 bg-purple-100 text-purple-600 rounded-xl"><History className="size-5" /></div>
                         <ChevronRight className="size-4 text-slate-300" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">Cycle Activity</p>
-                    <h3 className="text-2xl font-black text-slate-900 mt-1 uppercase truncate">{format(new Date(), 'MMMM yyyy')}</h3>
-                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Active Mission Cycle</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">Total Duration</p>
+                    <h3 className="text-2xl font-black text-slate-900 mt-1 uppercase truncate">{Math.floor(totalDuration / 60)}h {totalDuration % 60}m</h3>
+                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Current Filter Set</p>
+                </Card>
+
+                <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left ring-1 ring-border/50">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-amber-100 text-amber-600 rounded-xl"><Repeat className="size-5" /></div>
+                        <ChevronRight className="size-4 text-slate-300" />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Recurring</p>
+                    <h3 className="text-3xl font-black text-slate-900 mt-1">
+                        {meetings?.filter(m => m.title.includes('Recurring')).length || 0}
+                    </h3>
+                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Active Patterns</p>
                 </Card>
             </div>
 
@@ -448,13 +518,13 @@ export default function MeetingsPage() {
                             ) : filteredMeetings.length === 0 ? (
                                 <TableRow><TableCell colSpan={6} className="h-48 text-center text-slate-400 font-bold italic uppercase text-[10px] tracking-widest opacity-30">No matching records found.</TableCell></TableRow>
                             ) : filteredMeetings.map(m => {
-                                const status = getStatusInfo(m.date);
+                                const status = getStatusInfo(m.date, m.status);
                                 const isPast = isBefore(m.date.toDate(), now);
                                 const organizer = allUsers?.find(u => u.id === m.createdBy);
-                                const canDelete = isCEO || m.createdBy === user?.uid;
+                                const canManage = isCEO || m.createdBy === user?.uid;
 
                                 return (
-                                    <TableRow key={m.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-all cursor-pointer group" onClick={() => setSelectedMeeting(m)}>
+                                    <TableRow key={m.id} className={cn("border-b border-slate-50 hover:bg-slate-50/50 transition-all cursor-pointer group", m.status === 'cancelled' && "opacity-50")} onClick={() => setSelectedMeeting(m)}>
                                         <TableCell className="py-6 px-8 text-left">
                                             <div className="space-y-1">
                                                 <p className="font-black text-[13px] text-slate-900 uppercase tracking-tight group-hover:text-primary transition-colors">{m.title}</p>
@@ -469,7 +539,7 @@ export default function MeetingsPage() {
                                         <TableCell className="text-left">
                                             <div className="text-left">
                                                 <p className="text-xs font-black text-slate-700 uppercase tracking-tight">{format(m.date.toDate(), 'dd MMM yyyy')}</p>
-                                                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-40 mt-1">{format(m.date.toDate(), 'p')}</p>
+                                                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-40 mt-1">{format(m.date.toDate(), 'p')} • {m.durationMinutes || 60}m</p>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-left">
@@ -494,6 +564,7 @@ export default function MeetingsPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-64 rounded-2xl border-none shadow-3xl p-2 bg-white/95 backdrop-blur-xl">
+                                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Oversight Actions</DropdownMenuLabel>
                                                     <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
                                                         <Eye className="size-4 text-primary" /> View Details
                                                     </DropdownMenuItem>
@@ -501,8 +572,9 @@ export default function MeetingsPage() {
                                                         <Users className="size-4 text-primary" /> Attendance
                                                     </DropdownMenuItem>
 
-                                                    {/* Contextual Menus Based on Status */}
-                                                    {!isPast ? (
+                                                    <DropdownMenuSeparator className="my-2 bg-slate-100" />
+
+                                                    {!isPast && m.status !== 'cancelled' ? (
                                                         <>
                                                             {m.link && (
                                                                 <DropdownMenuItem onClick={() => window.open(m.link, '_blank')} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-emerald-50 text-emerald-700 uppercase tracking-tight">
@@ -513,7 +585,7 @@ export default function MeetingsPage() {
                                                                 <PenLine className="size-4 text-primary" /> Edit Meeting
                                                             </DropdownMenuItem>
                                                         </>
-                                                    ) : (
+                                                    ) : isPast && (
                                                         <>
                                                             <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-amber-50 text-amber-800 uppercase tracking-tight">
                                                                 <MessageSquareText className="size-4" /> Meeting Remarks
@@ -524,32 +596,22 @@ export default function MeetingsPage() {
                                                         </>
                                                     )}
 
-                                                    <DropdownMenuItem onClick={() => handleDuplicateMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
+                                                    <DropdownMenuItem onClick={() => setDuplicationMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
                                                         <Copy className="size-4 text-primary" /> Duplicate Meeting
                                                     </DropdownMenuItem>
 
-                                                    {canDelete && (
+                                                    {canManage && (
                                                         <>
                                                             <DropdownMenuSeparator className="my-2 bg-slate-100" />
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem onSelect={e => e.preventDefault()} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600 uppercase tracking-tight">
-                                                                        <Trash2 className="size-4" /> {isPast ? "Delete Meeting" : "Cancel Meeting"}
-                                                                    </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent className="rounded-3xl border-none shadow-3xl">
-                                                                    <AlertDialogHeader className="text-left">
-                                                                        <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">{isPast ? "Delete Log?" : "Cancel Meeting?"}</AlertDialogTitle>
-                                                                        <AlertDialogDescription className="text-sm font-medium leading-relaxed opacity-60">
-                                                                            This action will permanently remove the record for "{m.title}" from the organizational registry.
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter className="mt-8 gap-3">
-                                                                        <AlertDialogCancel className="rounded-full font-black uppercase text-[10px] h-11 px-8">Abort</AlertDialogCancel>
-                                                                        <AlertDialogAction onClick={() => deleteDocumentNonBlocking(doc(firestore, 'meetings', m.id))} className="rounded-full font-black uppercase text-[10px] h-11 px-8 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20">Confirm</AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
+                                                            {m.status === 'active' ? (
+                                                                <DropdownMenuItem onClick={() => setCancellingMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600 uppercase tracking-tight">
+                                                                    <X className="size-4" /> Cancel Meeting
+                                                                </DropdownMenuItem>
+                                                            ) : (
+                                                                <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(firestore, 'meetings', m.id))} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600 uppercase tracking-tight">
+                                                                    <Trash2 className="size-4" /> Delete Log
+                                                                </DropdownMenuItem>
+                                                            )}
                                                         </>
                                                     )}
                                                 </DropdownMenuContent>
@@ -562,6 +624,79 @@ export default function MeetingsPage() {
                     </Table>
                 </div>
             </div>
+
+            {/* Cancel Meeting Dialog */}
+            <Dialog open={!!cancellingMeeting} onOpenChange={o => !o && setCancellingMeeting(null)}>
+                <DialogContent className="rounded-[2rem] sm:max-w-md p-8 border-none shadow-3xl text-left">
+                    <DialogHeader className="text-left">
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-rose-600 flex items-center gap-2">
+                            <AlertTriangle className="size-5" /> Abort Mission
+                        </DialogTitle>
+                        <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
+                            Reason for cancellation is required for participant debrief.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-6 space-y-2 text-left">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Cancellation Reason</Label>
+                        <Textarea 
+                            value={cancelReason} 
+                            onChange={e => setCancelReason(e.target.value)} 
+                            placeholder="e.g., Tactical re-assignment, Technical issues..." 
+                            className="rounded-xl min-h-[100px] border-none ring-1 ring-border"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" className="rounded-full h-11 px-8 font-black uppercase text-[10px]" onClick={() => setCancellingMeeting(null)}>Keep briefing</Button>
+                        <Button disabled={!cancelReason.trim()} className="rounded-full h-11 px-8 bg-rose-600 hover:bg-rose-700 text-white font-black uppercase text-[10px]" onClick={handleCancelMeeting}>Confirm Cancel</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Duplicate Meeting Dialog */}
+            <Dialog open={!!duplicatingMeeting} onOpenChange={o => !o && setDuplicationMeeting(null)}>
+                <DialogContent className="rounded-[2rem] sm:max-w-md p-8 border-none shadow-3xl text-left">
+                    <DialogHeader className="text-left">
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
+                            <Repeat className="size-5" /> Mission Patterns
+                        </DialogTitle>
+                        <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
+                            Configure duplication parameters
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-6 space-y-6 text-left">
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-xl">
+                                <Label className="text-[11px] font-black uppercase tracking-tight">Same Personnel?</Label>
+                                <Checkbox checked={dupOptions.samePeople} onCheckedChange={v => setDupOptions({...dupOptions, samePeople: !!v})} />
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-xl">
+                                <Label className="text-[11px] font-black uppercase tracking-tight">Same Mission Title?</Label>
+                                <Checkbox checked={dupOptions.sameTitle} onCheckedChange={v => setDupOptions({...dupOptions, sameTitle: !!v})} />
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-xl">
+                                <Label className="text-[11px] font-black uppercase tracking-tight">Keep Original Time Range?</Label>
+                                <Checkbox checked={dupOptions.sameDate} onCheckedChange={v => setDupOptions({...dupOptions, sameDate: !!v})} />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Recurrence Pattern</Label>
+                            <Select value={dupOptions.recurrence} onValueChange={(v: any) => setDupOptions({...dupOptions, recurrence: v})}>
+                                <SelectTrigger className="h-11 rounded-xl font-bold uppercase text-[10px]"><SelectValue /></SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="once" className="text-[10px] font-black uppercase">One Time Only</SelectItem>
+                                    <SelectItem value="daily" className="text-[10px] font-black uppercase">Daily Sync (5 Days)</SelectItem>
+                                    <SelectItem value="weekly" className="text-[10px] font-black uppercase">Weekly Pulse (4 Weeks)</SelectItem>
+                                    <SelectItem value="month-end" className="text-[10px] font-black uppercase">Month End Wrap-up</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button className="w-full h-12 rounded-xl font-black uppercase tracking-widest shadow-xl" onClick={handleDuplicateFinal}>Execute Pattern Clones</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Attendees Terminal */}
             <Dialog open={!!attendeesMeeting} onOpenChange={o => !o && setAttendeesMeeting(null)}>
@@ -628,7 +763,9 @@ export default function MeetingsPage() {
                             <Badge className="bg-primary text-white border-none rounded-none text-[8px] font-black h-5 uppercase tracking-widest px-3 shadow-md">
                                 {selectedMeeting?.type}
                             </Badge>
-                            {selectedMeeting && isBefore(selectedMeeting.date.toDate(), now) && (
+                            {selectedMeeting && selectedMeeting.status === 'cancelled' ? (
+                                <Badge className="bg-rose-50 text-rose-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">Mission Aborted</Badge>
+                            ) : selectedMeeting && isBefore(selectedMeeting.date.toDate(), now) && (
                                 <Badge className="bg-emerald-50 text-emerald-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">Mission Concluded</Badge>
                             )}
                         </div>
@@ -638,6 +775,15 @@ export default function MeetingsPage() {
                     
                     <ScrollArea className="flex-1">
                         <div className="p-10 space-y-12 pb-32 text-left">
+                            {selectedMeeting?.status === 'cancelled' && (
+                                <Card className="p-6 bg-rose-50 border-2 border-rose-200 rounded-none shadow-lg animate-pulse">
+                                    <div className="flex items-center gap-3 text-rose-700 font-black uppercase text-[10px] mb-2 tracking-widest">
+                                        <AlertTriangle className="size-4" /> Cancellation Directive
+                                    </div>
+                                    <p className="text-sm font-bold text-rose-900 uppercase italic">"{selectedMeeting.cancellationReason || "No reason provided."}"</p>
+                                </Card>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
                                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Active Time</Label>
@@ -646,10 +792,10 @@ export default function MeetingsPage() {
                                             <div className="size-12 rounded-none bg-primary text-white flex items-center justify-center shadow-lg"><Calendar className="size-6"/></div>
                                             <div className="text-left">
                                                 <p className="text-sm font-black text-slate-900 uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'PPP')}</p>
-                                                <p className="text-[11px] font-black text-primary uppercase mt-1 opacity-60">{selectedMeeting && format(selectedMeeting.date.toDate(), 'p')}</p>
+                                                <p className="text-[11px] font-black text-primary uppercase mt-1 opacity-60">{selectedMeeting && format(selectedMeeting.date.toDate(), 'p')} • {selectedMeeting?.durationMinutes || 60}m</p>
                                             </div>
                                         </div>
-                                        {selectedMeeting?.link && !isBefore(selectedMeeting.date.toDate(), now) && (
+                                        {selectedMeeting?.link && selectedMeeting.status === 'active' && !isBefore(selectedMeeting.date.toDate(), now) && (
                                             <Button className="w-full h-12 rounded-none font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" onClick={() => window.open(selectedMeeting.link, '_blank')}>
                                                 <ExternalLink className="size-4 mr-2" /> Start Call
                                             </Button>
@@ -700,7 +846,6 @@ export default function MeetingsPage() {
                                 </div>
                             </div>
 
-                            {/* Retrospective Data Management */}
                             <div className="space-y-8 pt-8 border-t-4 border-double border-border/50">
                                 <div className="space-y-6 text-left">
                                     <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
