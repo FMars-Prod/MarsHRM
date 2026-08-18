@@ -13,7 +13,7 @@ import {
     Eye, BellRing, Info, MoreHorizontal, UserPlus, X, FileText,
     ChevronRight, Filter, ClipboardList, Target, AlertCircle, FileCheck,
     ChevronLeft, ListFilter, CalendarDays, Copy, PenLine, FileEdit, MessageSquareText,
-    History, Repeat, AlertTriangle
+    History, Repeat, AlertTriangle, Check
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -115,6 +115,9 @@ export default function MeetingsPage() {
 
     // Duplication State
     const [duplicatingMeeting, setDuplicationMeeting] = React.useState<Meeting | null>(null);
+    const [newDupTitle, setNewDupTitle] = React.useState("");
+    const [newDupDate, setNewDupDate] = React.useState("");
+    const [newDupParticipantIds, setNewDupParticipantIds] = React.useState<string[]>([]);
     const [dupOptions, setDupOptions] = React.useState({
         samePeople: true,
         sameTitle: true,
@@ -204,7 +207,7 @@ export default function MeetingsPage() {
     const handleDuplicateFinal = async () => {
         if (!duplicatingMeeting || !user) return;
 
-        const baseDate = dupOptions.sameDate ? duplicatingMeeting.date.toDate() : addMinutes(new Date(), 60);
+        const baseDate = dupOptions.sameDate ? duplicatingMeeting.date.toDate() : (newDupDate ? new Date(newDupDate) : addMinutes(new Date(), 60));
         const datesToCreate = [];
 
         if (dupOptions.recurrence === 'once') {
@@ -217,10 +220,15 @@ export default function MeetingsPage() {
             datesToCreate.push(endOfMonth(baseDate));
         }
 
+        const participants = dupOptions.samePeople ? duplicatingMeeting.participantIds : newDupParticipantIds;
+        const participantNames = dupOptions.samePeople 
+            ? duplicatingMeeting.participantNames 
+            : allUsers?.filter(u => newDupParticipantIds.includes(u.id)).map(p => `${p.firstName} ${p.lastName}`) || [];
+
         for (const targetDate of datesToCreate) {
             const payload = {
                 ...duplicatingMeeting,
-                title: dupOptions.sameTitle ? duplicatingMeeting.title : `${duplicatingMeeting.title} (Recurring)`,
+                title: dupOptions.sameTitle ? duplicatingMeeting.title : (newDupTitle || duplicatingMeeting.title),
                 date: Timestamp.fromDate(targetDate),
                 createdAt: serverTimestamp(),
                 createdBy: user.uid,
@@ -228,8 +236,8 @@ export default function MeetingsPage() {
                 attendedIds: [],
                 minutesOfMeeting: "",
                 status: 'active',
-                participantIds: dupOptions.samePeople ? duplicatingMeeting.participantIds : [user.uid],
-                participantNames: dupOptions.samePeople ? duplicatingMeeting.participantNames : [userData?.firstName + ' ' + userData?.lastName]
+                participantIds: participants,
+                participantNames: participantNames
             };
             delete (payload as any).id;
             await addDocumentNonBlocking(collection(firestore, 'meetings'), payload);
@@ -595,7 +603,7 @@ export default function MeetingsPage() {
                                                         </>
                                                     )}
 
-                                                    <DropdownMenuItem onClick={() => setDuplicationMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
+                                                    <DropdownMenuItem onClick={() => { setDuplicationMeeting(m); setNewDupTitle(m.title); setNewDupDate(format(m.date.toDate(), "yyyy-MM-dd'T'HH:mm")); setNewDupParticipantIds(m.participantIds); }} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
                                                         <Copy className="size-4 text-primary" /> Duplicate Meeting
                                                     </DropdownMenuItem>
 
@@ -653,8 +661,8 @@ export default function MeetingsPage() {
 
             {/* Duplicate Meeting Dialog */}
             <Dialog open={!!duplicatingMeeting} onOpenChange={o => !o && setDuplicationMeeting(null)}>
-                <DialogContent className="rounded-[2rem] sm:max-w-md p-8 border-none shadow-3xl text-left">
-                    <DialogHeader className="text-left">
+                <DialogContent className="rounded-[2rem] sm:max-w-xl p-0 border-none shadow-3xl text-left overflow-hidden flex flex-col h-[85vh]">
+                    <DialogHeader className="p-8 border-b bg-white shrink-0">
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
                             <Repeat className="size-5" /> Duplicate Meeting
                         </DialogTitle>
@@ -662,38 +670,86 @@ export default function MeetingsPage() {
                             Configure duplication options
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-6 space-y-6 text-left">
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-xl">
-                                <Label className="text-[11px] font-black uppercase tracking-tight">Same Participants?</Label>
-                                <Checkbox checked={dupOptions.samePeople} onCheckedChange={v => setDupOptions({...dupOptions, samePeople: !!v})} />
-                            </div>
-                            <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-xl">
-                                <Label className="text-[11px] font-black uppercase tracking-tight">Same Title?</Label>
-                                <Checkbox checked={dupOptions.sameTitle} onCheckedChange={v => setDupOptions({...dupOptions, sameTitle: !!v})} />
-                            </div>
-                            <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-xl">
-                                <Label className="text-[11px] font-black uppercase tracking-tight">Keep Original Time?</Label>
-                                <Checkbox checked={dupOptions.sameDate} onCheckedChange={v => setDupOptions({...dupOptions, sameDate: !!v})} />
-                            </div>
-                        </div>
+                    <ScrollArea className="flex-1 bg-muted/5">
+                        <div className="p-8 space-y-8 text-left">
+                            <div className="space-y-6">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-white border border-border/50 rounded-xl shadow-sm">
+                                        <Label className="text-[11px] font-black uppercase tracking-tight">Same Title?</Label>
+                                        <Checkbox checked={dupOptions.sameTitle} onCheckedChange={v => setDupOptions({...dupOptions, sameTitle: !!v})} />
+                                    </div>
+                                    {!dupOptions.sameTitle && (
+                                        <div className="space-y-2 animate-fade-in-up">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">New Title</Label>
+                                            <Input value={newDupTitle} onChange={e => setNewDupTitle(e.target.value)} placeholder="Enter new title..." className="h-11 rounded-xl bg-white" />
+                                        </div>
+                                    )}
+                                </div>
 
-                        <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Repeat Pattern</Label>
-                            <Select value={dupOptions.recurrence} onValueChange={(v: any) => setDupOptions({...dupOptions, recurrence: v})}>
-                                <SelectTrigger className="h-11 rounded-xl font-bold uppercase text-[10px]"><SelectValue /></SelectTrigger>
-                                <SelectContent className="rounded-xl">
-                                    <SelectItem value="once" className="text-[10px] font-black uppercase">One Time</SelectItem>
-                                    <SelectItem value="daily" className="text-[10px] font-black uppercase">Daily (5 Days)</SelectItem>
-                                    <SelectItem value="weekly" className="text-[10px] font-black uppercase">Weekly (4 Weeks)</SelectItem>
-                                    <SelectItem value="month-end" className="text-[10px] font-black uppercase">Month End</SelectItem>
-                                </SelectContent>
-                            </Select>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-white border border-border/50 rounded-xl shadow-sm">
+                                        <Label className="text-[11px] font-black uppercase tracking-tight">Keep Original Time?</Label>
+                                        <Checkbox checked={dupOptions.sameDate} onCheckedChange={v => setDupOptions({...dupOptions, sameDate: !!v})} />
+                                    </div>
+                                    {!dupOptions.sameDate && (
+                                        <div className="space-y-2 animate-fade-in-up">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">New Date & Time</Label>
+                                            <Input type="datetime-local" value={newDupDate} onChange={e => setNewDupDate(e.target.value)} className="h-11 rounded-xl bg-white" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-white border border-border/50 rounded-xl shadow-sm">
+                                        <Label className="text-[11px] font-black uppercase tracking-tight">Same Participants?</Label>
+                                        <Checkbox checked={dupOptions.samePeople} onCheckedChange={v => setDupOptions({...dupOptions, samePeople: !!v})} />
+                                    </div>
+                                    {!dupOptions.samePeople && (
+                                        <div className="space-y-4 animate-fade-in-up">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Select New Participants</Label>
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {allUsers?.filter(u => u.id !== user?.uid).map(u => (
+                                                    <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-border/50 hover:border-primary/20 transition-colors">
+                                                        <Checkbox id={`dup-u-${u.id}`} checked={newDupParticipantIds.includes(u.id)} onCheckedChange={c => {
+                                                            setNewDupParticipantIds(prev => c ? [...prev, u.id] : prev.filter(id => id !== u.id));
+                                                        }} className="rounded-md" />
+                                                        <Label htmlFor={`dup-u-${u.id}`} className="flex-1 font-bold text-[11px] uppercase cursor-pointer flex items-center gap-3">
+                                                            <Avatar className="size-8 rounded-full">
+                                                                <AvatarImage src={u.avatar} className="object-cover" />
+                                                                <AvatarFallback className="text-[10px] font-black bg-primary/10 text-primary">{u.firstName[0]}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="flex flex-col">
+                                                                <span className="leading-none">{u.firstName} {u.lastName}</span>
+                                                                <span className="text-[8px] opacity-40 mt-1">{u.jobTitle}</span>
+                                                            </div>
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <Separator className="opacity-50" />
+
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Repeat Pattern</Label>
+                                <Select value={dupOptions.recurrence} onValueChange={(v: any) => setDupOptions({...dupOptions, recurrence: v})}>
+                                    <SelectTrigger className="h-11 rounded-xl font-bold uppercase text-[10px] bg-white"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="once" className="text-[10px] font-black uppercase">One Time</SelectItem>
+                                        <SelectItem value="daily" className="text-[10px] font-black uppercase">Daily (5 Days)</SelectItem>
+                                        <SelectItem value="weekly" className="text-[10px] font-black uppercase">Weekly (4 Weeks)</SelectItem>
+                                        <SelectItem value="month-end" className="text-[10px] font-black uppercase">Month End</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                    </div>
-                    <DialogFooter>
+                    </ScrollArea>
+                    <div className="p-8 border-t bg-white shrink-0">
                         <Button className="w-full h-12 rounded-xl font-black uppercase tracking-widest shadow-xl" onClick={handleDuplicateFinal}>Create Clones</Button>
-                    </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
 
