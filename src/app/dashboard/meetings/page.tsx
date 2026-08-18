@@ -13,7 +13,7 @@ import {
     Eye, BellRing, Info, MoreHorizontal, UserPlus, X, FileText,
     ChevronRight, Filter, ClipboardList, Target, AlertCircle, FileCheck,
     ChevronLeft, ListFilter, CalendarDays, Copy, PenLine, FileEdit, MessageSquareText,
-    History, Repeat, AlertTriangle, Check
+    History, Repeat, AlertTriangle, Check, Mail, ListTodo, PlusCircle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -89,6 +89,9 @@ type Meeting = {
     status: 'active' | 'cancelled';
     cancellationReason?: string;
     durationMinutes: number;
+    location?: string;
+    reminder?: string;
+    notificationType?: string;
 };
 
 export default function MeetingsPage() {
@@ -104,9 +107,8 @@ export default function MeetingsPage() {
     const [statusFilter, setStatusFilter] = React.useState<string>("all");
     const [typeFilter, setTypeFilter] = React.useState<string>("all");
     const [selectedMeeting, setSelectedMeeting] = React.useState<Meeting | null>(null);
-    const [attendeesMeeting, setAttendeesMeeting] = React.useState<Meeting | null>(null);
     const [meetingForm, setMeetingForm] = React.useState<Partial<Meeting>>({
-        title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), durationMinutes: 60
+        title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), durationMinutes: 60, location: '', reminder: '30 minutes before', notificationType: 'Email and In-App'
     });
 
     // Cancellation State
@@ -188,7 +190,10 @@ export default function MeetingsPage() {
             decisionsOutcomes: meetingForm.decisionsOutcomes || 'Pending discussion.',
             attendedIds: editingMeeting ? editingMeeting.attendedIds || [] : [],
             status: 'active',
-            durationMinutes: Number(meetingForm.durationMinutes) || 60
+            durationMinutes: Number(meetingForm.durationMinutes) || 60,
+            location: meetingForm.location || '',
+            reminder: meetingForm.reminder || '30 minutes before',
+            notificationType: meetingForm.notificationType || 'Email and In-App'
         };
 
         if (editingMeeting) {
@@ -201,7 +206,7 @@ export default function MeetingsPage() {
         
         setIsAddOpen(false);
         setEditingMeeting(null);
-        setMeetingForm({ title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), durationMinutes: 60 });
+        setMeetingForm({ title: '', description: '', agendas: '', decisionsOutcomes: '', link: '', type: 'Team Meeting', clientId: '', participantIds: [], date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), durationMinutes: 60, location: '', reminder: '30 minutes before', notificationType: 'Email and In-App' });
     };
 
     const handleDuplicateFinal = async () => {
@@ -329,7 +334,7 @@ export default function MeetingsPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="text-left">
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none uppercase">Meetings</h1>
-                    <p className="text-sm text-muted-foreground mt-1.5 uppercase font-black text-[10px] tracking-widest opacity-60">Manage and view company meetings.</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 uppercase font-black text-[10px] tracking-widest opacity-60">Manage operational briefs and strategic debriefs.</p>
                 </div>
                 {canSchedule && (
                     <Dialog open={isAddOpen} onOpenChange={(o) => { if(!o) setEditingMeeting(null); setIsAddOpen(o); }}>
@@ -338,85 +343,157 @@ export default function MeetingsPage() {
                                 <Plus className="size-4" /> New Meeting
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl rounded-2xl border-none shadow-3xl p-0 overflow-hidden">
-                            <DialogHeader className="p-10 border-b bg-white text-left">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">
-                                    {editingMeeting ? "Edit Meeting" : "New Meeting"}
-                                </DialogTitle>
-                                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Configure meeting details</DialogDescription>
+                        <DialogContent className="max-w-4xl rounded-2xl border-none shadow-3xl p-0 overflow-hidden flex flex-col h-[90vh]">
+                            <DialogHeader className="p-8 border-b bg-white shrink-0 text-left">
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900">Schedule Meeting</DialogTitle>
+                                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Create and schedule a new internal meeting</DialogDescription>
                             </DialogHeader>
-                            <ScrollArea className="max-h-[70vh] p-10 bg-muted/5">
-                                <div className="space-y-8 text-left">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Title</Label>
-                                            <Input value={meetingForm.title} onChange={e => setMeetingForm({...meetingForm, title: e.target.value})} placeholder="e.g., Weekly Sync" className="h-12 rounded-xl font-bold uppercase text-xs" required />
+                            <ScrollArea className="flex-1 bg-muted/5">
+                                <div className="p-8 space-y-10">
+                                    <div className="space-y-6">
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Meeting Details</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Title *</Label>
+                                                <Input value={meetingForm.title} onChange={e => setMeetingForm({...meetingForm, title: e.target.value})} placeholder="August Business Goals Setting Meeting" className="h-12 rounded-xl font-bold" required />
+                                            </div>
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Type *</Label>
+                                                <Select value={meetingForm.type} onValueChange={v => setMeetingForm({...meetingForm, type: v as any})}>
+                                                    <SelectTrigger className="h-12 rounded-xl font-bold uppercase text-[10px]"><SelectValue /></SelectTrigger>
+                                                    <SelectContent className="rounded-xl">
+                                                        {MEETING_TYPES.map(type => (
+                                                            <SelectItem key={type} value={type} className="uppercase font-bold text-[10px]">{type}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Duration (Minutes)</Label>
-                                            <Input type="number" step="15" value={meetingForm.durationMinutes} onChange={e => setMeetingForm({...meetingForm, durationMinutes: Number(e.target.value)})} className="h-12 rounded-xl font-bold" />
-                                        </div>
-                                    </div>
 
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Topics</Label>
-                                        <Textarea value={meetingForm.agendas} onChange={e => setMeetingForm({...meetingForm, agendas: e.target.value})} placeholder="Main objectives..." className="rounded-xl min-h-[100px] text-sm" />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Type</Label>
-                                            <Select value={meetingForm.type} onValueChange={v => setMeetingForm({...meetingForm, type: v as any})}>
-                                                <SelectTrigger className="h-12 rounded-xl font-bold uppercase text-[10px]"><SelectValue /></SelectTrigger>
-                                                <SelectContent className="rounded-xl">
-                                                    {MEETING_TYPES.map(type => (
-                                                        <SelectItem key={type} value={type} className="uppercase font-bold text-[10px]">{type}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                        <div className="space-y-2 text-left">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Purpose / Agenda *</Label>
+                                            <div className="relative">
+                                                <Textarea value={meetingForm.agendas} onChange={e => setMeetingForm({...meetingForm, agendas: e.target.value})} placeholder="Define August business goals, revenue targets, team responsibilities..." className="rounded-xl min-h-[120px] text-sm" />
+                                                <span className="absolute bottom-2 right-2 text-[8px] font-bold text-muted-foreground opacity-40">145 / 500</span>
+                                            </div>
                                         </div>
-                                        <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground">Date & Time</Label><Input type="datetime-local" value={meetingForm.date} onChange={e => setMeetingForm({...meetingForm, date: e.target.value})} className="h-12 rounded-xl font-bold" /></div>
-                                    </div>
-                                    
-                                    {meetingForm.type === 'Client Meeting' && (
-                                        <div className="space-y-2 animate-fade-in-up">
-                                            <Label className="text-[10px] font-black uppercase text-primary">Select Client</Label>
-                                            <Select value={meetingForm.clientId} onValueChange={v => setMeetingForm({...meetingForm, clientId: v})}>
-                                                <SelectTrigger className="h-12 rounded-xl font-bold uppercase text-[10px]"><SelectValue placeholder="Which client?" /></SelectTrigger>
-                                                <SelectContent className="rounded-xl">{allClients?.map(c => <SelectItem key={c.id} value={c.id} className="uppercase font-bold text-[10px]">{c.companyName}</SelectItem>)}</SelectContent>
-                                            </Select>
-                                        </div>
-                                    )}
 
-                                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Link</Label><Input value={meetingForm.link} onChange={e => setMeetingForm({...meetingForm, link: e.target.value})} placeholder="https://..." className="h-12 rounded-xl" /></div>
-                                    
-                                    <div className="space-y-4">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Participants</Label>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            {allUsers?.filter(u => u.id !== user?.uid).map(u => (
-                                                <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-border/50 hover:border-primary/20 transition-colors">
-                                                    <Checkbox id={`u-${u.id}`} checked={meetingForm.participantIds?.includes(u.id)} onCheckedChange={c => {
-                                                        const current = meetingForm.participantIds || [];
-                                                        setMeetingForm({...meetingForm, participantIds: c ? [...current, u.id] : current.filter(id => id !== u.id)});
-                                                    }} className="rounded-md" />
-                                                    <Label htmlFor={`u-${u.id}`} className="flex-1 font-bold text-[11px] uppercase cursor-pointer flex items-center gap-3">
-                                                        <Avatar className="size-8 rounded-full">
-                                                            <AvatarImage src={u.avatar} className="object-cover" />
-                                                            <AvatarFallback className="text-[10px] font-black bg-primary/10 text-primary">{u.firstName[0]}</AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="flex flex-col">
-                                                            <span className="leading-none">{u.firstName} {u.lastName}</span>
-                                                            <span className="text-[8px] opacity-40 mt-1">{u.jobTitle}</span>
-                                                        </div>
-                                                    </Label>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Date *</Label>
+                                                <div className="relative">
+                                                    <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
+                                                    <Input type="date" value={meetingForm.date?.split('T')[0]} onChange={e => setMeetingForm({...meetingForm, date: `${e.target.value}T${meetingForm.date?.split('T')[1] || '09:00'}`})} className="h-12 rounded-xl font-bold pl-10" />
                                                 </div>
-                                            ))}
+                                            </div>
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Start Time *</Label>
+                                                <div className="relative">
+                                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
+                                                    <Input type="time" value={meetingForm.date?.split('T')[1]} onChange={e => setMeetingForm({...meetingForm, date: `${meetingForm.date?.split('T')[0] || format(new Date(), 'yyyy-MM-dd')}T${e.target.value}`})} className="h-12 rounded-xl font-bold pl-10" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Duration *</Label>
+                                                <Select value={meetingForm.durationMinutes?.toString()} onValueChange={v => setMeetingForm({...meetingForm, durationMinutes: Number(v)})}>
+                                                    <SelectTrigger className="h-12 rounded-xl font-bold uppercase text-[10px]"><SelectValue placeholder="Select" /></SelectTrigger>
+                                                    <SelectContent className="rounded-xl">
+                                                        <SelectItem value="30">30 minutes</SelectItem>
+                                                        <SelectItem value="60">60 minutes</SelectItem>
+                                                        <SelectItem value="90">90 minutes</SelectItem>
+                                                        <SelectItem value="120">120 minutes</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Link (Teams / Meet / Zoom)</Label>
+                                                <div className="relative">
+                                                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary opacity-60" />
+                                                    <Input value={meetingForm.link} onChange={e => setMeetingForm({...meetingForm, link: e.target.value})} placeholder="https://meet.google.com/abc-defg-hij" className="h-12 rounded-xl font-medium pl-10 text-primary" />
+                                                </div>
+                                                <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Participants will be able to join using this link.</p>
+                                            </div>
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Location (Optional)</Label>
+                                                <div className="relative">
+                                                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
+                                                    <Input value={meetingForm.location} onChange={e => setMeetingForm({...meetingForm, location: e.target.value})} placeholder="Add physical location" className="h-12 rounded-xl font-bold pl-10" />
+                                                </div>
+                                                <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">For in-person meetings</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-rose-600 tracking-widest">Organizer *</Label>
+                                                <div className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                                                    <Avatar className="size-10">
+                                                        <AvatarImage src={userData?.avatar} />
+                                                        <AvatarFallback className="bg-primary/10 text-primary font-black">{userData?.firstName?.[0]}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-black uppercase truncate">{userData?.firstName} {userData?.lastName}</p>
+                                                        <p className="text-[9px] font-bold text-muted-foreground uppercase">{userData?.jobTitle}</p>
+                                                    </div>
+                                                    <ChevronRight className="size-4 text-slate-300" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-rose-600 tracking-widest">Add Participants *</Label>
+                                                <div className="flex flex-wrap items-center gap-2 p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                                                    <div className="flex -space-x-2">
+                                                        {meetingForm.participantIds?.slice(0, 5).map(id => {
+                                                            const u = allUsers?.find((user: any) => user.id === id);
+                                                            return (
+                                                                <Avatar key={id} className="size-8 rounded-full border-2 border-white ring-1 ring-border/50">
+                                                                    <AvatarImage src={u?.avatar} />
+                                                                    <AvatarFallback className="bg-primary text-white text-[8px] font-black uppercase">{u?.firstName?.[0]}{u?.lastName?.[0]}</AvatarFallback>
+                                                                </Avatar>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg text-primary font-black uppercase text-[8px] tracking-widest hover:bg-primary/5" onClick={() => {/* Toggle participant selection UI */}}>
+                                                        + Add More
+                                                    </Button>
+                                                </div>
+                                                <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Add team members or external email addresses</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2"><BellRing className="size-3" /> Reminder</Label>
+                                                <Select value={meetingForm.reminder} onValueChange={v => setMeetingForm({...meetingForm, reminder: v})}>
+                                                    <SelectTrigger className="h-11 rounded-xl font-bold uppercase text-[10px]"><SelectValue /></SelectTrigger>
+                                                    <SelectContent className="rounded-xl">
+                                                        <SelectItem value="15 minutes before" className="text-[10px] font-bold">15 minutes before</SelectItem>
+                                                        <SelectItem value="30 minutes before" className="text-[10px] font-bold">30 minutes before</SelectItem>
+                                                        <SelectItem value="1 hour before" className="text-[10px] font-bold">1 hour before</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2 text-left">
+                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2"><Mail className="size-3" /> Notification</Label>
+                                                <Select value={meetingForm.notificationType} onValueChange={v => setMeetingForm({...meetingForm, notificationType: v})}>
+                                                    <SelectTrigger className="h-11 rounded-xl font-bold uppercase text-[10px]"><SelectValue /></SelectTrigger>
+                                                    <SelectContent className="rounded-xl">
+                                                        <SelectItem value="Email and In-App" className="text-[10px] font-bold">Email and In-App</SelectItem>
+                                                        <SelectItem value="Email only" className="text-[10px] font-bold">Email only</SelectItem>
+                                                        <SelectItem value="In-App only" className="text-[10px] font-bold">In-App only</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </ScrollArea>
-                            <div className="p-10 border-t bg-white shrink-0">
-                                <Button onClick={handleCreateOrUpdateMeeting} className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 text-xs">
-                                    {editingMeeting ? "Save Changes" : "Create Meeting"}
+                            <div className="p-8 border-t bg-white shrink-0 flex justify-end gap-3">
+                                <Button variant="ghost" onClick={() => setIsAddOpen(false)} className="h-12 px-8 rounded-xl font-black uppercase text-[10px] tracking-widest">Cancel</Button>
+                                <Button onClick={handleCreateOrUpdateMeeting} className="h-12 px-10 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 text-[10px] bg-[#6D28D9] hover:bg-[#5B21B6]">
+                                    Schedule Meeting
                                 </Button>
                             </div>
                         </DialogContent>
@@ -442,9 +519,9 @@ export default function MeetingsPage() {
                         <div className="p-3 bg-blue-100 text-blue-600 rounded-xl"><Users className="size-5" /></div>
                         <ChevronRight className="size-4 text-slate-300" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Total Meetings</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Total Missions</p>
                     <h3 className="text-3xl font-black text-slate-900 mt-1">{meetings?.length || 0}</h3>
-                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Global List</p>
+                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Master Registry</p>
                 </Card>
 
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left ring-1 ring-border/50">
@@ -452,9 +529,9 @@ export default function MeetingsPage() {
                         <div className="p-3 bg-purple-100 text-purple-600 rounded-xl"><History className="size-5" /></div>
                         <ChevronRight className="size-4 text-slate-300" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">Total Hours</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">Total Duration</p>
                     <h3 className="text-2xl font-black text-slate-900 mt-1 uppercase truncate">{Math.floor(totalDuration / 60)}h {totalDuration % 60}m</h3>
-                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Based on Filter</p>
+                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Current Filter Set</p>
                 </Card>
 
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left ring-1 ring-border/50">
@@ -475,7 +552,7 @@ export default function MeetingsPage() {
                     <div className="relative flex-1 w-full text-left group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 group-focus-within:text-primary transition-colors" />
                         <Input 
-                            placeholder="Search meetings..." 
+                            placeholder="Search meetings, participants, or organizers" 
                             value={searchQuery} 
                             onChange={e => setSearchQuery(e.target.value)} 
                             className="h-11 bg-white border-slate-200 rounded-xl pl-12 text-sm font-semibold uppercase tracking-tight placeholder:opacity-40" 
@@ -511,9 +588,9 @@ export default function MeetingsPage() {
                     <Table>
                         <TableHeader className="bg-slate-50/50">
                             <TableRow className="hover:bg-transparent border-b border-slate-100">
-                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 px-8 tracking-[0.2em]">Meeting</TableHead>
-                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Type</TableHead>
-                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Date & Time</TableHead>
+                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 px-8 tracking-[0.2em]">Briefing Identity</TableHead>
+                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Class</TableHead>
+                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Range</TableHead>
                                 <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Host</TableHead>
                                 <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Status</TableHead>
                                 <TableHead className="text-right px-8 font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Actions</TableHead>
@@ -573,9 +650,9 @@ export default function MeetingsPage() {
                                                 <DropdownMenuContent align="end" className="w-64 rounded-2xl border-none shadow-3xl p-2 bg-white/95 backdrop-blur-xl">
                                                     <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Manage</DropdownMenuLabel>
                                                     <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
-                                                        <Eye className="size-4 text-primary" /> View Details
+                                                        <Eye className="size-4 text-primary" /> Details
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setAttendeesMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
+                                                    <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
                                                         <Users className="size-4 text-primary" /> Attendance
                                                     </DropdownMenuItem>
 
@@ -585,7 +662,7 @@ export default function MeetingsPage() {
                                                         <>
                                                             {m.link && (
                                                                 <DropdownMenuItem onClick={() => window.open(m.link, '_blank')} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-emerald-50 text-emerald-700 uppercase tracking-tight">
-                                                                    <ExternalLink className="size-4" /> Join Meeting
+                                                                    <ExternalLink className="size-4" /> Join Call
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuItem onClick={() => { setEditingMeeting(m); setMeetingForm({...m, date: format(m.date.toDate(), "yyyy-MM-dd'T'HH:mm")}); setIsAddOpen(true); }} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
@@ -615,9 +692,23 @@ export default function MeetingsPage() {
                                                                     <X className="size-4" /> Cancel Meeting
                                                                 </DropdownMenuItem>
                                                             ) : (
-                                                                <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(firestore, 'meetings', m.id))} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600 uppercase tracking-tight">
-                                                                    <Trash2 className="size-4" /> Delete Log
-                                                                </DropdownMenuItem>
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem onSelect={e => e.preventDefault()} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600">
+                                                                            <Trash2 className="size-4" /> Delete Meeting
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent className="rounded-2xl border-none shadow-3xl">
+                                                                        <AlertDialogHeader className="text-left">
+                                                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Record?</AlertDialogTitle>
+                                                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed">This will permanently remove the briefing from the mission log. This action is irreversible.</AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter className="mt-8 gap-3">
+                                                                            <AlertDialogCancel className="rounded-full h-11 px-6 font-bold uppercase text-[10px]">Back</AlertDialogCancel>
+                                                                            <AlertDialogAction onClick={() => deleteDocumentNonBlocking(doc(firestore, 'meetings', m.id))} className="rounded-full h-11 px-6 font-bold uppercase text-[10px] bg-red-600 hover:bg-red-700">Confirm Purge</AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
                                                             )}
                                                         </>
                                                     )}
@@ -753,66 +844,7 @@ export default function MeetingsPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Attendees Terminal */}
-            <Dialog open={!!attendeesMeeting} onOpenChange={o => !o && setAttendeesMeeting(null)}>
-                <DialogContent className="rounded-3xl border-none shadow-3xl sm:max-w-md p-0 overflow-hidden flex flex-col h-[70vh]">
-                    <DialogHeader className="p-8 border-b bg-white shrink-0 text-left">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-3">
-                            <div className="p-2 bg-primary/5 text-primary rounded-lg shadow-sm"><Users className="size-5" /></div>
-                            Attendance Hub
-                        </DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">Verified Personnel</DialogDescription>
-                    </DialogHeader>
-                    <div className="flex-1 bg-muted/5 min-h-0 overflow-hidden">
-                        <ScrollArea className="h-full">
-                            <div className="p-6 space-y-2">
-                                {(meetings?.find(m => m.id === attendeesMeeting?.id) || attendeesMeeting)?.participantIds.map((id, i) => {
-                                    const currentMeeting = meetings?.find(m => m.id === attendeesMeeting?.id) || attendeesMeeting!;
-                                    const member = allUsers?.find(u => u.id === id);
-                                    const isHost = currentMeeting.createdBy === user?.uid;
-                                    const isAttending = currentMeeting.attendedIds?.includes(id);
-
-                                    return (
-                                        <div key={id} className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm group hover:ring-2 ring-primary/10 transition-all">
-                                            {isHost && (
-                                                <Checkbox 
-                                                    checked={isAttending} 
-                                                    onCheckedChange={(checked) => {
-                                                        const currentAttended = currentMeeting.attendedIds || [];
-                                                        const updated = checked 
-                                                            ? [...currentAttended, id] 
-                                                            : currentAttended.filter(aid => aid !== id);
-                                                        updateDocumentNonBlocking(doc(firestore, 'meetings', currentMeeting.id), {
-                                                            attendedIds: updated
-                                                        });
-                                                    }}
-                                                    className="rounded-md size-5"
-                                                />
-                                            )}
-                                            <Avatar className="size-10 rounded-full border-2 border-white shadow-sm ring-1 ring-border/50">
-                                                <AvatarImage src={member?.avatar} className="object-cover" />
-                                                <AvatarFallback className="text-[10px] font-black bg-muted uppercase">{currentMeeting.participantNames[i]?.[0]}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1 min-w-0 text-left">
-                                                <p className="font-black text-sm text-slate-800 truncate uppercase tracking-tight">{currentMeeting.participantNames[i]}</p>
-                                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate">{member?.jobTitle || 'Team Member'}</p>
-                                            </div>
-                                            {id === currentMeeting.createdBy && (
-                                                <Badge className="rounded-none bg-primary text-white font-black text-[7px] uppercase tracking-widest h-4 px-2">Host</Badge>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </ScrollArea>
-                    </div>
-                    <div className="p-8 border-t bg-white shrink-0">
-                        <Button className="w-full h-12 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl" onClick={() => setAttendeesMeeting(null)}>Close</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Details Terminal */}
+            {/* Details & Summary Terminal */}
             <Sheet open={!!selectedMeeting} onOpenChange={o => !o && setSelectedMeeting(null)}>
                 <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
                     <SheetHeader className="p-10 border-b bg-white shrink-0 text-left shadow-sm">
@@ -826,8 +858,8 @@ export default function MeetingsPage() {
                                 <Badge className="bg-emerald-50 text-emerald-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">Completed</Badge>
                             )}
                         </div>
-                        <SheetTitle className="text-3xl font-black tracking-tighter text-slate-900 uppercase leading-none text-left">{selectedMeeting?.title}</SheetTitle>
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mt-3">Meeting Details</p>
+                        <SheetTitle className="text-3xl font-black tracking-tighter text-slate-900 uppercase leading-none text-left">Meeting Summary</SheetTitle>
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mt-3 opacity-60">(To be updated after the meeting)</p>
                     </SheetHeader>
                     
                     <ScrollArea className="flex-1">
@@ -841,121 +873,166 @@ export default function MeetingsPage() {
                                 </Card>
                             )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Time</Label>
-                                    <div className="p-6 bg-white border-2 border-dashed border-border rounded-none shadow-sm space-y-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-12 rounded-none bg-primary text-white flex items-center justify-center shadow-lg"><Calendar className="size-6"/></div>
-                                            <div className="text-left">
-                                                <p className="text-sm font-black text-slate-900 uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'PPP')}</p>
-                                                <p className="text-[11px] font-black text-primary uppercase mt-1 opacity-60">{selectedMeeting && format(selectedMeeting.date.toDate(), 'p')} • {selectedMeeting?.durationMinutes || 60}m</p>
-                                            </div>
-                                        </div>
-                                        {selectedMeeting?.link && selectedMeeting.status === 'active' && !isBefore(selectedMeeting.date.toDate(), now) && (
-                                            <Button className="w-full h-12 rounded-none font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" onClick={() => window.open(selectedMeeting.link, '_blank')}>
-                                                <ExternalLink className="size-4 mr-2" /> Start Call
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Host</Label>
-                                    <div className="p-6 bg-white ring-1 ring-border rounded-none shadow-sm flex items-center gap-4">
-                                        <Avatar className="size-14 rounded-none border-4 border-muted shadow-md">
-                                            <AvatarFallback className="bg-primary/5 text-primary font-black text-xl uppercase">{selectedMeeting?.createdByName?.[0]}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="text-left">
-                                            <p className="text-base font-black text-slate-900 uppercase leading-none">{selectedMeeting?.createdByName}</p>
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase mt-2 tracking-widest">Organizer</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="space-y-4">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <ClipboardList className="size-4" /> Topics
-                                    </h4>
-                                    <div className="p-8 bg-white ring-1 ring-border shadow-sm rounded-none border-l-8 border-primary">
-                                        <p className="text-sm font-medium text-slate-700 leading-relaxed italic">"{selectedMeeting?.agendas || 'Standard review.'}"</p>
-                                    </div>
-                                </div>
-                            </div>
-
+                            {/* Meeting Meta Header */}
                             <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Participants</h4>
-                                    <Badge variant="outline" className="bg-muted/30 text-muted-foreground text-[9px] font-black uppercase rounded-none h-6 px-3">{selectedMeeting?.participantIds.length} Members</Badge>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {selectedMeeting?.participantIds.map((id, i) => (
-                                        <div key={id} className="flex items-center gap-4 p-4 bg-white ring-1 ring-border rounded-none group hover:ring-primary/40 transition-all">
-                                            <Avatar className="size-8 rounded-none border-2 border-white shadow-sm ring-1 ring-border/50">
-                                                <AvatarFallback className="text-[10px] font-black uppercase text-slate-700">{selectedMeeting.participantNames[i]?.[0]}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="text-[10px] font-black uppercase text-slate-700 tracking-tight truncate">{selectedMeeting.participantNames[i]}</span>
-                                            {selectedMeeting.attendedIds?.includes(id) && <CheckCircle2 className="size-3 text-emerald-600 ml-auto" />}
+                                <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-tight">{selectedMeeting?.title}</h2>
+                                <div className="p-6 bg-white ring-1 ring-border rounded-none shadow-sm flex items-center gap-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="size-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center"><Calendar className="size-5"/></div>
+                                        <div className="text-left">
+                                            <p className="text-[8px] font-black uppercase text-muted-foreground">Date</p>
+                                            <p className="text-xs font-bold uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'dd MMM yyyy')}</p>
                                         </div>
-                                    ))}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="size-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center"><Clock className="size-5"/></div>
+                                        <div className="text-left">
+                                            <p className="text-[8px] font-black uppercase text-muted-foreground">Time</p>
+                                            <p className="text-xs font-bold uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'p')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="size-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center"><Timer className="size-5"/></div>
+                                        <div className="text-left">
+                                            <p className="text-[8px] font-black uppercase text-muted-foreground">Duration</p>
+                                            <p className="text-xs font-bold uppercase">{selectedMeeting?.durationMinutes || 60} minutes</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-8 pt-8 border-t-4 border-double border-border/50">
-                                <div className="space-y-6 text-left">
-                                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <FileCheck className="size-4" /> Post-Meeting Notes
+                            {/* Attendance Section */}
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between border-b border-primary/20 pb-3">
+                                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                                        <Users className="size-4" /> Attendance
                                     </h4>
+                                    <span className="text-[10px] font-black text-muted-foreground/60">{selectedMeeting?.attendedIds?.length || 0} / {selectedMeeting?.participantIds.length}</span>
+                                </div>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-40" />
+                                    <Input placeholder="Search participants" className="pl-10 h-11 rounded-none bg-white border-none ring-1 ring-border focus-visible:ring-primary" />
+                                </div>
+                                <div className="space-y-3">
+                                    {selectedMeeting?.participantIds.map((id, i) => {
+                                        const member = allUsers?.find(u => u.id === id);
+                                        const isHost = selectedMeeting.createdBy === user?.uid;
+                                        const isPresent = selectedMeeting.attendedIds?.includes(id);
 
-                                    <div className="space-y-4">
-                                        <Label className="text-[10px] font-black uppercase text-slate-900 tracking-widest">Meeting Notes</Label>
-                                        {selectedMeeting?.minutesOfMeeting ? (
-                                            <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-none shadow-sm italic text-emerald-900 text-sm whitespace-pre-wrap">
-                                                "{selectedMeeting.minutesOfMeeting}"
+                                        return (
+                                            <div key={id} className="flex items-center gap-4 p-4 bg-white ring-1 ring-border rounded-none group hover:shadow-md transition-all">
+                                                {isHost && (
+                                                    <Checkbox 
+                                                        checked={isPresent} 
+                                                        onCheckedChange={(checked) => {
+                                                            const currentAttended = selectedMeeting.attendedIds || [];
+                                                            const updated = checked ? [...currentAttended, id] : currentAttended.filter(aid => aid !== id);
+                                                            updateDocumentNonBlocking(doc(firestore, 'meetings', selectedMeeting.id), { attendedIds: updated });
+                                                            setSelectedMeeting({ ...selectedMeeting, attendedIds: updated });
+                                                        }}
+                                                        className="rounded-md size-5"
+                                                    />
+                                                )}
+                                                <Avatar className="size-10 rounded-full border-2 border-white shadow-sm ring-1 ring-border/50">
+                                                    <AvatarImage src={member?.avatar} className="object-cover" />
+                                                    <AvatarFallback className="text-[10px] font-black uppercase text-slate-700">{selectedMeeting.participantNames[i]?.[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 min-w-0 text-left">
+                                                    <p className="font-black text-sm text-slate-800 truncate uppercase tracking-tight">{selectedMeeting.participantNames[i]}</p>
+                                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate">{member?.jobTitle || 'Team Member'}</p>
+                                                </div>
+                                                <Badge variant="outline" className={cn("rounded-none text-[8px] font-black uppercase h-5 border-none", isPresent ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                                                    {isPresent ? "Present" : "Absent"}
+                                                </Badge>
                                             </div>
-                                        ) : (
-                                            selectedMeeting?.createdBy === user?.uid && (
-                                                <Textarea 
-                                                    value={momText} 
-                                                    onChange={e => setMomText(e.target.value)} 
-                                                    placeholder="Add meeting notes..." 
-                                                    className="rounded-none min-h-[120px] bg-white border-2 border-dashed focus-visible:ring-primary"
-                                                />
-                                            )
-                                        )}
-                                    </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
 
-                                    <div className="space-y-4">
-                                        <Label className="text-[10px] font-black uppercase text-slate-900 tracking-widest">Decisions & Outcomes</Label>
-                                        {selectedMeeting?.decisionsOutcomes && selectedMeeting.decisionsOutcomes !== 'Pending discussion.' ? (
-                                            <div className="p-6 bg-indigo-50/50 border border-indigo-100 rounded-none shadow-sm font-bold text-indigo-900 text-sm whitespace-pre-wrap uppercase tracking-tight">
-                                                {selectedMeeting.decisionsOutcomes}
-                                            </div>
-                                        ) : (
-                                            selectedMeeting?.createdBy === user?.uid && (
-                                                <Textarea 
-                                                    value={decisionsText} 
-                                                    onChange={e => setDecisionsText(e.target.value)} 
-                                                    placeholder="Finalize decisions..." 
-                                                    className="rounded-none min-h-[120px] bg-white border-2 border-dashed focus-visible:ring-primary"
-                                                />
-                                            )
-                                        )}
-                                    </div>
-
-                                    {selectedMeeting?.createdBy === user?.uid && (!selectedMeeting?.minutesOfMeeting || (selectedMeeting?.decisionsOutcomes === 'Pending discussion.')) && (
-                                        <Button 
-                                            onClick={handleSaveNotes} 
-                                            disabled={isSavingNotes || (!momText.trim() && !decisionsText.trim())}
-                                            className="w-full h-14 rounded-none font-black uppercase text-xs tracking-widest shadow-2xl"
-                                        >
-                                            {isSavingNotes ? <Loader2 className="animate-spin size-4 mr-2"/> : <FileCheck className="size-4 mr-2"/>}
-                                            Save Meeting Record
-                                        </Button>
+                            {/* Decisions Section */}
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between border-b border-primary/20 pb-3">
+                                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                                        <Target className="size-4" /> Decisions / Outcomes
+                                    </h4>
+                                    <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase text-primary hover:bg-primary/5">
+                                        <Plus className="size-3 mr-1" /> Add Decision
+                                    </Button>
+                                </div>
+                                <div className="space-y-4">
+                                    {selectedMeeting?.decisionsOutcomes && selectedMeeting.decisionsOutcomes !== 'Pending discussion.' ? (
+                                        <div className="space-y-3">
+                                            {selectedMeeting.decisionsOutcomes.split('\n').map((decision, idx) => (
+                                                <div key={idx} className="flex items-start gap-3 group">
+                                                    <CheckCircle2 className="size-4 text-emerald-600 mt-0.5 shrink-0" />
+                                                    <p className="text-sm font-medium text-slate-700 leading-relaxed flex-1">{decision}</p>
+                                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-40 transition-opacity">
+                                                        <PenLine className="size-3 cursor-pointer" />
+                                                        <Trash2 className="size-3 cursor-pointer text-rose-600" />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="p-8 border-2 border-dashed border-border rounded-none text-center opacity-40">
+                                            <p className="text-[10px] font-black uppercase tracking-widest">No decisions logged yet.</p>
+                                        </div>
                                     )}
                                 </div>
+                            </div>
+
+                            {/* Action Items Section */}
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between border-b border-primary/20 pb-3">
+                                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                                        <ListTodo className="size-4" /> Action Items / Reminders
+                                    </h4>
+                                    <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase text-primary hover:bg-primary/5">
+                                        <Plus className="size-3 mr-1" /> Add Action
+                                    </Button>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-white ring-1 ring-border rounded-none shadow-sm">
+                                        <div className="flex items-center gap-3">
+                                            <div className="size-4 rounded-full border-2 border-slate-300" />
+                                            <p className="text-sm font-bold uppercase tracking-tight text-slate-700">Prepare business goal tracking dashboard</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground opacity-60">
+                                            <Calendar className="size-3" />
+                                            12 AUG 2026
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between p-4 bg-white ring-1 ring-border rounded-none shadow-sm">
+                                        <div className="flex items-center gap-3">
+                                            <div className="size-4 rounded-full border-2 border-slate-300" />
+                                            <p className="text-sm font-bold uppercase tracking-tight text-slate-700">Client proposal follow-ups</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground opacity-60">
+                                            <Calendar className="size-3" />
+                                            14 AUG 2026
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Additional Remarks */}
+                            <div className="space-y-4">
+                                <Label className="text-[10px] font-black uppercase text-slate-900 tracking-widest">Additional Remarks (Optional)</Label>
+                                <Textarea 
+                                    value={momText} 
+                                    onChange={e => setMomText(e.target.value)} 
+                                    placeholder="Add any additional remarks..." 
+                                    className="rounded-none min-h-[100px] bg-white border-2 border-dashed focus-visible:ring-primary text-sm italic"
+                                />
+                                <span className="block text-right text-[8px] font-bold text-muted-foreground opacity-40">0 / 500</span>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-6 border-t border-dashed">
+                                <Button variant="outline" className="rounded-xl h-12 px-8 font-black uppercase text-[10px] tracking-widest bg-white" onClick={() => setSelectedMeeting(null)}>Save as Draft</Button>
+                                <Button onClick={handleSaveNotes} disabled={isSavingNotes} className="rounded-xl h-12 px-10 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 bg-[#6D28D9] hover:bg-[#5B21B6]">
+                                    Save Remarks
+                                </Button>
                             </div>
                         </div>
                     </ScrollArea>
@@ -965,18 +1042,23 @@ export default function MeetingsPage() {
     );
 }
 
-function MetricCard({ label, value, icon: Icon, color, bg }: { label: string, value: number, icon: any, color: string, bg: string }) {
-    return (
-        <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl text-left">
-            <div className="flex items-center gap-4 text-left">
-                <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}>
-                    <Icon className="size-5" />
-                </div>
-                <div className="min-w-0 text-left">
-                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
-                    <h3 className="text-xl font-black tracking-tight text-slate-900 truncate">{value}</h3>
-                </div>
-            </div>
-        </Card>
-    );
+function getStatusInfo(date: Timestamp, mStatus?: string) {
+    if (mStatus === 'cancelled') return { label: 'Cancelled', color: 'bg-rose-50 text-rose-600' };
+    const d = date.toDate();
+    const now = new Date();
+    if (isBefore(d, now)) return { label: 'Completed', color: 'bg-emerald-50 text-emerald-700' };
+    if (isBefore(d, addMinutes(now, 60))) return { label: 'Scheduled', color: 'bg-blue-50 text-blue-700' };
+    return { label: 'Upcoming', color: 'bg-purple-50 text-purple-700' };
+}
+
+function getTypeIcon(type: string) {
+    if (type.includes('Client')) return <Video className="size-4 text-emerald-600" />;
+    if (type.includes('Project')) return <Calendar className="size-4 text-blue-600" />;
+    return <Users className="size-4 text-purple-600" />;
+}
+
+function getTypeBg(type: string) {
+    if (type.includes('Client')) return 'bg-emerald-50';
+    if (type.includes('Project')) return 'bg-blue-50';
+    return 'bg-purple-50';
 }
