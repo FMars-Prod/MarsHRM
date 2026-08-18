@@ -76,7 +76,7 @@ export function UpcomingMeetingsWidget() {
     return (
         <Card className="border-none shadow-sm rounded-none bg-white overflow-hidden h-full flex flex-col">
             <CardHeader className="p-4 pb-2 border-b bg-primary/5">
-                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center gap-2 text-left">
                     <Video className="size-3.5" /> Upcoming Meetings
                 </CardTitle>
             </CardHeader>
@@ -254,15 +254,15 @@ export default function DashboardPage() {
         {cancelledMeetings && cancelledMeetings.map((m: any) => (
             <Alert key={m.id} className="mb-4 animate-fade-in-up bg-rose-50/60 border-none ring-1 ring-rose-200 backdrop-blur-xl shadow-xl rounded-2xl">
                 <AlertTriangle className="h-4 w-4 text-rose-600" />
-                <AlertTitle className="font-black text-rose-700 uppercase tracking-widest text-[10px] mb-1">Briefing Cancelled</AlertTitle>
-                <AlertDescription className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="space-y-0.5">
+                <AlertTitle className="font-black text-rose-700 uppercase tracking-widest text-[10px] mb-1">Meeting Cancelled</AlertTitle>
+                <AlertDescription className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
+                    <div className="space-y-0.5 text-left">
                         <p className="text-sm font-black uppercase tracking-tight text-rose-900">{m.title}</p>
                         <p className="text-[10px] font-bold uppercase text-rose-700/60 leading-relaxed italic">
-                            Reason: {m.cancellationReason || "Tactical re-assignment."}
+                            Reason: {m.cancellationReason || "No reason provided."}
                         </p>
                     </div>
-                    <Badge variant="outline" className="rounded-full bg-white/50 border-rose-200 text-rose-600 text-[8px] font-black uppercase">Aborted Mission</Badge>
+                    <Badge variant="outline" className="rounded-full bg-white/50 border-rose-200 text-rose-600 text-[8px] font-black uppercase">Cancelled</Badge>
                 </AlertDescription>
             </Alert>
         ))}
@@ -271,9 +271,8 @@ export default function DashboardPage() {
         <WfhSetupReminder />
         
         {isExecutive ? (
-            /* EXECUTIVE HEADER */
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pt-2 animate-fade-in-up text-left">
-                <div className="space-y-0.5 text-left">
+                <div className="space-y-0.5 text-left w-full md:w-auto">
                     <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none text-left uppercase">
                         Executive Terminal: {currentUserData?.firstName || 'User'}
                     </h1>
@@ -295,7 +294,6 @@ export default function DashboardPage() {
                 </div>
             </div>
         ) : (
-            /* MEMBER HEADER */
             <div className="flex flex-col gap-0.5 mb-1 animate-fade-in-up text-left">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tighter leading-none text-primary uppercase text-left">
                     {new Date().getHours() < 12 ? "Good Morning" : new Date().getHours() < 17 ? "Good Afternoon" : "Good Evening"}, {currentUserData?.firstName || 'User'}

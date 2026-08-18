@@ -235,7 +235,7 @@ export default function MeetingsPage() {
             await addDocumentNonBlocking(collection(firestore, 'meetings'), payload);
         }
 
-        toast({ title: "Mission Duplicated", description: `${datesToCreate.length} briefings added to roster.` });
+        toast({ title: "Meeting Duplicated", description: `${datesToCreate.length} meetings added.` });
         setDuplicationMeeting(null);
     };
 
@@ -246,7 +246,7 @@ export default function MeetingsPage() {
             cancellationReason: cancelReason.trim(),
             lastUpdated: serverTimestamp()
         });
-        toast({ title: "Mission Aborted", description: "Cancellation broadcasted to participants." });
+        toast({ title: "Meeting Cancelled", description: "Reason broadcasted to participants." });
         setCancellingMeeting(null);
         setCancelReason("");
     };
@@ -261,7 +261,7 @@ export default function MeetingsPage() {
 
             if (Object.keys(updates).length > 0) {
                 await updateDocumentNonBlocking(doc(firestore, 'meetings', selectedMeeting.id), updates);
-                toast({ title: "Protocol Saved", description: "Meeting record updated." });
+                toast({ title: "Notes Saved", description: "Meeting record updated." });
                 setSelectedMeeting({ ...selectedMeeting, ...updates });
                 setMomText("");
                 setDecisionsText("");
@@ -320,8 +320,8 @@ export default function MeetingsPage() {
         <div className="space-y-8 animate-fade-in-up pb-20 font-jakarta max-w-7xl mx-auto px-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="text-left">
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none uppercase">Briefings</h1>
-                    <p className="text-sm text-muted-foreground mt-1.5 uppercase font-black text-[10px] tracking-widest opacity-60">Manage operational briefs and strategic debriefs.</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none uppercase">Meetings</h1>
+                    <p className="text-sm text-muted-foreground mt-1.5 uppercase font-black text-[10px] tracking-widest opacity-60">Manage and view company meetings.</p>
                 </div>
                 {canSchedule && (
                     <Dialog open={isAddOpen} onOpenChange={(o) => { if(!o) setEditingMeeting(null); setIsAddOpen(o); }}>
@@ -333,9 +333,9 @@ export default function MeetingsPage() {
                         <DialogContent className="max-w-2xl rounded-2xl border-none shadow-3xl p-0 overflow-hidden">
                             <DialogHeader className="p-10 border-b bg-white text-left">
                                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">
-                                    {editingMeeting ? "Update Briefing" : "New Meeting"}
+                                    {editingMeeting ? "Edit Meeting" : "New Meeting"}
                                 </DialogTitle>
-                                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Mission parameters setup</DialogDescription>
+                                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Configure meeting details</DialogDescription>
                             </DialogHeader>
                             <ScrollArea className="max-h-[70vh] p-10 bg-muted/5">
                                 <div className="space-y-8 text-left">
@@ -351,8 +351,8 @@ export default function MeetingsPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Topics / Agenda</Label>
-                                        <Textarea value={meetingForm.agendas} onChange={e => setMeetingForm({...meetingForm, agendas: e.target.value})} placeholder="Primary discussion objectives..." className="rounded-xl min-h-[100px] text-sm" />
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Topics</Label>
+                                        <Textarea value={meetingForm.agendas} onChange={e => setMeetingForm({...meetingForm, agendas: e.target.value})} placeholder="Main objectives..." className="rounded-xl min-h-[100px] text-sm" />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-6">
@@ -371,7 +371,7 @@ export default function MeetingsPage() {
                                     
                                     {meetingForm.type === 'Client Meeting' && (
                                         <div className="space-y-2 animate-fade-in-up">
-                                            <Label className="text-[10px] font-black uppercase text-primary">Target Client</Label>
+                                            <Label className="text-[10px] font-black uppercase text-primary">Select Client</Label>
                                             <Select value={meetingForm.clientId} onValueChange={v => setMeetingForm({...meetingForm, clientId: v})}>
                                                 <SelectTrigger className="h-12 rounded-xl font-bold uppercase text-[10px]"><SelectValue placeholder="Which client?" /></SelectTrigger>
                                                 <SelectContent className="rounded-xl">{allClients?.map(c => <SelectItem key={c.id} value={c.id} className="uppercase font-bold text-[10px]">{c.companyName}</SelectItem>)}</SelectContent>
@@ -382,7 +382,7 @@ export default function MeetingsPage() {
                                     <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Link</Label><Input value={meetingForm.link} onChange={e => setMeetingForm({...meetingForm, link: e.target.value})} placeholder="https://..." className="h-12 rounded-xl" /></div>
                                     
                                     <div className="space-y-4">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Participants Hub</Label>
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Participants</Label>
                                         <div className="grid grid-cols-1 gap-2">
                                             {allUsers?.filter(u => u.id !== user?.uid).map(u => (
                                                 <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-border/50 hover:border-primary/20 transition-colors">
@@ -408,7 +408,7 @@ export default function MeetingsPage() {
                             </ScrollArea>
                             <div className="p-10 border-t bg-white shrink-0">
                                 <Button onClick={handleCreateOrUpdateMeeting} className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 text-xs">
-                                    {editingMeeting ? "Finalize Changes" : "Finalize Mission Briefing"}
+                                    {editingMeeting ? "Save Changes" : "Create Meeting"}
                                 </Button>
                             </div>
                         </DialogContent>
@@ -416,14 +416,13 @@ export default function MeetingsPage() {
                 )}
             </div>
 
-            {/* Tactical Stat Matrix */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left ring-1 ring-border/50">
                     <div className="flex items-center justify-between mb-4">
                         <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl"><Video className="size-5" /></div>
                         <ChevronRight className="size-4 text-slate-300" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Upcoming Briefings</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Upcoming Meetings</p>
                     <h3 className="text-3xl font-black text-slate-900 mt-1">{upcomingCount}</h3>
                     <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60 truncate">
                         Next: {nextMeeting ? format(nextMeeting.date.toDate(), 'p, dd MMM') : 'None'}
@@ -435,9 +434,9 @@ export default function MeetingsPage() {
                         <div className="p-3 bg-blue-100 text-blue-600 rounded-xl"><Users className="size-5" /></div>
                         <ChevronRight className="size-4 text-slate-300" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Total Missions</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Total Meetings</p>
                     <h3 className="text-3xl font-black text-slate-900 mt-1">{meetings?.length || 0}</h3>
-                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Master Registry</p>
+                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Global List</p>
                 </Card>
 
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left ring-1 ring-border/50">
@@ -445,9 +444,9 @@ export default function MeetingsPage() {
                         <div className="p-3 bg-purple-100 text-purple-600 rounded-xl"><History className="size-5" /></div>
                         <ChevronRight className="size-4 text-slate-300" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">Total Duration</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">Total Hours</p>
                     <h3 className="text-2xl font-black text-slate-900 mt-1 uppercase truncate">{Math.floor(totalDuration / 60)}h {totalDuration % 60}m</h3>
-                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Current Filter Set</p>
+                    <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-tight opacity-60">Based on Filter</p>
                 </Card>
 
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left ring-1 ring-border/50">
@@ -468,7 +467,7 @@ export default function MeetingsPage() {
                     <div className="relative flex-1 w-full text-left group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 group-focus-within:text-primary transition-colors" />
                         <Input 
-                            placeholder="Search briefing titles..." 
+                            placeholder="Search meetings..." 
                             value={searchQuery} 
                             onChange={e => setSearchQuery(e.target.value)} 
                             className="h-11 bg-white border-slate-200 rounded-xl pl-12 text-sm font-semibold uppercase tracking-tight placeholder:opacity-40" 
@@ -504,9 +503,9 @@ export default function MeetingsPage() {
                     <Table>
                         <TableHeader className="bg-slate-50/50">
                             <TableRow className="hover:bg-transparent border-b border-slate-100">
-                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 px-8 tracking-[0.2em]">Briefing Identity</TableHead>
-                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Class</TableHead>
-                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Range</TableHead>
+                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 px-8 tracking-[0.2em]">Meeting</TableHead>
+                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Type</TableHead>
+                                <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Date & Time</TableHead>
                                 <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Host</TableHead>
                                 <TableHead className="font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Status</TableHead>
                                 <TableHead className="text-right px-8 font-black text-[9px] uppercase text-slate-500 h-14 tracking-[0.2em]">Actions</TableHead>
@@ -514,9 +513,9 @@ export default function MeetingsPage() {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse uppercase font-black text-xs opacity-20 tracking-[0.4em]">Scanning Database...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={6} className="h-48 text-center animate-pulse uppercase font-black text-xs opacity-20 tracking-[0.4em]">Loading Database...</TableCell></TableRow>
                             ) : filteredMeetings.length === 0 ? (
-                                <TableRow><TableCell colSpan={6} className="h-48 text-center text-slate-400 font-bold italic uppercase text-[10px] tracking-widest opacity-30">No matching records found.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={6} className="h-48 text-center text-slate-400 font-bold italic uppercase text-[10px] tracking-widest opacity-30">No records found.</TableCell></TableRow>
                             ) : filteredMeetings.map(m => {
                                 const status = getStatusInfo(m.date, m.status);
                                 const isPast = isBefore(m.date.toDate(), now);
@@ -564,7 +563,7 @@ export default function MeetingsPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-64 rounded-2xl border-none shadow-3xl p-2 bg-white/95 backdrop-blur-xl">
-                                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Oversight Actions</DropdownMenuLabel>
+                                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Manage</DropdownMenuLabel>
                                                     <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
                                                         <Eye className="size-4 text-primary" /> View Details
                                                     </DropdownMenuItem>
@@ -588,7 +587,7 @@ export default function MeetingsPage() {
                                                     ) : isPast && (
                                                         <>
                                                             <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-amber-50 text-amber-800 uppercase tracking-tight">
-                                                                <MessageSquareText className="size-4" /> Meeting Remarks
+                                                                <MessageSquareText className="size-4" /> Meeting Notes
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-indigo-50 text-indigo-800 uppercase tracking-tight">
                                                                 <Target className="size-4" /> Decisions & Outcomes
@@ -630,23 +629,23 @@ export default function MeetingsPage() {
                 <DialogContent className="rounded-[2rem] sm:max-w-md p-8 border-none shadow-3xl text-left">
                     <DialogHeader className="text-left">
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-rose-600 flex items-center gap-2">
-                            <AlertTriangle className="size-5" /> Abort Mission
+                            <AlertTriangle className="size-5" /> Cancel Meeting
                         </DialogTitle>
                         <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
-                            Reason for cancellation is required for participant debrief.
+                            Provide a reason for cancellation.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-6 space-y-2 text-left">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Cancellation Reason</Label>
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Reason</Label>
                         <Textarea 
                             value={cancelReason} 
                             onChange={e => setCancelReason(e.target.value)} 
-                            placeholder="e.g., Tactical re-assignment, Technical issues..." 
+                            placeholder="e.g., Re-scheduled, Technical issues..." 
                             className="rounded-xl min-h-[100px] border-none ring-1 ring-border"
                         />
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" className="rounded-full h-11 px-8 font-black uppercase text-[10px]" onClick={() => setCancellingMeeting(null)}>Keep briefing</Button>
+                        <Button variant="outline" className="rounded-full h-11 px-8 font-black uppercase text-[10px]" onClick={() => setCancellingMeeting(null)}>Go Back</Button>
                         <Button disabled={!cancelReason.trim()} className="rounded-full h-11 px-8 bg-rose-600 hover:bg-rose-700 text-white font-black uppercase text-[10px]" onClick={handleCancelMeeting}>Confirm Cancel</Button>
                     </DialogFooter>
                 </DialogContent>
@@ -657,43 +656,43 @@ export default function MeetingsPage() {
                 <DialogContent className="rounded-[2rem] sm:max-w-md p-8 border-none shadow-3xl text-left">
                     <DialogHeader className="text-left">
                         <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
-                            <Repeat className="size-5" /> Mission Patterns
+                            <Repeat className="size-5" /> Duplicate Meeting
                         </DialogTitle>
                         <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
-                            Configure duplication parameters
+                            Configure duplication options
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-6 space-y-6 text-left">
                         <div className="space-y-4">
                             <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-xl">
-                                <Label className="text-[11px] font-black uppercase tracking-tight">Same Personnel?</Label>
+                                <Label className="text-[11px] font-black uppercase tracking-tight">Same Participants?</Label>
                                 <Checkbox checked={dupOptions.samePeople} onCheckedChange={v => setDupOptions({...dupOptions, samePeople: !!v})} />
                             </div>
                             <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-xl">
-                                <Label className="text-[11px] font-black uppercase tracking-tight">Same Mission Title?</Label>
+                                <Label className="text-[11px] font-black uppercase tracking-tight">Same Title?</Label>
                                 <Checkbox checked={dupOptions.sameTitle} onCheckedChange={v => setDupOptions({...dupOptions, sameTitle: !!v})} />
                             </div>
                             <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/50 rounded-xl">
-                                <Label className="text-[11px] font-black uppercase tracking-tight">Keep Original Time Range?</Label>
+                                <Label className="text-[11px] font-black uppercase tracking-tight">Keep Original Time?</Label>
                                 <Checkbox checked={dupOptions.sameDate} onCheckedChange={v => setDupOptions({...dupOptions, sameDate: !!v})} />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Recurrence Pattern</Label>
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Repeat Pattern</Label>
                             <Select value={dupOptions.recurrence} onValueChange={(v: any) => setDupOptions({...dupOptions, recurrence: v})}>
                                 <SelectTrigger className="h-11 rounded-xl font-bold uppercase text-[10px]"><SelectValue /></SelectTrigger>
                                 <SelectContent className="rounded-xl">
-                                    <SelectItem value="once" className="text-[10px] font-black uppercase">One Time Only</SelectItem>
-                                    <SelectItem value="daily" className="text-[10px] font-black uppercase">Daily Sync (5 Days)</SelectItem>
-                                    <SelectItem value="weekly" className="text-[10px] font-black uppercase">Weekly Pulse (4 Weeks)</SelectItem>
-                                    <SelectItem value="month-end" className="text-[10px] font-black uppercase">Month End Wrap-up</SelectItem>
+                                    <SelectItem value="once" className="text-[10px] font-black uppercase">One Time</SelectItem>
+                                    <SelectItem value="daily" className="text-[10px] font-black uppercase">Daily (5 Days)</SelectItem>
+                                    <SelectItem value="weekly" className="text-[10px] font-black uppercase">Weekly (4 Weeks)</SelectItem>
+                                    <SelectItem value="month-end" className="text-[10px] font-black uppercase">Month End</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button className="w-full h-12 rounded-xl font-black uppercase tracking-widest shadow-xl" onClick={handleDuplicateFinal}>Execute Pattern Clones</Button>
+                        <Button className="w-full h-12 rounded-xl font-black uppercase tracking-widest shadow-xl" onClick={handleDuplicateFinal}>Create Clones</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -706,51 +705,53 @@ export default function MeetingsPage() {
                             <div className="p-2 bg-primary/5 text-primary rounded-lg shadow-sm"><Users className="size-5" /></div>
                             Attendance Hub
                         </DialogTitle>
-                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">Verified Personnel Presence</DialogDescription>
+                        <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">Verified Personnel</DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="flex-1 bg-muted/5">
-                        <div className="p-6 space-y-2">
-                            {(meetings?.find(m => m.id === attendeesMeeting?.id) || attendeesMeeting)?.participantIds.map((id, i) => {
-                                const currentMeeting = meetings?.find(m => m.id === attendeesMeeting?.id) || attendeesMeeting!;
-                                const member = allUsers?.find(u => u.id === id);
-                                const isHost = currentMeeting.createdBy === user?.uid;
-                                const isAttending = currentMeeting.attendedIds?.includes(id);
+                    <div className="flex-1 bg-muted/5 min-h-0 overflow-hidden">
+                        <ScrollArea className="h-full">
+                            <div className="p-6 space-y-2">
+                                {(meetings?.find(m => m.id === attendeesMeeting?.id) || attendeesMeeting)?.participantIds.map((id, i) => {
+                                    const currentMeeting = meetings?.find(m => m.id === attendeesMeeting?.id) || attendeesMeeting!;
+                                    const member = allUsers?.find(u => u.id === id);
+                                    const isHost = currentMeeting.createdBy === user?.uid;
+                                    const isAttending = currentMeeting.attendedIds?.includes(id);
 
-                                return (
-                                    <div key={id} className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm group hover:ring-2 ring-primary/10 transition-all">
-                                        {isHost && (
-                                            <Checkbox 
-                                                checked={isAttending} 
-                                                onCheckedChange={(checked) => {
-                                                    const currentAttended = currentMeeting.attendedIds || [];
-                                                    const updated = checked 
-                                                        ? [...currentAttended, id] 
-                                                        : currentAttended.filter(aid => aid !== id);
-                                                    updateDocumentNonBlocking(doc(firestore, 'meetings', currentMeeting.id), {
-                                                        attendedIds: updated
-                                                    });
-                                                }}
-                                                className="rounded-md size-5"
-                                            />
-                                        )}
-                                        <Avatar className="size-10 rounded-full border-2 border-white shadow-sm ring-1 ring-border/50">
-                                            <AvatarImage src={member?.avatar} className="object-cover" />
-                                            <AvatarFallback className="text-[10px] font-black bg-muted uppercase">{currentMeeting.participantNames[i]?.[0]}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1 min-w-0 text-left">
-                                            <p className="font-black text-sm text-slate-800 truncate uppercase tracking-tight">{currentMeeting.participantNames[i]}</p>
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate">{member?.jobTitle || 'Fleet Personnel'}</p>
+                                    return (
+                                        <div key={id} className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm group hover:ring-2 ring-primary/10 transition-all">
+                                            {isHost && (
+                                                <Checkbox 
+                                                    checked={isAttending} 
+                                                    onCheckedChange={(checked) => {
+                                                        const currentAttended = currentMeeting.attendedIds || [];
+                                                        const updated = checked 
+                                                            ? [...currentAttended, id] 
+                                                            : currentAttended.filter(aid => aid !== id);
+                                                        updateDocumentNonBlocking(doc(firestore, 'meetings', currentMeeting.id), {
+                                                            attendedIds: updated
+                                                        });
+                                                    }}
+                                                    className="rounded-md size-5"
+                                                />
+                                            )}
+                                            <Avatar className="size-10 rounded-full border-2 border-white shadow-sm ring-1 ring-border/50">
+                                                <AvatarImage src={member?.avatar} className="object-cover" />
+                                                <AvatarFallback className="text-[10px] font-black bg-muted uppercase">{currentMeeting.participantNames[i]?.[0]}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1 min-w-0 text-left">
+                                                <p className="font-black text-sm text-slate-800 truncate uppercase tracking-tight">{currentMeeting.participantNames[i]}</p>
+                                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate">{member?.jobTitle || 'Team Member'}</p>
+                                            </div>
+                                            {id === currentMeeting.createdBy && (
+                                                <Badge className="rounded-none bg-primary text-white font-black text-[7px] uppercase tracking-widest h-4 px-2">Host</Badge>
+                                            )}
                                         </div>
-                                        {id === currentMeeting.createdBy && (
-                                            <Badge className="rounded-none bg-primary text-white font-black text-[7px] uppercase tracking-widest h-4 px-2">Host</Badge>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </ScrollArea>
+                                    );
+                                })}
+                            </div>
+                        </ScrollArea>
+                    </div>
                     <div className="p-8 border-t bg-white shrink-0">
-                        <Button className="w-full h-12 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl" onClick={() => setAttendeesMeeting(null)}>Close Terminal</Button>
+                        <Button className="w-full h-12 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl" onClick={() => setAttendeesMeeting(null)}>Close</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -764,13 +765,13 @@ export default function MeetingsPage() {
                                 {selectedMeeting?.type}
                             </Badge>
                             {selectedMeeting && selectedMeeting.status === 'cancelled' ? (
-                                <Badge className="bg-rose-50 text-rose-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">Mission Aborted</Badge>
+                                <Badge className="bg-rose-50 text-rose-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">Cancelled</Badge>
                             ) : selectedMeeting && isBefore(selectedMeeting.date.toDate(), now) && (
-                                <Badge className="bg-emerald-50 text-emerald-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">Mission Concluded</Badge>
+                                <Badge className="bg-emerald-50 text-emerald-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">Completed</Badge>
                             )}
                         </div>
                         <SheetTitle className="text-3xl font-black tracking-tighter text-slate-900 uppercase leading-none text-left">{selectedMeeting?.title}</SheetTitle>
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mt-3">Registry Briefing</p>
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mt-3">Meeting Details</p>
                     </SheetHeader>
                     
                     <ScrollArea className="flex-1">
@@ -778,7 +779,7 @@ export default function MeetingsPage() {
                             {selectedMeeting?.status === 'cancelled' && (
                                 <Card className="p-6 bg-rose-50 border-2 border-rose-200 rounded-none shadow-lg animate-pulse">
                                     <div className="flex items-center gap-3 text-rose-700 font-black uppercase text-[10px] mb-2 tracking-widest">
-                                        <AlertTriangle className="size-4" /> Cancellation Directive
+                                        <AlertTriangle className="size-4" /> Cancellation Reason
                                     </div>
                                     <p className="text-sm font-bold text-rose-900 uppercase italic">"{selectedMeeting.cancellationReason || "No reason provided."}"</p>
                                 </Card>
@@ -786,7 +787,7 @@ export default function MeetingsPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Active Time</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Time</Label>
                                     <div className="p-6 bg-white border-2 border-dashed border-border rounded-none shadow-sm space-y-4">
                                         <div className="flex items-center gap-4">
                                             <div className="size-12 rounded-none bg-primary text-white flex items-center justify-center shadow-lg"><Calendar className="size-6"/></div>
@@ -804,14 +805,14 @@ export default function MeetingsPage() {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Mission Host</Label>
+                                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Host</Label>
                                     <div className="p-6 bg-white ring-1 ring-border rounded-none shadow-sm flex items-center gap-4">
                                         <Avatar className="size-14 rounded-none border-4 border-muted shadow-md">
                                             <AvatarFallback className="bg-primary/5 text-primary font-black text-xl uppercase">{selectedMeeting?.createdByName?.[0]}</AvatarFallback>
                                         </Avatar>
                                         <div className="text-left">
                                             <p className="text-base font-black text-slate-900 uppercase leading-none">{selectedMeeting?.createdByName}</p>
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase mt-2 tracking-widest">Auth. Representative</p>
+                                            <p className="text-[9px] font-bold text-muted-foreground uppercase mt-2 tracking-widest">Organizer</p>
                                         </div>
                                     </div>
                                 </div>
@@ -820,18 +821,18 @@ export default function MeetingsPage() {
                             <div className="space-y-6">
                                 <div className="space-y-4">
                                     <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <ClipboardList className="size-4" /> Discussion Points
+                                        <ClipboardList className="size-4" /> Topics
                                     </h4>
                                     <div className="p-8 bg-white ring-1 ring-border shadow-sm rounded-none border-l-8 border-primary">
-                                        <p className="text-sm font-medium text-slate-700 leading-relaxed italic">"{selectedMeeting?.agendas || 'Standard operational review.'}"</p>
+                                        <p className="text-sm font-medium text-slate-700 leading-relaxed italic">"{selectedMeeting?.agendas || 'Standard review.'}"</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Deployment List</h4>
-                                    <Badge variant="outline" className="bg-muted/30 text-muted-foreground text-[9px] font-black uppercase rounded-none h-6 px-3">{selectedMeeting?.participantIds.length} Personnel</Badge>
+                                    <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Participants</h4>
+                                    <Badge variant="outline" className="bg-muted/30 text-muted-foreground text-[9px] font-black uppercase rounded-none h-6 px-3">{selectedMeeting?.participantIds.length} Members</Badge>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {selectedMeeting?.participantIds.map((id, i) => (
@@ -849,11 +850,11 @@ export default function MeetingsPage() {
                             <div className="space-y-8 pt-8 border-t-4 border-double border-border/50">
                                 <div className="space-y-6 text-left">
                                     <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <FileCheck className="size-4" /> Post-Mission Terminal
+                                        <FileCheck className="size-4" /> Post-Meeting Notes
                                     </h4>
 
                                     <div className="space-y-4">
-                                        <Label className="text-[10px] font-black uppercase text-slate-900 tracking-widest">Meeting Remarks</Label>
+                                        <Label className="text-[10px] font-black uppercase text-slate-900 tracking-widest">Meeting Notes</Label>
                                         {selectedMeeting?.minutesOfMeeting ? (
                                             <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-none shadow-sm italic text-emerald-900 text-sm whitespace-pre-wrap">
                                                 "{selectedMeeting.minutesOfMeeting}"
@@ -863,7 +864,7 @@ export default function MeetingsPage() {
                                                 <Textarea 
                                                     value={momText} 
                                                     onChange={e => setMomText(e.target.value)} 
-                                                    placeholder="Stamping mission remarks..." 
+                                                    placeholder="Add meeting notes..." 
                                                     className="rounded-none min-h-[120px] bg-white border-2 border-dashed focus-visible:ring-primary"
                                                 />
                                             )
@@ -881,7 +882,7 @@ export default function MeetingsPage() {
                                                 <Textarea 
                                                     value={decisionsText} 
                                                     onChange={e => setDecisionsText(e.target.value)} 
-                                                    placeholder="Finalizing mission directives..." 
+                                                    placeholder="Finalize decisions..." 
                                                     className="rounded-none min-h-[120px] bg-white border-2 border-dashed focus-visible:ring-primary"
                                                 />
                                             )
@@ -895,7 +896,7 @@ export default function MeetingsPage() {
                                             className="w-full h-14 rounded-none font-black uppercase text-xs tracking-widest shadow-2xl"
                                         >
                                             {isSavingNotes ? <Loader2 className="animate-spin size-4 mr-2"/> : <FileCheck className="size-4 mr-2"/>}
-                                            Lock Mission Records
+                                            Save Meeting Record
                                         </Button>
                                     )}
                                 </div>
@@ -905,5 +906,21 @@ export default function MeetingsPage() {
                 </SheetContent>
             </Sheet>
         </div>
+    );
+}
+
+function MetricCard({ label, value, icon: Icon, color, bg }: { label: string, value: number, icon: any, color: string, bg: string }) {
+    return (
+        <Card className="border-none shadow-sm rounded-none bg-white p-5 space-y-4 ring-1 ring-border/50 group transition-all duration-500 hover:shadow-xl text-left">
+            <div className="flex items-center gap-4 text-left">
+                <div className={cn("p-3 rounded-none shadow-sm transition-transform group-hover:scale-105", bg, color)}>
+                    <Icon className="size-5" />
+                </div>
+                <div className="min-w-0 text-left">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">{label}</p>
+                    <h3 className="text-xl font-black tracking-tight text-slate-900 truncate">{value}</h3>
+                </div>
+            </div>
+        </Card>
     );
 }
