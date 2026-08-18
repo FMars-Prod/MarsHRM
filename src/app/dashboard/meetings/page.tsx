@@ -23,8 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { format, isAfter, isBefore, isToday, startOfDay, addMinutes, formatDistanceToNow, addDays, addWeeks, endOfMonth, setDate } from 'date-fns';
-import { Checkbox } from '@/components/ui/checkbox';
+import { format, isAfter, isBefore, isToday, startOfDay, addMinutes, formatDistanceToNow, addDays, addWeeks, endOfMonth } from 'date-fns';
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -102,6 +102,9 @@ export default function MeetingsPage() {
     const prefilledClientId = searchParams.get('clientId');
 
     const [isAddOpen, setIsAddOpen] = React.useState(false);
+    const [isParticipantSheetOpen, setIsParticipantSheetOpen] = React.useState(false);
+    const [participantSearch, setParticipantSearch] = React.useState("");
+    
     const [editingMeeting, setEditingMeeting] = React.useState<Meeting | null>(null);
     const [searchQuery, setSearchQuery] = React.useState("");
     const [statusFilter, setStatusFilter] = React.useState<string>("all");
@@ -312,7 +315,7 @@ export default function MeetingsPage() {
     const getStatusInfo = (date: Timestamp, mStatus?: string) => {
         if (mStatus === 'cancelled') return { label: 'Cancelled', color: 'bg-rose-50 text-rose-600' };
         const d = date.toDate();
-        if (isBefore(d, now)) return { label: 'Completed', color: 'bg-emerald-50 text-emerald-600' };
+        if (isBefore(d, now)) return { label: 'Completed', color: 'bg-emerald-50 text-emerald-700' };
         if (isBefore(d, addMinutes(now, 60))) return { label: 'Scheduled', color: 'bg-blue-50 text-blue-600' };
         return { label: 'Upcoming', color: 'bg-purple-50 text-purple-600' };
     };
@@ -330,8 +333,8 @@ export default function MeetingsPage() {
     };
 
     return (
-        <div className="space-y-8 animate-fade-in-up pb-20 font-jakarta max-w-7xl mx-auto px-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-8 animate-fade-in-up pb-20 font-jakarta max-w-7xl mx-auto px-4 text-left">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
                 <div className="text-left">
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none uppercase">Meetings</h1>
                     <p className="text-sm text-muted-foreground mt-1.5 uppercase font-black text-[10px] tracking-widest opacity-60">Manage operational briefs and strategic debriefs.</p>
@@ -343,16 +346,16 @@ export default function MeetingsPage() {
                                 <Plus className="size-4" /> New Meeting
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl rounded-2xl border-none shadow-3xl p-0 overflow-hidden flex flex-col h-[90vh]">
+                        <DialogContent className="max-w-4xl rounded-2xl border-none shadow-3xl p-0 overflow-hidden flex flex-col h-[90vh] text-left">
                             <DialogHeader className="p-8 border-b bg-white shrink-0 text-left">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900">Schedule Meeting</DialogTitle>
-                                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Create and schedule a new internal meeting</DialogDescription>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900 text-left">Schedule Meeting</DialogTitle>
+                                <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60 text-left">Create and schedule a new internal meeting</DialogDescription>
                             </DialogHeader>
-                            <ScrollArea className="flex-1 bg-muted/5">
-                                <div className="p-8 space-y-10">
-                                    <div className="space-y-6">
-                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Meeting Details</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <ScrollArea className="flex-1 bg-muted/5 text-left">
+                                <div className="p-8 space-y-10 text-left">
+                                    <div className="space-y-6 text-left">
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-primary text-left">Meeting Details</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                                             <div className="space-y-2 text-left">
                                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Title *</Label>
                                                 <Input value={meetingForm.title} onChange={e => setMeetingForm({...meetingForm, title: e.target.value})} placeholder="August Business Goals Setting Meeting" className="h-12 rounded-xl font-bold" required />
@@ -374,11 +377,10 @@ export default function MeetingsPage() {
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Purpose / Agenda *</Label>
                                             <div className="relative">
                                                 <Textarea value={meetingForm.agendas} onChange={e => setMeetingForm({...meetingForm, agendas: e.target.value})} placeholder="Define August business goals, revenue targets, team responsibilities..." className="rounded-xl min-h-[120px] text-sm" />
-                                                <span className="absolute bottom-2 right-2 text-[8px] font-bold text-muted-foreground opacity-40">145 / 500</span>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
                                             <div className="space-y-2 text-left">
                                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Date *</Label>
                                                 <div className="relative">
@@ -407,14 +409,13 @@ export default function MeetingsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                                             <div className="space-y-2 text-left">
                                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meeting Link (Teams / Meet / Zoom)</Label>
                                                 <div className="relative">
                                                     <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary opacity-60" />
                                                     <Input value={meetingForm.link} onChange={e => setMeetingForm({...meetingForm, link: e.target.value})} placeholder="https://meet.google.com/abc-defg-hij" className="h-12 rounded-xl font-medium pl-10 text-primary" />
                                                 </div>
-                                                <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Participants will be able to join using this link.</p>
                                             </div>
                                             <div className="space-y-2 text-left">
                                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Location (Optional)</Label>
@@ -422,28 +423,26 @@ export default function MeetingsPage() {
                                                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-50" />
                                                     <Input value={meetingForm.location} onChange={e => setMeetingForm({...meetingForm, location: e.target.value})} placeholder="Add physical location" className="h-12 rounded-xl font-bold pl-10" />
                                                 </div>
-                                                <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">For in-person meetings</p>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                                             <div className="space-y-2 text-left">
                                                 <Label className="text-[10px] font-black uppercase text-rose-600 tracking-widest">Organizer *</Label>
-                                                <div className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                                                <div className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl shadow-sm text-left">
                                                     <Avatar className="size-10">
                                                         <AvatarImage src={userData?.avatar} />
                                                         <AvatarFallback className="bg-primary/10 text-primary font-black">{userData?.firstName?.[0]}</AvatarFallback>
                                                     </Avatar>
-                                                    <div className="flex-1 min-w-0">
+                                                    <div className="flex-1 min-w-0 text-left">
                                                         <p className="text-sm font-black uppercase truncate">{userData?.firstName} {userData?.lastName}</p>
                                                         <p className="text-[9px] font-bold text-muted-foreground uppercase">{userData?.jobTitle}</p>
                                                     </div>
-                                                    <ChevronRight className="size-4 text-slate-300" />
                                                 </div>
                                             </div>
                                             <div className="space-y-2 text-left">
-                                                <Label className="text-[10px] font-black uppercase text-rose-600 tracking-widest">Add Participants *</Label>
-                                                <div className="flex flex-wrap items-center gap-2 p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                                                <Label className="text-[10px] font-black uppercase text-rose-600 tracking-widest text-left">Add Participants *</Label>
+                                                <div className="flex flex-wrap items-center gap-2 p-3 bg-white border border-slate-100 rounded-xl shadow-sm text-left">
                                                     <div className="flex -space-x-2">
                                                         {meetingForm.participantIds?.slice(0, 5).map(id => {
                                                             const u = allUsers?.find((user: any) => user.id === id);
@@ -455,42 +454,16 @@ export default function MeetingsPage() {
                                                             );
                                                         })}
                                                     </div>
-                                                    <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg text-primary font-black uppercase text-[8px] tracking-widest hover:bg-primary/5" onClick={() => {/* Toggle participant selection UI */}}>
+                                                    <Button variant="ghost" size="sm" className="h-8 px-3 rounded-lg text-primary font-black uppercase text-[8px] tracking-widest hover:bg-primary/5" onClick={() => setIsParticipantSheetOpen(true)}>
                                                         + Add More
                                                     </Button>
                                                 </div>
-                                                <p className="text-[8px] font-bold text-muted-foreground uppercase mt-1">Add team members or external email addresses</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="space-y-2 text-left">
-                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2"><BellRing className="size-3" /> Reminder</Label>
-                                                <Select value={meetingForm.reminder} onValueChange={v => setMeetingForm({...meetingForm, reminder: v})}>
-                                                    <SelectTrigger className="h-11 rounded-xl font-bold uppercase text-[10px]"><SelectValue /></SelectTrigger>
-                                                    <SelectContent className="rounded-xl">
-                                                        <SelectItem value="15 minutes before" className="text-[10px] font-bold">15 minutes before</SelectItem>
-                                                        <SelectItem value="30 minutes before" className="text-[10px] font-bold">30 minutes before</SelectItem>
-                                                        <SelectItem value="1 hour before" className="text-[10px] font-bold">1 hour before</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2 text-left">
-                                                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2"><Mail className="size-3" /> Notification</Label>
-                                                <Select value={meetingForm.notificationType} onValueChange={v => setMeetingForm({...meetingForm, notificationType: v})}>
-                                                    <SelectTrigger className="h-11 rounded-xl font-bold uppercase text-[10px]"><SelectValue /></SelectTrigger>
-                                                    <SelectContent className="rounded-xl">
-                                                        <SelectItem value="Email and In-App" className="text-[10px] font-bold">Email and In-App</SelectItem>
-                                                        <SelectItem value="Email only" className="text-[10px] font-bold">Email only</SelectItem>
-                                                        <SelectItem value="In-App only" className="text-[10px] font-bold">In-App only</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </ScrollArea>
-                            <div className="p-8 border-t bg-white shrink-0 flex justify-end gap-3">
+                            <div className="p-8 border-t bg-white shrink-0 flex justify-end gap-3 text-left">
                                 <Button variant="ghost" onClick={() => setIsAddOpen(false)} className="h-12 px-8 rounded-xl font-black uppercase text-[10px] tracking-widest">Cancel</Button>
                                 <Button onClick={handleCreateOrUpdateMeeting} className="h-12 px-10 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 text-[10px] bg-[#6D28D9] hover:bg-[#5B21B6]">
                                     Schedule Meeting
@@ -501,7 +474,7 @@ export default function MeetingsPage() {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-left">
                 <Card className="border-none shadow-sm rounded-2xl bg-white p-6 relative group text-left ring-1 ring-border/50">
                     <div className="flex items-center justify-between mb-4">
                         <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl"><Video className="size-5" /></div>
@@ -547,8 +520,8 @@ export default function MeetingsPage() {
                 </Card>
             </div>
 
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-3 items-center">
+            <div className="space-y-4 text-left">
+                <div className="flex flex-col md:flex-row gap-3 items-center text-left">
                     <div className="relative flex-1 w-full text-left group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 group-focus-within:text-primary transition-colors" />
                         <Input 
@@ -558,7 +531,7 @@ export default function MeetingsPage() {
                             className="h-11 bg-white border-slate-200 rounded-xl pl-12 text-sm font-semibold uppercase tracking-tight placeholder:opacity-40" 
                         />
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto">
+                    <div className="flex gap-2 w-full md:w-auto text-left">
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
                             <SelectTrigger className="h-11 bg-white border-slate-200 rounded-xl w-[140px] text-[10px] font-black uppercase tracking-widest text-slate-600">
                                 <SelectValue placeholder="All Status" />
@@ -578,13 +551,10 @@ export default function MeetingsPage() {
                                 {MEETING_TYPES.map(t => <SelectItem key={t} value={t} className="text-[10px] font-black uppercase">{t}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                        <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl border-slate-200 bg-white">
-                            <ListFilter className="size-4 text-slate-600" />
-                        </Button>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden ring-1 ring-border/50">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden ring-1 ring-border/50 text-left">
                     <Table>
                         <TableHeader className="bg-slate-50/50">
                             <TableRow className="hover:bg-transparent border-b border-slate-100">
@@ -610,8 +580,8 @@ export default function MeetingsPage() {
                                 return (
                                     <TableRow key={m.id} className={cn("border-b border-slate-50 hover:bg-slate-50/50 transition-all cursor-pointer group", m.status === 'cancelled' && "opacity-50")} onClick={() => setSelectedMeeting(m)}>
                                         <TableCell className="py-6 px-8 text-left">
-                                            <div className="space-y-1">
-                                                <p className="font-black text-[13px] text-slate-900 uppercase tracking-tight group-hover:text-primary transition-colors">{m.title}</p>
+                                            <div className="space-y-1 text-left">
+                                                <p className="font-black text-[13px] text-slate-900 uppercase tracking-tight group-hover:text-primary transition-colors text-left">{m.title}</p>
                                                 <Badge variant="secondary" className="bg-primary/5 text-primary text-[8px] font-black px-2 h-5 rounded-none border-none uppercase tracking-widest">{m.type}</Badge>
                                             </div>
                                         </TableCell>
@@ -627,7 +597,7 @@ export default function MeetingsPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-left">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-3 text-left">
                                                 <Avatar className="size-8 rounded-full border-2 border-white shadow-sm ring-1 ring-border/50">
                                                     <AvatarImage src={organizer?.avatar} className="object-cover" />
                                                     <AvatarFallback className="text-[9px] font-black bg-muted uppercase">{m.createdByName?.[0]}</AvatarFallback>
@@ -647,12 +617,12 @@ export default function MeetingsPage() {
                                                         <MoreHorizontal className="size-5 text-slate-400" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-64 rounded-2xl border-none shadow-3xl p-2 bg-white/95 backdrop-blur-xl">
-                                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Manage</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
+                                                <DropdownMenuContent align="end" className="w-64 rounded-2xl border-none shadow-3xl p-2 bg-white/95 backdrop-blur-xl text-left">
+                                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2 text-left">Manage</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight text-left">
                                                         <Eye className="size-4 text-primary" /> Details
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
+                                                    <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight text-left">
                                                         <Users className="size-4 text-primary" /> Attendance
                                                     </DropdownMenuItem>
 
@@ -661,26 +631,26 @@ export default function MeetingsPage() {
                                                     {!isPast && m.status !== 'cancelled' ? (
                                                         <>
                                                             {m.link && (
-                                                                <DropdownMenuItem onClick={() => window.open(m.link, '_blank')} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-emerald-50 text-emerald-700 uppercase tracking-tight">
+                                                                <DropdownMenuItem onClick={() => window.open(m.link, '_blank')} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-emerald-50 text-emerald-700 uppercase tracking-tight text-left">
                                                                     <ExternalLink className="size-4" /> Join Call
                                                                 </DropdownMenuItem>
                                                             )}
-                                                            <DropdownMenuItem onClick={() => { setEditingMeeting(m); setMeetingForm({...m, date: format(m.date.toDate(), "yyyy-MM-dd'T'HH:mm")}); setIsAddOpen(true); }} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
+                                                            <DropdownMenuItem onClick={() => { setEditingMeeting(m); setMeetingForm({...m, date: format(m.date.toDate(), "yyyy-MM-dd'T'HH:mm")}); setIsAddOpen(true); }} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight text-left">
                                                                 <PenLine className="size-4 text-primary" /> Edit Meeting
                                                             </DropdownMenuItem>
                                                         </>
                                                     ) : isPast && (
                                                         <>
-                                                            <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-amber-50 text-amber-800 uppercase tracking-tight">
+                                                            <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-amber-50 text-amber-800 uppercase tracking-tight text-left">
                                                                 <MessageSquareText className="size-4" /> Meeting Notes
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-indigo-50 text-indigo-800 uppercase tracking-tight">
+                                                            <DropdownMenuItem onClick={() => setSelectedMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-indigo-50 text-indigo-800 uppercase tracking-tight text-left">
                                                                 <Target className="size-4" /> Decisions & Outcomes
                                                             </DropdownMenuItem>
                                                         </>
                                                     )}
 
-                                                    <DropdownMenuItem onClick={() => { setDuplicationMeeting(m); setNewDupTitle(m.title); setNewDupDate(format(m.date.toDate(), "yyyy-MM-dd'T'HH:mm")); setNewDupParticipantIds(m.participantIds); }} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight">
+                                                    <DropdownMenuItem onClick={() => { setDuplicationMeeting(m); setNewDupTitle(m.title); setNewDupDate(format(m.date.toDate(), "yyyy-MM-dd'T'HH:mm")); setNewDupParticipantIds(m.participantIds); }} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-primary/5 text-slate-700 uppercase tracking-tight text-left">
                                                         <Copy className="size-4 text-primary" /> Duplicate Meeting
                                                     </DropdownMenuItem>
 
@@ -688,22 +658,22 @@ export default function MeetingsPage() {
                                                         <>
                                                             <DropdownMenuSeparator className="my-2 bg-slate-100" />
                                                             {m.status === 'active' ? (
-                                                                <DropdownMenuItem onClick={() => setCancellingMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600 uppercase tracking-tight">
+                                                                <DropdownMenuItem onClick={() => setCancellingMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600 uppercase tracking-tight text-left">
                                                                     <X className="size-4" /> Cancel Meeting
                                                                 </DropdownMenuItem>
                                                             ) : (
                                                                 <AlertDialog>
                                                                     <AlertDialogTrigger asChild>
-                                                                        <DropdownMenuItem onSelect={e => e.preventDefault()} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600">
+                                                                        <DropdownMenuItem onSelect={e => e.preventDefault()} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-red-50 text-rose-600 text-left">
                                                                             <Trash2 className="size-4" /> Delete Meeting
                                                                         </DropdownMenuItem>
                                                                     </AlertDialogTrigger>
-                                                                    <AlertDialogContent className="rounded-2xl border-none shadow-3xl">
+                                                                    <AlertDialogContent className="rounded-2xl border-none shadow-3xl text-left">
                                                                         <AlertDialogHeader className="text-left">
-                                                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary">Purge Record?</AlertDialogTitle>
-                                                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed">This will permanently remove the briefing from the mission log. This action is irreversible.</AlertDialogDescription>
+                                                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter text-primary text-left">Purge Record?</AlertDialogTitle>
+                                                                            <AlertDialogDescription className="text-sm font-medium leading-relaxed text-left">This will permanently remove the briefing from the mission log. This action is irreversible.</AlertDialogDescription>
                                                                         </AlertDialogHeader>
-                                                                        <AlertDialogFooter className="mt-8 gap-3">
+                                                                        <AlertDialogFooter className="mt-8 gap-3 text-left">
                                                                             <AlertDialogCancel className="rounded-full h-11 px-6 font-bold uppercase text-[10px]">Back</AlertDialogCancel>
                                                                             <AlertDialogAction onClick={() => deleteDocumentNonBlocking(doc(firestore, 'meetings', m.id))} className="rounded-full h-11 px-6 font-bold uppercase text-[10px] bg-red-600 hover:bg-red-700">Confirm Purge</AlertDialogAction>
                                                                         </AlertDialogFooter>
@@ -727,10 +697,10 @@ export default function MeetingsPage() {
             <Dialog open={!!cancellingMeeting} onOpenChange={o => !o && setCancellingMeeting(null)}>
                 <DialogContent className="rounded-[2rem] sm:max-w-md p-8 border-none shadow-3xl text-left">
                     <DialogHeader className="text-left">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-rose-600 flex items-center gap-2">
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-rose-600 flex items-center gap-2 text-left">
                             <AlertTriangle className="size-5" /> Cancel Meeting
                         </DialogTitle>
-                        <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
+                        <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60 text-left">
                             Provide a reason for cancellation.
                         </DialogDescription>
                     </DialogHeader>
@@ -743,7 +713,7 @@ export default function MeetingsPage() {
                             className="rounded-xl min-h-[100px] border-none ring-1 ring-border"
                         />
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="text-left">
                         <Button variant="outline" className="rounded-full h-11 px-8 font-black uppercase text-[10px]" onClick={() => setCancellingMeeting(null)}>Go Back</Button>
                         <Button disabled={!cancelReason.trim()} className="rounded-full h-11 px-8 bg-rose-600 hover:bg-rose-700 text-white font-black uppercase text-[10px]" onClick={handleCancelMeeting}>Confirm Cancel</Button>
                     </DialogFooter>
@@ -753,63 +723,63 @@ export default function MeetingsPage() {
             {/* Duplicate Meeting Dialog */}
             <Dialog open={!!duplicatingMeeting} onOpenChange={o => !o && setDuplicationMeeting(null)}>
                 <DialogContent className="rounded-[2rem] sm:max-w-xl p-0 border-none shadow-3xl text-left overflow-hidden flex flex-col h-[85vh]">
-                    <DialogHeader className="p-8 border-b bg-white shrink-0">
-                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
+                    <DialogHeader className="p-8 border-b bg-white shrink-0 text-left">
+                        <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 text-left">
                             <Repeat className="size-5" /> Duplicate Meeting
                         </DialogTitle>
-                        <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">
+                        <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60 text-left">
                             Configure duplication options
                         </DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="flex-1 bg-muted/5">
+                    <ScrollArea className="flex-1 bg-muted/5 text-left">
                         <div className="p-8 space-y-8 text-left">
-                            <div className="space-y-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 bg-white border border-border/50 rounded-xl shadow-sm">
+                            <div className="space-y-6 text-left">
+                                <div className="space-y-4 text-left">
+                                    <div className="flex items-center justify-between p-4 bg-white border border-border/50 rounded-xl shadow-sm text-left">
                                         <Label className="text-[11px] font-black uppercase tracking-tight">Same Title?</Label>
                                         <Checkbox checked={dupOptions.sameTitle} onCheckedChange={v => setDupOptions({...dupOptions, sameTitle: !!v})} />
                                     </div>
                                     {!dupOptions.sameTitle && (
-                                        <div className="space-y-2 animate-fade-in-up">
+                                        <div className="space-y-2 animate-fade-in-up text-left">
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground">New Title</Label>
                                             <Input value={newDupTitle} onChange={e => setNewDupTitle(e.target.value)} placeholder="Enter new title..." className="h-11 rounded-xl bg-white" />
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 bg-white border border-border/50 rounded-xl shadow-sm">
+                                <div className="space-y-4 text-left">
+                                    <div className="flex items-center justify-between p-4 bg-white border border-border/50 rounded-xl shadow-sm text-left">
                                         <Label className="text-[11px] font-black uppercase tracking-tight">Keep Original Time?</Label>
                                         <Checkbox checked={dupOptions.sameDate} onCheckedChange={v => setDupOptions({...dupOptions, sameDate: !!v})} />
                                     </div>
                                     {!dupOptions.sameDate && (
-                                        <div className="space-y-2 animate-fade-in-up">
+                                        <div className="space-y-2 animate-fade-in-up text-left">
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground">New Date & Time</Label>
                                             <Input type="datetime-local" value={newDupDate} onChange={e => setNewDupDate(e.target.value)} className="h-11 rounded-xl bg-white" />
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 bg-white border border-border/50 rounded-xl shadow-sm">
+                                <div className="space-y-4 text-left">
+                                    <div className="flex items-center justify-between p-4 bg-white border border-border/50 rounded-xl shadow-sm text-left">
                                         <Label className="text-[11px] font-black uppercase tracking-tight">Same Participants?</Label>
                                         <Checkbox checked={dupOptions.samePeople} onCheckedChange={v => setDupOptions({...dupOptions, samePeople: !!v})} />
                                     </div>
                                     {!dupOptions.samePeople && (
-                                        <div className="space-y-4 animate-fade-in-up">
+                                        <div className="space-y-4 animate-fade-in-up text-left">
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground">Select New Participants</Label>
-                                            <div className="grid grid-cols-1 gap-2">
+                                            <div className="grid grid-cols-1 gap-2 text-left">
                                                 {allUsers?.filter(u => u.id !== user?.uid).map(u => (
-                                                    <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-border/50 hover:border-primary/20 transition-colors">
+                                                    <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-border/50 hover:border-primary/20 transition-all cursor-pointer text-left">
                                                         <Checkbox id={`dup-u-${u.id}`} checked={newDupParticipantIds.includes(u.id)} onCheckedChange={c => {
                                                             setNewDupParticipantIds(prev => c ? [...prev, u.id] : prev.filter(id => id !== u.id));
                                                         }} className="rounded-md" />
-                                                        <Label htmlFor={`dup-u-${u.id}`} className="flex-1 font-bold text-[11px] uppercase cursor-pointer flex items-center gap-3">
+                                                        <Label htmlFor={`dup-u-${u.id}`} className="flex-1 font-bold text-[11px] uppercase cursor-pointer flex items-center gap-3 text-left">
                                                             <Avatar className="size-8 rounded-full">
                                                                 <AvatarImage src={u.avatar} className="object-cover" />
                                                                 <AvatarFallback className="text-[10px] font-black bg-primary/10 text-primary">{u.firstName[0]}</AvatarFallback>
                                                             </Avatar>
-                                                            <div className="flex flex-col">
+                                                            <div className="flex flex-col text-left">
                                                                 <span className="leading-none">{u.firstName} {u.lastName}</span>
                                                                 <span className="text-[8px] opacity-40 mt-1">{u.jobTitle}</span>
                                                             </div>
@@ -824,7 +794,7 @@ export default function MeetingsPage() {
 
                             <Separator className="opacity-50" />
 
-                            <div className="space-y-2">
+                            <div className="space-y-2 text-left">
                                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Repeat Pattern</Label>
                                 <Select value={dupOptions.recurrence} onValueChange={(v: any) => setDupOptions({...dupOptions, recurrence: v})}>
                                     <SelectTrigger className="h-11 rounded-xl font-bold uppercase text-[10px] bg-white"><SelectValue /></SelectTrigger>
@@ -838,18 +808,80 @@ export default function MeetingsPage() {
                             </div>
                         </div>
                     </ScrollArea>
-                    <div className="p-8 border-t bg-white shrink-0">
+                    <div className="p-8 border-t bg-white shrink-0 text-left">
                         <Button className="w-full h-12 rounded-xl font-black uppercase tracking-widest shadow-xl" onClick={handleDuplicateFinal}>Create Clones</Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
+            {/* Participant Selection Sheet */}
+            <Sheet open={isParticipantSheetOpen} onOpenChange={setIsParticipantSheetOpen}>
+                <SheetContent side="right" className="w-full sm:max-w-2xl p-0 border-none shadow-3xl flex flex-col bg-white">
+                    <SheetHeader className="p-8 border-b bg-white shrink-0 text-left">
+                        <SheetTitle className="text-2xl font-black uppercase tracking-tighter text-slate-900 text-left">Add Participants</SheetTitle>
+                        <SheetDescription className="text-xs font-bold uppercase tracking-widest opacity-60 text-left">Select personnel for this mission briefing</SheetDescription>
+                    </SheetHeader>
+                    <div className="p-6 border-b bg-muted/5 text-left">
+                        <div className="relative text-left">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                            <Input 
+                                placeholder="Search by name or title..." 
+                                className="pl-12 h-12 rounded-xl border-none ring-1 ring-border bg-white font-bold"
+                                value={participantSearch}
+                                onChange={e => setParticipantSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <ScrollArea className="flex-1 bg-muted/5 text-left">
+                        <div className="p-8 space-y-2 text-left">
+                            {allUsers?.filter(u => {
+                                const fullName = `${u.firstName} ${u.lastName}`.toLowerCase();
+                                return fullName.includes(participantSearch.toLowerCase()) || (u.jobTitle || '').toLowerCase().includes(participantSearch.toLowerCase());
+                            }).map(u => {
+                                const isSelected = meetingForm.participantIds?.includes(u.id);
+                                return (
+                                    <div 
+                                        key={u.id} 
+                                        className={cn(
+                                            "flex items-center gap-4 p-4 rounded-xl transition-all border cursor-pointer",
+                                            isSelected ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-white border-transparent hover:border-slate-200"
+                                        )}
+                                        onClick={() => {
+                                            const current = meetingForm.participantIds || [];
+                                            if (current.includes(u.id)) {
+                                                setMeetingForm({ ...meetingForm, participantIds: current.filter(id => id !== u.id) });
+                                            } else {
+                                                setMeetingForm({ ...meetingForm, participantIds: [...current, u.id] });
+                                            }
+                                        }}
+                                    >
+                                        <Checkbox checked={isSelected} className="rounded-md" />
+                                        <Avatar className="size-12 rounded-full border-2 border-white shadow-sm ring-1 ring-border/50">
+                                            <AvatarImage src={u.avatar} className="object-cover" />
+                                            <AvatarFallback className="font-black bg-muted">{u.firstName[0]}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className="font-black text-sm uppercase tracking-tight text-slate-900 leading-none">{u.firstName} {u.lastName}</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">{u.jobTitle}</p>
+                                        </div>
+                                        {isSelected && <CheckCircle2 className="size-5 text-primary" />}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </ScrollArea>
+                    <div className="p-8 border-t bg-white shrink-0 text-left">
+                        <Button className="w-full h-14 rounded-xl font-black uppercase tracking-widest shadow-2xl" onClick={() => setIsParticipantSheetOpen(false)}>Done</Button>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
             {/* Details & Summary Terminal */}
             <Sheet open={!!selectedMeeting} onOpenChange={o => !o && setSelectedMeeting(null)}>
-                <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col bg-[#F8FAFC]">
+                <SheetContent className="rounded-none border-none shadow-3xl w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col bg-[#F8FAFC] text-left">
                     <SheetHeader className="p-10 border-b bg-white shrink-0 text-left shadow-sm">
-                        <div className="flex items-center justify-between mb-4">
-                            <Badge className="bg-primary text-white border-none rounded-none text-[8px] font-black h-5 uppercase tracking-widest px-3 shadow-md">
+                        <div className="flex items-center justify-between mb-4 text-left">
+                            <Badge className="bg-primary text-white border-none rounded-none text-[8px] font-black h-5 uppercase tracking-widest px-3 shadow-md text-left">
                                 {selectedMeeting?.type}
                             </Badge>
                             {selectedMeeting && selectedMeeting.status === 'cancelled' ? (
@@ -859,68 +891,61 @@ export default function MeetingsPage() {
                             )}
                         </div>
                         <SheetTitle className="text-3xl font-black tracking-tighter text-slate-900 uppercase leading-none text-left">Meeting Summary</SheetTitle>
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mt-3 opacity-60">(To be updated after the meeting)</p>
                     </SheetHeader>
                     
-                    <ScrollArea className="flex-1">
+                    <ScrollArea className="flex-1 bg-muted/5 text-left">
                         <div className="p-10 space-y-12 pb-32 text-left">
                             {selectedMeeting?.status === 'cancelled' && (
-                                <Card className="p-6 bg-rose-50 border-2 border-rose-200 rounded-none shadow-lg animate-pulse">
-                                    <div className="flex items-center gap-3 text-rose-700 font-black uppercase text-[10px] mb-2 tracking-widest">
+                                <Card className="p-6 bg-rose-50 border-2 border-rose-200 rounded-none shadow-lg animate-pulse text-left">
+                                    <div className="flex items-center gap-3 text-rose-700 font-black uppercase text-[10px] mb-2 tracking-widest text-left">
                                         <AlertTriangle className="size-4" /> Cancellation Reason
                                     </div>
                                     <p className="text-sm font-bold text-rose-900 uppercase italic">"{selectedMeeting.cancellationReason || "No reason provided."}"</p>
                                 </Card>
                             )}
 
-                            {/* Meeting Meta Header */}
-                            <div className="space-y-4">
-                                <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-tight">{selectedMeeting?.title}</h2>
-                                <div className="p-6 bg-white ring-1 ring-border rounded-none shadow-sm flex items-center gap-6">
-                                    <div className="flex items-center gap-3">
+                            <div className="space-y-4 text-left">
+                                <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-tight text-left">{selectedMeeting?.title}</h2>
+                                <div className="p-6 bg-white ring-1 ring-border rounded-none shadow-sm flex items-center gap-6 text-left">
+                                    <div className="flex items-center gap-3 text-left">
                                         <div className="size-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center"><Calendar className="size-5"/></div>
                                         <div className="text-left">
-                                            <p className="text-[8px] font-black uppercase text-muted-foreground">Date</p>
-                                            <p className="text-xs font-bold uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'dd MMM yyyy')}</p>
+                                            <p className="text-[8px] font-black uppercase text-muted-foreground text-left">Date</p>
+                                            <p className="text-xs font-bold uppercase text-left">{selectedMeeting && format(selectedMeeting.date.toDate(), 'dd MMM yyyy')}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 text-left">
                                         <div className="size-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center"><Clock className="size-5"/></div>
                                         <div className="text-left">
-                                            <p className="text-[8px] font-black uppercase text-muted-foreground">Time</p>
-                                            <p className="text-xs font-bold uppercase">{selectedMeeting && format(selectedMeeting.date.toDate(), 'p')}</p>
+                                            <p className="text-[8px] font-black uppercase text-muted-foreground text-left">Time</p>
+                                            <p className="text-xs font-bold uppercase text-left">{selectedMeeting && format(selectedMeeting.date.toDate(), 'p')}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 text-left">
                                         <div className="size-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center"><Timer className="size-5"/></div>
                                         <div className="text-left">
-                                            <p className="text-[8px] font-black uppercase text-muted-foreground">Duration</p>
-                                            <p className="text-xs font-bold uppercase">{selectedMeeting?.durationMinutes || 60} minutes</p>
+                                            <p className="text-[8px] font-black uppercase text-muted-foreground text-left">Duration</p>
+                                            <p className="text-xs font-bold uppercase text-left">{selectedMeeting?.durationMinutes || 60} minutes</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Attendance Section */}
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between border-b border-primary/20 pb-3">
-                                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                            <div className="space-y-6 text-left">
+                                <div className="flex items-center justify-between border-b border-primary/20 pb-3 text-left">
+                                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3 text-left">
                                         <Users className="size-4" /> Attendance
                                     </h4>
                                     <span className="text-[10px] font-black text-muted-foreground/60">{selectedMeeting?.attendedIds?.length || 0} / {selectedMeeting?.participantIds.length}</span>
                                 </div>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground opacity-40" />
-                                    <Input placeholder="Search participants" className="pl-10 h-11 rounded-none bg-white border-none ring-1 ring-border focus-visible:ring-primary" />
-                                </div>
-                                <div className="space-y-3">
+                                <div className="space-y-3 text-left">
                                     {selectedMeeting?.participantIds.map((id, i) => {
                                         const member = allUsers?.find(u => u.id === id);
                                         const isHost = selectedMeeting.createdBy === user?.uid;
                                         const isPresent = selectedMeeting.attendedIds?.includes(id);
 
                                         return (
-                                            <div key={id} className="flex items-center gap-4 p-4 bg-white ring-1 ring-border rounded-none group hover:shadow-md transition-all">
+                                            <div key={id} className="flex items-center gap-4 p-4 bg-white ring-1 ring-border rounded-none group hover:shadow-md transition-all text-left">
                                                 {isHost && (
                                                     <Checkbox 
                                                         checked={isPresent} 
@@ -938,8 +963,8 @@ export default function MeetingsPage() {
                                                     <AvatarFallback className="text-[10px] font-black uppercase text-slate-700">{selectedMeeting.participantNames[i]?.[0]}</AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex-1 min-w-0 text-left">
-                                                    <p className="font-black text-sm text-slate-800 truncate uppercase tracking-tight">{selectedMeeting.participantNames[i]}</p>
-                                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate">{member?.jobTitle || 'Team Member'}</p>
+                                                    <p className="font-black text-sm text-slate-800 truncate uppercase tracking-tight text-left">{selectedMeeting.participantNames[i]}</p>
+                                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate text-left">{member?.jobTitle || 'Team Member'}</p>
                                                 </div>
                                                 <Badge variant="outline" className={cn("rounded-none text-[8px] font-black uppercase h-5 border-none", isPresent ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
                                                     {isPresent ? "Present" : "Absent"}
@@ -950,86 +975,42 @@ export default function MeetingsPage() {
                                 </div>
                             </div>
 
-                            {/* Decisions Section */}
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between border-b border-primary/20 pb-3">
-                                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
+                            <div className="space-y-6 text-left">
+                                <div className="flex items-center justify-between border-b border-primary/20 pb-3 text-left">
+                                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3 text-left">
                                         <Target className="size-4" /> Decisions / Outcomes
                                     </h4>
-                                    <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase text-primary hover:bg-primary/5">
-                                        <Plus className="size-3 mr-1" /> Add Decision
-                                    </Button>
                                 </div>
-                                <div className="space-y-4">
+                                <div className="space-y-4 text-left">
                                     {selectedMeeting?.decisionsOutcomes && selectedMeeting.decisionsOutcomes !== 'Pending discussion.' ? (
-                                        <div className="space-y-3">
+                                        <div className="space-y-3 text-left">
                                             {selectedMeeting.decisionsOutcomes.split('\n').map((decision, idx) => (
-                                                <div key={idx} className="flex items-start gap-3 group">
+                                                <div key={idx} className="flex items-start gap-3 group text-left">
                                                     <CheckCircle2 className="size-4 text-emerald-600 mt-0.5 shrink-0" />
-                                                    <p className="text-sm font-medium text-slate-700 leading-relaxed flex-1">{decision}</p>
-                                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-40 transition-opacity">
-                                                        <PenLine className="size-3 cursor-pointer" />
-                                                        <Trash2 className="size-3 cursor-pointer text-rose-600" />
-                                                    </div>
+                                                    <p className="text-sm font-medium text-slate-700 leading-relaxed flex-1 text-left">{decision}</p>
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="p-8 border-2 border-dashed border-border rounded-none text-center opacity-40">
-                                            <p className="text-[10px] font-black uppercase tracking-widest">No decisions logged yet.</p>
+                                        <div className="p-8 border-2 border-dashed border-border rounded-none text-center opacity-40 text-left">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-left">No decisions logged yet.</p>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Action Items Section */}
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between border-b border-primary/20 pb-3">
-                                    <h4 className="text-[11px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                                        <ListTodo className="size-4" /> Action Items / Reminders
-                                    </h4>
-                                    <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase text-primary hover:bg-primary/5">
-                                        <Plus className="size-3 mr-1" /> Add Action
-                                    </Button>
-                                </div>
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between p-4 bg-white ring-1 ring-border rounded-none shadow-sm">
-                                        <div className="flex items-center gap-3">
-                                            <div className="size-4 rounded-full border-2 border-slate-300" />
-                                            <p className="text-sm font-bold uppercase tracking-tight text-slate-700">Prepare business goal tracking dashboard</p>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground opacity-60">
-                                            <Calendar className="size-3" />
-                                            12 AUG 2026
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 bg-white ring-1 ring-border rounded-none shadow-sm">
-                                        <div className="flex items-center gap-3">
-                                            <div className="size-4 rounded-full border-2 border-slate-300" />
-                                            <p className="text-sm font-bold uppercase tracking-tight text-slate-700">Client proposal follow-ups</p>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground opacity-60">
-                                            <Calendar className="size-3" />
-                                            14 AUG 2026
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Additional Remarks */}
-                            <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase text-slate-900 tracking-widest">Additional Remarks (Optional)</Label>
+                            <div className="space-y-4 text-left">
+                                <Label className="text-[10px] font-black uppercase text-slate-900 tracking-widest text-left">Additional Remarks (Optional)</Label>
                                 <Textarea 
                                     value={momText} 
                                     onChange={e => setMomText(e.target.value)} 
                                     placeholder="Add any additional remarks..." 
                                     className="rounded-none min-h-[100px] bg-white border-2 border-dashed focus-visible:ring-primary text-sm italic"
                                 />
-                                <span className="block text-right text-[8px] font-bold text-muted-foreground opacity-40">0 / 500</span>
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-6 border-t border-dashed">
-                                <Button variant="outline" className="rounded-xl h-12 px-8 font-black uppercase text-[10px] tracking-widest bg-white" onClick={() => setSelectedMeeting(null)}>Save as Draft</Button>
+                            <div className="flex justify-end gap-3 pt-6 border-t border-dashed text-left">
+                                <Button variant="outline" className="rounded-xl h-12 px-8 font-black uppercase text-[10px] tracking-widest bg-white" onClick={() => setSelectedMeeting(null)}>Close</Button>
                                 <Button onClick={handleSaveNotes} disabled={isSavingNotes} className="rounded-xl h-12 px-10 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 bg-[#6D28D9] hover:bg-[#5B21B6]">
                                     Save Remarks
                                 </Button>
@@ -1047,7 +1028,7 @@ function getStatusInfo(date: Timestamp, mStatus?: string) {
     const d = date.toDate();
     const now = new Date();
     if (isBefore(d, now)) return { label: 'Completed', color: 'bg-emerald-50 text-emerald-700' };
-    if (isBefore(d, addMinutes(now, 60))) return { label: 'Scheduled', color: 'bg-blue-50 text-blue-700' };
+    if (isBefore(d, addMinutes(now, 60))) return { label: 'Scheduled', color: 'bg-blue-50 text-blue-600' };
     return { label: 'Upcoming', color: 'bg-purple-50 text-purple-700' };
 }
 
