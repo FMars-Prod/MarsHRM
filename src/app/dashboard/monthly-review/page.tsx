@@ -4,6 +4,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/geohrm/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { useUser, useFirestore, useDoc, updateDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { Target, CheckCircle2, ShieldCheck, Brain, TrendingUp, ChevronRight, Loader2 } from 'lucide-react';

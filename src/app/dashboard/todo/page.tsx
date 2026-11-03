@@ -500,7 +500,7 @@ export default function TodoPage() {
                                                     </Avatar>
                                                     <div className="text-left">
                                                         <p className="font-black text-xs uppercase tracking-tight">{todo.assignedToName}</p>
-                                                        <p className="text-[9px] font-bold text-muted-foreground uppercase">{completedBy?.jobTitle || 'Team Member'}</p>
+                                                        <p className="text-[9px] font-bold text-muted-foreground uppercase">{(completedBy as any)?.jobTitle || 'Team Member'}</p>
                                                     </div>
                                                 </div>
                                                 <Badge className="bg-emerald-500 text-white border-none rounded-none text-[8px] font-black uppercase tracking-widest px-2 h-5">Mission Success</Badge>

@@ -131,7 +131,7 @@ export default function MarketingManagementPage() {
 
     const allPlatformIds = React.useMemo(() => {
         const ids = new Set<string>();
-        brands.forEach(b => b.channels.forEach(c => ids.add(c)));
+        brands.forEach((b: any) => b.channels.forEach((c: any) => ids.add(c)));
         return Array.from(ids).sort();
     }, [brands]);
 
@@ -354,11 +354,11 @@ export default function MarketingManagementPage() {
                                     <div className="space-y-6">
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><Users className="size-3.5"/> Brand Growth</h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            {brands.map(brand => (
+                                            {brands.map((brand: any) => (
                                                 <div key={brand.id} className="p-6 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm space-y-4">
                                                     <p className="font-black text-xs uppercase tracking-tight border-b border-dashed pb-3">{brand.name}</p>
                                                     <div className="space-y-4">
-                                                        {brand.channels.map(channel => {
+                                                        {brand.channels.map((channel: any) => {
                                                             const log = formData.socialLogs?.find((l: any) => l.brandId === brand.id && l.platformId === channel);
                                                             return (
                                                                 <div key={channel} className="space-y-3 p-3 bg-muted/10 rounded-none">
@@ -472,7 +472,7 @@ export default function MarketingManagementPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {brands.map(brand => (
+                                        {brands.map((brand: any) => (
                                             <TableRow key={brand.id} className="border-border/50 hover:bg-primary/5 transition-colors">
                                                 <TableCell className="py-4 px-6">
                                                     <div className="flex items-center gap-3">

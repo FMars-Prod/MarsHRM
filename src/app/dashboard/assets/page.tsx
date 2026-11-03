@@ -130,7 +130,7 @@ export default function AssetsPage() {
         <div className="space-y-6 animate-fade-in-up font-jakarta">
             <PageHeader title="Asset Management" description="Manage company assets like laptops and mobile devices.">
                 {isPrivileged && (
-                    <Dialog open={isAddOpen} onOpenChange={(o) => { if(!o) setEditingUser(null); setIsAddOpen(o); }}>
+                    <Dialog open={isAddOpen} onOpenChange={(o) => { if(!o) setEditingAsset(null); setIsAddOpen(o); }}>
                         <DialogTrigger asChild><Button className="rounded-none h-11 shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest px-6"><Plus className="size-4 mr-2"/> Add Asset</Button></DialogTrigger>
                         <DialogContent className="rounded-none sm:max-w-md p-8 border-none shadow-3xl">
                             <DialogHeader className="text-left">

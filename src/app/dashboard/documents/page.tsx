@@ -177,8 +177,8 @@ export default function DocumentsPage() {
             uploadedAt: serverTimestamp(),
             sourceType: activeTab as 'link' | 'file',
             isInvoice,
-            clientId: isInvoice ? selectedClientId : null,
-            clientName: isInvoice ? client?.companyName : null,
+            clientId: (isInvoice ? selectedClientId : undefined) as string | undefined,
+            clientName: (isInvoice ? client?.companyName : undefined) as string | undefined,
             authorizedUids: isInvoice ? authorizedUids : []
         };
 

@@ -234,7 +234,7 @@ export default function AttendanceRequestsPage() {
                                 <TableRow className="hover:bg-transparent border-none">
                                     <TableHead className="w-[50px] py-4 px-6">
                                         <Checkbox 
-                                            checked={requests && requests.length > 0 && selectedIds.length === requests.length}
+                                            checked={Boolean(requests && requests.length > 0 && selectedIds.length === requests.length)}
                                             onCheckedChange={toggleSelectAll}
                                             className="rounded-none"
                                         />
