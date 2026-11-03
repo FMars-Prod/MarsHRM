@@ -86,7 +86,8 @@ type Meeting = {
     createdBy: string;
     createdByName: string;
     createdAt: any;
-    status: 'active' | 'cancelled';
+    status: 'active' | 'completed' | 'cancelled';
+    completedAt?: any;
     cancellationReason?: string;
     durationMinutes: number;
     location?: string;
@@ -267,6 +268,22 @@ export default function MeetingsPage() {
         setCancelReason("");
     };
 
+    const handleCompleteMeeting = async (meeting: Meeting) => {
+        if (!meeting || meeting.createdBy !== user?.uid) {
+            toast({ variant: 'destructive', title: 'Unauthorized', description: 'Only the meeting organizer can mark this meeting as completed.' });
+            return;
+        }
+        await updateDocumentNonBlocking(doc(firestore, 'meetings', meeting.id), {
+            status: 'completed',
+            completedAt: serverTimestamp(),
+            lastUpdated: serverTimestamp()
+        });
+        toast({ title: "Meeting Completed", description: "Marked as completed by organizer." });
+        if (selectedMeeting?.id === meeting.id) {
+            setSelectedMeeting({ ...selectedMeeting, status: 'completed' });
+        }
+    };
+
     const handleSaveNotes = async () => {
         if (!selectedMeeting) return;
         setIsSavingNotes(true);
@@ -295,9 +312,10 @@ export default function MeetingsPage() {
                                  (m.clientName && m.clientName.toLowerCase().includes(searchQuery.toLowerCase()));
             
             const isPast = isBefore(m.date.toDate(), now);
+            const isCompleted = m.status === 'completed';
             const matchesStatus = statusFilter === 'all' || 
-                                 (statusFilter === 'upcoming' && !isPast && m.status !== 'cancelled') || 
-                                 (statusFilter === 'past' && isPast);
+                                 (statusFilter === 'upcoming' && m.status === 'active') || 
+                                 (statusFilter === 'past' && isCompleted);
                                  
             const matchesType = typeFilter === 'all' || m.type === typeFilter;
             
@@ -309,15 +327,16 @@ export default function MeetingsPage() {
         return filteredMeetings.reduce((acc, curr) => acc + (curr.durationMinutes || 0), 0);
     }, [filteredMeetings]);
 
-    const upcomingCount = meetings?.filter(m => isAfter(m.date.toDate(), now) && m.status !== 'cancelled').length || 0;
-    const nextMeeting = meetings?.filter(m => isAfter(m.date.toDate(), now) && m.status !== 'cancelled').sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime())[0];
+    const upcomingCount = meetings?.filter(m => m.status === 'active').length || 0;
+    const nextMeeting = meetings?.filter(m => m.status === 'active' && isAfter(m.date.toDate(), now)).sort((a,b) => a.date.toDate().getTime() - b.date.toDate().getTime())[0];
 
     const getStatusInfo = (date: Timestamp, mStatus?: string) => {
         if (mStatus === 'cancelled') return { label: 'Cancelled', color: 'bg-rose-50 text-rose-600' };
+        if (mStatus === 'completed') return { label: 'Completed', color: 'bg-emerald-50 text-emerald-700' };
         const d = date.toDate();
-        if (isBefore(d, now)) return { label: 'Completed', color: 'bg-emerald-50 text-emerald-700' };
-        if (isBefore(d, addMinutes(now, 60))) return { label: 'Scheduled', color: 'bg-blue-50 text-blue-600' };
-        return { label: 'Upcoming', color: 'bg-purple-50 text-purple-600' };
+        if (isBefore(d, addMinutes(now, 60)) && isAfter(d, addMinutes(now, -60))) return { label: 'In Session', color: 'bg-amber-50 text-amber-700' };
+        if (isBefore(d, now)) return { label: 'Pending Completion', color: 'bg-blue-50 text-blue-600' };
+        return { label: 'Scheduled', color: 'bg-purple-50 text-purple-600' };
     };
 
     const getTypeIcon = (type: string) => {
@@ -654,6 +673,12 @@ export default function MeetingsPage() {
                                                         <Copy className="size-4 text-primary" /> Duplicate Meeting
                                                     </DropdownMenuItem>
 
+                                                    {m.createdBy === user?.uid && m.status === 'active' && (
+                                                        <DropdownMenuItem onClick={() => handleCompleteMeeting(m)} className="rounded-xl font-bold text-xs gap-3 py-3 px-3 hover:bg-emerald-50 text-emerald-700 uppercase tracking-tight text-left">
+                                                            <CheckCircle2 className="size-4 text-emerald-600" /> Mark as Completed
+                                                        </DropdownMenuItem>
+                                                    )}
+
                                                     {canManage && (
                                                         <>
                                                             <DropdownMenuSeparator className="my-2 bg-slate-100" />
@@ -886,8 +911,12 @@ export default function MeetingsPage() {
                             </Badge>
                             {selectedMeeting && selectedMeeting.status === 'cancelled' ? (
                                 <Badge className="bg-rose-50 text-rose-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">Cancelled</Badge>
-                            ) : selectedMeeting && isBefore(selectedMeeting.date.toDate(), now) && (
+                            ) : selectedMeeting && selectedMeeting.status === 'completed' ? (
                                 <Badge className="bg-emerald-50 text-emerald-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">Completed</Badge>
+                            ) : (
+                                <Badge className="bg-blue-50 text-blue-700 border-none rounded-none text-[8px] font-black uppercase tracking-widest h-5 px-3">
+                                    {isBefore(selectedMeeting?.date.toDate(), now) ? "Pending Completion" : "Scheduled"}
+                                </Badge>
                             )}
                         </div>
                         <SheetTitle className="text-3xl font-black tracking-tighter text-slate-900 uppercase leading-none text-left">Meeting Summary</SheetTitle>
@@ -1009,11 +1038,23 @@ export default function MeetingsPage() {
                                 />
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-6 border-t border-dashed text-left">
-                                <Button variant="outline" className="rounded-xl h-12 px-8 font-black uppercase text-[10px] tracking-widest bg-white" onClick={() => setSelectedMeeting(null)}>Close</Button>
-                                <Button onClick={handleSaveNotes} disabled={isSavingNotes} className="rounded-xl h-12 px-10 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 bg-[#6D28D9] hover:bg-[#5B21B6]">
-                                    Save Remarks
-                                </Button>
+                            <div className="flex flex-wrap items-center justify-between gap-3 pt-6 border-t border-dashed text-left">
+                                <div className="flex items-center gap-2">
+                                    {selectedMeeting && selectedMeeting.createdBy === user?.uid && selectedMeeting.status === 'active' && (
+                                        <Button 
+                                            onClick={() => handleCompleteMeeting(selectedMeeting)} 
+                                            className="rounded-xl h-12 px-6 font-black uppercase text-[10px] tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white shadow-md gap-2"
+                                        >
+                                            <CheckCircle2 className="size-4" /> Mark as Completed
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Button variant="outline" className="rounded-xl h-12 px-8 font-black uppercase text-[10px] tracking-widest bg-white" onClick={() => setSelectedMeeting(null)}>Close</Button>
+                                    <Button onClick={handleSaveNotes} disabled={isSavingNotes} className="rounded-xl h-12 px-10 font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 bg-[#6D28D9] hover:bg-[#5B21B6]">
+                                        Save Remarks
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </ScrollArea>
@@ -1025,11 +1066,12 @@ export default function MeetingsPage() {
 
 function getStatusInfo(date: Timestamp, mStatus?: string) {
     if (mStatus === 'cancelled') return { label: 'Cancelled', color: 'bg-rose-50 text-rose-600' };
+    if (mStatus === 'completed') return { label: 'Completed', color: 'bg-emerald-50 text-emerald-700' };
     const d = date.toDate();
     const now = new Date();
-    if (isBefore(d, now)) return { label: 'Completed', color: 'bg-emerald-50 text-emerald-700' };
-    if (isBefore(d, addMinutes(now, 60))) return { label: 'Scheduled', color: 'bg-blue-50 text-blue-600' };
-    return { label: 'Upcoming', color: 'bg-purple-50 text-purple-700' };
+    if (isBefore(d, addMinutes(now, 60)) && isAfter(d, addMinutes(now, -60))) return { label: 'In Session', color: 'bg-amber-50 text-amber-700' };
+    if (isBefore(d, now)) return { label: 'Pending Completion', color: 'bg-blue-50 text-blue-600' };
+    return { label: 'Scheduled', color: 'bg-purple-50 text-purple-700' };
 }
 
 function getTypeIcon(type: string) {
