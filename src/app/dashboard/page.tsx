@@ -50,7 +50,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-export function UpcomingMeetingsWidget() {
+function UpcomingMeetingsWidget() {
     const { user } = useUser();
     const firestore = useFirestore();
 

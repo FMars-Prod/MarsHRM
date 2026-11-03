@@ -69,6 +69,42 @@ const BusinessAuditDetailComp = ({ report, isNested = false }: { report: any, is
                     <div className="p-4 bg-green-50 rounded-none border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed</p><p className="text-xl font-black text-green-900">₹{report.committedRevenue || 0}</p></div>
                 </div>
             </div>
+
+            {(report.totalCallRecordings || report.bestCallRecording || report.worstCallRecording) && (
+                <div className="p-5 bg-primary/5 rounded-none space-y-4 border border-primary/10">
+                    <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                        <PhoneCall className="size-4" /> 3️⃣ Call Recordings & Drive Assets
+                    </p>
+                    <div className="grid gap-3">
+                        {report.totalCallRecordings && (
+                            <Button 
+                                variant="outline" 
+                                className="h-11 text-[10px] uppercase font-black rounded-none bg-white w-full text-primary border-primary/20 hover:bg-primary/5 shadow-sm justify-between px-4" 
+                                asChild
+                            >
+                                <Link href={report.totalCallRecordings} target="_blank" rel="noopener noreferrer">
+                                    <span className="flex items-center gap-2 truncate">
+                                        <LinkIcon className="size-3.5 text-primary" /> Daily Work Recordings (Google Drive)
+                                    </span>
+                                    <ExternalLink className="size-3.5 ml-2 shrink-0 opacity-70" />
+                                </Link>
+                            </Button>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[['Best Call', report.bestCallRecording, 'text-green-600'], ['Worst Call', report.worstCallRecording, 'text-red-600']].map(([label, url, color], i) => url && (
+                                <div key={i} className="p-3 bg-white rounded-none ring-1 ring-border/50 space-y-2">
+                                    <p className={cn("text-[9px] font-black uppercase flex items-center gap-1.5", color)}>
+                                        <Mic className="size-3"/> {label}
+                                    </p>
+                                    <audio controls className="w-full h-8 scale-90 -ml-2">
+                                        <source src={url as string} />
+                                    </audio>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -311,15 +347,34 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest"><PhoneCall className="size-4" /> 3️⃣ Call Recordings</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest"><PhoneCall className="size-4" /> 3️⃣ Call Recordings & Drive Link</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">
+                    <FormField control={control} name="totalCallRecordings" render={({ field }) => (
+                        <FormItem className="space-y-1.5 text-left">
+                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                                <LinkIcon className="size-3 text-primary" /> Daily Work Recordings (Google Drive Link)
+                            </FormLabel>
+                            <FormControl>
+                                <Input 
+                                    type="url" 
+                                    placeholder="https://drive.google.com/drive/folders/..." 
+                                    {...field} 
+                                    className="rounded-none h-11 bg-white font-medium text-xs focus:ring-1 focus:ring-primary" 
+                                />
+                            </FormControl>
+                            <p className="text-[8px] font-medium text-muted-foreground italic">Paste the Google Drive folder or link containing your daily call recordings.</p>
+                        </FormItem>
+                    )} />
+
+                    <Separator className="opacity-50" />
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                         <div className="space-y-2">
-                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Best Call</Label>
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Best Call (Audio File)</Label>
                             <Input type="file" accept="audio/*" className="h-11 rounded-none bg-white" onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'bestCallRecording', setIsUploadingBest)} disabled={isUploadingBest} />
                         </div>
                         <div className="space-y-2 text-left">
-                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Worst Call</Label>
+                            <Label className="text-[9px] font-black uppercase text-muted-foreground">Worst Call (Audio File)</Label>
                             <Input type="file" accept="audio/*" className="h-11 rounded-none bg-white" onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'worstCallRecording', setIsUploadingWorst)} disabled={isUploadingWorst} />
                         </div>
                     </div>
@@ -613,6 +668,7 @@ export default function ReportsPage() {
         meetingsTomorrow: "0", criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None",
         coldCalls: "0", linkedinOutreach: "0", emailsSent: "0", followUps: "0", potentialClients: "0", 
         revenueCollected: "0", committedRevenue: "0", pipelineValue: "0",
+        totalCallRecordings: "",
         logInTime: "", logOutTime: "",
         technicalMeetings: [], technicalProjects: [],
         learnedToday: [],
