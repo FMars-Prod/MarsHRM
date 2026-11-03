@@ -76,7 +76,7 @@ const BusinessAuditDetailComp = ({ report, isNested = false }: { report: any, is
                         <PhoneCall className="size-4" /> 3️⃣ Call Recordings & Drive Assets
                     </p>
                     <div className="grid gap-3">
-                        {report.totalCallRecordings && (
+                        {report.totalCallRecordings && report.reportType === 'Business' && !isNested && (
                             <Button 
                                 variant="outline" 
                                 className="h-11 text-[10px] uppercase font-black rounded-none bg-white w-full text-primary border-primary/20 hover:bg-primary/5 shadow-sm justify-between px-4" 
@@ -347,26 +347,33 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
             </Card>
 
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest"><PhoneCall className="size-4" /> 3️⃣ Call Recordings & Drive Link</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3">
+                    <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <PhoneCall className="size-4" /> 3️⃣ Call Recordings {!isNested && "& Drive Link"}
+                    </CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-6 pt-6">
-                    <FormField control={control} name="totalCallRecordings" render={({ field }) => (
-                        <FormItem className="space-y-1.5 text-left">
-                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground flex items-center gap-1.5">
-                                <LinkIcon className="size-3 text-primary" /> Daily Work Recordings (Google Drive Link)
-                            </FormLabel>
-                            <FormControl>
-                                <Input 
-                                    type="url" 
-                                    placeholder="https://drive.google.com/drive/folders/..." 
-                                    {...field} 
-                                    className="rounded-none h-11 bg-white font-medium text-xs focus:ring-1 focus:ring-primary" 
-                                />
-                            </FormControl>
-                            <p className="text-[8px] font-medium text-muted-foreground italic">Paste the Google Drive folder or link containing your daily call recordings.</p>
-                        </FormItem>
-                    )} />
-
-                    <Separator className="opacity-50" />
+                    {!isNested && (
+                        <>
+                            <FormField control={control} name="totalCallRecordings" render={({ field }) => (
+                                <FormItem className="space-y-1.5 text-left">
+                                    <FormLabel className="text-[9px] uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                                        <LinkIcon className="size-3 text-primary" /> Daily Work Recordings (Google Drive Link)
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Input 
+                                            type="url" 
+                                            placeholder="https://drive.google.com/drive/folders/..." 
+                                            {...field} 
+                                            className="rounded-none h-11 bg-white font-medium text-xs focus:ring-1 focus:ring-primary" 
+                                        />
+                                    </FormControl>
+                                    <p className="text-[8px] font-medium text-muted-foreground italic">Paste the Google Drive folder or link containing your daily call recordings.</p>
+                                </FormItem>
+                            )} />
+                            <Separator className="opacity-50" />
+                        </>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                         <div className="space-y-2">

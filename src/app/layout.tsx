@@ -9,17 +9,19 @@ import { FirebaseClientProvider } from "@/firebase/client-provider";
 const fontJakarta = Plus_Jakarta_Sans({ 
   subsets: ["latin"], 
   variable: "--font-jakarta",
-  weight: ['400', '500', '600', '700', '800']
+  display: "swap",
 });
 
 const fontHeadline = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-headline",
+  display: "swap",
 });
 
 const fontOpenSans = Open_Sans({
   subsets: ["latin"],
   variable: "--font-open-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
