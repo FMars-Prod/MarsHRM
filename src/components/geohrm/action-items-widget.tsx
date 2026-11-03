@@ -28,14 +28,14 @@ export function ActionItemsWidget() {
     const currentUserDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [firestore, currentUser]);
     const { data: currentUserData } = useDoc(currentUserDocRef);
     const userRole = (currentUserData as any)?.role;
-    const isAdmin = userRole === 'CEO/Admin' || userRole === 'HR Manager';
+    const isAdmin = userRole === 'CEO/Admin' || userRole === 'CEO/MD' || userRole === 'HR Manager';
 
     const leaveRequestsQuery = useMemoFirebase(() => {
         if (!currentUser || !userRole || userRole === 'Member') return null;
         let statuses: string[] = [];
         if (userRole === 'Team Lead') statuses = ['Pending'];
         if (userRole === 'HR Manager') statuses = ['Pending HR Approval'];
-        if (userRole === 'CEO/Admin') statuses = ['Pending', 'Pending HR Approval'];
+        if (userRole === 'CEO/Admin' || userRole === 'CEO/MD') statuses = ['Pending', 'Pending HR Approval'];
         if (statuses.length === 0) return null;
         return query(collection(firestore, 'leave_requests'), where('status', 'in', statuses));
     }, [firestore, currentUser, userRole]);

@@ -212,13 +212,15 @@ export default function LeavePage() {
   );
   const { data: userData } = useDoc(userDocRef);
   const userRole = (userData as any)?.role || 'Member';
-  const isExecutiveTier = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+  const isExecutiveTier = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
 
   const [category, setCategory] = React.useState<RequestCategory>("Leave");
   const [leaveType, setLeaveType] = React.useState<string>("");
   const [reason, setReason] = React.useState("");
   const [isRequesting, setIsRequesting] = React.useState(false);
   const [selectedRequest, setSelectedRequest] = React.useState<LeaveRequestWithId | null>(null);
+  const [requestToReject, setRequestToReject] = React.useState<LeaveRequestWithId | null>(null);
+  const [rejectionReason, setRejectionReason] = React.useState("");
   
   const [showMissed, setShowMissed] = React.useState(false);
   
@@ -309,6 +311,19 @@ export default function LeavePage() {
     toast({ title: `Status: ${newStatus}` });
   }
 
+  const handleRejectRequest = () => {
+    if (!requestToReject || !user) return;
+    const newStatus: LeaveStatus = isExecutiveTier ? 'Rejected by HR' : 'Rejected by Team Lead';
+    updateDocumentNonBlocking(doc(firestore, 'leave_requests', requestToReject.id), {
+      status: newStatus,
+      rejectionReason: rejectionReason || 'Request rejected by authority',
+      ...(isExecutiveTier ? { approvedByHRId: user.uid } : { approvedByTeamLeadId: user.uid })
+    });
+    toast({ title: `Request Rejected`, description: `Marked as ${newStatus}` });
+    setRequestToReject(null);
+    setRejectionReason("");
+  }
+
   const handleDeleteRequest = (requestId: string) => {
     deleteDocumentNonBlocking(doc(firestore, 'leave_requests', requestId));
     toast({ title: 'Request Removed' });
@@ -331,7 +346,7 @@ export default function LeavePage() {
         toDate = new Date(parseInt(endYear), parseInt(endMonth), parseInt(endDay));
         if (toDate < fromDate) { toast({ variant: "destructive", title: "Invalid Range" }); setIsRequesting(false); return; }
     }
-    const isManagement = userRole === 'HR Manager' || userRole === 'CEO/Admin';
+    const isManagement = userRole === 'HR Manager' || userRole === 'CEO/Admin' || userRole === 'CEO/MD';
     const initialStatus: LeaveStatus = (userRole === 'Team Lead' || isManagement) ? 'Pending HR Approval' : 'Pending';
     const newRequest: LeaveRequest = {
         employeeId: user.uid, employeeName: `${(userData as any).firstName} ${(userData as any).lastName}`,
@@ -456,13 +471,19 @@ export default function LeavePage() {
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-none h-9 w-9 hover:bg-muted/50 transition-colors"><MoreHorizontal className="h-4.5 w-4.5" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-none border-none shadow-2xl p-2 w-56 text-left">
                           <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-60 px-3 py-2">Oversight</DropdownMenuLabel>
-                          <SheetTrigger asChild><DropdownMenuItem onClick={() => setSelectedRequest(request)} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5"><Eye className="size-4 text-primary"/> Details</DropdownMenuItem></SheetTrigger>
+                          <DropdownMenuItem onClick={() => setSelectedRequest(request)} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5"><Eye className="size-4 text-primary"/> Details</DropdownMenuItem>
                            
                            {userRole === 'Team Lead' && request.status === 'Pending' && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 text-emerald-600 hover:bg-emerald-50"><Check className="size-4"/> Approve</DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Pending HR Approval', user!.uid, 'approvedByTeamLeadId')} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 text-emerald-600 hover:bg-emerald-50"><Check className="size-4"/> Approve</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setRequestToReject(request); setRejectionReason(""); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 text-rose-600 hover:bg-rose-50"><X className="size-4"/> Reject</DropdownMenuItem>
+                              </>
                           )}
                           {isExecutiveTier && (request.status === 'Pending' || request.status === 'Pending HR Approval') && (
-                              <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 text-emerald-600 hover:bg-emerald-50"><Check className="size-4"/> Approve</DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem onClick={() => handleRequestStatus(request.id, 'Approved', user!.uid, 'approvedByHRId')} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 text-emerald-600 hover:bg-emerald-50"><Check className="size-4"/> Approve</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setRequestToReject(request); setRejectionReason(""); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 text-rose-600 hover:bg-rose-50"><X className="size-4"/> Reject</DropdownMenuItem>
+                              </>
                           )}
                           
                           <DropdownMenuSeparator />
@@ -504,6 +525,31 @@ export default function LeavePage() {
           </SheetContent>
         )}
       </Sheet>
+      <Dialog open={!!requestToReject} onOpenChange={(open) => !open && setRequestToReject(null)}>
+        <DialogContent className="sm:max-w-md rounded-none p-0 overflow-hidden text-left border-none shadow-3xl">
+          <DialogHeader className="p-8 border-b bg-white">
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-rose-600">Reject Request</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">
+              Provide justification for declining {requestToReject?.employeeName}'s {requestToReject?.category} request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-8 space-y-4 bg-muted/5">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Reason for Rejection</Label>
+              <Textarea 
+                placeholder="State specific operational or scheduling reason..." 
+                value={rejectionReason} 
+                onChange={(e) => setRejectionReason(e.target.value)} 
+                className="rounded-none min-h-[100px] font-medium text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter className="p-6 border-t bg-white gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRequestToReject(null)} className="rounded-none uppercase font-black text-xs">Cancel</Button>
+            <Button onClick={handleRejectRequest} className="rounded-none uppercase font-black text-xs bg-rose-600 hover:bg-rose-700 text-white">Confirm Rejection</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
