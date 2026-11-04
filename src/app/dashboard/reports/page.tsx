@@ -749,7 +749,24 @@ export default function ReportsPage() {
   const handleDownloadPdf = (report: any) => {
       const pdfDoc = new jsPDF();
       pdfDoc.text(`${report.reportType} Report - ${report.employeeName}`, 14, 20);
-      autoTable(pdfDoc, { startY: 30, body: [['Date', formatIST(report.date)], ['Category', report.reportType]] });
+      
+      const checkInText = report.checkInLocation?.latitude != null 
+        ? `${report.checkInLocation.locationName || 'Standard Location'} (${Number(report.checkInLocation.latitude).toFixed(4)}, ${Number(report.checkInLocation.longitude).toFixed(4)})`
+        : 'Not recorded';
+
+      const checkOutText = report.checkOutLocation?.latitude != null 
+        ? `${report.checkOutLocation.locationName || 'Clock Out Point'} (${Number(report.checkOutLocation.latitude).toFixed(4)}, ${Number(report.checkOutLocation.longitude).toFixed(4)})`
+        : 'Recorded during shift end';
+
+      autoTable(pdfDoc, { 
+        startY: 30, 
+        body: [
+          ['Date', formatIST(report.date)], 
+          ['Category', report.reportType],
+          ['Login Location', checkInText],
+          ['Logout Location', checkOutText]
+        ] 
+      });
       pdfDoc.save(`Report_${report.employeeName}.pdf`);
   };
 
