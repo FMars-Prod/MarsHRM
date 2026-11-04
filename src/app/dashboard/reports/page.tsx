@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList, Building2, ChevronRight, MapPin, LocateFixed, Navigation } from "lucide-react";
+import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList, Building2, ChevronRight, MapPin, LocateFixed, Navigation, FileSpreadsheet, ShieldAlert, AlertCircle, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -69,6 +69,88 @@ const BusinessAuditDetailComp = ({ report, isNested = false }: { report: any, is
                     <div className="p-4 bg-green-50 rounded-none border border-green-100"><p className="text-[9px] font-black uppercase text-green-700">Committed</p><p className="text-xl font-black text-green-900">₹{report.committedRevenue || 0}</p></div>
                 </div>
             </div>
+
+            {/* Full Spec: High Value Engagements, Blockers & Excel */}
+            {report.pipelineBusinessValue != null && Number(report.pipelineBusinessValue) > 0 && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest"><DollarSign className="size-4" /> 2️⃣.1 Pipeline Valuation & Variance</div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-purple-50 border border-purple-100 rounded-none"><p className="text-[9px] font-black uppercase text-purple-700">Pipeline Business Value</p><p className="text-xl font-black text-purple-950">₹{Number(report.pipelineBusinessValue || 0).toLocaleString()}</p></div>
+                        <div className="p-4 bg-purple-50 border border-purple-100 rounded-none"><p className="text-[9px] font-black uppercase text-purple-700">Daily Revenue Target</p><p className="text-xl font-black text-purple-950">₹{Number(report.dailyRevenueTarget || 0).toLocaleString()}</p></div>
+                    </div>
+                </div>
+            )}
+
+            {report.clientEngagements?.length > 0 && (
+                <div className="space-y-3">
+                    <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                        <Briefcase className="size-4" /> 3️⃣ High-Value Client Engagements
+                    </p>
+                    <div className="grid grid-cols-1 gap-2">
+                        {report.clientEngagements.map((c: any, i: number) => (
+                            <div key={i} className="p-3 bg-white border border-border/60 rounded-none flex items-center justify-between text-left">
+                                <div>
+                                    <p className="font-black text-xs uppercase text-slate-900">{c.clientName}</p>
+                                    <p className="text-[9px] text-muted-foreground uppercase">{c.service} • Next: {c.nextStep || 'Follow up'}</p>
+                                </div>
+                                <Badge variant="outline" className="text-[8px] font-black uppercase rounded-none">{c.status}</Badge>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {(report.clientWinHighlight || report.strategicLearning) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {report.clientWinHighlight && (
+                        <div className="p-4 bg-emerald-50/60 border border-emerald-100 space-y-1">
+                            <p className="text-[9px] font-black uppercase text-emerald-800">🏆 Breakthrough / Client Win</p>
+                            <p className="text-xs text-slate-800 font-medium italic">"{report.clientWinHighlight}"</p>
+                        </div>
+                    )}
+                    {report.strategicLearning && (
+                        <div className="p-4 bg-indigo-50/60 border border-indigo-100 space-y-1">
+                            <p className="text-[9px] font-black uppercase text-indigo-800">💡 Strategic Learning</p>
+                            <p className="text-xs text-slate-800 font-medium italic">"{report.strategicLearning}"</p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {report.pipelineBlockers?.length > 0 && (
+                <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase text-rose-600 tracking-widest flex items-center gap-1.5">
+                        <AlertCircle className="size-3.5" /> Pipeline Blockers
+                    </p>
+                    <div className="grid gap-2">
+                        {report.pipelineBlockers.map((b: any, i: number) => (
+                            <div key={i} className="p-3 bg-rose-50/50 border border-rose-200 rounded-none flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs font-bold text-slate-900">{b.barrierDetails}</p>
+                                    <p className="text-[8px] font-black uppercase text-muted-foreground">Owner: {b.blockerOwnership}</p>
+                                </div>
+                                <span className="font-mono text-xs font-black text-rose-700">₹{b.revenueBlocked}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {report.potentialClientsFileUrl && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 flex justify-between items-center rounded-none">
+                    <div className="space-y-0.5">
+                        <p className="text-xs font-black uppercase text-emerald-900 flex items-center gap-1.5">
+                            <FileSpreadsheet className="size-4 text-emerald-600" /> Potential Clients Excel Sheet
+                        </p>
+                        <p className="text-[8px] font-bold text-emerald-700 uppercase">Mapped prospect dataset attached by employee</p>
+                    </div>
+                    <Button variant="outline" size="sm" asChild className="rounded-none h-8 font-black uppercase text-[8px] tracking-wider bg-white border-emerald-300 text-emerald-800 hover:bg-emerald-100">
+                        <a href={report.potentialClientsFileUrl} target="_blank" rel="noreferrer" download="Potential_Clients_Report.xlsx">
+                            <Download className="size-3 mr-1" /> Download Sheet
+                        </a>
+                    </Button>
+                </div>
+            )}
 
             {(report.totalCallRecordings || report.bestCallRecording || report.worstCallRecording) && (
                 <div className="p-5 bg-primary/5 rounded-none space-y-4 border border-primary/10">
@@ -335,33 +417,52 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
     const { control, setValue } = useFormContext();
     const storage = useStorage();
     const { user } = useUser();
+    const firestore = useFirestore();
     const { toast } = useToast();
     
     const [isUploadingBest, setIsUploadingBest] = React.useState(false);
     const [isUploadingWorst, setIsUploadingWorst] = React.useState(false);
+    const [isUploadingExcel, setIsUploadingExcel] = React.useState(false);
+
+    // Watch master switch from settings/report_templates
+    const templateConfigRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
+    const { data: templateConfig } = useDoc<any>(templateConfigRef);
+    const isFullSpec = !!templateConfig?.isFullSpecBusinessEnabled;
 
     const coldCalls = Number(useWatch({ control, name: 'coldCalls' }) || 0);
     const linkedin = Number(useWatch({ control, name: 'linkedinOutreach' }) || 0);
     const emails = Number(useWatch({ control, name: 'emailsSent' }) || 0);
     const potential = Number(useWatch({ control, name: 'potentialClients' }) || 0);
-    
-    const totalOutreach = coldCalls + linkedin + emails;
-    const efficiency = totalOutreach > 0 ? (potential / totalOutreach) * 100 : 0;
+    const revenueCollected = Number(useWatch({ control, name: 'revenueCollected' }) || 0);
+    const dailyTarget = Number(useWatch({ control, name: 'dailyRevenueTarget' }) || 0);
+    const potentialClientsFileUrl = useWatch({ control, name: 'potentialClientsFileUrl' });
 
-    const handleAudioUpload = async (file: File, fieldName: string, setUploading: (v: boolean) => void) => {
+    // Target call metrics: fixed target 90 calls/day
+    const FIXED_CALL_TARGET = 90;
+    const pendingCallTarget = Math.max(0, FIXED_CALL_TARGET - coldCalls);
+
+    const totalOutreach = coldCalls + linkedin + emails;
+    const conversionRate = coldCalls > 0 ? (potential / coldCalls) * 100 : 0;
+    const revenueVariance = revenueCollected - dailyTarget;
+
+    // Field arrays for High-Value Client Engagements, Meetings Tomorrow, and Blockers
+    const { fields: clientFields, append: addClient, remove: removeClient } = useFieldArray({ control, name: "clientEngagements" });
+    const { fields: meetingTomorrowFields, append: addMeetingTomorrow, remove: removeMeetingTomorrow } = useFieldArray({ control, name: "meetingsTomorrowDetails" });
+    const { fields: blockerFields, append: addBlocker, remove: removeBlocker } = useFieldArray({ control, name: "pipelineBlockers" });
+
+    const handleFileUpload = async (file: File, fieldName: string, setUploading: (v: boolean) => void, folder = 'call_recordings') => {
         if (!user || !storage) return;
         setUploading(true);
         try {
-            const storageRef = ref(storage, `call_recordings/${user.uid}/${Date.now()}-${file.name}`);
+            const storageRef = ref(storage, `${folder}/${user.uid}/${Date.now()}-${file.name}`);
             const snapshot = await uploadBytes(storageRef, file);
             const url = await getDownloadURL(snapshot.ref);
             setValue(fieldName, url);
-            toast({ title: "Upload Success" });
+            toast({ title: "Upload Success", description: file.name });
         } catch (error: any) {
-            toast({ variant: "destructive", title: "Error", description: error.message });
+            toast({ variant: "destructive", title: "Upload Failed", description: error.message });
         } finally {
-            setIsUploadingBest(false);
-            setIsUploadingWorst(false);
+            setUploading(false);
         }
     };
 
@@ -369,22 +470,48 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
         <div className="space-y-8 text-left">
             {!isNested && <ShiftHeaderFields />}
 
+            {/* 1️⃣ OUTREACH & CONVERSION ANALYTICS */}
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest"><Activity className="size-4" /> 1️⃣ Outreach</CardTitle></CardHeader>
+                <CardHeader className="bg-muted/10 py-3 flex flex-row items-center justify-between">
+                    <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <Activity className="size-4" /> 1️⃣ Outreach & Conversion Analytics
+                    </CardTitle>
+                    {isFullSpec && (
+                        <Badge className="bg-primary text-white text-[7px] font-black uppercase rounded-none border-none px-1.5 h-4">
+                            Target: 90 Calls/Day
+                        </Badge>
+                    )}
+                </CardHeader>
                 <CardContent className="space-y-8 pt-6 text-left">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-8 text-left">
                         <div className="md:col-span-8 space-y-6 text-left">
                             <div className="p-4 bg-muted/20 rounded-none border-2 border-dashed border-border/50 grid grid-cols-3 gap-4 text-left">
                                 <FormField control={control} name="coldCalls" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Cold Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11 bg-white" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Connected Calls</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11 bg-white font-bold" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={control} name="linkedinOutreach" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11 bg-white" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">LinkedIn</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11 bg-white font-bold" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={control} name="emailsSent" render={({ field }) => (
-                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Emails</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11 bg-white" /></FormControl></FormItem>
+                                    <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Emails</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11 bg-white font-bold" /></FormControl></FormItem>
                                 )} />
                             </div>
+
+                            {/* Full Spec Call Target Gauge */}
+                            {isFullSpec && (
+                                <div className="grid grid-cols-2 gap-4 p-4 bg-purple-50/50 border border-purple-100">
+                                    <div className="space-y-1">
+                                        <p className="text-[8px] font-black uppercase tracking-wider text-purple-900">Fixed Daily Call Target</p>
+                                        <p className="text-xl font-black text-purple-900">90 Calls / Day</p>
+                                    </div>
+                                    <div className="space-y-1 text-right">
+                                        <p className="text-[8px] font-black uppercase tracking-wider text-muted-foreground">Pending Call Target</p>
+                                        <p className={cn("text-xl font-black", pendingCallTarget > 0 ? "text-amber-600" : "text-emerald-600")}>
+                                            {pendingCallTarget} {pendingCallTarget === 0 ? "✓ (Achieved)" : "Calls Left"}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="flex gap-4">
                                 <div className="flex-1 p-6 bg-primary/5 rounded-none ring-2 ring-primary/10 shadow-sm text-center">
@@ -398,6 +525,24 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                                     )} />
                                 </div>
                             </div>
+
+                            {/* Full Spec: Detailed Follow-up Client List */}
+                            {isFullSpec && (
+                                <FormField control={control} name="followUpClientsList" render={({ field }) => (
+                                    <FormItem className="space-y-1.5 text-left">
+                                        <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">
+                                            Follow-ups Completed: List of Existing Clients Contacted
+                                        </FormLabel>
+                                        <FormControl>
+                                            <Textarea 
+                                                placeholder="e.g. 1. Dr Aakarsh Babu - Discussed proposal&#10;2. Agartta Boutique - Payment follow-up"
+                                                {...field} 
+                                                className="rounded-none min-h-[60px] bg-white font-medium text-xs" 
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )} />
+                            )}
                         </div>
 
                         <div className="md:col-span-4 space-y-6">
@@ -408,14 +553,17 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                                 <CardContent className="p-6 space-y-6 text-center">
                                     <FormField control={control} name="potentialClients" render={({ field }) => (
                                         <FormItem className="text-center">
-                                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Potentials</FormLabel>
+                                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Active Potential Clients</FormLabel>
                                             <FormControl><Input type="number" min="0" {...field} className="h-14 text-3xl font-black text-center border-2 border-primary/20 rounded-none focus:border-primary" /></FormControl>
                                         </FormItem>
                                     )} />
                                     <Separator />
                                     <div className="text-center">
-                                        <p className="text-[9px] font-black uppercase text-muted-foreground mb-1">Success Rate</p>
-                                        <p className="text-4xl font-black tracking-tighter text-primary">{efficiency.toFixed(1)}%</p>
+                                        <p className="text-[9px] font-black uppercase text-muted-foreground mb-1">
+                                            {isFullSpec ? "Lead Conversion Rate (%)" : "Success Rate"}
+                                        </p>
+                                        <p className="text-4xl font-black tracking-tighter text-primary">{conversionRate.toFixed(1)}%</p>
+                                        {isFullSpec && <p className="text-[8px] text-muted-foreground font-mono mt-1">(Potentials / Calls × 100)</p>}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -424,63 +572,348 @@ const BusinessFields = ({ isNested = false }: { isNested?: boolean }) => {
                 </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest"><DollarSign className="size-4" /> 2️⃣ Revenue</CardTitle></CardHeader>
-                <CardContent className="space-y-6 pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField control={control} name="revenueCollected" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Collected</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11" /></FormControl></FormItem>
-                        )} />
-                        <FormField control={control} name="committedRevenue" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Committed</FormLabel><FormControl><Input type="number" min="0" {...field} className="rounded-none h-11" /></FormControl></FormItem>
-                        )} />
-                    </div>
-                </CardContent>
-            </Card>
-
+            {/* 2️⃣ REVENUE & FINANCIAL IMPACT */}
             <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
                 <CardHeader className="bg-muted/10 py-3">
                     <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
-                        <PhoneCall className="size-4" /> 3️⃣ Call Recordings {!isNested && "& Drive Link"}
+                        <DollarSign className="size-4" /> 2️⃣ Revenue & Financial Impact
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
-                    {!isNested && (
-                        <>
-                            <FormField control={control} name="totalCallRecordings" render={({ field }) => (
-                                <FormItem className="space-y-1.5 text-left">
-                                    <FormLabel className="text-[9px] uppercase font-black text-muted-foreground flex items-center gap-1.5">
-                                        <LinkIcon className="size-3 text-primary" /> Daily Work Recordings (Google Drive Link)
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField control={control} name="revenueCollected" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Net Revenue Collected Today (₹)</FormLabel>
+                                <FormControl><Input type="number" min="0" placeholder="Actual payments received today" {...field} className="rounded-none h-11 bg-white font-bold" /></FormControl>
+                            </FormItem>
+                        )} />
+                        <FormField control={control} name="committedRevenue" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Committed Net Revenue (₹)</FormLabel>
+                                <FormControl><Input type="number" min="0" placeholder="Pending payment commitments" {...field} className="rounded-none h-11 bg-white font-bold" /></FormControl>
+                            </FormItem>
+                        )} />
+
+                        {isFullSpec && (
+                            <>
+                                <FormField control={control} name="pipelineBusinessValue" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Pipeline Business Value (₹)</FormLabel>
+                                        <FormControl><Input type="number" min="0" placeholder="Total value of active open leads" {...field} className="rounded-none h-11 bg-white font-bold" /></FormControl>
+                                    </FormItem>
+                                )} />
+                                <FormField control={control} name="dailyRevenueTarget" render={({ field }) => (
+                                    <FormItem>
+                                        <div className="flex justify-between items-center">
+                                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Daily Revenue Target (₹)</FormLabel>
+                                            <span className={cn("text-[8px] font-black uppercase font-mono", revenueVariance >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                                                Variance: ₹{revenueVariance.toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <FormControl><Input type="number" min="0" placeholder="Daily target for variance calculation" {...field} className="rounded-none h-11 bg-white font-bold" /></FormControl>
+                                    </FormItem>
+                                )} />
+                            </>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* 3️⃣ HIGH-VALUE ENGAGEMENTS (FULL SPEC MODE) */}
+            {isFullSpec && (
+                <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
+                    <CardHeader className="bg-muted/10 py-3 flex flex-row items-center justify-between">
+                        <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                            <Briefcase className="size-4" /> 3️⃣ High-Value Engagements (Meetings, Demos, Quotations, Invoices)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
+                        <div className="grid grid-cols-3 gap-4 p-4 bg-muted/10 border">
+                            <FormField control={control} name="totalMeetingsConducted" render={({ field }) => (
+                                <FormItem><FormLabel className="text-[8px] uppercase font-bold text-slate-700">Meetings / Demos</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-9 rounded-none bg-white font-bold" /></FormControl></FormItem>
+                            )} />
+                            <FormField control={control} name="totalQuotationsShared" render={({ field }) => (
+                                <FormItem><FormLabel className="text-[8px] uppercase font-bold text-slate-700">Quotations Shared</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-9 rounded-none bg-white font-bold" /></FormControl></FormItem>
+                            )} />
+                            <FormField control={control} name="totalInvoicesShared" render={({ field }) => (
+                                <FormItem><FormLabel className="text-[8px] uppercase font-bold text-slate-700">Invoices Shared</FormLabel><FormControl><Input type="number" min="0" {...field} className="h-9 rounded-none bg-white font-bold" /></FormControl></FormItem>
+                            )} />
+                        </div>
+
+                        {/* Dynamic Client Entries */}
+                        <div className="space-y-3">
+                            <Label className="text-[9px] font-black uppercase text-primary tracking-widest">Client Engagement Details</Label>
+                            {clientFields.map((field, index) => (
+                                <div key={field.id} className="p-4 bg-white border border-border/60 rounded-none space-y-3 relative text-left">
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeClient(index)} className="absolute top-2 right-2 text-rose-500 h-7 w-7"><X className="size-3.5"/></Button>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <FormField control={control} name={`clientEngagements.${index}.clientName`} render={({ field }) => (
+                                            <FormItem><FormLabel className="text-[8px] uppercase font-bold text-muted-foreground">Client Name</FormLabel><FormControl><Input placeholder="e.g. Dr Aakarsh Babu" {...field} className="h-9 rounded-none text-xs" /></FormControl></FormItem>
+                                        )} />
+                                        <FormField control={control} name={`clientEngagements.${index}.service`} render={({ field }) => (
+                                            <FormItem><FormLabel className="text-[8px] uppercase font-bold text-muted-foreground">Service Discussed</FormLabel><FormControl><Input placeholder="e.g. ERP / Marketing" {...field} className="h-9 rounded-none text-xs" /></FormControl></FormItem>
+                                        )} />
+                                        <FormField control={control} name={`clientEngagements.${index}.status`} render={({ field }) => (
+                                            <FormItem><FormLabel className="text-[8px] uppercase font-bold text-muted-foreground">Current Status</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value || 'Pitching'}>
+                                                    <FormControl><SelectTrigger className="h-9 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl>
+                                                    <SelectContent className="rounded-none">
+                                                        {["New Lead", "Pitching", "Quotation Sent", "Closing", "Closed Won", "Closed Lost"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                    <FormField control={control} name={`clientEngagements.${index}.nextStep`} render={({ field }) => (
+                                        <FormItem><FormLabel className="text-[8px] uppercase font-bold text-muted-foreground">Next Step / Planned Action</FormLabel><FormControl><Input placeholder="Follow up tomorrow 2 PM..." {...field} className="h-9 rounded-none text-xs" /></FormControl></FormItem>
+                                    )} />
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" onClick={() => addClient({ clientName: "", service: "", status: "Pitching", nextStep: "" })} className="w-full h-9 rounded-none border-dashed border-primary/40 font-black uppercase text-[8px] tracking-widest">
+                                + Add Another Client
+                            </Button>
+                        </div>
+
+                        {/* Client Win & Strategic Learning */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                            <FormField control={control} name="clientWinHighlight" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-[9px] uppercase font-black text-emerald-700 flex items-center gap-1.5">
+                                        <CheckCircle2 className="size-3" /> Client Win / Breakthrough of the Day
                                     </FormLabel>
-                                    <FormControl>
-                                        <Input 
-                                            type="url" 
-                                            placeholder="https://drive.google.com/drive/folders/..." 
-                                            {...field} 
-                                            className="rounded-none h-11 bg-white font-medium text-xs focus:ring-1 focus:ring-primary" 
-                                        />
-                                    </FormControl>
-                                    <p className="text-[8px] font-medium text-muted-foreground italic">Paste the Google Drive folder or link containing your daily call recordings.</p>
+                                    <FormControl><Textarea placeholder="Narrative of the best conversation, closure, or breakthrough..." {...field} className="rounded-none min-h-[70px] bg-white text-xs" /></FormControl>
                                 </FormItem>
                             )} />
-                            <Separator className="opacity-50" />
-                        </>
+                            <FormField control={control} name="strategicLearning" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-[9px] uppercase font-black text-indigo-700 flex items-center gap-1.5">
+                                        <Brain className="size-3" /> Strategic Learning & Market Insights
+                                    </FormLabel>
+                                    <FormControl><Textarea placeholder="Insights on industry trends, training takeaways, or client behavior..." {...field} className="rounded-none min-h-[70px] bg-white text-xs" /></FormControl>
+                                </FormItem>
+                            )} />
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* 4️⃣ PIPELINE IMPACT & T+1 PLANNING (FULL SPEC OR STANDARD) */}
+            {isFullSpec ? (
+                <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
+                    <CardHeader className="bg-muted/10 py-3">
+                        <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                            <Target className="size-4" /> 4️⃣ Pipeline Impact & T+1 Planning
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
+                        {/* Meetings Booked for Tomorrow Dynamic Array */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-[9px] font-black uppercase text-primary tracking-widest">Meetings Booked for Tomorrow ({meetingTomorrowFields.length})</Label>
+                                <Button type="button" variant="outline" size="sm" onClick={() => addMeetingTomorrow({ clientName: "", industry: "", service: "", mode: "Online" })} className="rounded-none h-7 text-[8px] font-black uppercase tracking-wider">
+                                    + Add Meeting
+                                </Button>
+                            </div>
+                            {meetingTomorrowFields.map((field, index) => (
+                                <div key={field.id} className="p-3 bg-white border border-border/60 rounded-none flex items-center gap-3 relative text-left">
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-2">
+                                        <FormField control={control} name={`meetingsTomorrowDetails.${index}.clientName`} render={({ field }) => (
+                                            <FormControl><Input placeholder="Client Name" {...field} className="h-8 rounded-none text-xs" /></FormControl>
+                                        )} />
+                                        <FormField control={control} name={`meetingsTomorrowDetails.${index}.industry`} render={({ field }) => (
+                                            <FormControl><Input placeholder="Industry / Business" {...field} className="h-8 rounded-none text-xs" /></FormControl>
+                                        )} />
+                                        <FormField control={control} name={`meetingsTomorrowDetails.${index}.service`} render={({ field }) => (
+                                            <FormControl><Input placeholder="Interested Service" {...field} className="h-8 rounded-none text-xs" /></FormControl>
+                                        )} />
+                                        <FormField control={control} name={`meetingsTomorrowDetails.${index}.mode`} render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value || 'Online'}>
+                                                <FormControl><SelectTrigger className="h-8 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent className="rounded-none">
+                                                    <SelectItem value="Online">Online (Zoom/Meet)</SelectItem>
+                                                    <SelectItem value="Onsite">Onsite (In-Person)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        )} />
+                                    </div>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeMeetingTomorrow(index)} className="h-8 w-8 text-rose-500 shrink-0"><X className="size-3.5"/></Button>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Critical Path & Deliverables */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField control={control} name="criticalPathTomorrow" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">T+1 Critical Path (Tomorrow's #1 Focus)</FormLabel>
+                                    <FormControl><Textarea placeholder="Core milestone or deliverable for tomorrow..." {...field} className="rounded-none min-h-[70px] bg-white text-xs font-bold" /></FormControl>
+                                </FormItem>
+                            )} />
+                            <FormField control={control} name="pendingDeliverables" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Pending Deliverables (Carried Forward)</FormLabel>
+                                    <FormControl><Textarea placeholder="Tasks not finished today..." {...field} className="rounded-none min-h-[70px] bg-white text-xs font-bold" /></FormControl>
+                                </FormItem>
+                            )} />
+                        </div>
+
+                        {/* Pipeline Blockers Array */}
+                        <div className="space-y-3 pt-2">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-[9px] font-black uppercase text-rose-600 tracking-widest flex items-center gap-1.5">
+                                    <AlertCircle className="size-3.5" /> Pipeline Blockers (If Any)
+                                </Label>
+                                <Button type="button" variant="outline" size="sm" onClick={() => addBlocker({ revenueBlocked: "0", blockerOwnership: "Client", barrierDetails: "" })} className="rounded-none h-7 text-[8px] font-black uppercase tracking-wider border-rose-200 text-rose-700">
+                                    + Add Blocker
+                                </Button>
+                            </div>
+                            {blockerFields.map((field, index) => (
+                                <div key={field.id} className="p-3 bg-rose-50/40 border border-rose-200 rounded-none space-y-2 relative text-left">
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeBlocker(index)} className="absolute top-2 right-2 text-rose-500 h-6 w-6"><X className="size-3"/></Button>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <FormField control={control} name={`pipelineBlockers.${index}.revenueBlocked`} render={({ field }) => (
+                                            <FormItem><FormLabel className="text-[8px] uppercase font-bold text-slate-700">Revenue Blocked (₹)</FormLabel><FormControl><Input placeholder="0" {...field} className="h-8 rounded-none bg-white text-xs" /></FormControl></FormItem>
+                                        )} />
+                                        <FormField control={control} name={`pipelineBlockers.${index}.blockerOwnership`} render={({ field }) => (
+                                            <FormItem><FormLabel className="text-[8px] uppercase font-bold text-slate-700">Blocker Ownership</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value || 'Client'}>
+                                                    <FormControl><SelectTrigger className="h-8 rounded-none bg-white text-xs"><SelectValue /></SelectTrigger></FormControl>
+                                                    <SelectContent className="rounded-none">
+                                                        {["Client", "Internal Team", "Technical Team", "Management", "Other"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                    <FormField control={control} name={`pipelineBlockers.${index}.barrierDetails`} render={({ field }) => (
+                                        <FormItem><FormLabel className="text-[8px] uppercase font-bold text-slate-700">Barrier Details</FormLabel><FormControl><Input placeholder="Brief explanation of the obstacle..." {...field} className="h-8 rounded-none bg-white text-xs" /></FormControl></FormItem>
+                                    )} />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Intervention Trigger */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <FormField control={control} name="interventionTrigger" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Intervention Trigger</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || 'None'}>
+                                        <FormControl><SelectTrigger className="rounded-none h-11 bg-white font-bold"><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent className="rounded-none">
+                                            <SelectItem value="None">None</SelectItem>
+                                            <SelectItem value="Coaching">Coaching</SelectItem>
+                                            <SelectItem value="Tech Support">Tech Support</SelectItem>
+                                            <SelectItem value="Client Meeting">Client Meeting</SelectItem>
+                                            <SelectItem value="Manager Input Required">Manager Input Required</SelectItem>
+                                            <SelectItem value="Resource Blocked">Resource Blocked</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormItem>
+                            )} />
+                            <FormField control={control} name="interventionTriggerReason" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Reason for Trigger (If Applicable)</FormLabel>
+                                    <FormControl><Input placeholder="Explanation for management intervention..." {...field} className="rounded-none h-11 bg-white" /></FormControl>
+                                </FormItem>
+                            )} />
+                        </div>
+                    </CardContent>
+                </Card>
+            ) : (
+                !isNested ? <ExecutionPlanFields /> : null
+            )}
+
+            {/* 📎 SUPPORTING DOCUMENTATION */}
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
+                <CardHeader className="bg-muted/10 py-3">
+                    <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <FileSpreadsheet className="size-4" /> 📎 Supporting Documentation & Call Assets
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                    {/* Google Drive Link */}
+                    {!isNested && (
+                        <FormField control={control} name="totalCallRecordings" render={({ field }) => (
+                            <FormItem className="space-y-1.5 text-left">
+                                <FormLabel className="text-[9px] uppercase font-black text-muted-foreground flex items-center gap-1.5">
+                                    <LinkIcon className="size-3 text-primary" /> Complete Daily Call Recordings (Google Drive Link)
+                                </FormLabel>
+                                <FormControl>
+                                    <Input 
+                                        type="url" 
+                                        placeholder="https://drive.google.com/drive/folders/..." 
+                                        {...field} 
+                                        className="rounded-none h-11 bg-white font-medium text-xs focus:ring-1 focus:ring-primary" 
+                                    />
+                                </FormControl>
+                                <p className="text-[8px] font-medium text-muted-foreground italic">Paste the Google Drive folder or link containing all audio recordings for the shift.</p>
+                            </FormItem>
+                        )} />
                     )}
 
+                    {/* Audio Files */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                         <div className="space-y-2">
                             <Label className="text-[9px] font-black uppercase text-muted-foreground">Best Call (Audio File)</Label>
-                            <Input type="file" accept="audio/*" className="h-11 rounded-none bg-white" onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'bestCallRecording', setIsUploadingBest)} disabled={isUploadingBest} />
+                            <Input type="file" accept="audio/*" className="h-11 rounded-none bg-white" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'bestCallRecording', setIsUploadingBest, 'call_recordings')} disabled={isUploadingBest} />
                         </div>
                         <div className="space-y-2 text-left">
                             <Label className="text-[9px] font-black uppercase text-muted-foreground">Worst Call (Audio File)</Label>
-                            <Input type="file" accept="audio/*" className="h-11 rounded-none bg-white" onChange={(e) => e.target.files?.[0] && handleAudioUpload(e.target.files[0], 'worstCallRecording', setIsUploadingWorst)} disabled={isUploadingWorst} />
+                            <Input type="file" accept="audio/*" className="h-11 rounded-none bg-white" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'worstCallRecording', setIsUploadingWorst, 'call_recordings')} disabled={isUploadingWorst} />
+                        </div>
+                    </div>
+
+                    {/* Potential Client Excel Sheet Upload + Download Sample Button */}
+                    <div className="p-4 bg-muted/20 border border-border/60 rounded-none space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <Label className="text-[10px] font-black uppercase text-slate-900 tracking-wider flex items-center gap-1.5">
+                                    <FileSpreadsheet className="size-4 text-emerald-600" /> Potential Client Excel Sheet (.xlsx / .csv)
+                                </Label>
+                                <p className="text-[8px] text-muted-foreground font-medium">Upload today's mapped potential leads file following company standards.</p>
+                            </div>
+                            <Button asChild variant="outline" size="sm" className="rounded-none h-8 font-black uppercase text-[8px] tracking-wider border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+                                <a href="/templates/potential_clients_sample.csv" download="Potential_Clients_Sample_Format.csv">
+                                    <Download className="size-3 mr-1" /> Download Sample Format
+                                </a>
+                            </Button>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Input 
+                                type="file" 
+                                accept=".xlsx,.xls,.csv" 
+                                className="h-10 rounded-none bg-white flex-1" 
+                                onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'potentialClientsFileUrl', setIsUploadingExcel, 'lead_spreadsheets')} 
+                                disabled={isUploadingExcel} 
+                            />
+                            {potentialClientsFileUrl && (
+                                <Badge className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase rounded-none border-none px-2 h-7 shrink-0">
+                                    ✓ Sheet Uploaded
+                                </Badge>
+                            )}
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            {!isNested && <ExecutionPlanFields />}
+            {/* 🖋️ EMPLOYEE ACKNOWLEDGEMENT & E-SIGNATURE */}
+            <Card className="border ring-1 ring-border/50 bg-white rounded-none p-5 text-left">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                        <p className="text-xs font-black uppercase text-slate-900 flex items-center gap-1.5">
+                            <ShieldCheck className="size-4 text-primary" /> 🖋️ Employee Acknowledgement & E-Signature
+                        </p>
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase">
+                            I verify that all outreach metrics, financial figures, and lead recordings submitted herein are accurate.
+                        </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                        <Badge variant="outline" className="rounded-none font-mono text-[9px] font-black uppercase bg-primary/5 text-primary border-primary/20 px-3 py-1">
+                            {formatIST(new Date())}
+                        </Badge>
+                    </div>
+                </div>
+            </Card>
         </div>
     );
 };
@@ -766,7 +1199,17 @@ export default function ReportsPage() {
     defaultValues: {
         meetingsTomorrow: "0", criticalPathTomorrow: "", pendingDeliverables: "", interventionTrigger: "None",
         coldCalls: "0", linkedinOutreach: "0", emailsSent: "0", followUps: "0", potentialClients: "0", 
-        revenueCollected: "0", committedRevenue: "0", pipelineValue: "0",
+        revenueCollected: "0", committedRevenue: "0", pipelineValue: "0", pipelineBusinessValue: "0", revenueVariance: "0", dailyRevenueTarget: "0",
+        followUpClientsList: "",
+        totalMeetingsConducted: "0", totalQuotationsShared: "0", totalInvoicesShared: "0",
+        clientEngagements: [],
+        clientWinHighlight: "",
+        strategicLearning: "",
+        meetingsTomorrowDetails: [],
+        pipelineBlockers: [],
+        potentialClientsFileUrl: "",
+        interventionTriggerReason: "",
+        eSignatureAcknowledged: true,
         totalCallRecordings: "",
         logInTime: "", logOutTime: "",
         technicalMeetings: [], technicalProjects: [],

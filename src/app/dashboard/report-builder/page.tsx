@@ -219,6 +219,9 @@ export default function ReportBuilderPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const configRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
+  const { data: reportConfig } = useDoc<any>(configRef);
+
   const templatesQuery = useMemoFirebase(() => query(collection(firestore, "settings", "config", "custom_report_templates")), [firestore]);
   const { data: remoteTemplates, isLoading } = useCollection<ReportTemplate>(templatesQuery);
 
@@ -226,6 +229,22 @@ export default function ReportBuilderPage() {
   const [selectedTemplate, setSelectedTemplate] = React.useState<ReportTemplate | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isEditorOpen, setIsEditorOpen] = React.useState(false);
+
+  const isFullSpecEnabled = !!reportConfig?.isFullSpecBusinessEnabled;
+
+  const handleToggleFullSpec = async (checked: boolean) => {
+    try {
+      await setDocumentNonBlocking(configRef, { isFullSpecBusinessEnabled: checked }, { merge: true });
+      toast({
+        title: checked ? "Full Specification Mode Activated" : "Standard Mode Activated",
+        description: checked 
+          ? "Employees will now submit under the complete Performance, Revenue, and Client Leads format."
+          : "Employees will submit under the standard clean reporting format."
+      });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    }
+  };
 
   // Editor Form State
   const [editingTemplate, setEditingTemplate] = React.useState<ReportTemplate>({
@@ -350,6 +369,31 @@ export default function ReportBuilderPage() {
           <Plus className="size-4 mr-2" /> Create New Template
         </Button>
       </PageHeader>
+
+      {/* Master Switch for Full Specification Mode */}
+      <Card className="border-none ring-1 ring-primary/20 bg-gradient-to-r from-purple-50 via-white to-purple-50 rounded-none shadow-sm text-left">
+        <CardHeader className="p-6 border-b border-purple-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-black uppercase text-purple-900 tracking-wider flex items-center gap-2">
+                <Sparkles className="size-4 text-purple-600" /> Comprehensive Performance & Revenue Report Mode
+              </CardTitle>
+              <Badge className={isFullSpecEnabled ? "bg-emerald-600 text-white rounded-none text-[8px] font-black uppercase px-2" : "bg-slate-200 text-slate-700 rounded-none text-[8px] font-black uppercase px-2"}>
+                {isFullSpecEnabled ? "FULL SPEC ACTIVE" : "STANDARD MODE"}
+              </Badge>
+            </div>
+            <CardDescription className="text-xs font-medium text-slate-600">
+              When enabled, Business team members submit under the full 4-tier specification (Fixed 90 calls/day target, Revenue Variance, Client Engagements, Blockers, and Potential Client Excel Upload). If disabled, the classic standard format is preserved without conflicts.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              {isFullSpecEnabled ? "Full Spec ON" : "Standard"}
+            </span>
+            <Switch checked={isFullSpecEnabled} onCheckedChange={handleToggleFullSpec} />
+          </div>
+        </CardHeader>
+      </Card>
 
       {/* Category Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
