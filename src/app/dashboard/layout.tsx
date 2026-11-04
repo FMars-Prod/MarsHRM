@@ -77,6 +77,7 @@ const SEARCHABLE_LINKS = [
     { label: "Support Centre", href: "/dashboard/issues", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Geofence Control", href: "/dashboard/geofence", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Reports", href: "/dashboard/report-templates", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Report Builder", href: "/dashboard/report-builder", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "System Settings", href: "/dashboard/settings", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "My Profile", href: "/dashboard/profile", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
 ];
