@@ -120,7 +120,7 @@ const groups = [
     links: [
       { href: "/dashboard/geofence", label: "Geofence Control", icon: MapPin, roles: EXEC_ROLES },
       { href: "/dashboard/users", label: "User Management", icon: Settings, roles: EXEC_ROLES },
-      { href: "/dashboard/report-templates", label: "Reports", icon: LayoutTemplate, roles: EXEC_ROLES },
+      { href: "/dashboard/report-templates", label: "Report Formats & Templates", icon: LayoutTemplate, roles: EXEC_ROLES },
       { href: "/dashboard/settings", label: "System Settings", icon: Settings, roles: EXEC_ROLES },
     ]
   },
