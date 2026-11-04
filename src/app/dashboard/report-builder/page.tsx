@@ -55,8 +55,82 @@ export type ReportTemplate = {
 // Default starter templates matching MarsHRM's actual report structures
 const INITIAL_SYSTEM_TEMPLATES: ReportTemplate[] = [
   {
+    id: "business-full-spec-template",
+    name: "Performance & Revenue Report (Full Spec)",
+    category: "Business",
+    description: "Complete 4-tier protocol: 90 calls/day target, Revenue Variance, Client Engagements, Blockers, & Excel Leads upload.",
+    isActive: true,
+    sections: [
+      {
+        id: "shift-timings",
+        title: "Shift Timings & Location",
+        description: "Verified login, logout, and GPS check-in",
+        fields: [
+          { id: "logInTime", name: "Shift Start Time", type: "text", required: true, placeholder: "09:00" },
+          { id: "logOutTime", name: "Shift End Time", type: "text", required: true, placeholder: "18:00" }
+        ]
+      },
+      {
+        id: "outreach-analytics",
+        title: "1️⃣ Outreach & Conversion Analytics",
+        description: "Fixed 90 calls/day target, conversion %, and client contact list",
+        fields: [
+          { id: "coldCalls", name: "Connected Calls", type: "number", required: true, defaultValue: 0 },
+          { id: "linkedinOutreach", name: "LinkedIn Messages", type: "number", defaultValue: 0 },
+          { id: "emailsSent", name: "Emails Sent", type: "number", defaultValue: 0 },
+          { id: "potentialClients", name: "Active Potential Clients", type: "number", defaultValue: 0 },
+          { id: "followUps", name: "Follow-ups Completed Count", type: "number", defaultValue: 0 },
+          { id: "followUpClientsList", name: "List of Existing Clients Contacted", type: "textarea", placeholder: "Clients and progress notes..." }
+        ]
+      },
+      {
+        id: "revenue-impact",
+        title: "2️⃣ Revenue & Financial Impact",
+        description: "Collected, Committed, Pipeline Business Value, and Target Variance",
+        fields: [
+          { id: "revenueCollected", name: "Net Revenue Collected Today (₹)", type: "number", defaultValue: 0 },
+          { id: "committedRevenue", name: "Committed Net Revenue (₹)", type: "number", defaultValue: 0 },
+          { id: "pipelineBusinessValue", name: "Pipeline Business Value (₹)", type: "number", defaultValue: 0 },
+          { id: "dailyRevenueTarget", name: "Daily Revenue Target (₹)", type: "number", defaultValue: 0 }
+        ]
+      },
+      {
+        id: "high-value-engagements",
+        title: "3️⃣ High-Value Engagements",
+        description: "Meetings/Demos, Quotations, Invoices, Client Wins, and Strategic Learnings",
+        fields: [
+          { id: "totalMeetingsConducted", name: "Total Meetings / Demos Conducted", type: "number", defaultValue: 0 },
+          { id: "totalQuotationsShared", name: "Total Quotations Shared", type: "number", defaultValue: 0 },
+          { id: "totalInvoicesShared", name: "Total Invoices Shared", type: "number", defaultValue: 0 },
+          { id: "clientWinHighlight", name: "Client Win / Breakthrough of the Day", type: "textarea" },
+          { id: "strategicLearning", name: "Strategic Learning & Market Insight", type: "textarea" }
+        ]
+      },
+      {
+        id: "pipeline-planning",
+        title: "4️⃣ Pipeline Impact & T+1 Planning",
+        description: "Meetings booked tomorrow (Online/Onsite), Critical Path, Blockers, and Intervention Trigger",
+        fields: [
+          { id: "criticalPathTomorrow", name: "T+1 Critical Path (Main Milestone)", type: "textarea", placeholder: "#1 most important deliverable..." },
+          { id: "pendingDeliverables", name: "Pending Deliverables Carried Forward", type: "textarea" },
+          { id: "interventionTrigger", name: "Intervention Trigger", type: "select", options: ["None", "Coaching", "Tech Support", "Client Meeting", "Manager Input Required", "Resource Blocked"] },
+          { id: "interventionTriggerReason", name: "Reason for Trigger", type: "text" }
+        ]
+      },
+      {
+        id: "supporting-documentation",
+        title: "📎 Supporting Docs & Excel Leads",
+        description: "Potential Client Excel Sheet upload (.xlsx / .csv) & Google Drive link",
+        fields: [
+          { id: "totalCallRecordings", name: "Google Drive Call Recordings Link", type: "text" },
+          { id: "potentialClientsFileUrl", name: "Potential Client Excel File (.xlsx/.csv)", type: "text" }
+        ]
+      }
+    ]
+  },
+  {
     id: "business-report-template",
-    name: "Business Intelligence Report",
+    name: "Business Intelligence Report (Standard)",
     category: "Business",
     description: "Daily outreach, client potentials, deal pipelines, and revenue impact.",
     isActive: true,
