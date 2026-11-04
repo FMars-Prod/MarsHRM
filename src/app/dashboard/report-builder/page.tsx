@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { 
   FileText, Briefcase, Code, Megaphone, Users, Plus, Trash2, Edit, Save, 
   CheckCircle2, Eye, ShieldCheck, Download, Upload, Copy, RefreshCw, Layers, Sparkles,
-  MapPin, LocateFixed, Navigation, ExternalLink, Activity, DollarSign, PhoneCall, Clock
+  MapPin, LocateFixed, Navigation, ExternalLink, Activity, DollarSign, PhoneCall, Clock, FileSpreadsheet
 } from "lucide-react";
 
 export type FieldDefinition = {
@@ -593,7 +593,286 @@ export default function ReportBuilderPage() {
               </div>
 
               {/* Exact Report Sections as seen by employee */}
-              {selectedTemplate?.category === "Business" ? (
+              {selectedTemplate?.id === "business-full-spec-template" ? (
+                <div className="space-y-6">
+                  {/* 1. OUTREACH & CONVERSION */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <Activity className="size-4" /> 1️⃣ OUTREACH & CONVERSION ANALYTICS
+                        </span>
+                        <Badge className="bg-primary/10 text-primary border border-primary/20 text-[8px] font-black uppercase rounded-none">
+                          Daily Target: 90 Cold Calls
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6 text-left">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 text-left">
+                        <div className="md:col-span-8 space-y-4">
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-[9px] uppercase font-black text-muted-foreground">COLD CALLS (TARGET: 90)</Label>
+                              <div className="h-11 border bg-white flex items-center px-3 font-bold text-sm">90</div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[9px] uppercase font-black text-muted-foreground">LINKEDIN OUTREACH</Label>
+                              <div className="h-11 border bg-white flex items-center px-3 font-bold text-sm">15</div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[9px] uppercase font-black text-muted-foreground">EMAILS SENT</Label>
+                              <div className="h-11 border bg-white flex items-center px-3 font-bold text-sm">20</div>
+                            </div>
+                          </div>
+
+                          {/* Target Gauge Indicator */}
+                          <div className="p-4 bg-purple-50/60 border border-purple-200 flex items-center justify-between">
+                            <div>
+                              <p className="text-[9px] font-black uppercase text-purple-900 tracking-wider">Fixed Minimum Target Protocol</p>
+                              <p className="text-xs font-black text-purple-950 uppercase mt-0.5">Target Met: 90 / 90 Calls Achieved</p>
+                            </div>
+                            <Badge className="bg-emerald-600 text-white font-mono text-[9px] font-black uppercase rounded-none px-2 py-0.5">
+                              0 Calls Pending
+                            </Badge>
+                          </div>
+
+                          <div className="flex gap-4">
+                            <div className="flex-1 p-5 bg-primary/5 ring-1 ring-primary/20 text-center">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-1">TOTAL OUTREACH</p>
+                              <span className="text-3xl font-black text-primary">125</span>
+                            </div>
+                            <div className="w-1/3 p-5 bg-white ring-1 ring-border/50 text-center">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">FOLLOW-UPS TODAY</p>
+                              <span className="text-2xl font-black text-slate-800">12</span>
+                            </div>
+                          </div>
+
+                          {/* Follow-up clients breakdown */}
+                          <div className="space-y-1.5 pt-2">
+                            <Label className="text-[9px] uppercase font-black text-muted-foreground">FOLLOW-UP CLIENTS BREAKDOWN</Label>
+                            <div className="p-3 border bg-white text-xs font-mono text-slate-700 space-y-1">
+                              <p className="font-bold">• Apex Engineering College - Final Quotation review (Rs. 1,20,000)</p>
+                              <p className="font-bold">• Zenith Institute of Tech - Demo scheduled tomorrow 11:30 AM</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-4">
+                          <Card className="bg-white border ring-2 ring-primary/20 rounded-none overflow-hidden h-full flex flex-col justify-between">
+                            <div className="p-3 bg-primary text-white text-center text-[10px] font-black uppercase tracking-widest">
+                              CONVERSION EFFICIENCY
+                            </div>
+                            <CardContent className="p-5 space-y-4 text-center">
+                              <div className="space-y-1">
+                                <span className="text-[8px] font-black uppercase text-muted-foreground">POTENTIAL CLIENTS IDENTIFIED</span>
+                                <div className="text-3xl font-black text-slate-900 border py-2">8</div>
+                              </div>
+                              <div className="text-center pt-2 border-t">
+                                <p className="text-[8px] font-black uppercase text-muted-foreground">EFFICIENCY RATE</p>
+                                <p className="text-3xl font-black text-primary">8.9%</p>
+                                <p className="text-[8px] text-muted-foreground font-bold uppercase mt-1">(Potentials / Calls)</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 2. REVENUE & FINANCIAL IMPACT */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <DollarSign className="size-4" /> 2️⃣ REVENUE & FINANCIAL IMPACT
+                        </span>
+                        <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[8px] font-black uppercase rounded-none">
+                          Target Variance Tracked
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4 text-left">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-3 border bg-white space-y-1">
+                          <Label className="text-[8px] uppercase font-black text-muted-foreground">REVENUE COLLECTED TODAY (₹)</Label>
+                          <div className="text-lg font-black text-emerald-600">₹45,000</div>
+                        </div>
+                        <div className="p-3 border bg-white space-y-1">
+                          <Label className="text-[8px] uppercase font-black text-muted-foreground">COMMITTED PIPELINE (₹)</Label>
+                          <div className="text-lg font-black text-primary">₹1,50,000</div>
+                        </div>
+                        <div className="p-3 border bg-white space-y-1">
+                          <Label className="text-[8px] uppercase font-black text-muted-foreground">PIPELINE BUSINESS VALUE (₹)</Label>
+                          <div className="text-lg font-black text-slate-900">₹3,80,000</div>
+                        </div>
+                        <div className="p-3 border bg-emerald-50/50 border-emerald-200 space-y-1">
+                          <Label className="text-[8px] uppercase font-black text-emerald-900">REVENUE TARGET VARIANCE (₹)</Label>
+                          <div className="text-lg font-black text-emerald-700">+₹5,000 (Met)</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 3. HIGH-VALUE CLIENT ENGAGEMENTS */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <Briefcase className="size-4" /> 3️⃣ HIGH-VALUE ENGAGEMENTS & CLIENT LOG
+                        </span>
+                        <Badge className="bg-primary/10 text-primary border-primary/20 text-[8px] font-black uppercase rounded-none">
+                          Detailed Prospect Matrix
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-5 text-left">
+                      {/* Counter strip */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="p-3 border bg-white text-center">
+                          <p className="text-[8px] uppercase font-black text-muted-foreground">MEETINGS CONDUCTED</p>
+                          <p className="text-xl font-black text-primary mt-0.5">3</p>
+                        </div>
+                        <div className="p-3 border bg-white text-center">
+                          <p className="text-[8px] uppercase font-black text-muted-foreground">QUOTATIONS SHARED</p>
+                          <p className="text-xl font-black text-primary mt-0.5">2</p>
+                        </div>
+                        <div className="p-3 border bg-white text-center">
+                          <p className="text-[8px] uppercase font-black text-muted-foreground">INVOICES SHARED</p>
+                          <p className="text-xl font-black text-primary mt-0.5">1</p>
+                        </div>
+                      </div>
+
+                      {/* Client repeater demo */}
+                      <div className="p-4 border bg-white space-y-2">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <span className="text-xs font-black uppercase text-slate-900">Principal - ABC Polytechnic College</span>
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-purple-100 text-purple-900 border">Deal: ₹75,000 • Quotation Sent</span>
+                        </div>
+                        <p className="text-xs text-slate-700 font-bold">Contact: Dr. Ramanathan (+91 98401 23456) • Stage: Commercial Evaluation</p>
+                        <p className="text-[10px] text-primary font-black uppercase">Next Action: Follow up on MoU approval this Thursday 2:00 PM</p>
+                      </div>
+
+                      {/* Win & Learning */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 border bg-emerald-50/40 border-emerald-200 space-y-1">
+                          <Label className="text-[8px] uppercase font-black text-emerald-900">🏆 CLIENT WIN / HIGH CONVERSION HIGHLIGHT</Label>
+                          <p className="text-xs font-bold text-emerald-950">Closed ₹45,000 annual training package with 60 students upfront batch enrollment.</p>
+                        </div>
+                        <div className="p-3 border bg-blue-50/40 border-blue-200 space-y-1">
+                          <Label className="text-[8px] uppercase font-black text-blue-900">💡 STRATEGIC LEARNING & OBJECTION RESOLVED</Label>
+                          <p className="text-xs font-bold text-blue-950">Clients respond 40% faster when WhatsApp brochure link is sent during call.</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 4. PIPELINE IMPACT & T+1 PLANNING */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <Clock className="size-4" /> 4️⃣ PIPELINE IMPACT & T+1 ACTION PLAN
+                        </span>
+                        <Badge className="bg-primary/10 text-primary border-primary/20 text-[8px] font-black uppercase rounded-none">
+                          Next-Day Readiness
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4 text-left">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-[9px] uppercase font-black text-muted-foreground">TOMORROW'S CONFIRMED MEETINGS</Label>
+                          <div className="p-3 border bg-white text-xs font-mono text-slate-700 space-y-1">
+                            <p className="font-bold">1. 10:30 AM - St. Xavier Tech [ONLINE - Google Meet]</p>
+                            <p className="font-bold">2. 02:30 PM - TechPark Corp HR [ONSITE Visit]</p>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[9px] uppercase font-black text-muted-foreground">CRITICAL PATH & DELIVERABLES</Label>
+                          <div className="p-3 border bg-white text-xs font-bold text-slate-700 min-h-[72px] flex items-center">
+                            Dispatch revised commercial proposals to 3 pipeline clients by 12:00 PM.
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Blockers & Intervention */}
+                      <div className="p-4 border bg-rose-50/30 border-rose-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[9px] uppercase font-black text-rose-900">PIPELINE BLOCKERS & RESOLUTION</Label>
+                          <Badge className="bg-rose-100 text-rose-800 text-[7px] font-black uppercase rounded-none border-rose-300">Revenue Blocked: ₹1,20,000</Badge>
+                        </div>
+                        <p className="text-xs font-bold text-rose-950">Awaiting custom syllabus PDF from Academic TL before Dean signs agreement.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 5. SUPPORTING DOCUMENTATION & EXCEL SHEET */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <PhoneCall className="size-4" /> 5️⃣ AUDIT AUDIO & PROSPECT EXCEL UPLOAD
+                        </span>
+                        <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[8px] font-black uppercase rounded-none">
+                          Client Data Ingest
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-5 text-left">
+                      <div className="space-y-1">
+                        <Label className="text-[9px] uppercase font-black text-muted-foreground">GOOGLE DRIVE AUDIT RECORDINGS FOLDER</Label>
+                        <div className="h-11 border bg-white flex items-center px-3 text-xs text-muted-foreground font-mono">
+                          https://drive.google.com/drive/folders/bde-daily-recordings-...
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-[9px] uppercase font-black text-muted-foreground">BEST CALL AUDIO RECORDING</Label>
+                          <div className="h-11 border bg-muted/10 flex items-center px-3 text-xs font-bold text-muted-foreground uppercase">
+                            Audio File Attached (best_call_dean.mp3)
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[9px] uppercase font-black text-muted-foreground">WORST CALL AUDIO RECORDING</Label>
+                          <div className="h-11 border bg-muted/10 flex items-center px-3 text-xs font-bold text-muted-foreground uppercase">
+                            Audio File Attached (call_objection_review.mp3)
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Excel leads uploader preview */}
+                      <div className="p-4 border-2 border-dashed border-primary/30 bg-primary/5 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-black uppercase text-primary flex items-center gap-2">
+                              <FileSpreadsheet className="size-4" /> Potential Clients Leads Sheet (.xlsx, .csv)
+                            </p>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase mt-0.5">
+                              Upload the day's scraped / contacted leads matching standardized schema
+                            </p>
+                          </div>
+                          <a
+                            href="/templates/potential_clients_sample.csv"
+                            download="potential_clients_sample.csv"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-primary/30 text-primary font-black text-[9px] uppercase tracking-wider hover:bg-primary/10 transition-colors shadow-sm"
+                          >
+                            <Download className="size-3" /> Download Sample Format
+                          </a>
+                        </div>
+                        <div className="p-3 bg-white border border-primary/20 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileSpreadsheet className="size-4 text-emerald-600" />
+                            <span className="text-xs font-bold text-slate-800 font-mono">Jamsheela_Leads_Assigned_Today.xlsx</span>
+                          </div>
+                          <Badge className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase rounded-none border-none">
+                            Verified Format (15 Columns)
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : selectedTemplate?.category === "Business" ? (
                 <div className="space-y-6">
                   {/* 1. OUTREACH CARD */}
                   <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
