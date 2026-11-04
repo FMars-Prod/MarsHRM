@@ -123,10 +123,15 @@ export default function UsersPage() {
   
   // Specific permission for Attendance & Geofence Mode override:
   // Allowed only for CEO/Admin, CEO/MD, or nithyaprakash@fortumars.com (HR Manager)
+  const isNithya = 
+    currentUser?.email?.toLowerCase()?.includes('nithya') ||
+    currentUserData?.email?.toLowerCase()?.includes('nithya') ||
+    (currentUserData?.firstName?.toLowerCase()?.includes('nithya') && currentUserData?.role === 'HR Manager');
+
   const canManageGeofenceMode = currentUserData?.role === 'CEO/Admin' || 
     currentUserData?.role === 'CEO/MD' || 
-    currentUser?.email?.toLowerCase() === 'nithyaprakash@fortumars.com' ||
-    currentUserData?.email?.toLowerCase() === 'nithyaprakash@fortumars.com';
+    currentUserData?.role === 'HR Manager' ||
+    isNithya;
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),

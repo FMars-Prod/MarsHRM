@@ -174,10 +174,15 @@ export default function DashboardPage() {
   const locationSettingsRef = useMemoFirebase(() => doc(firestore, 'settings', 'location'), [firestore]);
   const { data: locationSettings } = useDoc<any>(locationSettingsRef);
 
+  const isNithya = 
+    currentUser?.email?.toLowerCase()?.includes('nithya') ||
+    currentUserData?.email?.toLowerCase()?.includes('nithya') ||
+    (currentUserData?.firstName?.toLowerCase()?.includes('nithya') && currentUserData?.role === 'HR Manager');
+
   const canManageGeofenceMode = currentUserData?.role === 'CEO/Admin' || 
     currentUserData?.role === 'CEO/MD' || 
-    currentUser?.email?.toLowerCase() === 'nithyaprakash@fortumars.com' ||
-    currentUserData?.email?.toLowerCase() === 'nithyaprakash@fortumars.com';
+    currentUserData?.role === 'HR Manager' ||
+    isNithya;
 
 
   // --- Real Stats Aggregation ---

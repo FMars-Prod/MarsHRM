@@ -20,10 +20,15 @@ export default function SettingsPage() {
     const userDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
     const { data: currentUserData } = useDoc<any>(userDocRef);
 
-    const canManageGeofenceMode = currentUserData?.role === 'CEO/Admin' || 
-      currentUserData?.role === 'CEO/MD' || 
-      currentUser?.email?.toLowerCase() === 'nithyaprakash@fortumars.com' ||
-      currentUserData?.email?.toLowerCase() === 'nithyaprakash@fortumars.com';
+    const isNithya = 
+    currentUser?.email?.toLowerCase()?.includes('nithya') ||
+    currentUserData?.email?.toLowerCase()?.includes('nithya') ||
+    (currentUserData?.firstName?.toLowerCase()?.includes('nithya') && currentUserData?.role === 'HR Manager');
+
+  const canManageGeofenceMode = currentUserData?.role === 'CEO/Admin' || 
+    currentUserData?.role === 'CEO/MD' || 
+    currentUserData?.role === 'HR Manager' ||
+    isNithya;
     const { toast } = useToast();
 
     const configRef = useMemoFirebase(() => doc(firestore, 'settings', 'location'), [firestore]);
