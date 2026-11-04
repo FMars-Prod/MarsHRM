@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react";
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, setDocumentNonBlocking } from "@/firebase";
 import { doc, collection, query, where, orderBy, Timestamp, getDocs, limit, or, and, collectionGroup } from "firebase/firestore";
 import { AttendanceWidget } from "@/components/geohrm/attendance-widget";
 import { ActionItemsWidget } from "@/components/geohrm/action-items-widget";
@@ -37,6 +37,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -170,6 +171,15 @@ export default function DashboardPage() {
   const userRole = currentUserData?.role;
   const isExecutive = userRole === 'CEO/Admin' || userRole === 'CEO/MD' || userRole === 'HR Manager';
 
+  const locationSettingsRef = useMemoFirebase(() => doc(firestore, 'settings', 'location'), [firestore]);
+  const { data: locationSettings } = useDoc<any>(locationSettingsRef);
+
+  const canManageGeofenceMode = currentUserData?.role === 'CEO/Admin' || 
+    currentUserData?.role === 'CEO/MD' || 
+    currentUser?.email?.toLowerCase() === 'nithyaprakash@fortumars.com' ||
+    currentUserData?.email?.toLowerCase() === 'nithyaprakash@fortumars.com';
+
+
   // --- Real Stats Aggregation ---
   const clientsQuery = useMemoFirebase(() => query(collection(firestore, 'clients')), [firestore]);
   const { data: clients } = useCollection<any>(clientsQuery);
@@ -267,6 +277,49 @@ export default function DashboardPage() {
             </Alert>
         ))}
         <MonthlyReviewBanner />
+
+        {canManageGeofenceMode && (
+            <Card className="border-none shadow-sm rounded-none bg-gradient-to-r from-primary/10 via-purple-50/50 to-white overflow-hidden ring-1 ring-primary/20 animate-fade-in-up">
+                <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="size-10 bg-primary text-white flex items-center justify-center shrink-0 shadow-md">
+                            <ShieldCheck className="size-5" />
+                        </div>
+                        <div className="space-y-0.5 text-left">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                                    Direct Outside Attendance Control
+                                </h3>
+                                <Badge className={locationSettings?.directAttendanceEnabled ? "bg-emerald-500 text-white rounded-none text-[8px] font-black uppercase px-2" : "bg-slate-200 text-slate-700 rounded-none text-[8px] font-black uppercase px-2"}>
+                                    {locationSettings?.directAttendanceEnabled ? "ACTIVE (DIRECT CLOCK-IN)" : "OFF (APPROVAL REQUIRED)"}
+                                </Badge>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                                {locationSettings?.directAttendanceEnabled 
+                                    ? "Employees outside the office can clock in and clock out directly without manager approval or reason." 
+                                    : "Employees outside the office must enter a reason and submit a request to managers for approval."}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">
+                            {locationSettings?.directAttendanceEnabled ? "Direct Mode ON" : "Direct Mode OFF"}
+                        </span>
+                        <Switch 
+                            checked={!!locationSettings?.directAttendanceEnabled}
+                            onCheckedChange={(val) => {
+                                setDocumentNonBlocking(locationSettingsRef!, {
+                                    directAttendanceEnabled: val,
+                                    updatedAt: Timestamp.now()
+                                }, { merge: true });
+                            }}
+                            className="rounded-none data-[state=checked]:bg-primary"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+
         <MeetingStatusBanner />
         <WfhSetupReminder />
         

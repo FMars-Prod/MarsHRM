@@ -62,6 +62,16 @@ const userSchema = z.object({
 
 type UserFormValues = z.infer<typeof userSchema>;
 
+
+  const getValidAvatarUrl = (url?: string) => {
+    if (!url || typeof url !== 'string') return undefined;
+    const trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/')) {
+      return trimmed;
+    }
+    return undefined;
+  };
+
 export default function UsersPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
@@ -110,6 +120,13 @@ export default function UsersPage() {
   const { data: currentUserData } = useDoc<any>(currentUserDataRef);
   
   const isAdmin = currentUserData?.role === 'HR Manager' || currentUserData?.role === 'CEO/Admin' || currentUserData?.role === 'CEO/MD';
+  
+  // Specific permission for Attendance & Geofence Mode override:
+  // Allowed only for CEO/Admin, CEO/MD, or nithyaprakash@fortumars.com (HR Manager)
+  const canManageGeofenceMode = currentUserData?.role === 'CEO/Admin' || 
+    currentUserData?.role === 'CEO/MD' || 
+    currentUser?.email?.toLowerCase() === 'nithyaprakash@fortumars.com' ||
+    currentUserData?.email?.toLowerCase() === 'nithyaprakash@fortumars.com';
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -521,7 +538,7 @@ export default function UsersPage() {
                                                         >
                                                             <Checkbox checked={isSelected} className="rounded-none pointer-events-none" />
                                                             <Avatar className="size-10 rounded-none border shrink-0">
-                                                                <AvatarImage src={manager.avatar} className="object-cover rounded-none" />
+                                                                <AvatarImage src={getValidAvatarUrl(manager.avatar)} className="object-cover rounded-none" />
                                                                 <AvatarFallback className="rounded-none text-xs font-black">{manager.firstName?.[0] || 'U'}{manager.lastName?.[0] || ''}</AvatarFallback>
                                                             </Avatar>
                                                             <div className="min-w-0 flex-1">
@@ -592,6 +609,7 @@ export default function UsersPage() {
                                 <Separator className="my-4 opacity-50" />
                                 
                                 <div className="space-y-4">
+                                    {canManageGeofenceMode && (
                                     <div className="space-y-2 text-left p-4 bg-muted/10 border border-border/50">
                                         <FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Attendance & Geofence Mode</FormLabel>
                                         <FormField control={form.control} name="attendanceMode" render={({ field }) => (
@@ -612,6 +630,7 @@ export default function UsersPage() {
                                         )} />
                                         <p className="text-[9px] text-muted-foreground uppercase font-bold opacity-70">Controls whether this user clocks in/out directly or submits an approval request when outside work location.</p>
                                     </div>
+                                )}
 
                                     <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
                                         <div className="space-y-0.5 text-left">
@@ -706,7 +725,7 @@ export default function UsersPage() {
                         <div className="flex items-center gap-4">
                             <div className="relative">
                                 <Avatar className="h-10 w-10 rounded-none ring-1 ring-border group-hover:ring-primary/20 transition-all">
-                                    <AvatarImage src={u.avatar} className="object-cover" />
+                                    <AvatarImage src={getValidAvatarUrl(u.avatar)} className="object-cover" />
                                     <AvatarFallback className="rounded-none font-black text-xs bg-muted">{u.firstName?.[0] || 'U'}{u.lastName?.[0] || ''}</AvatarFallback>
                                 </Avatar>
                                 {isAdmin && complianceCount > 0 && (
@@ -763,7 +782,7 @@ export default function UsersPage() {
                                 
                                 {isAdmin && (
                                     <>
-                                        <DropdownMenuItem onClick={() => { setEditingUser(u); form.reset(u); setIsDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5 text-left">
+                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setEditingUser(u); form.reset(u); setIsDialogOpen(true); }} className="rounded-none font-black text-xs uppercase cursor-pointer gap-3 py-3 px-3 hover:bg-primary/5 text-left">
                                             <Edit className="size-4 text-primary" /> Edit
                                         </DropdownMenuItem>
                                         

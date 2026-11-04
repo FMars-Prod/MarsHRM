@@ -16,6 +16,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 export default function SettingsPage() {
     const firestore = useFirestore();
+    const { user: currentUser } = useUser();
+    const userDocRef = useMemoFirebase(() => currentUser ? doc(firestore, 'users', currentUser.uid) : null, [currentUser, firestore]);
+    const { data: currentUserData } = useDoc<any>(userDocRef);
+
+    const canManageGeofenceMode = currentUserData?.role === 'CEO/Admin' || 
+      currentUserData?.role === 'CEO/MD' || 
+      currentUser?.email?.toLowerCase() === 'nithyaprakash@fortumars.com' ||
+      currentUserData?.email?.toLowerCase() === 'nithyaprakash@fortumars.com';
     const { toast } = useToast();
 
     const configRef = useMemoFirebase(() => doc(firestore, 'settings', 'location'), [firestore]);
@@ -217,6 +225,7 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
+                {canManageGeofenceMode && (
                 <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none">
                     <CardHeader className="bg-muted/10 border-b p-8">
                         <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter">
@@ -242,6 +251,7 @@ export default function SettingsPage() {
                         </div>
                     </CardContent>
                 </Card>
+                )}
 
                 <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none">
                     <CardHeader className="bg-primary/5 border-b border-primary/10 p-8">
