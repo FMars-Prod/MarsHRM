@@ -862,7 +862,7 @@ export default function ReportBuilderPage() {
                         <div className="p-3 bg-white border border-primary/20 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <FileSpreadsheet className="size-4 text-emerald-600" />
-                            <span className="text-xs font-bold text-slate-800 font-mono">Jamsheela_Leads_Assigned_Today.xlsx</span>
+                            <span className="text-xs font-bold text-slate-800 font-mono">Potential_Clients_Leads_Template.xlsx</span>
                           </div>
                           <Badge className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase rounded-none border-none">
                             Verified Format (15 Columns)
