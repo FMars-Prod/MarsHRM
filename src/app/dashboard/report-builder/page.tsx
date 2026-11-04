@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { PageHeader } from "@/components/geohrm/page-header";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
@@ -20,7 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { 
   FileText, Briefcase, Code, Megaphone, Users, Plus, Trash2, Edit, Save, 
-  CheckCircle2, Eye, ShieldCheck, Download, Upload, Copy, RefreshCw, Layers, Sparkles 
+  CheckCircle2, Eye, ShieldCheck, Download, Upload, Copy, RefreshCw, Layers, Sparkles,
+  MapPin, LocateFixed, Navigation, ExternalLink, Activity, DollarSign, PhoneCall, Clock
 } from "lucide-react";
 
 export type FieldDefinition = {
@@ -85,8 +87,8 @@ const INITIAL_SYSTEM_TEMPLATES: ReportTemplate[] = [
         title: "Revenue & Collections",
         description: "Financial performance tracking for today",
         fields: [
-          { id: "revenueCollected", name: "Revenue Collected (Γé╣)", type: "number", defaultValue: 0 },
-          { id: "committedRevenue", name: "Committed Pipeline (Γé╣)", type: "number", defaultValue: 0 }
+          { id: "revenueCollected", name: "Revenue Collected (₹)", type: "number", defaultValue: 0 },
+          { id: "committedRevenue", name: "Committed Pipeline (₹)", type: "number", defaultValue: 0 }
         ]
       },
       {
@@ -212,7 +214,7 @@ const INITIAL_SYSTEM_TEMPLATES: ReportTemplate[] = [
   }
 ];
 
-export default function ReportCustomizerPage() {
+export default function ReportBuilderPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -298,8 +300,10 @@ export default function ReportCustomizerPage() {
         {
           id: `sec-${Date.now()}`,
           title: "New Section",
-          description: "Section description",
-          fields: [{ id: `field_${Date.now()}`, name: "New Field", type: "text" }]
+          description: "Section details",
+          fields: [
+            { id: `field_${Date.now()}`, name: "Field Name", type: "text", required: false }
+          ]
         }
       ]
     });
@@ -348,35 +352,30 @@ export default function ReportCustomizerPage() {
       </PageHeader>
 
       {/* Category Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-white p-1 rounded-none border ring-1 ring-border shadow-sm flex flex-wrap h-auto gap-1">
-          <TabsTrigger value="all" className="rounded-none text-[10px] font-black uppercase px-4 h-9">All Formats</TabsTrigger>
-          <TabsTrigger value="business" className="rounded-none text-[10px] font-black uppercase px-4 h-9">Business Reports</TabsTrigger>
-          <TabsTrigger value="technical" className="rounded-none text-[10px] font-black uppercase px-4 h-9">Technical Reports</TabsTrigger>
-          <TabsTrigger value="digital marketing" className="rounded-none text-[10px] font-black uppercase px-4 h-9">Marketing Reports</TabsTrigger>
-          <TabsTrigger value="hr" className="rounded-none text-[10px] font-black uppercase px-4 h-9">HR Reports</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-white border rounded-none p-1 h-12 shadow-sm">
+          <TabsTrigger value="all" className="rounded-none font-black uppercase text-[9px] tracking-wider px-5">All Formats</TabsTrigger>
+          <TabsTrigger value="business" className="rounded-none font-black uppercase text-[9px] tracking-wider px-5">Business</TabsTrigger>
+          <TabsTrigger value="technical" className="rounded-none font-black uppercase text-[9px] tracking-wider px-5">Technical</TabsTrigger>
+          <TabsTrigger value="digital marketing" className="rounded-none font-black uppercase text-[9px] tracking-wider px-5">Marketing</TabsTrigger>
+          <TabsTrigger value="hr" className="rounded-none font-black uppercase text-[9px] tracking-wider px-5">HR & Ops</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-6">
+        <TabsContent value={activeTab} className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredTemplates.map((template) => {
               const totalFields = template.sections.reduce((acc, s) => acc + s.fields.length, 0);
 
               return (
-                <Card key={template.id} className="border-none ring-1 ring-border/50 shadow-sm rounded-none bg-white overflow-hidden text-left flex flex-col justify-between hover:shadow-md transition-all">
-                  <CardHeader className="bg-muted/10 border-b p-6 text-left">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="size-10 bg-primary/10 text-primary flex items-center justify-center rounded-none font-bold">
-                          {template.category === "Technical" ? <Code className="size-5" /> : 
-                           template.category === "Business" ? <Briefcase className="size-5" /> : 
-                           template.category === "Digital Marketing" ? <Megaphone className="size-5" /> : <Users className="size-5" />}
-                        </div>
-                        <div>
-                          <CardTitle className="text-sm font-black uppercase tracking-tight text-slate-900">
-                            {template.name}
-                          </CardTitle>
-                          <Badge variant="outline" className="text-[8px] font-black uppercase tracking-wider rounded-none mt-1 bg-white">
+                <Card key={template.id} className="border-none ring-1 ring-border/50 shadow-sm rounded-none bg-white overflow-hidden text-left hover:shadow-md transition-all flex flex-col justify-between">
+                  <CardHeader className="bg-muted/10 p-6 border-b text-left">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <CardTitle className="text-base font-black uppercase tracking-tight text-slate-900 flex items-center gap-2">
+                          {template.name}
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="rounded-none border-primary/20 text-primary bg-primary/5 text-[8px] font-black uppercase px-2 py-0.5">
                             {template.category}
                           </Badge>
                         </div>
@@ -438,75 +437,296 @@ export default function ReportCustomizerPage() {
         </TabsContent>
       </Tabs>
 
-      {/* PREVIEW MODAL */}
+      {/* PREVIEW MODAL (EXACT USER SIDE LAYOUT) */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-3xl rounded-none border-none shadow-3xl h-[85vh] flex flex-col p-0 overflow-hidden text-left">
-          <DialogHeader className="p-8 border-b bg-white text-left">
+        <DialogContent className="max-w-4xl rounded-none border-none shadow-3xl h-[90vh] flex flex-col p-0 overflow-hidden text-left font-jakarta">
+          <DialogHeader className="p-6 border-b bg-white text-left shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-2xl font-black uppercase tracking-tight text-primary">
-                  {selectedTemplate?.name}
+                <DialogTitle className="text-xl font-black uppercase tracking-tight text-primary flex items-center gap-2">
+                  <FileText className="size-5" /> DAILY REPORT PREVIEW: {selectedTemplate?.name}
                 </DialogTitle>
                 <DialogDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Official employee daily report layout ΓÇó {selectedTemplate?.category}
+                  Exact user-side layout rendered to employees • {selectedTemplate?.category}
                 </DialogDescription>
               </div>
               <Badge className="bg-primary text-white text-[9px] font-black uppercase px-3 h-7 rounded-none">
-                Preview Mode
+                Live Layout
               </Badge>
             </div>
           </DialogHeader>
 
           <ScrollArea className="flex-1 p-8 bg-muted/5 text-left">
-            <div className="space-y-6 max-w-2xl mx-auto text-left">
-              {/* Geolocation Section */}
-              <div className="p-4 bg-primary/5 border border-primary/20 space-y-2">
-                <span className="text-[9px] font-black uppercase text-primary tracking-widest flex items-center gap-1.5">
-                  <ShieldCheck className="size-3.5" /> ≡ƒôì Verified Location Coordinates Log
-                </span>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold">
-                  Captures clock-in latitude, longitude, and authorized location name automatically.
-                </p>
+            <div className="space-y-6 max-w-3xl mx-auto text-left">
+              
+              {/* DETAILS (SHIFT TIMINGS) */}
+              <div className="space-y-3">
+                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">DETAILS</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-[9px] font-black uppercase text-muted-foreground">SHIFT START</Label>
+                    <div className="h-11 border bg-white flex items-center px-4 font-mono text-sm text-slate-700">--:--</div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[9px] font-black uppercase text-muted-foreground">SHIFT END</Label>
+                    <div className="h-11 border bg-white flex items-center px-4 font-mono text-sm text-slate-700">--:--</div>
+                  </div>
+                </div>
               </div>
 
-              {selectedTemplate?.sections.map((section, idx) => (
-                <Card key={section.id} className="border rounded-none shadow-sm bg-white overflow-hidden text-left">
-                  <CardHeader className="bg-muted/10 p-4 border-b">
-                    <CardTitle className="text-xs font-black uppercase text-primary flex items-center gap-2">
-                      <span className="size-5 rounded-none bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
-                        {idx + 1}
-                      </span>
-                      {section.title}
-                    </CardTitle>
-                    {section.description && (
-                      <CardDescription className="text-[9px] font-bold uppercase text-muted-foreground">
-                        {section.description}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent className="p-6 space-y-4 text-left">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                      {section.fields.map((field) => (
-                        <div key={field.id} className={cn("space-y-1.5 text-left", field.type === "textarea" && "sm:col-span-2")}>
-                          <Label className="text-[9px] font-black uppercase text-slate-700 tracking-wider flex items-center gap-1">
-                            {field.name}
-                            {field.required && <span className="text-rose-500">*</span>}
-                          </Label>
-                          {field.type === "textarea" ? (
-                            <Textarea placeholder={field.placeholder || "Enter description..."} disabled className="rounded-none bg-muted/10 text-xs font-bold" />
-                          ) : field.type === "select" ? (
-                            <div className="h-10 border bg-muted/10 flex items-center px-3 text-xs font-bold text-muted-foreground uppercase">
-                              {field.options?.[0] || "Select Option"}
+              {/* Exact Report Sections as seen by employee */}
+              {selectedTemplate?.category === "Business" ? (
+                <div className="space-y-6">
+                  {/* 1. OUTREACH CARD */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <Activity className="size-4" /> 1️⃣ OUTREACH & METRICS
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6 text-left">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 text-left">
+                        <div className="md:col-span-8 space-y-4">
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">COLD CALLS</Label><div className="h-11 border bg-white flex items-center px-3 font-bold text-sm">0</div></div>
+                            <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">LINKEDIN</Label><div className="h-11 border bg-white flex items-center px-3 font-bold text-sm">0</div></div>
+                            <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">EMAILS</Label><div className="h-11 border bg-white flex items-center px-3 font-bold text-sm">0</div></div>
+                          </div>
+                          <div className="flex gap-4">
+                            <div className="flex-1 p-5 bg-primary/5 ring-1 ring-primary/20 text-center">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-1">TOTAL OUTREACH</p>
+                              <span className="text-3xl font-black text-primary">0</span>
                             </div>
-                          ) : (
-                            <Input placeholder={field.placeholder || "Value..."} disabled className="h-10 rounded-none bg-muted/10 text-xs font-bold" />
-                          )}
+                            <div className="w-1/3 p-5 bg-white ring-1 ring-border/50 text-center">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">FOLLOW-UPS</p>
+                              <span className="text-2xl font-black text-slate-800">0</span>
+                            </div>
+                          </div>
                         </div>
-                      ))}
+                        <div className="md:col-span-4">
+                          <Card className="bg-white border ring-2 ring-primary/20 rounded-none overflow-hidden">
+                            <div className="p-3 bg-primary text-white text-center text-[10px] font-black uppercase tracking-widest">EFFICIENCY</div>
+                            <CardContent className="p-4 space-y-4 text-center">
+                              <div className="space-y-1">
+                                <span className="text-[8px] font-black uppercase text-muted-foreground">POTENTIALS</span>
+                                <div className="text-2xl font-black text-slate-900 border py-2">0</div>
+                              </div>
+                              <div className="text-center pt-1 border-t">
+                                <p className="text-[8px] font-black uppercase text-muted-foreground">SUCCESS RATE</p>
+                                <p className="text-2xl font-black text-primary">0.0%</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 2. REVENUE */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <DollarSign className="size-4" /> 2️⃣ REVENUE
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">REVENUE COLLECTED (₹)</Label><div className="h-11 border bg-white flex items-center px-3 font-bold">₹0</div></div>
+                        <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">COMMITTED PIPELINE (₹)</Label><div className="h-11 border bg-white flex items-center px-3 font-bold">₹0</div></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 3. CALL RECORDINGS */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <PhoneCall className="size-4" /> 3️⃣ DAILY CALL RECORDINGS & AUDIT ASSETS
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="space-y-1">
+                        <Label className="text-[9px] uppercase font-black text-muted-foreground">GOOGLE DRIVE RECORDINGS FOLDER LINK</Label>
+                        <div className="h-11 border bg-white flex items-center px-3 text-xs text-muted-foreground font-mono">https://drive.google.com/...</div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">BEST CALL (AUDIO)</Label><div className="h-11 border bg-muted/10 flex items-center px-3 text-xs font-bold text-muted-foreground uppercase">Audio File Selector</div></div>
+                        <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">WORST CALL (AUDIO)</Label><div className="h-11 border bg-muted/10 flex items-center px-3 text-xs font-bold text-muted-foreground uppercase">Audio File Selector</div></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 4. EXECUTION PLAN */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        🎯 TOMORROW'S PLAN & OBJECTIVES
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">MEETINGS SCHEDULED</Label><div className="h-11 border bg-white flex items-center px-3 font-bold">0</div></div>
+                        <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">SUPPORT NEEDED</Label><div className="h-11 border bg-white flex items-center px-3 font-bold text-xs uppercase text-slate-700">None</div></div>
+                      </div>
+                      <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">MAIN GOAL / DELIVERABLE</Label><div className="min-h-[70px] border bg-white p-3 text-xs text-muted-foreground font-bold">Key tasks planned for tomorrow...</div></div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : selectedTemplate?.category === "Technical" ? (
+                <div className="space-y-6">
+                  {/* Calls */}
+                  <Card className="border ring-1 ring-border/50 rounded-none shadow-sm bg-white overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2">
+                        <PhoneCall className="size-4" /> CALLS & MEETINGS
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-3">
+                      <div className="p-3 bg-muted/5 border flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-xs font-black uppercase text-slate-800">Tech Architecture Sync</p>
+                          <p className="text-[9px] font-bold uppercase text-muted-foreground">Internal / Client Platform</p>
+                        </div>
+                        <Badge className="rounded-none bg-primary/10 text-primary border-primary/20 text-[8px] font-black uppercase">Closing</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Projects */}
+                  <Card className="border ring-1 ring-border/50 rounded-none shadow-sm bg-white overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2">
+                        <Briefcase className="size-4" /> PROJECTS & MODULES
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="p-4 bg-muted/5 border space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-black uppercase text-slate-800">MarsHRM Engine</span>
+                          <span className="text-[9px] font-bold uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 border border-emerald-200">100% DONE</span>
+                        </div>
+                        <p className="text-[9px] font-bold text-slate-600 uppercase">Geofence Attendance Module & Admin Switches</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Tomorrow's Plan */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        🎯 TOMORROW'S PLAN & OBJECTIVES
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">MEETINGS</Label><div className="h-11 border bg-white flex items-center px-3 font-bold">0</div></div>
+                        <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">SUPPORT NEEDED</Label><div className="h-11 border bg-white flex items-center px-3 font-bold text-xs uppercase text-slate-700">None</div></div>
+                      </div>
+                      <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">MAIN GOAL / DELIVERABLE</Label><div className="min-h-[70px] border bg-white p-3 text-xs text-muted-foreground font-bold">Core technical sprint tasks...</div></div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                /* Dynamic Custom / Other Formats */
+                <div className="space-y-6">
+                  {selectedTemplate?.sections.map((section, idx) => (
+                    <Card key={section.id} className="border rounded-none shadow-sm bg-white overflow-hidden text-left">
+                      <CardHeader className="bg-muted/10 p-4 border-b">
+                        <CardTitle className="text-xs font-black uppercase text-primary flex items-center gap-2">
+                          <span className="size-5 rounded-none bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
+                            {idx + 1}
+                          </span>
+                          {section.title}
+                        </CardTitle>
+                        {section.description && (
+                          <CardDescription className="text-[9px] font-bold uppercase text-muted-foreground">
+                            {section.description}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-4 text-left">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                          {section.fields.map((field) => (
+                            <div key={field.id} className={cn("space-y-1.5 text-left", field.type === "textarea" && "sm:col-span-2")}>
+                              <Label className="text-[9px] font-black uppercase text-slate-700 tracking-wider flex items-center gap-1">
+                                {field.name}
+                                {field.required && <span className="text-rose-500">*</span>}
+                              </Label>
+                              {field.type === "textarea" ? (
+                                <Textarea placeholder={field.placeholder || "Enter description..."} disabled className="rounded-none bg-muted/10 text-xs font-bold" />
+                              ) : field.type === "select" ? (
+                                <div className="h-10 border bg-muted/10 flex items-center px-3 text-xs font-bold text-muted-foreground uppercase">
+                                  {field.options?.[0] || "Select Option"}
+                                </div>
+                              ) : (
+                                <Input placeholder={field.placeholder || "Value..."} disabled className="h-10 rounded-none bg-muted/10 text-xs font-bold" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* NEW DEDICATED LOCATION COORDINATES SECTION */}
+              <div className="mt-8 pt-6 border-t border-dashed">
+                <Card className="border-none ring-1 ring-primary/20 bg-gradient-to-r from-primary/5 via-white to-primary/5 rounded-none shadow-sm text-left">
+                  <CardHeader className="bg-muted/10 py-3 px-4 border-b border-border/40">
+                    <CardTitle className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <MapPin className="size-3.5" /> 📍 NEW SECTION: VERIFIED GPS ATTENDANCE COORDINATES
+                      </span>
+                      <Badge className="bg-primary text-white text-[7px] font-black uppercase rounded-none border-none px-1.5 h-4">
+                        SYSTEM ATTACHED
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-3">
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold">
+                      Automatically recorded during clock-in and clock-out to verify employee coordinates:
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
+                      {/* Check In Location Box */}
+                      <div className="p-3 bg-white border border-border/60 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[8px] font-black uppercase text-muted-foreground flex items-center gap-1">
+                            <LocateFixed className="size-3 text-emerald-600" /> Clock-In Location
+                          </span>
+                          <Badge className="bg-emerald-100 text-emerald-800 text-[7px] font-black uppercase rounded-none border-none px-1.5 h-4">Office / Authorized</Badge>
+                        </div>
+                        <p className="text-xs font-black uppercase text-slate-800">
+                          Office Geofence
+                        </p>
+                        <div className="space-y-0.5">
+                          <p className="font-mono text-[9px] font-bold text-slate-600">
+                            10.77091, 76.09277
+                          </p>
+                          <span className="text-[8px] font-black uppercase text-primary hover:underline flex items-center gap-1 pt-0.5 cursor-pointer">
+                            <ExternalLink className="size-2.5" /> View On Map
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Check Out Location Box */}
+                      <div className="p-3 bg-white border border-border/60 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[8px] font-black uppercase text-muted-foreground flex items-center gap-1">
+                            <Navigation className="size-3 text-rose-600" /> Clock-Out Location
+                          </span>
+                          <Badge className="bg-slate-100 text-slate-700 text-[7px] font-black uppercase rounded-none border-none px-1.5 h-4">Shift End</Badge>
+                        </div>
+                        <p className="text-xs font-black uppercase text-slate-800">
+                          Current Device Coordinates
+                        </p>
+                        <p className="text-[9px] font-bold text-slate-500 italic uppercase">Will record coordinates automatically on submit</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              </div>
+
             </div>
           </ScrollArea>
 
@@ -580,101 +800,83 @@ export default function ReportCustomizerPage() {
 
                 {editingTemplate.sections.map((section, sIdx) => (
                   <Card key={section.id} className="border rounded-none shadow-sm bg-white overflow-hidden text-left">
-                    <CardHeader className="bg-muted/15 p-4 border-b flex flex-row items-center justify-between">
+                    <CardHeader className="bg-muted/10 p-4 border-b flex flex-row items-center justify-between">
                       <div className="flex items-center gap-3 flex-1 mr-4">
-                        <span className="size-6 bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0">
+                        <span className="size-6 bg-primary text-white text-[10px] font-black flex items-center justify-center shrink-0">
                           {sIdx + 1}
                         </span>
-                        <Input
-                          value={section.title}
+                        <Input 
+                          value={section.title} 
                           onChange={(e) => {
                             const updated = [...editingTemplate.sections];
                             updated[sIdx].title = e.target.value;
                             setEditingTemplate({ ...editingTemplate, sections: updated });
-                          }}
-                          placeholder="Section Title"
-                          className="h-9 rounded-none font-black text-xs uppercase bg-white border-none ring-1 ring-border"
+                          }} 
+                          className="h-9 rounded-none font-black uppercase text-xs border-primary/20 bg-white" 
                         />
                       </div>
                       <div className="flex items-center gap-2">
                         <Button 
-                          type="button" 
+                          onClick={() => handleAddField(sIdx)} 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => handleAddField(sIdx)} 
-                          className="h-8 rounded-none text-[8px] font-black uppercase tracking-wider"
+                          className="rounded-none h-8 text-[9px] font-black uppercase tracking-wider border-border"
                         >
                           <Plus className="size-3 mr-1" /> Add Field
                         </Button>
                         <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
                           onClick={() => handleRemoveSection(sIdx)} 
-                          className="h-8 w-8 text-rose-500 hover:bg-rose-50"
+                          variant="ghost" 
+                          size="sm" 
+                          className="rounded-none h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                         >
-                          <Trash2 className="size-4" />
+                          <Trash2 className="size-3.5" />
                         </Button>
                       </div>
                     </CardHeader>
 
-                    <CardContent className="p-6 space-y-4">
+                    <CardContent className="p-6 space-y-4 text-left">
                       {section.fields.map((field, fIdx) => (
-                        <div key={field.id} className="p-4 bg-muted/10 border border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 w-full">
-                            <div className="space-y-1">
-                              <Label className="text-[8px] font-bold uppercase text-muted-foreground">Field Label</Label>
-                              <Input
-                                value={field.name}
-                                onChange={(e) => {
-                                  const updated = [...editingTemplate.sections];
-                                  updated[sIdx].fields[fIdx].name = e.target.value;
-                                  setEditingTemplate({ ...editingTemplate, sections: updated });
-                                }}
-                                className="h-9 rounded-none bg-white font-bold text-xs"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[8px] font-bold uppercase text-muted-foreground">Input Type</Label>
-                              <select
-                                value={field.type}
-                                onChange={(e: any) => {
-                                  const updated = [...editingTemplate.sections];
-                                  updated[sIdx].fields[fIdx].type = e.target.value;
-                                  setEditingTemplate({ ...editingTemplate, sections: updated });
-                                }}
-                                className="h-9 w-full rounded-none bg-white border border-input text-xs font-bold px-2 uppercase"
-                              >
-                                <option value="text">Text Input</option>
-                                <option value="number">Numeric / Count</option>
-                                <option value="textarea">Paragraph / Textarea</option>
-                                <option value="select">Dropdown Menu</option>
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[8px] font-bold uppercase text-muted-foreground">Placeholder Hint</Label>
-                              <Input
-                                value={field.placeholder || ""}
-                                onChange={(e) => {
-                                  const updated = [...editingTemplate.sections];
-                                  updated[sIdx].fields[fIdx].placeholder = e.target.value;
-                                  setEditingTemplate({ ...editingTemplate, sections: updated });
-                                }}
-                                className="h-9 rounded-none bg-white text-xs"
-                                placeholder="e.g. Enter details..."
-                              />
-                            </div>
-                          </div>
+                        <div key={field.id} className="p-4 bg-muted/5 border border-border/50 rounded-none space-y-3 text-left">
+                          <div className="flex items-center justify-between gap-3">
+                            <Input 
+                              value={field.name} 
+                              onChange={(e) => {
+                                const updated = [...editingTemplate.sections];
+                                updated[sIdx].fields[fIdx].name = e.target.value;
+                                setEditingTemplate({ ...editingTemplate, sections: updated });
+                              }} 
+                              placeholder="Field Label (e.g. Cold Calls)"
+                              className="h-9 rounded-none font-bold text-xs bg-white flex-1" 
+                            />
+                            <Select 
+                              value={field.type} 
+                              onValueChange={(val: any) => {
+                                const updated = [...editingTemplate.sections];
+                                updated[sIdx].fields[fIdx].type = val;
+                                setEditingTemplate({ ...editingTemplate, sections: updated });
+                              }}
+                            >
+                              <SelectTrigger className="h-9 w-36 rounded-none text-xs font-bold uppercase bg-white">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-none">
+                                <SelectItem value="text">Text Input</SelectItem>
+                                <SelectItem value="number">Numeric Metric</SelectItem>
+                                <SelectItem value="textarea">Paragraph / Area</SelectItem>
+                                <SelectItem value="select">Dropdown Select</SelectItem>
+                              </SelectContent>
+                            </Select>
 
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveField(sIdx, fIdx)}
-                            className="text-rose-500 hover:bg-rose-50 size-8 self-end sm:self-center"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
+                            <Button 
+                              onClick={() => handleRemoveField(sIdx, fIdx)} 
+                              variant="ghost" 
+                              size="sm" 
+                              className="rounded-none h-9 w-9 text-rose-500 hover:bg-rose-50"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </CardContent>
@@ -684,12 +886,12 @@ export default function ReportCustomizerPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-6 border-t bg-white shrink-0 flex items-center justify-between gap-4">
-            <Button variant="outline" onClick={() => setIsEditorOpen(false)} className="rounded-none h-11 px-6 font-black uppercase text-[10px]">
+          <DialogFooter className="p-6 border-t bg-white flex items-center justify-between">
+            <Button variant="outline" onClick={() => setIsEditorOpen(false)} className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest">
               Cancel
             </Button>
-            <Button onClick={handleSaveTemplate} className="rounded-none h-11 px-8 font-black uppercase text-[10px] tracking-widest shadow-xl">
-              <Save className="size-4 mr-2" /> Save & Activate Template
+            <Button onClick={handleSaveTemplate} className="rounded-none h-11 px-8 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
+              <Save className="size-3.5 mr-2" /> Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
