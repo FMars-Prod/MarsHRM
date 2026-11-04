@@ -9,13 +9,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList, Building2, ChevronRight } from "lucide-react";
+import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList, Building2, ChevronRight, MapPin, LocateFixed, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { format, isSameDay, startOfDay, startOfWeek, endOfWeek, differenceInSeconds, eachDayOfInterval } from "date-fns";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, useAuth, deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, orderBy, doc, getDocs, Timestamp, limit, serverTimestamp, collectionGroup } from "firebase/firestore";
+import { collection, query, where, orderBy, doc, getDocs, getDoc, Timestamp, limit, serverTimestamp, collectionGroup } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, useWatch, FormProvider, useFormContext, useFieldArray } from "react-hook-form";
@@ -690,9 +690,48 @@ export default function ReportsPage() {
 
   const onSubmit = async (values: any) => {
     if (!user || !currentUserData) return;
-    const payload = { ...values, employeeId: user.uid, employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`, employeeDepartment: currentUserData.department, employeeJobTitle: currentUserData.jobTitle, date: serverTimestamp(), reportType: currentTemplateId };
     const todayId = format(new Date(), 'yyyy-MM-dd');
     const attRef = doc(firestore, `users/${user.uid}/attendances`, todayId);
+    
+    // Fetch today's coordinates to attach to daily report
+    let checkInCoords: any = null;
+    let checkOutCoords: any = null;
+    try {
+        const attSnap = await getDoc(attRef);
+        if (attSnap.exists()) {
+            const attData = attSnap.data();
+            if (attData.locationCheckInLatitude != null && attData.locationCheckInLongitude != null) {
+                checkInCoords = {
+                    latitude: attData.locationCheckInLatitude,
+                    longitude: attData.locationCheckInLongitude,
+                    locationName: attData.locationCheckInType || (attData.isAtHome ? 'Home (WFH)' : (attData.isOutOfRange ? 'Outside (Direct)' : 'Office')),
+                    isOutOfRange: !!attData.isOutOfRange
+                };
+            }
+            if (attData.locationCheckOutLatitude != null && attData.locationCheckOutLongitude != null) {
+                checkOutCoords = {
+                    latitude: attData.locationCheckOutLatitude,
+                    longitude: attData.locationCheckOutLongitude,
+                    locationName: attData.locationCheckOutType || 'Logged Out Location'
+                };
+            }
+        }
+    } catch (e) {
+        console.error("Could not fetch attendance coordinates for report", e);
+    }
+
+    const payload = { 
+        ...values, 
+        employeeId: user.uid, 
+        employeeName: `${currentUserData.firstName} ${currentUserData.lastName}`, 
+        employeeDepartment: currentUserData.department, 
+        employeeJobTitle: currentUserData.jobTitle, 
+        date: serverTimestamp(), 
+        reportType: currentTemplateId,
+        checkInLocation: checkInCoords,
+        checkOutLocation: checkOutCoords
+    };
+
     await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/reports`), payload);
     setDocumentNonBlocking(attRef, { checkOutTime: serverTimestamp() }, { merge: true });
     toast({ title: "Report Saved" });
@@ -813,6 +852,78 @@ export default function ReportsPage() {
                       {(selectedReportForReview?.reportType === 'Business' || selectedReportForReview?.reportType === 'Digital Marketing') && <BusinessAuditDetailComp report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Digital Marketing' && <MarketingAuditDetailComp report={selectedReportForReview} />}
                       {selectedReportForReview?.reportType === 'Technical' && <TechnicalAuditDetailComp report={selectedReportForReview} />}
+                      <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm rounded-none text-left">
+                          <CardHeader className="bg-muted/10 py-3">
+                              <CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2">
+                                  <MapPin className="size-4" /> 📍 Attendance Coordinates & Location Log
+                              </CardTitle>
+                          </CardHeader>
+                          <CardContent className="pt-6 space-y-4 text-left">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {/* Check In Coordinates */}
+                                  <div className="p-4 bg-muted/20 border border-border/50 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                          <p className="text-[9px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                                              <LocateFixed className="size-3 text-emerald-600" /> Logged In Location
+                                          </p>
+                                          {selectedReportForReview?.checkInLocation?.isOutOfRange ? (
+                                              <Badge className="bg-amber-100 text-amber-800 text-[8px] font-black uppercase border-none rounded-none px-1.5 h-5">Outside Area</Badge>
+                                          ) : (
+                                              <Badge className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase border-none rounded-none px-1.5 h-5">Authorized</Badge>
+                                          )}
+                                      </div>
+                                      <p className="text-xs font-black uppercase text-slate-800">
+                                          {selectedReportForReview?.checkInLocation?.locationName || 'Standard Geofence'}
+                                      </p>
+                                      {selectedReportForReview?.checkInLocation?.latitude != null ? (
+                                          <div className="space-y-1">
+                                              <p className="text-[10px] font-mono font-bold text-slate-600">
+                                                  Lat: {Number(selectedReportForReview.checkInLocation.latitude).toFixed(6)}, Lng: {Number(selectedReportForReview.checkInLocation.longitude).toFixed(6)}
+                                              </p>
+                                              <a 
+                                                  href={`https://www.google.com/maps?q=${selectedReportForReview.checkInLocation.latitude},${selectedReportForReview.checkInLocation.longitude}`}
+                                                  target="_blank" 
+                                                  rel="noreferrer" 
+                                                  className="text-[9px] font-black uppercase text-primary hover:underline flex items-center gap-1 pt-1"
+                                              >
+                                                  <ExternalLink className="size-3" /> View On Google Maps
+                                              </a>
+                                          </div>
+                                      ) : (
+                                          <p className="text-[10px] font-bold text-muted-foreground italic uppercase">No coordinates recorded</p>
+                                      )}
+                                  </div>
+
+                                  {/* Check Out Coordinates */}
+                                  <div className="p-4 bg-muted/20 border border-border/50 space-y-2">
+                                      <p className="text-[9px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                                          <Navigation className="size-3 text-rose-600" /> Logged Out Location
+                                      </p>
+                                      <p className="text-xs font-black uppercase text-slate-800">
+                                          {selectedReportForReview?.checkOutLocation?.locationName || 'Clock Out Point'}
+                                      </p>
+                                      {selectedReportForReview?.checkOutLocation?.latitude != null ? (
+                                          <div className="space-y-1">
+                                              <p className="text-[10px] font-mono font-bold text-slate-600">
+                                                  Lat: {Number(selectedReportForReview.checkOutLocation.latitude).toFixed(6)}, Lng: {Number(selectedReportForReview.checkOutLocation.longitude).toFixed(6)}
+                                              </p>
+                                              <a 
+                                                  href={`https://www.google.com/maps?q=${selectedReportForReview.checkOutLocation.latitude},${selectedReportForReview.checkOutLocation.longitude}`}
+                                                  target="_blank" 
+                                                  rel="noreferrer" 
+                                                  className="text-[9px] font-black uppercase text-primary hover:underline flex items-center gap-1 pt-1"
+                                              >
+                                                  <ExternalLink className="size-3" /> View On Google Maps
+                                              </a>
+                                          </div>
+                                      ) : (
+                                          <p className="text-[10px] font-bold text-muted-foreground italic uppercase">Coordinates captured during clock out</p>
+                                      )}
+                                  </div>
+                              </div>
+                          </CardContent>
+                      </Card>
+
                       <Card className="bg-white border-none ring-1 ring-border/50 overflow-hidden shadow-sm rounded-none text-left"><CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Target className="size-4"/> Tomorrow</CardTitle></CardHeader><CardContent className="pt-6 space-y-4 text-left"><div className="grid grid-cols-2 gap-4"><div><p className="text-[9px] font-black uppercase text-muted-foreground">Meetings</p><p className="font-black text-sm">{selectedReportForReview?.meetingsTomorrow || 0}</p></div><div><p className="text-[9px] font-black uppercase text-muted-foreground">Support</p><p className={cn("font-black text-sm uppercase", selectedReportForReview?.interventionTrigger !== 'None' ? 'text-red-600' : 'text-emerald-600')}>{selectedReportForReview?.interventionTrigger || 'None'}</p></div></div><div><p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Goal</p><p className="text-sm font-medium italic text-slate-700">"{selectedReportForReview?.criticalPathTomorrow || 'N/A'}"</p></div></CardContent></Card>
                       <div className="pt-10 flex flex-col items-center text-center space-y-6"><div className="h-20 w-48 border-b-2 border-dashed border-primary/20 flex flex-col items-center justify-center">{selectedReportForReview?.signatureUrl ? (<img src={selectedReportForReview.signatureUrl} alt="Signature" className="h-16 object-contain" />) : (<span className="font-mono text-[10px] italic opacity-60 uppercase">Verified</span>)}</div><div className="space-y-1"><p className="text-sm font-black uppercase tracking-tighter">{selectedReportForReview?.employeeName}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedReportForReview?.employeeJobTitle}</p></div></div></div></ScrollArea></DialogContent>
       </Dialog>

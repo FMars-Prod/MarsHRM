@@ -57,6 +57,7 @@ const userSchema = z.object({
   leaveBalance: z.any().optional().default(0),
   payrollAmount: z.any().optional().default(0),
   reportingHeadIds: z.array(z.string()).default([]),
+  attendanceMode: z.enum(['default', 'direct', 'strict']).default('default'),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -117,7 +118,7 @@ export default function UsersPage() {
       branchId: "", shiftType: "General Shift",
       employmentType: "Employee", role: "Member", password: "", isWfhAllowed: false, isDemoAccount: false,
       homeLatitude: "", homeLongitude: "", homeRadius: 0.5,
-      performanceRating: "Good", leaveBalance: 0, payrollAmount: 0, reportingHeadIds: []
+      performanceRating: "Good", leaveBalance: 0, payrollAmount: 0, reportingHeadIds: [], attendanceMode: "default"
     },
   });
 
@@ -591,6 +592,27 @@ export default function UsersPage() {
                                 <Separator className="my-4 opacity-50" />
                                 
                                 <div className="space-y-4">
+                                    <div className="space-y-2 text-left p-4 bg-muted/10 border border-border/50">
+                                        <FormLabel className="text-[10px] font-black uppercase text-primary tracking-widest">Attendance & Geofence Mode</FormLabel>
+                                        <FormField control={form.control} name="attendanceMode" render={({ field }) => (
+                                            <FormItem>
+                                                <Select onValueChange={field.onChange} value={field.value || "default"}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="rounded-none h-12 font-bold text-sm bg-white border-none ring-1 ring-border/50">
+                                                            <SelectValue placeholder="Select Mode" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent className="rounded-none">
+                                                        <SelectItem value="default">Inherit System Default (Follows Global Setting)</SelectItem>
+                                                        <SelectItem value="direct">Direct Attendance (Always Clock In/Out without approval)</SelectItem>
+                                                        <SelectItem value="strict">Strict / Require Approval (Always submit reason if outside)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormItem>
+                                        )} />
+                                        <p className="text-[9px] text-muted-foreground uppercase font-bold opacity-70">Controls whether this user clocks in/out directly or submits an approval request when outside work location.</p>
+                                    </div>
+
                                     <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
                                         <div className="space-y-0.5 text-left">
                                             <Label className="text-sm font-black uppercase tracking-tight">Allow Work From Home</Label>

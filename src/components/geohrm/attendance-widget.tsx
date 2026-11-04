@@ -102,6 +102,13 @@ export function AttendanceWidget() {
     return { name: "Office", lat: Number(globalLocationData?.latitude || 13.0827), lng: Number(globalLocationData?.longitude || 80.2707), radius: Number(globalLocationData?.maxDistanceKm || 0.5), type: 'office' };
   }, [branchData, globalLocationData, userData, activeWfhToday]);
 
+
+  const isDirectAttendanceActive = useMemo(() => {
+    if (userData?.attendanceMode === 'direct') return true;
+    if (userData?.attendanceMode === 'strict') return false;
+    return !!globalLocationData?.directAttendanceEnabled;
+  }, [userData?.attendanceMode, globalLocationData?.directAttendanceEnabled]);
+
   const [isOutOfRangeDialogOpen, setIsOutOfRangeDialogOpen] = useState(false);
   const [outOfRangeReason, setOutOfRangeReason] = useState("");
   const [outOfRangeType, setOutOfRangeType] = useState<'Check In' | 'Clock Out'>('Check In');
@@ -181,17 +188,36 @@ export function AttendanceWidget() {
         setLastCapturedLoc(userLoc);
         const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
         setIsVerifyingLocation(false);
-        if (dist <= (activeGeofence.radius + 0.05)) {
+        const isWithinRange = dist <= (activeGeofence.radius + 0.05);
+
+        if (isWithinRange || isDirectAttendanceActive) {
             const todayId = format(new Date(), 'yyyy-MM-dd');
             setDocumentNonBlocking(getTodaysAttendanceRef!, { 
-                id: todayId, employeeId: user!.uid, checkInTime: serverTimestamp(), 
-                status: 'present', totalBreakDuration: 0, 
-                locationCheckInLatitude: userLoc.latitude, locationCheckInLongitude: userLoc.longitude, 
-                isOutOfRange: false, isAtHome: activeGeofence.type === 'wfh'
+                id: todayId, 
+                employeeId: user!.uid, 
+                checkInTime: serverTimestamp(), 
+                status: 'present', 
+                totalBreakDuration: 0, 
+                locationCheckInLatitude: userLoc.latitude, 
+                locationCheckInLongitude: userLoc.longitude, 
+                isOutOfRange: !isWithinRange, 
+                isAtHome: activeGeofence.type === 'wfh',
+                attendanceMode: isDirectAttendanceActive ? 'direct' : 'standard',
+                locationCheckInType: isWithinRange ? activeGeofence.name : 'Outside (Direct)'
             }, { merge: true });
-            toast({ title: "Clocked In" });
-        } else { setOutOfRangeType('Check In'); setIsOutOfRangeDialogOpen(true); }
-    }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Location Error" }); }, { enableHighAccuracy: true });
+
+            toast({ 
+                title: isWithinRange ? "Clocked In" : "Clocked In (Outside Office)",
+                description: isWithinRange ? undefined : "Logged in direct attendance mode."
+            });
+        } else { 
+            setOutOfRangeType('Check In'); 
+            setIsOutOfRangeDialogOpen(true); 
+        }
+    }, () => { 
+        setIsVerifyingLocation(false); 
+        toast({ variant: "destructive", title: "Location Error" }); 
+    }, { enableHighAccuracy: true });
   };
 
   const handleClockOut = async () => {
@@ -201,14 +227,27 @@ export function AttendanceWidget() {
           setLastCapturedLoc(userLoc);
           const dist = getDistanceInKm(userLoc, { latitude: activeGeofence.lat, longitude: activeGeofence.lng });
           setIsVerifyingLocation(false);
-          if (dist <= (activeGeofence.radius + 0.05)) {
+          const isWithinRange = dist <= (activeGeofence.radius + 0.05);
+
+          if (isWithinRange || isDirectAttendanceActive) {
               updateDocumentNonBlocking(getTodaysAttendanceRef!, { 
                   checkOutTime: serverTimestamp(), 
-                  locationCheckOutLatitude: p.coords.latitude, locationCheckOutLongitude: p.coords.longitude 
+                  locationCheckOutLatitude: p.coords.latitude, 
+                  locationCheckOutLongitude: p.coords.longitude,
+                  locationCheckOutType: isWithinRange ? activeGeofence.name : 'Outside (Direct)'
               });
-              toast({ title: "Clocked Out" });
-          } else { setOutOfRangeType('Clock Out'); setIsOutOfRangeDialogOpen(true); }
-      }, () => { setIsVerifyingLocation(false); toast({ variant: "destructive", title: "Location Error" }); }, { enableHighAccuracy: true });
+              toast({ 
+                  title: "Clocked Out",
+                  description: !isWithinRange && isDirectAttendanceActive ? "Logged out directly without reason box." : undefined
+              });
+          } else { 
+              setOutOfRangeType('Clock Out'); 
+              setIsOutOfRangeDialogOpen(true); 
+          }
+      }, () => { 
+          setIsVerifyingLocation(false); 
+          toast({ variant: "destructive", title: "Location Error" }); 
+      }, { enableHighAccuracy: true });
   };
 
   const handleLunchOut = () => {

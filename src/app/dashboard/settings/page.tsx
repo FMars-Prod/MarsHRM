@@ -9,7 +9,8 @@ import { doc, serverTimestamp, collection, query, orderBy } from 'firebase/fires
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin, Clock, CheckCircle2, Globe, Save, Info, Key, Map as MapIcon, CalendarClock, LocateFixed, Plus, Trash2 } from 'lucide-react';
+import { MapPin, Clock, CheckCircle2, ShieldCheck, Globe, Save, Info, Key, Map as MapIcon, CalendarClock, LocateFixed, Plus, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -33,7 +34,8 @@ export default function SettingsPage() {
         latitude: '', longitude: '', maxDistanceKm: '0.5', shiftStartTime: '09:00', shiftEndTime: '18:00',
         morningReportSlot: '09:50', eveningReportSlot: '18:50', companyName: 'FortuMars AI',
         googleMapsApiKey: 'AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI',
-        defaultLeaveEntitlement: '12'
+        defaultLeaveEntitlement: '12',
+        directAttendanceEnabled: false
     });
 
     const [newShift, setNewShift] = React.useState({ name: '', start: '09:00', end: '18:00', deadline: '18:30' });
@@ -46,7 +48,8 @@ export default function SettingsPage() {
                 longitude: locationData.longitude || '',
                 maxDistanceKm: locationData.maxDistanceKm || '0.5',
                 shiftStartTime: locationData.shiftStartTime || '09:00',
-                googleMapsApiKey: locationData.googleMapsApiKey || 'AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI'
+                googleMapsApiKey: locationData.googleMapsApiKey || 'AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI',
+                directAttendanceEnabled: locationData.directAttendanceEnabled ?? false
             }));
         }
         if (reportData?.timings) {
@@ -99,6 +102,7 @@ export default function SettingsPage() {
             maxDistanceKm: parseFloat(form.maxDistanceKm),
             shiftStartTime: form.shiftStartTime,
             googleMapsApiKey: form.googleMapsApiKey,
+            directAttendanceEnabled: !!form.directAttendanceEnabled,
             updatedAt: serverTimestamp()
         };
 
@@ -210,6 +214,32 @@ export default function SettingsPage() {
                             <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Longitude</Label><Input type="number" step="any" value={form.longitude} onChange={e => setForm({...form, longitude: e.target.value})} placeholder="e.g., 77.20" className="rounded-none h-12 font-mono" /></div>
                         </div>
                         <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-primary tracking-widest">Check-in Radius (KM)</Label><Input type="number" step="0.1" value={form.maxDistanceKm} onChange={e => setForm({...form, maxDistanceKm: e.target.value})} className="rounded-none h-12 w-full md:w-1/3" /></div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none">
+                    <CardHeader className="bg-muted/10 border-b p-8">
+                        <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter">
+                            <ShieldCheck className="size-5 text-primary" /> Attendance & Outside Geofence Mode
+                        </CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">
+                            Control whether employees outside office coordinates must submit approval or clock in directly.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-6 text-left">
+                        <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
+                            <div className="space-y-1 text-left max-w-xl">
+                                <Label className="text-sm font-black uppercase tracking-tight">Direct Outside Attendance (Bypass Approval Request)</Label>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-75">
+                                    When ON, employees outside the office check-in directly without waiting for admin approval, and clock out directly without entering a reason. When OFF, legacy request approval is required.
+                                </p>
+                            </div>
+                            <Switch 
+                                checked={form.directAttendanceEnabled} 
+                                onCheckedChange={(val) => setForm({ ...form, directAttendanceEnabled: val })}
+                                className="rounded-none ml-4" 
+                            />
+                        </div>
                     </CardContent>
                 </Card>
 
