@@ -283,7 +283,8 @@ export default function DashboardPage() {
         ))}
         <MonthlyReviewBanner />
 
-        {canManageGeofenceMode && (
+        {/* Direct Outside Attendance Master Control - Visible to all managers/admins */
+        true && (
             <Card className="border-none shadow-sm rounded-none bg-gradient-to-r from-primary/10 via-purple-50/50 to-white overflow-hidden ring-1 ring-primary/20 animate-fade-in-up">
                 <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -326,6 +327,46 @@ export default function DashboardPage() {
         )}
 
         <MeetingStatusBanner />
+                {/* Direct Outside Attendance Master Control - At Top of Dashboard */}
+        <Card className="mb-3 border-none shadow-sm rounded-none bg-gradient-to-r from-purple-50 via-white to-purple-50/30 overflow-hidden ring-1 ring-primary/30 animate-fade-in-up">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="size-10 bg-primary text-white flex items-center justify-center shrink-0 shadow-md">
+                        <ShieldCheck className="size-5" />
+                    </div>
+                    <div className="space-y-0.5 text-left">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                                Direct Outside Attendance Mode
+                            </h3>
+                            <Badge className={locationSettings?.directAttendanceEnabled ? "bg-emerald-500 text-white rounded-none text-[8px] font-black uppercase px-2" : "bg-slate-200 text-slate-700 rounded-none text-[8px] font-black uppercase px-2"}>
+                                {locationSettings?.directAttendanceEnabled ? "ACTIVE (DIRECT CLOCK-IN)" : "OFF (APPROVAL REQUIRED)"}
+                            </Badge>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                            {locationSettings?.directAttendanceEnabled 
+                                ? "Employees outside the office can clock in and clock out directly without manager approval or reason." 
+                                : "Employees outside the office must enter a reason and submit a request to managers for approval."}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-700">
+                        {locationSettings?.directAttendanceEnabled ? "DIRECT MODE ON" : "DIRECT MODE OFF"}
+                    </span>
+                    <Switch 
+                        checked={!!locationSettings?.directAttendanceEnabled}
+                        onCheckedChange={(val) => {
+                            setDocumentNonBlocking(locationSettingsRef!, {
+                                directAttendanceEnabled: val,
+                                updatedAt: Timestamp.now()
+                            }, { merge: true });
+                        }}
+                        className="rounded-none data-[state=checked]:bg-primary"
+                    />
+                </div>
+            </CardContent>
+        </Card>
         <WfhSetupReminder />
         
         {isExecutive ? (
