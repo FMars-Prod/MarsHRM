@@ -22,9 +22,11 @@ import { cn } from "@/lib/utils";
 import { 
   FileText, Briefcase, Code, Megaphone, Users, Plus, Trash2, Edit, Save, 
   CheckCircle2, Eye, ShieldCheck, Download, Upload, Copy, RefreshCw, Layers, Sparkles,
-  MapPin, LocateFixed, Navigation, ExternalLink, Activity, DollarSign, PhoneCall, Clock, FileSpreadsheet, EyeOff
+  MapPin, LocateFixed, Navigation, ExternalLink, Activity, DollarSign, PhoneCall, Clock, FileSpreadsheet, EyeOff, Share2
 } from "lucide-react";
 import { useBranding } from "@/context/branding-context";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export type FieldDefinition = {
   id: string;
@@ -539,6 +541,156 @@ export default function ReportBuilderPage() {
     setEditingTemplate({ ...editingTemplate, sections: updated });
   };
 
+  // Download Report Template Spec as PDF (Official Documentation & Shareable Spec)
+  const handleDownloadTemplatePdf = (template: ReportTemplate) => {
+    try {
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // Brand Header Banner
+      pdf.setFillColor(124, 58, 237); // Primary purple
+      pdf.rect(0, 0, pageWidth, 28, "F");
+
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(14);
+      pdf.text("MARSHRM • OFFICIAL WORKFORCE REPORT SPECIFICATION", 14, 13);
+
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`CATEGORY: ${template.category.toUpperCase()} | STATUS: ${template.isActive ? 'ACTIVE SPECIFICATION' : 'DRAFT'}`, 14, 21);
+
+      // Template Title & Overview
+      pdf.setTextColor(30, 41, 59);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(16);
+      pdf.text(template.name.toUpperCase(), 14, 40);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      pdf.setTextColor(100, 116, 139);
+      const descLines = pdf.splitTextToSize(template.description || "Official standard operational report structure.", pageWidth - 28);
+      pdf.text(descLines, 14, 48);
+
+      let currentY = 48 + descLines.length * 5 + 4;
+
+      // Summary Metric Box
+      const totalFields = template.sections.reduce((acc, s) => acc + s.fields.length, 0);
+      autoTable(pdf, {
+        startY: currentY,
+        head: [["Category", "Total Sections", "Total Input Fields", "GPS Location Stamp", "Generated Date"]],
+        body: [[
+          template.category,
+          String(template.sections.length),
+          String(totalFields),
+          "System Attached (Check-in / Check-out Coordinates)",
+          new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+        ]],
+        theme: "plain",
+        headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: "bold", fontSize: 8 },
+        bodyStyles: { textColor: [15, 23, 42], fontSize: 8, fontStyle: "bold" },
+        margin: { left: 14, right: 14 }
+      });
+
+      currentY = (pdf as any).lastAutoTable.finalY + 8;
+
+      // Iterate through sections and output table of fields
+      template.sections.forEach((sec, sIdx) => {
+        // Check if page needs to break before section
+        if (currentY > pageHeight - 40) {
+          pdf.addPage();
+          currentY = 20;
+        }
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(11);
+        pdf.setTextColor(109, 40, 217);
+        pdf.text(`SECTION ${sIdx + 1}: ${sec.title.toUpperCase()}`, 14, currentY);
+        currentY += 4;
+
+        if (sec.description) {
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(8);
+          pdf.setTextColor(100, 116, 139);
+          pdf.text(sec.description, 14, currentY);
+          currentY += 4;
+        }
+
+        const tableBody = sec.fields.map((f, fIdx) => [
+          String(fIdx + 1),
+          f.name,
+          f.type.toUpperCase(),
+          f.required ? "REQUIRED" : "OPTIONAL",
+          f.options && f.options.length > 0 ? f.options.join(", ") : (f.placeholder || "None specified")
+        ]);
+
+        autoTable(pdf, {
+          startY: currentY,
+          head: [["#", "Field Name", "Type", "Requirement", "Options / Allowed Values"]],
+          body: tableBody,
+          theme: "striped",
+          headStyles: { fillColor: [237, 233, 254], textColor: [109, 40, 217], fontSize: 8, fontStyle: "bold" },
+          bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+          columnStyles: {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 55, fontStyle: "bold" },
+            2: { cellWidth: 25 },
+            3: { cellWidth: 25 },
+            4: { cellWidth: "auto" }
+          },
+          margin: { left: 14, right: 14 },
+          didDrawPage: (data) => {
+            currentY = data.cursor?.y || currentY;
+          }
+        });
+
+        currentY = (pdf as any).lastAutoTable.finalY + 8;
+      });
+
+      // GPS Coordinates note
+      if (currentY > pageHeight - 35) {
+        pdf.addPage();
+        currentY = 20;
+      }
+      autoTable(pdf, {
+        startY: currentY,
+        head: [["System Verified Attendance Coordinates (Automatic)"]],
+        body: [[
+          "Clock-In & Clock-Out Latitude and Longitude are automatically verified and bound to every submitted report. View-on-Map coordinates ensure compliance with assigned client/office locations."
+        ]],
+        theme: "plain",
+        headStyles: { fillColor: [236, 253, 245], textColor: [6, 95, 70], fontStyle: "bold", fontSize: 8 },
+        bodyStyles: { textColor: [15, 23, 42], fontSize: 8 },
+        margin: { left: 14, right: 14 }
+      });
+
+      // Footer
+      const totalPages = pdf.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text(
+          `MarsHRM Report Specification • Page ${i} of ${totalPages} • Confidential Internal Operational Protocol`,
+          pageWidth / 2,
+          pageHeight - 8,
+          { align: "center" }
+        );
+      }
+
+      const fileName = `${template.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_specification.pdf`;
+      pdf.save(fileName);
+
+      toast({
+        title: "Report Template Downloaded",
+        description: `Exported "${template.name}" as an official PDF specification.`
+      });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "PDF Export Failed", description: e.message });
+    }
+  };
+
   const filteredTemplates = React.useMemo(() => {
     if (activeTab === "all") return templatesList;
     return templatesList.filter(t => t.category.toLowerCase() === activeTab.toLowerCase());
@@ -704,6 +856,15 @@ export default function ReportBuilderPage() {
                       </span>
 
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadTemplatePdf(template)}
+                          className="rounded-none h-8 font-black uppercase text-[9px] tracking-wider border-border hover:bg-primary/5 text-slate-700"
+                          title="Download official PDF template specification to share"
+                        >
+                          <Download className="size-3 mr-1" /> PDF Spec
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -1452,8 +1613,17 @@ export default function ReportBuilderPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-6 border-t bg-white">
-            <Button onClick={() => setIsPreviewOpen(false)} className="rounded-none h-11 px-8 font-black uppercase text-[10px] tracking-widest">
+          <DialogFooter className="p-6 border-t bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
+            {selectedTemplate && (
+              <Button 
+                variant="outline" 
+                onClick={() => handleDownloadTemplatePdf(selectedTemplate)}
+                className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest border-primary/30 text-primary hover:bg-primary/5 w-full sm:w-auto"
+              >
+                <Download className="size-4 mr-2" /> Download Report Template (PDF)
+              </Button>
+            )}
+            <Button onClick={() => setIsPreviewOpen(false)} className="rounded-none h-11 px-8 font-black uppercase text-[10px] tracking-widest w-full sm:w-auto">
               Close Preview
             </Button>
           </DialogFooter>
