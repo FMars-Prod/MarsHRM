@@ -47,6 +47,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { updateProfile, updatePassword } from "firebase/auth";
 import { useAuth } from "@/firebase";
 import { Input } from '@/components/ui/input';
+import { useBranding } from "@/context/branding-context";
 
 const profileFormSchema = z.object({
     firstName: z.string().min(1, "Required"),
@@ -215,6 +216,7 @@ const HRAuditDetail = ({ report }: { report: any }) => (
 );
 
 export default function ProfilePage() {
+    const { hideFortuMarsBranding } = useBranding();
     const { user } = useUser();
     const firestore = useFirestore();
     const auth = useAuth();
@@ -406,7 +408,9 @@ export default function ProfilePage() {
                             </div>
                             <div className="flex gap-3">
                                 <Button onClick={() => setIsProfileDialogOpen(true)} variant="outline" size="sm" className="rounded-none h-11 px-6 font-bold uppercase text-[10px] tracking-widest bg-white shadow-sm hover:shadow-md transition-all">Edit Info</Button>
-                                <Button asChild size="sm" className="rounded-none h-11 px-6 font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"><Link href="https://fortumars.com/os.html" target="_blank">Access OS</Link></Button>
+                                {!hideFortuMarsBranding && (
+                                    <Button asChild size="sm" className="rounded-none h-11 px-6 font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"><Link href="https://fortumars.com/os.html" target="_blank">Access OS</Link></Button>
+                                )}
                             </div>
                         </div>
 

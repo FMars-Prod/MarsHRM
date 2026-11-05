@@ -22,12 +22,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useBranding } from '@/context/branding-context';
 
 const carouselImageIds = ["tutorial-dashboard", "tutorial-attendance", "tutorial-leave", "tutorial-teams"];
 const carouselItems = PlaceHolderImages.filter(img => carouselImageIds.includes(img.id));
 
 
 export default function LoginPage() {
+  const { hideFortuMarsBranding } = useBranding();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -152,9 +154,11 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <p className="w-full text-center text-xs text-muted-foreground">
-              Developed by FortuMars
-            </p>
+            {!hideFortuMarsBranding && (
+              <p className="w-full text-center text-xs text-muted-foreground">
+                Developed by FortuMars
+              </p>
+            )}
           </CardFooter>
         </Card>
       </div>

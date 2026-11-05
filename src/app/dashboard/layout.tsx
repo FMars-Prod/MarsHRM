@@ -45,6 +45,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useBranding } from '@/context/branding-context';
 
 const SEARCHABLE_LINKS = [
     { label: "Dashboard", href: "/dashboard", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
@@ -250,6 +251,8 @@ export default function DashboardLayout({
     if (!isUserLoading && !user) router.push('/login');
   }, [user, isUserLoading, router]);
 
+  const { hideFortuMarsBranding } = useBranding();
+
   const handleLogout = async () => {
     if (!user) return;
     setIsLoggingOut(true);
@@ -294,15 +297,21 @@ export default function DashboardLayout({
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-purple-500 via-purple-800 to-indigo-950">
         <div className="flex flex-col items-center gap-6">
-          <div className="relative h-20 w-56 animate-pulse drop-shadow-2xl">
-            <Image
-              src="https://fortumars.com/fortumarslogo.png"
-              alt="FortuMars Logo"
-              fill
-              style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
-              priority
-            />
-          </div>
+          {!hideFortuMarsBranding ? (
+            <div className="relative h-20 w-56 animate-pulse drop-shadow-2xl">
+              <Image
+                src="https://fortumars.com/fortumarslogo.png"
+                alt="Logo"
+                fill
+                style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
+                priority
+              />
+            </div>
+          ) : (
+            <div className="size-16 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-2xl animate-pulse">
+              <Building2 className="size-8 text-white" />
+            </div>
+          )}
           <div className="space-y-2 text-center">
             <h2 className="text-white/90 text-lg font-black uppercase tracking-[0.2em] animate-fade-in-up">MarsHRM</h2>
             <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden mx-auto">
@@ -483,11 +492,13 @@ export default function DashboardLayout({
                     </Link>
                 </Button>
 
-                <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
-                    <Link href="https://fortumars.com/os.html" target="_blank">
-                        <LayoutGrid className="size-5" />
-                    </Link>
-                </Button>
+                {!hideFortuMarsBranding && (
+                  <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
+                      <Link href="https://fortumars.com/os.html" target="_blank">
+                          <LayoutGrid className="size-5" />
+                      </Link>
+                  </Button>
+                )}
 
                 <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
                     <Link href="/tutorial">
@@ -548,7 +559,7 @@ export default function DashboardLayout({
         <footer className="border-t py-4 px-6 bg-white/50 backdrop-blur-sm pointer-events-auto">
             <div className="flex items-center justify-between gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
                 <p>© {new Date().getFullYear()} MarsHRM</p>
-                <p>By FortuMars</p>
+                {!hideFortuMarsBranding && <p>By FortuMars</p>}
             </div>
         </footer>
       </SidebarInset>

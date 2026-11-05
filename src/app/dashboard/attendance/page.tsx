@@ -12,6 +12,7 @@ import { collection, query, where, Timestamp } from "firebase/firestore";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useBranding } from "@/context/branding-context";
 
 type Status = "present" | "late" | "absent" | "on_leave";
 
@@ -37,6 +38,7 @@ const statusDetails = {
 };
 
 export default function AttendancePage() {
+  const { hideFortuMarsBranding } = useBranding();
   const { user } = useUser();
   const firestore = useFirestore();
   const [date, setDate] = React.useState<Date | undefined>(new Date());
@@ -159,15 +161,21 @@ export default function AttendancePage() {
                {isLoading ? (
                  <div className="flex justify-center items-center h-[400px]">
                     <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                        <div className="relative h-12 w-40 animate-pulse">
-                            <Image
-                              src="https://fortumars.com/fortumarslogo.png"
-                              alt="FortuMars Logo"
-                              fill
-                              style={{ objectFit: 'contain' }}
-                              priority
-                            />
-                        </div>
+                        {!hideFortuMarsBranding ? (
+                          <div className="relative h-12 w-40 animate-pulse">
+                              <Image
+                                src="https://fortumars.com/fortumarslogo.png"
+                                alt="Logo"
+                                fill
+                                style={{ objectFit: 'contain' }}
+                                priority
+                              />
+                          </div>
+                        ) : (
+                          <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center animate-pulse">
+                              <Clock className="size-6 text-primary" />
+                          </div>
+                        )}
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Syncing...</p>
                     </div>
                  </div>

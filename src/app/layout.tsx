@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { BrandingProvider } from "@/context/branding-context";
 
 const fontJakarta = Plus_Jakarta_Sans({ 
   subsets: ["latin"], 
@@ -45,7 +46,9 @@ export default function RootLayout({
         )}
       >
         <FirebaseClientProvider>
-          {children}
+          <BrandingProvider>
+            {children}
+          </BrandingProvider>
         </FirebaseClientProvider>
         <Toaster />
       </body>

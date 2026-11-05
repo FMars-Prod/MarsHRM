@@ -22,8 +22,9 @@ import { cn } from "@/lib/utils";
 import { 
   FileText, Briefcase, Code, Megaphone, Users, Plus, Trash2, Edit, Save, 
   CheckCircle2, Eye, ShieldCheck, Download, Upload, Copy, RefreshCw, Layers, Sparkles,
-  MapPin, LocateFixed, Navigation, ExternalLink, Activity, DollarSign, PhoneCall, Clock, FileSpreadsheet
+  MapPin, LocateFixed, Navigation, ExternalLink, Activity, DollarSign, PhoneCall, Clock, FileSpreadsheet, EyeOff
 } from "lucide-react";
+import { useBranding } from "@/context/branding-context";
 
 export type FieldDefinition = {
   id: string;
@@ -392,6 +393,7 @@ export default function ReportBuilderPage() {
 
   const configRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
   const { data: reportConfig } = useDoc<any>(configRef);
+  const { hideFortuMarsBranding, setHideFortuMarsBranding } = useBranding();
 
   const templatesQuery = useMemoFirebase(() => query(collection(firestore, "settings", "config", "custom_report_templates")), [firestore]);
   const { data: remoteTemplates, isLoading } = useCollection<ReportTemplate>(templatesQuery);
@@ -602,6 +604,42 @@ export default function ReportBuilderPage() {
               {isFullSpecHREnabled ? "Full Spec ON" : "Standard"}
             </span>
             <Switch checked={isFullSpecHREnabled} onCheckedChange={handleToggleFullSpecHR} />
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Master Switch for White-Label / Hide FortuMars Branding */}
+      <Card className="border-none ring-1 ring-primary/20 bg-gradient-to-r from-amber-50/70 via-white to-amber-50/70 rounded-none shadow-sm text-left">
+        <CardHeader className="p-6 border-b border-amber-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-black uppercase text-amber-950 tracking-wider flex items-center gap-2">
+                <EyeOff className="size-4 text-amber-600" /> System White-Label & Clean Branding Mode
+              </CardTitle>
+              <Badge className={hideFortuMarsBranding ? "bg-amber-600 text-white rounded-none text-[8px] font-black uppercase px-2" : "bg-slate-200 text-slate-700 rounded-none text-[8px] font-black uppercase px-2"}>
+                {hideFortuMarsBranding ? "WHITE-LABEL ACTIVE" : "BRANDING VISIBLE"}
+              </Badge>
+            </div>
+            <CardDescription className="text-xs font-medium text-slate-600">
+              When enabled, "Developed by FortuMars" on Login / Forgot Password and the FortuMars watermark in loading screens, footer credits, and OS links are hidden from all user screens.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              {hideFortuMarsBranding ? "Branding Hidden" : "Visible"}
+            </span>
+            <Switch 
+              checked={hideFortuMarsBranding} 
+              onCheckedChange={async (val) => {
+                await setHideFortuMarsBranding(val);
+                toast({
+                  title: val ? "White-Label Mode Activated" : "FortuMars Branding Restored",
+                  description: val 
+                    ? "FortuMars credits and watermarks are now hidden across all pages and footers." 
+                    : "FortuMars developer branding is now visible."
+                });
+              }} 
+            />
           </div>
         </CardHeader>
       </Card>

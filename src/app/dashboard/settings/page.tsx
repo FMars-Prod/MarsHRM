@@ -13,6 +13,8 @@ import { MapPin, Clock, CheckCircle2, ShieldCheck, Globe, Save, Info, Key, Map a
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { EyeOff } from 'lucide-react';
+import { useBranding } from '@/context/branding-context';
 
 export default function SettingsPage() {
     const firestore = useFirestore();
@@ -40,6 +42,10 @@ export default function SettingsPage() {
     const personnelConfigRef = useMemoFirebase(() => doc(firestore, 'settings', 'personnel'), [firestore]);
     const { data: personnelData } = useDoc<any>(personnelConfigRef);
 
+    const brandingConfigRef = useMemoFirebase(() => doc(firestore, 'settings', 'branding'), [firestore]);
+    const { data: brandingData } = useDoc<any>(brandingConfigRef);
+    const { hideFortuMarsBranding: globalHideBranding, setHideFortuMarsBranding } = useBranding();
+
     const shiftsQuery = useMemoFirebase(() => query(collection(firestore, 'settings', 'config', 'shifts'), orderBy('name', 'asc')), [firestore]);
     const { data: shifts } = useCollection<any>(shiftsQuery);
 
@@ -48,7 +54,8 @@ export default function SettingsPage() {
         morningReportSlot: '09:50', eveningReportSlot: '18:50', companyName: 'FortuMars AI',
         googleMapsApiKey: 'AIzaSyC0ilt4E_SJSB-1l5Mlhkr-UFwlBmWkuiI',
         defaultLeaveEntitlement: '12',
-        directAttendanceEnabled: false
+        directAttendanceEnabled: false,
+        hideFortuMarsBranding: false
     });
 
     const [newShift, setNewShift] = React.useState({ name: '', start: '09:00', end: '18:00', deadline: '18:30' });
@@ -79,7 +86,18 @@ export default function SettingsPage() {
                 defaultLeaveEntitlement: personnelData.defaultLeaveEntitlement || '12'
             }));
         }
-    }, [locationData, reportData, personnelData]);
+        if (brandingData !== undefined) {
+            setForm((prev: any) => ({
+                ...prev,
+                hideFortuMarsBranding: !!brandingData?.hideFortuMarsBranding
+            }));
+        } else {
+            setForm((prev: any) => ({
+                ...prev,
+                hideFortuMarsBranding: globalHideBranding
+            }));
+        }
+    }, [locationData, reportData, personnelData, brandingData, globalHideBranding]);
 
     const handleGetCurrentLocation = () => {
         if (navigator.geolocation) {
@@ -132,9 +150,15 @@ export default function SettingsPage() {
             updatedAt: serverTimestamp()
         };
 
+        const brandingPayload = {
+            hideFortuMarsBranding: !!form.hideFortuMarsBranding,
+            updatedAt: serverTimestamp()
+        };
+
         setDocumentNonBlocking(configRef, locPayload, { merge: true });
         setDocumentNonBlocking(reportConfigRef, reportPayload, { merge: true });
         setDocumentNonBlocking(personnelConfigRef, personnelPayload, { merge: true });
+        setDocumentNonBlocking(brandingConfigRef, brandingPayload, { merge: true });
         
         toast({ title: "Settings saved" });
     };
@@ -251,6 +275,43 @@ export default function SettingsPage() {
                             <Switch 
                                 checked={form.directAttendanceEnabled} 
                                 onCheckedChange={(val) => setForm({ ...form, directAttendanceEnabled: val })}
+                                className="rounded-none ml-4" 
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+                )}
+
+                {canManageGeofenceMode && (
+                <Card className="border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none">
+                    <CardHeader className="bg-muted/10 border-b p-8">
+                        <CardTitle className="text-lg font-headline flex items-center gap-2 font-black uppercase tracking-tighter">
+                            <EyeOff className="size-5 text-primary" /> White-Label & System Branding Mode
+                        </CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest">
+                            Configure visibility of FortuMars developer credits and loading watermarks across user screens.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-6 text-left">
+                        <div className="flex items-center justify-between p-6 bg-muted/20 border border-dashed border-border/50 rounded-none">
+                            <div className="space-y-1 text-left max-w-xl">
+                                <Label className="text-sm font-black uppercase tracking-tight">Hide "Developed by FortuMars" & Brand Watermarks</Label>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold opacity-75">
+                                    When enabled, "Developed by FortuMars" on Login / Forgot Password and the FortuMars watermark in loading screens, footer, and OS links are hidden from user view.
+                                </p>
+                            </div>
+                            <Switch 
+                                checked={form.hideFortuMarsBranding} 
+                                onCheckedChange={async (val) => {
+                                    setForm((prev: any) => ({ ...prev, hideFortuMarsBranding: val }));
+                                    await setHideFortuMarsBranding(val);
+                                    toast({
+                                        title: val ? "White-Label Mode Activated" : "FortuMars Branding Restored",
+                                        description: val 
+                                            ? "FortuMars credits and watermarks are now hidden across the application." 
+                                            : "FortuMars developer branding is now visible."
+                                    });
+                                }}
                                 className="rounded-none ml-4" 
                             />
                         </div>

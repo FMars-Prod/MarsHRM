@@ -18,8 +18,10 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { useBranding } from '@/context/branding-context';
 
 export default function ForgotPasswordPage() {
+  const { hideFortuMarsBranding } = useBranding();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const { toast } = useToast();
@@ -76,9 +78,11 @@ export default function ForgotPasswordPage() {
                     Back to Sign In
                 </Button>
             </Link>
-          <p className="w-full text-center text-xs text-muted-foreground">
-            Developed by FortuMars
-          </p>
+          {!hideFortuMarsBranding && (
+            <p className="w-full text-center text-xs text-muted-foreground">
+              Developed by FortuMars
+            </p>
+          )}
         </CardFooter>
       </Card>
     </div>
