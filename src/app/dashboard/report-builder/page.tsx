@@ -27,6 +27,7 @@ import {
 import { useBranding } from "@/context/branding-context";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas";
 
 export type FieldDefinition = {
   id: string;
@@ -404,6 +405,8 @@ export default function ReportBuilderPage() {
   const [selectedTemplate, setSelectedTemplate] = React.useState<ReportTemplate | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isEditorOpen, setIsEditorOpen] = React.useState(false);
+  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
+  const previewContentRef = React.useRef<HTMLDivElement>(null);
 
   const isFullSpecEnabled = !!reportConfig?.isFullSpecBusinessEnabled;
   const isFullSpecHREnabled = !!reportConfig?.isFullSpecHREnabled;
@@ -541,7 +544,83 @@ export default function ReportBuilderPage() {
     setEditingTemplate({ ...editingTemplate, sections: updated });
   };
 
-  // Download Report Template Spec as PDF (Official Documentation & Shareable Spec)
+  // Download Report Template EXACT Visual Layout as PDF
+  const handleDownloadVisualPreviewPdf = async (template: ReportTemplate) => {
+    if (!previewContentRef.current) {
+      handleDownloadTemplatePdf(template);
+      return;
+    }
+
+    try {
+      setIsExportingPdf(true);
+      toast({
+        title: "Generating Visual PDF...",
+        description: "Capturing exact preview layout with all styling, cards, and metrics."
+      });
+
+      const element = previewContentRef.current;
+
+      // Capture with high pixel ratio for razor-sharp rendering
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 1200
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const imgWidth = pageWidth - 16; // 8mm margin on left and right
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 8; // Top margin
+
+      // Header Banner on first page
+      pdf.addImage(imgData, "PNG", 8, position, imgWidth, imgHeight);
+      heightLeft -= (pageHeight - 16);
+
+      // Subsequent pages if content overflows
+      while (heightLeft > 0) {
+        pdf.addPage();
+        position = heightLeft - imgHeight + 8;
+        pdf.addImage(imgData, "PNG", 8, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - 16);
+      }
+
+      // Add clean page numbers and MarsHRM footer on each page
+      const totalPages = pdf.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(7);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text(
+          `MarsHRM Report Layout: ${template.name.toUpperCase()} • Page ${i} of ${totalPages} • Exact User Submission Protocol`,
+          pageWidth / 2,
+          pageHeight - 4,
+          { align: "center" }
+        );
+      }
+
+      const fileName = `${template.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_preview_layout.pdf`;
+      pdf.save(fileName);
+
+      toast({
+        title: "Visual PDF Downloaded",
+        description: `Successfully exported exact visual report layout for "${template.name}".`
+      });
+    } catch (e: any) {
+      console.error("Visual PDF capture failed, falling back to structured PDF:", e);
+      handleDownloadTemplatePdf(template);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleDownloadTemplatePdf = (template: ReportTemplate) => {
     try {
       const pdf = new jsPDF();
@@ -911,8 +990,26 @@ export default function ReportBuilderPage() {
           </DialogHeader>
 
           <ScrollArea className="flex-1 p-8 bg-muted/5 text-left">
-            <div className="space-y-6 max-w-3xl mx-auto text-left">
+            <div ref={previewContentRef} className="space-y-6 max-w-3xl mx-auto text-left p-6 bg-white rounded-none border border-slate-200/80 shadow-sm">
               
+              {/* BRAND HEADER FOR VISUAL EXPORT */}
+              <div className="border-b pb-4 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="size-5 text-primary" />
+                    <h2 className="text-base font-black uppercase tracking-tight text-primary">
+                      DAILY REPORT: {selectedTemplate?.name}
+                    </h2>
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">
+                    EXACT USER-SIDE SUBMISSION LAYOUT • {selectedTemplate?.category}
+                  </p>
+                </div>
+                <Badge className="bg-primary text-white text-[8px] font-black uppercase px-2.5 py-1 rounded-none border-none">
+                  OFFICIAL PROTOCOL
+                </Badge>
+              </div>
+
               {/* DETAILS (SHIFT TIMINGS) */}
               <div className="space-y-3">
                 <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">DETAILS</span>
@@ -1617,10 +1714,12 @@ export default function ReportBuilderPage() {
             {selectedTemplate && (
               <Button 
                 variant="outline" 
-                onClick={() => handleDownloadTemplatePdf(selectedTemplate)}
-                className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest border-primary/30 text-primary hover:bg-primary/5 w-full sm:w-auto"
+                disabled={isExportingPdf}
+                onClick={() => handleDownloadVisualPreviewPdf(selectedTemplate)}
+                className="rounded-none h-11 px-6 font-black uppercase text-[10px] tracking-widest border-primary text-primary hover:bg-primary/5 w-full sm:w-auto shadow-sm"
               >
-                <Download className="size-4 mr-2" /> Download Report Template (PDF)
+                <Download className="size-4 mr-2" /> 
+                {isExportingPdf ? "Generating PDF..." : "Download Exact Preview (PDF)"}
               </Button>
             )}
             <Button onClick={() => setIsPreviewOpen(false)} className="rounded-none h-11 px-8 font-black uppercase text-[10px] tracking-widest w-full sm:w-auto">
