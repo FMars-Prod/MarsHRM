@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList, Building2, ChevronRight, MapPin, LocateFixed, Navigation, FileSpreadsheet, ShieldAlert, AlertCircle, ShieldCheck } from "lucide-react";
+import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList, Building2, ChevronRight, MapPin, LocateFixed, Navigation, FileSpreadsheet, ShieldAlert, AlertCircle, ShieldCheck, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -229,13 +229,70 @@ const TechnicalAuditDetailComp = ({ report }: { report: any }) => (
 );
 
 const HRAuditDetailComp = ({ report }: { report: any }) => (
-    <div className="space-y-8">
+    <div className="space-y-8 text-left">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-6 bg-primary text-white rounded-none shadow-xl flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest opacity-60">Sourced</span><span className="text-3xl font-black">{report.resumesSourced || 0}</span></div>
             <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Interviews</span><span className="text-3xl font-black text-emerald-600">{report.interviewsScheduled || 0}</span></div>
             <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Hired</span><span className="text-3xl font-black text-indigo-600">{report.hiredToday || 0}</span></div>
             <div className="p-6 bg-white rounded-none ring-1 ring-border shadow-sm flex flex-col items-center justify-center"><span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Docs</span><span className="text-3xl font-black">{report.documentationCompleted || 0}</span></div>
         </div>
+
+        {/* Full Spec 12-Stage Candidate Funnel Details */}
+        {(report.candidatesConnected || report.screeningsCompleted || report.candidatesOnboarded) && (
+            <div className="p-4 bg-muted/10 border space-y-2">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest">Candidate Funnel Breakdown</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold text-slate-700">
+                    <p>Connected Calls: {report.candidatesConnected || 0}</p>
+                    <p>Screenings: {report.screeningsCompleted || 0}</p>
+                    <p>Round 1 Selected: {report.candidatesSelectedR1 || 0}</p>
+                    <p>Final Selected: {report.candidatesSelectedFinal || 0}</p>
+                    <p>Onboarded: {report.candidatesOnboarded || 0}</p>
+                    <p>Awaiting Joining: {report.candidatesAwaitingJoining || 0}</p>
+                </div>
+            </div>
+        )}
+
+        {/* BDE Team Monitoring & Feedback PDFs */}
+        {report.bdeFeedbackRecords?.length > 0 && (
+            <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                    <PhoneCall className="size-4" /> BDE Team Feedback & Call Barging Reports
+                </p>
+                <div className="grid gap-3">
+                    {report.bdeFeedbackRecords.map((bde: any, i: number) => (
+                        <div key={i} className="p-4 bg-white border border-border/60 rounded-none space-y-2">
+                            <div className="flex items-center justify-between border-b pb-1.5">
+                                <span className="font-black text-xs uppercase text-slate-900">{bde.bdeEmployeeName}</span>
+                                <Badge variant="outline" className="text-[8px] uppercase font-black">Reviewed: {bde.recordedCalls || 0} | Barged: {bde.liveCallsBarged || 0}</Badge>
+                            </div>
+                            {bde.observations && <p className="text-xs text-slate-600"><strong>Observations:</strong> {bde.observations}</p>}
+                            {bde.feedbackPdfUrl && (
+                                <a href={bde.feedbackPdfUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-black text-rose-600 hover:underline pt-1">
+                                    <FileText className="size-3.5" /> Download BDE Feedback PDF ({bde.feedbackPdfName || 'feedback.pdf'})
+                                </a>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
+
+        {/* Tasks Logged */}
+        {report.hrTasks?.length > 0 && (
+            <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                    <ClipboardList className="size-4" /> HR Daily Tasks Executed
+                </p>
+                <div className="grid gap-2">
+                    {report.hrTasks.map((t: any, i: number) => (
+                        <div key={i} className="p-3 bg-white border flex items-center justify-between">
+                            <div><p className="font-bold text-xs uppercase">{t.task}</p><p className="text-[9px] text-muted-foreground uppercase">{t.description || 'No description'}</p></div>
+                            <Badge className="rounded-none text-[8px] uppercase">{t.status || 'Done'}</Badge>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
 
         {report.consultancies?.length > 0 && (
             <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><Building2 className="size-4"/> Consultancies</p>
@@ -247,17 +304,8 @@ const HRAuditDetailComp = ({ report }: { report: any }) => (
                 ))}</div>
             </div>
         )}
-
-        {report.campusDrives?.length > 0 && (
-            <div className="space-y-4"><p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><GraduationCap className="size-4"/> Campus Drives</p>
-                <div className="grid gap-2">{report.campusDrives.map((c: any, i: number) => (
-                    <div key={i} className="p-4 bg-white border border-border/50 flex justify-between items-center rounded-none shadow-sm"><span className="font-bold text-sm uppercase">{c.instituteName}</span><Badge variant="outline" className="rounded-none text-[8px] font-black uppercase">{c.status}</Badge></div>
-                ))}</div>
-            </div>
-        )}
     </div>
 );
-
 
 const LiveLocationDisplayInForm = () => {
     const { user } = useUser();
@@ -1006,11 +1054,53 @@ const DigitalMarketingFields = () => {
 };
 
 const HRReportFields = () => {
-    const { control } = useFormContext();
+    const { control, setValue } = useFormContext();
+    const firestore = useFirestore();
+    const storage = useStorage();
+    const { user } = useUser();
+    const { toast } = useToast();
+
+    // Watch master switch from settings/report_templates
+    const templateConfigRef = useMemoFirebase(() => doc(firestore, 'settings', 'report_templates'), [firestore]);
+    const { data: templateConfig } = useDoc<any>(templateConfigRef);
+    const isFullSpec = !!templateConfig?.isFullSpecHREnabled;
+
+    // Classic standard fields arrays
     const { fields: consultancyFields, append: addConsultancy, remove: removeConsultancy } = useFieldArray({ control, name: "consultancies" });
     const { fields: taskFields, append: addTask, remove: removeTask } = useFieldArray({ control, name: "otherTasks" });
-
     const consultancyCount = useWatch({ control, name: "consultancyCount" });
+
+    // Full spec arrays
+    const { fields: hrTaskFields, append: addHrTask, remove: removeHrTask } = useFieldArray({ control, name: "hrTasks" });
+    const { fields: bdeFeedbackFields, append: addBdeFeedback, remove: removeBdeFeedback } = useFieldArray({ control, name: "bdeFeedbackRecords" });
+    const { fields: pendingTaskFields, append: addPendingTask, remove: removePendingTask } = useFieldArray({ control, name: "pendingTasksList" });
+
+    // Fetch team members for BDE and assigned-to dropdowns
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, "users")), [firestore]);
+    const { data: allUsers } = useCollection<any>(usersQuery);
+
+    const [uploadingBdeIndex, setUploadingBdeIndex] = React.useState<number | null>(null);
+
+    const handlePdfUpload = async (file: File, index: number) => {
+        if (!file.name.toLowerCase().endsWith(".pdf")) {
+            toast({ variant: "destructive", title: "Invalid File Type", description: "Only PDF format is accepted for BDE feedback." });
+            return;
+        }
+        if (!user || !storage) return;
+        setUploadingBdeIndex(index);
+        try {
+            const storageRef = ref(storage, `hr_bde_feedback/${user.uid}/${Date.now()}-${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(snapshot.ref);
+            setValue(`bdeFeedbackRecords.${index}.feedbackPdfUrl`, url);
+            setValue(`bdeFeedbackRecords.${index}.feedbackPdfName`, file.name);
+            toast({ title: "Feedback PDF Attached", description: file.name });
+        } catch (err: any) {
+            toast({ variant: "destructive", title: "Upload Failed", description: err.message });
+        } finally {
+            setUploadingBdeIndex(null);
+        }
+    };
 
     React.useEffect(() => {
         const count = parseInt(consultancyCount) || 0;
@@ -1022,65 +1112,358 @@ const HRReportFields = () => {
         }
     }, [consultancyCount, addConsultancy, removeConsultancy, consultancyFields.length]);
 
+    if (!isFullSpec) {
+        return (
+            <div className="space-y-8 text-left">
+                <ShiftHeaderFields />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="p-6 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm text-center space-y-2">
+                        <p className="text-[9px] font-black uppercase text-primary tracking-widest">Sourced</p>
+                        <FormField control={control} name="resumesSourced" render={({ field }) => (
+                            <FormControl><Input type="number" min="0" {...field} className="text-3xl font-black text-center border-none h-10 focus-visible:ring-0" /></FormControl>
+                        )} />
+                    </Card>
+                    <Card className="p-6 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm text-center space-y-2">
+                        <p className="text-[9px] font-black uppercase text-emerald-600 tracking-widest">Interviews</p>
+                        <FormField control={control} name="interviewsScheduled" render={({ field }) => (
+                            <FormControl><Input type="number" min="0" {...field} className="text-3xl font-black text-center border-none h-10 text-emerald-700 focus-visible:ring-0" /></FormControl>
+                        )} />
+                    </Card>
+                    <Card className="p-6 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm text-center space-y-2">
+                        <p className="text-[9px] font-black uppercase text-indigo-600 tracking-widest">Hired</p>
+                        <FormField control={control} name="hiredToday" render={({ field }) => (
+                            <FormControl><Input type="number" min="0" {...field} className="text-3xl font-black text-center border-none h-10 text-indigo-700 focus-visible:ring-0" /></FormControl>
+                        )} />
+                    </Card>
+                </div>
+
+                <Card className="border-none ring-1 ring-border/50 rounded-none shadow-sm bg-white overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Building2 className="size-4"/> Agencies</CardTitle></CardHeader>
+                    <CardContent className="pt-6 space-y-6 text-left">
+                        <FormField control={control} name="consultancyCount" render={({ field }) => (
+                            <FormItem className="max-w-[200px] text-left">
+                                <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Number</FormLabel>
+                                <FormControl><Input type="number" min="0" {...field} className="h-10 rounded-none" /></FormControl>
+                            </FormItem>
+                        )} />
+                        {consultancyFields.length > 0 && (
+                            <div className="grid gap-3">
+                                {consultancyFields.map((field, index) => (
+                                    <div key={field.id} className="space-y-1.5 text-left">
+                                        <Label className="text-[8px] font-black uppercase opacity-40">Name #{index + 1}</Label>
+                                        <FormField control={control} name={`consultancies.${index}.name`} render={({ field }) => (<FormControl><Input {...field} className="h-10 rounded-none" /></FormControl>)} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card className="border-none ring-1 ring-border/50 rounded-none shadow-sm bg-white overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><ClipboardList className="size-4"/> Tasks</CardTitle></CardHeader>
+                    <CardContent className="pt-6 space-y-4 text-left">
+                        {taskFields.map((field, index) => (
+                            <div key={field.id} className="flex gap-2 group text-left">
+                                <FormField control={control} name={`otherTasks.${index}.content`} render={({ field }) => (
+                                    <FormControl><Input {...field} placeholder="Task..." className="h-10 rounded-none" /></FormControl>
+                                )} />
+                                <Button type="button" variant="ghost" size="icon" onClick={() => removeTask(index)} className="h-10 w-10 text-rose-500 shrink-0"><X className="size-4"/></Button>
+                            </div>
+                        ))}
+                        <Button type="button" variant="outline" onClick={() => addTask({ content: "" })} className="w-full h-10 rounded-none border-dashed border-primary/40 font-black uppercase text-[8px] tracking-widest">Add Task</Button>
+                    </CardContent>
+                </Card>
+
+                <ExecutionPlanFields />
+            </div>
+        );
+    }
+
+    // FULL SPEC HR PROTOCOL
     return (
         <div className="space-y-8 text-left">
             <ShiftHeaderFields />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="p-6 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm text-center space-y-2">
-                    <p className="text-[9px] font-black uppercase text-primary tracking-widest">Sourced</p>
-                    <FormField control={control} name="resumesSourced" render={({ field }) => (
-                        <FormControl><Input type="number" min="0" {...field} className="text-3xl font-black text-center border-none h-10 focus-visible:ring-0" /></FormControl>
-                    )} />
-                </Card>
-                <Card className="p-6 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm text-center space-y-2">
-                    <p className="text-[9px] font-black uppercase text-emerald-600 tracking-widest">Interviews</p>
-                    <FormField control={control} name="interviewsScheduled" render={({ field }) => (
-                        <FormControl><Input type="number" min="0" {...field} className="text-3xl font-black text-center border-none h-10 text-emerald-700 focus-visible:ring-0" /></FormControl>
-                    )} />
-                </Card>
-                <Card className="p-6 bg-white border-none ring-1 ring-border/50 rounded-none shadow-sm text-center space-y-2">
-                    <p className="text-[9px] font-black uppercase text-indigo-600 tracking-widest">Hired</p>
-                    <FormField control={control} name="hiredToday" render={({ field }) => (
-                        <FormControl><Input type="number" min="0" {...field} className="text-3xl font-black text-center border-none h-10 text-indigo-700 focus-visible:ring-0" /></FormControl>
-                    )} />
-                </Card>
-            </div>
-
-            <Card className="border-none ring-1 ring-border/50 rounded-none shadow-sm bg-white overflow-hidden text-left">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><Building2 className="size-4"/> Agencies</CardTitle></CardHeader>
-                <CardContent className="pt-6 space-y-6 text-left">
-                    <FormField control={control} name="consultancyCount" render={({ field }) => (
-                        <FormItem className="max-w-[200px] text-left">
-                            <FormLabel className="text-[9px] uppercase font-black text-muted-foreground">Number</FormLabel>
-                            <FormControl><Input type="number" min="0" {...field} className="h-10 rounded-none" /></FormControl>
-                        </FormItem>
-                    )} />
-                    {consultancyFields.length > 0 && (
-                        <div className="grid gap-3">
-                            {consultancyFields.map((field, index) => (
-                                <div key={field.id} className="space-y-1.5 text-left">
-                                    <Label className="text-[8px] font-black uppercase opacity-40">Name #{index + 1}</Label>
-                                    <FormField control={control} name={`consultancies.${index}.name`} render={({ field }) => (<FormControl><Input {...field} className="h-10 rounded-none" /></FormControl>)} />
+            {/* 1️⃣ DAILY TASK MANAGEMENT & EXECUTION */}
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
+                <CardHeader className="bg-muted/10 py-3 flex flex-row items-center justify-between">
+                    <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <CheckCircle2 className="size-4" /> 1️⃣ Daily Task Management & Execution
+                    </CardTitle>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addHrTask({ task: "", assignedBy: "", priority: "Medium", status: "In Progress", description: "", reasonPending: "" })} className="rounded-none h-7 text-[8px] font-black uppercase tracking-wider border-primary/30 text-primary">
+                        + Add Task
+                    </Button>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4 text-left">
+                    {hrTaskFields.length === 0 ? (
+                        <p className="text-xs font-bold text-muted-foreground uppercase italic p-4 text-center border border-dashed">
+                            No tasks recorded. Click "+ Add Task" to document morning meeting instructions.
+                        </p>
+                    ) : hrTaskFields.map((f, i) => (
+                        <div key={f.id} className="p-4 bg-white border border-border/60 rounded-none space-y-3 relative text-left">
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeHrTask(i)} className="absolute top-2 right-2 text-rose-500 h-6 w-6"><X className="size-3"/></Button>
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-left">
+                                <div className="sm:col-span-6 space-y-1">
+                                    <Label className="text-[8px] font-black uppercase text-muted-foreground">Task / Activity *</Label>
+                                    <FormField control={control} name={`hrTasks.${i}.task`} render={({ field }) => (<FormControl><Input placeholder="Task description..." {...field} className="h-9 rounded-none text-xs font-bold" /></FormControl>)} />
                                 </div>
-                            ))}
+                                <div className="sm:col-span-3 space-y-1">
+                                    <Label className="text-[8px] font-black uppercase text-muted-foreground">Priority</Label>
+                                    <FormField control={control} name={`hrTasks.${i}.priority`} render={({ field }) => (
+                                        <Select onValueChange={field.onChange} value={field.value || 'Medium'}><FormControl><SelectTrigger className="h-9 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="High">High</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Low">Low</SelectItem></SelectContent></Select>
+                                    )} />
+                                </div>
+                                <div className="sm:col-span-3 space-y-1">
+                                    <Label className="text-[8px] font-black uppercase text-muted-foreground">Status</Label>
+                                    <FormField control={control} name={`hrTasks.${i}.status`} render={({ field }) => (
+                                        <Select onValueChange={field.onChange} value={field.value || 'In Progress'}><FormControl><SelectTrigger className="h-9 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Completed">Completed</SelectItem><SelectItem value="In Progress">In Progress</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="On Hold">On Hold</SelectItem><SelectItem value="Cancelled">Cancelled</SelectItem></SelectContent></Select>
+                                    )} />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label className="text-[8px] font-black uppercase text-muted-foreground">Assigned By</Label>
+                                    <FormField control={control} name={`hrTasks.${i}.assignedBy`} render={({ field }) => (
+                                        <Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="h-9 rounded-none text-xs"><SelectValue placeholder="Select assigner" /></SelectTrigger></FormControl><SelectContent className="rounded-none">{allUsers?.map(u => <SelectItem key={u.id} value={`${u.firstName} ${u.lastName}`}>{u.firstName} {u.lastName} ({u.jobTitle})</SelectItem>)}</SelectContent></Select>
+                                    )} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-[8px] font-black uppercase text-muted-foreground">Work Description / Outcome</Label>
+                                    <FormField control={control} name={`hrTasks.${i}.description`} render={({ field }) => (<FormControl><Input placeholder="Outcome details..." {...field} className="h-9 rounded-none text-xs" /></FormControl>)} />
+                                </div>
+                            </div>
                         </div>
-                    )}
+                    ))}
                 </CardContent>
             </Card>
 
-            <Card className="border-none ring-1 ring-border/50 rounded-none shadow-sm bg-white overflow-hidden text-left">
-                <CardHeader className="bg-muted/10 py-3"><CardTitle className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><ClipboardList className="size-4"/> Tasks</CardTitle></CardHeader>
+            {/* 2️⃣ RECRUITMENT & CANDIDATE FUNNEL */}
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
+                <CardHeader className="bg-muted/10 py-3">
+                    <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <Users className="size-4" /> 2️⃣ Recruitment & Candidate Funnel (12 Stages)
+                    </CardTitle>
+                </CardHeader>
                 <CardContent className="pt-6 space-y-4 text-left">
-                    {taskFields.map((field, index) => (
-                        <div key={field.id} className="flex gap-2 group text-left">
-                            <FormField control={control} name={`otherTasks.${index}.content`} render={({ field }) => (
-                                <FormControl><Input {...field} placeholder="Task..." className="h-10 rounded-none" /></FormControl>
-                            )} />
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeTask(index)} className="h-10 w-10 text-rose-500 shrink-0"><X className="size-4"/></Button>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-left">
+                        {[
+                            { name: "resumesSourced", label: "Resumes Sourced" },
+                            { name: "candidatesConnected", label: "Connected Calls" },
+                            { name: "followUpCallsConducted", label: "Follow-up Calls" },
+                            { name: "screeningsCompleted", label: "Screenings Completed" },
+                            { name: "interviewsScheduled", label: "Interviews Round 1" },
+                            { name: "candidatesSelectedR1", label: "Selected Round 1" },
+                            { name: "interviewsScheduledR2", label: "Interviews Final" },
+                            { name: "candidatesSelectedFinal", label: "Selected Final" },
+                            { name: "documentationCompleted", label: "Completed Docs" },
+                            { name: "candidatesOnboarded", label: "Onboarded" },
+                            { name: "hiredToday", label: "Successfully Joined" },
+                            { name: "candidatesAwaitingJoining", label: "Awaiting Joining" }
+                        ].map(item => (
+                            <div key={item.name} className="p-3 bg-white border border-border/60 rounded-none space-y-1">
+                                <Label className="text-[8px] font-black uppercase text-muted-foreground">{item.label}</Label>
+                                <FormField control={control} name={item.name} render={({ field }) => (
+                                    <FormControl><Input type="number" min="0" {...field} className="h-9 rounded-none text-center font-black text-sm bg-muted/5" /></FormControl>
+                                )} />
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* 3️⃣ BDE TEAM MANAGEMENT & CALL MONITORING */}
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
+                <CardHeader className="bg-muted/10 py-3 flex flex-row items-center justify-between">
+                    <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <PhoneCall className="size-4" /> 3️⃣ BDE Team Management & Call Monitoring
+                    </CardTitle>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addBdeFeedback({ bdeEmployeeId: "", bdeEmployeeName: "", recordedCalls: "0", liveCallsBarged: "0", feedbackProvided: "Yes", observations: "", improvementAreas: "", feedbackPdfUrl: "", feedbackPdfName: "" })} className="rounded-none h-7 text-[8px] font-black uppercase tracking-wider border-rose-200 text-rose-700">
+                        + Add BDE Feedback Record
+                    </Button>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-5 text-left">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="p-3 bg-white border space-y-1">
+                            <Label className="text-[8px] font-black uppercase text-muted-foreground">BDEs Handling</Label>
+                            <FormField control={control} name="totalBdeHandled" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-center font-bold" /></FormControl>)} />
                         </div>
-                    ))}
-                    <Button type="button" variant="outline" onClick={() => addTask({ content: "" })} className="w-full h-10 rounded-none border-dashed border-primary/40 font-black uppercase text-[8px] tracking-widest">Add Task</Button>
+                        <div className="p-3 bg-white border space-y-1">
+                            <Label className="text-[8px] font-black uppercase text-muted-foreground">Login Meetings</Label>
+                            <FormField control={control} name="bdeLoginMeetings" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-center font-bold" /></FormControl>)} />
+                        </div>
+                        <div className="p-3 bg-white border space-y-1">
+                            <Label className="text-[8px] font-black uppercase text-muted-foreground">Day-End Meetings</Label>
+                            <FormField control={control} name="bdeDayEndMeetings" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-center font-bold" /></FormControl>)} />
+                        </div>
+                        <div className="p-3 bg-white border space-y-1">
+                            <Label className="text-[8px] font-black uppercase text-muted-foreground">Queries Resolved</Label>
+                            <FormField control={control} name="bdeQueriesResolved" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-center font-bold" /></FormControl>)} />
+                        </div>
+                    </div>
+
+                    {/* Feedback Repeater */}
+                    <div className="space-y-3 pt-2">
+                        <Label className="text-[9px] font-black uppercase text-slate-800 tracking-wider">
+                            Individual Monitored BDE Feedback Records (PDF Upload Required)
+                        </Label>
+                        {bdeFeedbackFields.map((f, i) => (
+                            <div key={f.id} className="p-4 bg-white border border-rose-200 rounded-none space-y-3 relative text-left">
+                                <Button type="button" variant="ghost" size="icon" onClick={() => removeBdeFeedback(i)} className="absolute top-2 right-2 text-rose-500 h-6 w-6"><X className="size-3"/></Button>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-[8px] font-black uppercase text-muted-foreground">BDE Employee Name *</Label>
+                                        <FormField control={control} name={`bdeFeedbackRecords.${i}.bdeEmployeeName`} render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="h-9 rounded-none text-xs"><SelectValue placeholder="Select BDE..." /></SelectTrigger></FormControl><SelectContent className="rounded-none">{allUsers?.filter(u => u.department === 'Business' || u.jobTitle?.includes('Business') || u.jobTitle?.includes('BDE')).map(u => <SelectItem key={u.id} value={`${u.firstName} ${u.lastName}`}>{u.firstName} {u.lastName}</SelectItem>)}</SelectContent></Select>
+                                        )} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[8px] font-black uppercase text-muted-foreground">Calls Reviewed</Label>
+                                        <FormField control={control} name={`bdeFeedbackRecords.${i}.recordedCalls`} render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-9 rounded-none" /></FormControl>)} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[8px] font-black uppercase text-muted-foreground">Live Calls Barged</Label>
+                                        <FormField control={control} name={`bdeFeedbackRecords.${i}.liveCallsBarged`} render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-9 rounded-none" /></FormControl>)} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-[8px] font-black uppercase text-muted-foreground">Performance Observation</Label>
+                                        <FormField control={control} name={`bdeFeedbackRecords.${i}.observations`} render={({ field }) => (<FormControl><Input placeholder="Key strengths/notes..." {...field} className="h-9 rounded-none text-xs" /></FormControl>)} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[8px] font-black uppercase text-muted-foreground">Areas Requiring Improvement</Label>
+                                        <FormField control={control} name={`bdeFeedbackRecords.${i}.improvementAreas`} render={({ field }) => (<FormControl><Input placeholder="Guidance given..." {...field} className="h-9 rounded-none text-xs" /></FormControl>)} />
+                                    </div>
+                                </div>
+                                {/* PDF Uploader */}
+                                <div className="p-3 bg-muted/20 border border-dashed border-border/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="size-4 text-rose-600 shrink-0" />
+                                        <div>
+                                            <p className="text-[9px] font-black uppercase text-slate-800">
+                                                Individual Feedback Report (PDF Format Only) *
+                                            </p>
+                                            <FormField control={control} name={`bdeFeedbackRecords.${i}.feedbackPdfName`} render={({ field }) => (
+                                                <p className="text-[9px] font-mono text-muted-foreground">{field.value || "No PDF attached"}</p>
+                                            )} />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="file"
+                                            accept="application/pdf"
+                                            id={`bde-pdf-${i}`}
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handlePdfUpload(file, i);
+                                            }}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={uploadingBdeIndex === i}
+                                            onClick={() => document.getElementById(`bde-pdf-${i}`)?.click()}
+                                            className="rounded-none h-8 text-[8px] font-black uppercase tracking-wider bg-white"
+                                        >
+                                            <Upload className="size-3 mr-1" />
+                                            {uploadingBdeIndex === i ? "Uploading..." : "Upload Feedback PDF"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* 4️⃣ TRAINING, HR OPERATIONS & CAMPUS OUTREACH */}
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
+                <CardHeader className="bg-muted/10 py-3">
+                    <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <Briefcase className="size-4" /> 4️⃣ Training, Operations & Campus Outreach
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-5 text-left">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 bg-white border space-y-2">
+                            <span className="text-[9px] font-black uppercase text-primary">Training Program</span>
+                            <FormField control={control} name="trainingType" render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || 'Onboarding Training'}><FormControl><SelectTrigger className="h-8 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none">{["Onboarding Training", "Employee Upskilling Training", "Product & Process Training", "Professional Development", "Compliance & Policy", "Client Handling Training", "Other"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                            )} />
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                                <div><Label className="text-[7px] uppercase font-bold text-muted-foreground">Conducted</Label><FormField control={control} name="trainingConducted" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-xs" /></FormControl>)} /></div>
+                                <div><Label className="text-[7px] uppercase font-bold text-muted-foreground">Attendees</Label><FormField control={control} name="trainingAttendees" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-xs" /></FormControl>)} /></div>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-white border space-y-2">
+                            <span className="text-[9px] font-black uppercase text-primary">HR Documentation Ops</span>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div><Label className="text-[7px] uppercase font-bold text-muted-foreground">Docs Collected</Label><FormField control={control} name="docsCollected" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-xs" /></FormControl>)} /></div>
+                                <div><Label className="text-[7px] uppercase font-bold text-muted-foreground">Offer Letters</Label><FormField control={control} name="offerLettersIssued" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-xs" /></FormControl>)} /></div>
+                                <div><Label className="text-[7px] uppercase font-bold text-muted-foreground">Appointments</Label><FormField control={control} name="appointmentLettersIssued" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-xs" /></FormControl>)} /></div>
+                                <div><Label className="text-[7px] uppercase font-bold text-muted-foreground">Attendance Verified</Label><FormField control={control} name="attendanceVerified" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-xs" /></FormControl>)} /></div>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-white border space-y-2">
+                            <span className="text-[9px] font-black uppercase text-primary">Campus Outreach</span>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div><Label className="text-[7px] uppercase font-bold text-muted-foreground">Colleges Contacted</Label><FormField control={control} name="collegesContacted" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-xs" /></FormControl>)} /></div>
+                                <div><Label className="text-[7px] uppercase font-bold text-muted-foreground">Campus Drives</Label><FormField control={control} name="campusDrivesCoordinated" render={({ field }) => (<FormControl><Input type="number" min="0" {...field} className="h-8 rounded-none text-xs" /></FormControl>)} /></div>
+                            </div>
+                            <FormField control={control} name="outreachStatus" render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || 'Initial Contact Completed'}><FormControl><SelectTrigger className="h-8 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none">{["Initial Contact Completed", "Awaiting Response", "Follow-up Required", "Meeting Scheduled", "Collaboration in Progress", "Collaboration Confirmed", "Nil"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                            )} />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* 5️⃣ ACCOUNTABILITY, PENDING TASKS & ESCALATIONS */}
+            <Card className="bg-gradient-to-br from-primary/5 to-transparent border-none ring-1 ring-border/50 shadow-sm overflow-hidden rounded-none text-left">
+                <CardHeader className="bg-muted/10 py-3">
+                    <CardTitle className="text-[10px] font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+                        <Clock className="size-4" /> 5️⃣ Daily Communication Accountability & Escalations
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4 text-left">
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="p-3 bg-white border text-center space-y-1">
+                            <p className="text-[8px] font-black uppercase text-muted-foreground">9:05 AM Login Meeting</p>
+                            <FormField control={control} name="loginMeeting905" render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || 'Attended'}><FormControl><SelectTrigger className="h-8 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Attended">Attended</SelectItem><SelectItem value="Not Attended">Not Attended</SelectItem></SelectContent></Select>
+                            )} />
+                        </div>
+                        <div className="p-3 bg-white border text-center space-y-1">
+                            <p className="text-[8px] font-black uppercase text-muted-foreground">11:00 AM Work Update</p>
+                            <FormField control={control} name="workUpdate1100" render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || 'Submitted'}><FormControl><SelectTrigger className="h-8 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Submitted">Submitted</SelectItem><SelectItem value="Not Submitted">Not Submitted</SelectItem></SelectContent></Select>
+                            )} />
+                        </div>
+                        <div className="p-3 bg-white border text-center space-y-1">
+                            <p className="text-[8px] font-black uppercase text-muted-foreground">12:55 PM Pre-Lunch Update</p>
+                            <FormField control={control} name="progressUpdate1255" render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || 'Submitted'}><FormControl><SelectTrigger className="h-8 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none"><SelectItem value="Submitted">Submitted</SelectItem><SelectItem value="Not Submitted">Not Submitted</SelectItem></SelectContent></Select>
+                            )} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-1">
+                            <Label className="text-[8px] font-black uppercase text-muted-foreground">Challenge / Escalation Category</Label>
+                            <FormField control={control} name="challengeCategory" render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || 'No Challenges'}><FormControl><SelectTrigger className="h-9 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none">{["No Challenges", "Recruitment / Candidate Response", "Employee Coordination", "BDE Performance / Call Monitoring", "Attendance / HRM Issues", "Documentation", "Training / Development", "Institutional Coordination", "Technical / System", "Management Dependency", "Other"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                            )} />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[8px] font-black uppercase text-muted-foreground">Escalation Status</Label>
+                            <FormField control={control} name="escalationStatus" render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || 'Not Required'}><FormControl><SelectTrigger className="h-9 rounded-none text-xs"><SelectValue /></SelectTrigger></FormControl><SelectContent className="rounded-none">{["Not Required", "Resolved Independently", "Escalated to HR Manager", "Escalated to Management", "Awaiting Resolution"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                            )} />
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 

@@ -261,6 +261,103 @@ const INITIAL_SYSTEM_TEMPLATES: ReportTemplate[] = [
     ]
   },
   {
+    id: "hr-full-spec-template",
+    name: "HR Operations & BDE Governance (Full Spec)",
+    category: "HR",
+    description: "Complete 12-section operational protocol: Task Management, 12-Stage Recruitment, BDE Team Call Monitoring with Feedback PDF Upload, Training, HR Ops, Campus Outreach, Accountability, Pending Tasks & Escalations.",
+    isActive: true,
+    sections: [
+      {
+        id: "daily-tasks",
+        title: "1️⃣ Daily Task Management & Execution",
+        description: "Task tracking with status, priority, description, and pending/hold reasons",
+        fields: [
+          { id: "taskActivity", name: "Task / Activity", type: "text", required: true },
+          { id: "taskAssignedBy", name: "Assigned By", type: "text" },
+          { id: "taskPriority", name: "Priority", type: "select", options: ["High", "Medium", "Low"] },
+          { id: "taskStatus", name: "Task Status", type: "select", options: ["Completed", "In Progress", "Pending", "On Hold", "Cancelled"] }
+        ]
+      },
+      {
+        id: "recruitment-candidate",
+        title: "2️⃣ Recruitment & Candidate Funnel",
+        description: "12-stage candidate lifecycle from sourcing to onboarding and joining",
+        fields: [
+          { id: "resumesSourced", name: "Candidate Resumes Sourced", type: "number", defaultValue: 0 },
+          { id: "candidatesConnected", name: "Candidates Contacted (Connected Calls)", type: "number", defaultValue: 0 },
+          { id: "followUpCallsConducted", name: "Follow-up Calls Conducted", type: "number", defaultValue: 0 },
+          { id: "screeningsCompleted", name: "Screening Completed", type: "number", defaultValue: 0 },
+          { id: "interviewsScheduled", name: "Interviews Scheduled (Round 1)", type: "number", defaultValue: 0 },
+          { id: "candidatesSelectedR1", name: "Candidates Selected (Round 1)", type: "number", defaultValue: 0 },
+          { id: "interviewsScheduledR2", name: "Interviews Scheduled (Final Round)", type: "number", defaultValue: 0 },
+          { id: "candidatesSelectedFinal", name: "Candidates Selected (Final Round)", type: "number", defaultValue: 0 },
+          { id: "documentationCompleted", name: "Completed Documentation", type: "number", defaultValue: 0 },
+          { id: "candidatesOnboarded", name: "Candidates Onboarded", type: "number", defaultValue: 0 },
+          { id: "hiredToday", name: "Successfully Joined", type: "number", defaultValue: 0 },
+          { id: "candidatesAwaitingJoining", name: "Awaiting Joining", type: "number", defaultValue: 0 }
+        ]
+      },
+      {
+        id: "bde-governance",
+        title: "3️⃣ BDE Team Management & Call Monitoring",
+        description: "BDE supervision metrics + Individual employee call review records with mandatory Feedback PDF",
+        fields: [
+          { id: "totalBdeHandled", name: "Total BDE Executives Handling", type: "number", defaultValue: 0 },
+          { id: "bdeLoginMeetings", name: "BDE Login Meetings Conducted", type: "number", defaultValue: 0 },
+          { id: "bdeDayEndMeetings", name: "BDE Day-End Meetings Conducted", type: "number", defaultValue: 0 },
+          { id: "bdeQueriesResolved", name: "BDE Queries Resolved", type: "number", defaultValue: 0 },
+          { id: "bdeFeedbackPdfUrl", name: "Mandatory Individual BDE Feedback PDF", type: "text" }
+        ]
+      },
+      {
+        id: "training-development",
+        title: "4️⃣ Training & Employee Development",
+        description: "Training programs, sessions conducted, attendee counts, and activity status",
+        fields: [
+          { id: "trainingType", name: "Training Type", type: "select", options: ["Onboarding Training", "Employee Upskilling Training", "Product & Process Training", "Professional Development", "Compliance & Policy", "Client Handling Training", "Other"] },
+          { id: "trainingConducted", name: "Sessions Conducted", type: "number", defaultValue: 0 },
+          { id: "trainingAttendees", name: "Employees Attended", type: "number", defaultValue: 0 },
+          { id: "trainingStatus", name: "Activity Status", type: "select", options: ["Completed", "In Progress", "Scheduled", "Pending", "Cancelled", "Nil"] }
+        ]
+      },
+      {
+        id: "hr-operations",
+        title: "5️⃣ HR Operations & Documentation",
+        description: "Verification of documentation, offer & appointment letters, and attendance records",
+        fields: [
+          { id: "docsCollected", name: "Employee Documents Collected", type: "number", defaultValue: 0 },
+          { id: "recordsUpdated", name: "Employee Records Updated", type: "number", defaultValue: 0 },
+          { id: "offerLettersIssued", name: "Offer Letters Issued", type: "number", defaultValue: 0 },
+          { id: "appointmentLettersIssued", name: "Appointment Letters Issued", type: "number", defaultValue: 0 },
+          { id: "attendanceVerified", name: "Attendance Records Verified", type: "number", defaultValue: 0 }
+        ]
+      },
+      {
+        id: "institutional-outreach",
+        title: "6️⃣ Campus Recruitment & Institutional Outreach",
+        description: "College partnerships, drives coordinated, and MoU status",
+        fields: [
+          { id: "collegesContacted", name: "Colleges Contacted", type: "number", defaultValue: 0 },
+          { id: "collegesResponded", name: "Colleges Responded", type: "number", defaultValue: 0 },
+          { id: "campusDrivesCoordinated", name: "Campus Drives Coordinated", type: "number", defaultValue: 0 },
+          { id: "outreachStatus", name: "Outreach Status", type: "select", options: ["Initial Contact Completed", "Awaiting Response", "Follow-up Required", "Meeting Scheduled", "Collaboration in Progress", "Collaboration Confirmed", "Nil"] }
+        ]
+      },
+      {
+        id: "accountability-pending",
+        title: "7️⃣ Daily Communication, Pending Tasks & Escalations",
+        description: "Check-in accountability, pending responsibilities carried forward, and management escalations",
+        fields: [
+          { id: "loginMeeting905", name: "9:05 AM Login Meeting Attended", type: "select", options: ["Attended", "Not Attended"] },
+          { id: "workUpdate1100", name: "11:00 AM Work Update Submitted", type: "select", options: ["Submitted", "Not Submitted"] },
+          { id: "progressUpdate1255", name: "12:55 PM Pre-Lunch Progress", type: "select", options: ["Submitted", "Not Submitted"] },
+          { id: "challengeCategory", name: "Challenge / Escalation Category", type: "select", options: ["No Challenges", "Recruitment / Candidate Response", "BDE Performance / Call Monitoring", "Attendance / HRM Issues", "Documentation", "Training / Development", "Institutional Coordination", "Technical / System", "Management Dependency", "Other"] },
+          { id: "escalationStatus", name: "Escalation Status", type: "select", options: ["Not Required", "Resolved Independently", "Escalated to HR Manager", "Escalated to Management", "Awaiting Resolution"] }
+        ]
+      }
+    ]
+  },
+  {
     id: "hr-report-template",
     name: "HR Talent & Operations",
     category: "HR",
@@ -305,6 +402,21 @@ export default function ReportBuilderPage() {
   const [isEditorOpen, setIsEditorOpen] = React.useState(false);
 
   const isFullSpecEnabled = !!reportConfig?.isFullSpecBusinessEnabled;
+  const isFullSpecHREnabled = !!reportConfig?.isFullSpecHREnabled;
+
+  const handleToggleFullSpecHR = async (checked: boolean) => {
+    try {
+      await setDocumentNonBlocking(configRef, { isFullSpecHREnabled: checked }, { merge: true });
+      toast({
+        title: checked ? "HR Full Spec Governance Mode Activated" : "Standard HR Mode Activated",
+        description: checked 
+          ? "HR team members will now submit under the 12-section protocol (BDE call barging, feedback PDFs, and candidate pipeline)."
+          : "HR team members will submit under the classic lightweight format."
+      });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    }
+  };
 
   const handleToggleFullSpec = async (checked: boolean) => {
     try {
@@ -465,6 +577,31 @@ export default function ReportBuilderPage() {
               {isFullSpecEnabled ? "Full Spec ON" : "Standard"}
             </span>
             <Switch checked={isFullSpecEnabled} onCheckedChange={handleToggleFullSpec} />
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Master Switch for HR Full Specification Mode */}
+      <Card className="border-none ring-1 ring-primary/20 bg-gradient-to-r from-blue-50/70 via-white to-blue-50/70 rounded-none shadow-sm text-left">
+        <CardHeader className="p-6 border-b border-blue-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-black uppercase text-blue-950 tracking-wider flex items-center gap-2">
+                <Sparkles className="size-4 text-blue-600" /> Comprehensive HR Operations & BDE Governance Mode
+              </CardTitle>
+              <Badge className={isFullSpecHREnabled ? "bg-emerald-600 text-white rounded-none text-[8px] font-black uppercase px-2" : "bg-slate-200 text-slate-700 rounded-none text-[8px] font-black uppercase px-2"}>
+                {isFullSpecHREnabled ? "HR FULL SPEC ACTIVE" : "STANDARD HR MODE"}
+              </Badge>
+            </div>
+            <CardDescription className="text-xs font-medium text-slate-600">
+              When enabled, HR team members submit under the full 12-section operational protocol (BDE supervision, call barging, mandatory Feedback PDFs, 12-stage candidate funnel, training, and pending task accountability). If disabled, the classic standard format is preserved without conflicts.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              {isFullSpecHREnabled ? "Full Spec ON" : "Standard"}
+            </span>
+            <Switch checked={isFullSpecHREnabled} onCheckedChange={handleToggleFullSpecHR} />
           </div>
         </CardHeader>
       </Card>
@@ -966,6 +1103,156 @@ export default function ReportBuilderPage() {
                         <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">SUPPORT NEEDED</Label><div className="h-11 border bg-white flex items-center px-3 font-bold text-xs uppercase text-slate-700">None</div></div>
                       </div>
                       <div className="space-y-1"><Label className="text-[9px] uppercase font-black text-muted-foreground">MAIN GOAL / DELIVERABLE</Label><div className="min-h-[70px] border bg-white p-3 text-xs text-muted-foreground font-bold">Key tasks planned for tomorrow...</div></div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : selectedTemplate?.id === "hr-full-spec-template" ? (
+                <div className="space-y-6">
+                  {/* 1. DAILY TASK MANAGEMENT */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <CheckCircle2 className="size-4" /> 1️⃣ DAILY TASK MANAGEMENT & EXECUTION
+                        </span>
+                        <Badge className="bg-primary/10 text-primary border border-primary/20 text-[8px] font-black uppercase rounded-none">
+                          Multi-Task Tracking
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4 text-left">
+                      <div className="p-4 border bg-white space-y-3">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <span className="text-xs font-black uppercase text-slate-900">Conduct BDE Login Strategy & Daily Target Alignment</span>
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-emerald-100 text-emerald-900 border">Priority: High • Status: Completed</span>
+                        </div>
+                        <p className="text-xs text-slate-700 font-bold">Assigned By: Management • Outcome: Sourced 15 new candidate leads & aligned 90-call targets.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 2. RECRUITMENT & CANDIDATE FUNNEL */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <Users className="size-4" /> 2️⃣ RECRUITMENT & CANDIDATE FUNNEL (12 STAGES)
+                        </span>
+                        <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[8px] font-black uppercase rounded-none">
+                          Pipeline Health
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4 text-left">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Resumes Sourced</p><p className="text-xl font-black text-primary mt-0.5">35</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Connected Calls</p><p className="text-xl font-black text-primary mt-0.5">24</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Follow-up Calls</p><p className="text-xl font-black text-primary mt-0.5">18</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Screenings Done</p><p className="text-xl font-black text-primary mt-0.5">12</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">1st Round Scheduled</p><p className="text-xl font-black text-primary mt-0.5">6</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">1st Round Selected</p><p className="text-xl font-black text-emerald-600 mt-0.5">4</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Final Round Scheduled</p><p className="text-xl font-black text-primary mt-0.5">3</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Final Round Selected</p><p className="text-xl font-black text-emerald-600 mt-0.5">2</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Documentation Completed</p><p className="text-xl font-black text-slate-900 mt-0.5">2</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Candidates Onboarded</p><p className="text-xl font-black text-indigo-600 mt-0.5">1</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Successfully Joined</p><p className="text-xl font-black text-emerald-600 mt-0.5">1</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Awaiting Joining</p><p className="text-xl font-black text-amber-600 mt-0.5">1</p></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 3. BDE TEAM GOVERNANCE & CALL MONITORING */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <PhoneCall className="size-4" /> 3️⃣ BDE TEAM MANAGEMENT & CALL MONITORING
+                        </span>
+                        <Badge className="bg-rose-50 text-rose-800 border-rose-200 text-[8px] font-black uppercase rounded-none">
+                          Mandatory PDF Upload
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4 text-left">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">BDEs Handled</p><p className="text-xl font-black text-primary mt-0.5">5</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Login Meetings</p><p className="text-xl font-black text-primary mt-0.5">1</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Day-End Meetings</p><p className="text-xl font-black text-primary mt-0.5">1</p></div>
+                        <div className="p-3 border bg-white text-center"><p className="text-[8px] font-black text-muted-foreground uppercase">Queries Resolved</p><p className="text-xl font-black text-emerald-600 mt-0.5">4</p></div>
+                      </div>
+
+                      {/* Monitored employee review card */}
+                      <div className="p-4 border bg-white space-y-2">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <span className="text-xs font-black uppercase text-slate-900">BDE Executive: Business Executive 1</span>
+                          <Badge className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase rounded-none">Feedback Provided: Yes</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-xs font-bold text-slate-700">
+                          <p>Recorded Calls Reviewed: 6</p>
+                          <p>Live Calls Barged: 3</p>
+                        </div>
+                        <p className="text-xs text-slate-600"><strong>Observations:</strong> Good pitch cadence; handled pricing objection smoothly.</p>
+                        <div className="pt-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileText className="size-4 text-rose-600" />
+                            <span className="text-xs font-mono font-bold text-slate-800">BDE_Feedback_Report_BDE1.pdf</span>
+                          </div>
+                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[7px] font-black uppercase rounded-none px-2 py-0.5">PDF Attached & Verified</Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 4. TRAINING & OPERATIONS */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <Briefcase className="size-4" /> 4️⃣ TRAINING, HR OPERATIONS & CAMPUS OUTREACH
+                        </span>
+                        <Badge className="bg-primary/10 text-primary border border-primary/20 text-[8px] font-black uppercase rounded-none">
+                          Operations Matrix
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4 text-left">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 border bg-white space-y-1">
+                          <span className="text-[9px] font-black uppercase text-primary">Training Program</span>
+                          <p className="text-xs font-bold text-slate-900">Product & Process Training • 1 Session Conducted (8 Attendees)</p>
+                          <Badge className="bg-emerald-100 text-emerald-800 text-[7px] font-black uppercase rounded-none">Status: Completed</Badge>
+                        </div>
+                        <div className="p-4 border bg-white space-y-1">
+                          <span className="text-[9px] font-black uppercase text-primary">HR Documentation Ops</span>
+                          <p className="text-xs font-bold text-slate-900">3 Offer Letters Released • 15 Attendance Records Verified</p>
+                          <Badge className="bg-blue-100 text-blue-800 text-[7px] font-black uppercase rounded-none">All Records Updated</Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 5. ACCOUNTABILITY & ESCALATIONS */}
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border ring-1 ring-border/50 shadow-sm rounded-none overflow-hidden text-left">
+                    <CardHeader className="bg-muted/10 py-3 px-4 border-b">
+                      <CardTitle className="text-[10px] font-black flex items-center justify-between text-primary uppercase tracking-widest">
+                        <span className="flex items-center gap-2">
+                          <Clock className="size-4" /> 5️⃣ ACCOUNTABILITY, PENDING RESPONSIBILITIES & ESCALATIONS
+                        </span>
+                        <Badge className="bg-primary/10 text-primary border border-primary/20 text-[8px] font-black uppercase rounded-none">
+                          Audited
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4 text-left">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="p-3 border bg-emerald-50/50 border-emerald-200 text-center"><p className="text-[8px] font-black text-emerald-900 uppercase">9:05 AM Login Sync</p><p className="text-xs font-black text-emerald-700 mt-1">✓ Attended</p></div>
+                        <div className="p-3 border bg-emerald-50/50 border-emerald-200 text-center"><p className="text-[8px] font-black text-emerald-900 uppercase">11:00 AM Update</p><p className="text-xs font-black text-emerald-700 mt-1">✓ Submitted</p></div>
+                        <div className="p-3 border bg-emerald-50/50 border-emerald-200 text-center"><p className="text-[8px] font-black text-emerald-900 uppercase">12:55 PM Pre-Lunch</p><p className="text-xs font-black text-emerald-700 mt-1">✓ Submitted</p></div>
+                      </div>
+                      <div className="p-4 border bg-blue-50/30 border-blue-200 space-y-1">
+                        <p className="text-[9px] font-black uppercase text-blue-900">Challenges / Escalations Status</p>
+                        <p className="text-xs font-bold text-blue-950">No critical blockers. Sourcing velocity on track for campus drive next week.</p>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
