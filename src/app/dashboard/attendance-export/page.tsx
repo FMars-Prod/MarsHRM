@@ -9,16 +9,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
 import { collection, query, where, getDocs, collectionGroup, doc, Timestamp, orderBy } from "firebase/firestore";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, isValid, differenceInSeconds } from "date-fns";
 import { 
-  Download, FileSpreadsheet, Calendar, Search, Filter, RefreshCw, 
-  MapPin, Clock, UserCheck, AlertCircle, CheckCircle2, ShieldCheck, Users, Building2 
+  Download, FileSpreadsheet, FileDown, Calendar, Search, Filter, RefreshCw, 
+  MapPin, Clock, UserCheck, AlertCircle, CheckCircle2, ShieldCheck, Users, Building2,
+  BarChart3, PieChart as PieChartIcon, TrendingUp, Activity, CheckSquare
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { 
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+  PieChart, Pie, Cell, AreaChart, Area
+} from "recharts";
 import { cn } from "@/lib/utils";
+
+const COLORS = ["#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#ec4899", "#6366f1"];
 
 export default function AttendanceExportPage() {
   const { user: currentUser } = useUser();
@@ -45,6 +55,7 @@ export default function AttendanceExportPage() {
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>("all");
   const [selectedEmployeeId, setSelectedEmployeeId] = React.useState<string>("all");
   const [searchQuery, setSearchQuery] = React.useState<string>("");
+  const [viewTab, setViewTab] = React.useState<string>("records");
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [attendanceRecords, setAttendanceRecords] = React.useState<any[]>([]);
@@ -70,7 +81,6 @@ export default function AttendanceExportPage() {
       const start = startOfDay(new Date(startDateStr));
       const end = endOfDay(new Date(endDateStr));
 
-      // Query all attendances in range across all users
       const attQuery = query(
         collectionGroup(firestore, "attendances"),
         where("checkInTime", ">=", Timestamp.fromDate(start)),
@@ -84,23 +94,20 @@ export default function AttendanceExportPage() {
       const rows: any[] = [];
       snap.docs.forEach(docSnap => {
         const data = docSnap.data();
-        const empId = data.employeeId || docSnap.ref.parent.parent?.id;
+        const empId = data.employeeId || docSnap.ref.parent.parent?.id || "unknown";
         const emp = userMap.get(empId) || {};
 
-        // Parse timestamps
         const checkIn = data.checkInTime instanceof Timestamp ? data.checkInTime.toDate() : (data.checkInTime ? new Date(data.checkInTime) : null);
         const checkOut = data.checkOutTime instanceof Timestamp ? data.checkOutTime.toDate() : (data.checkOutTime ? new Date(data.checkOutTime) : null);
         const lunchOut = data.lunchOutTime instanceof Timestamp ? data.lunchOutTime.toDate() : (data.lunchOutTime ? new Date(data.lunchOutTime) : null);
         const lunchIn = data.lunchInTime instanceof Timestamp ? data.lunchInTime.toDate() : (data.lunchInTime ? new Date(data.lunchInTime) : null);
 
-        // Compute total work hours
-        let totalHours = 0;
+        let totalHoursNum = 0;
         if (checkIn && checkOut) {
           const diffSec = differenceInSeconds(checkOut, checkIn) - (data.totalBreakDuration || 0);
-          totalHours = Math.max(0, diffSec / 3600);
+          totalHoursNum = Math.max(0, diffSec / 3600);
         }
 
-        // Location verification
         const checkInLat = data.locationCheckInLatitude != null ? Number(data.locationCheckInLatitude).toFixed(5) : "";
         const checkInLng = data.locationCheckInLongitude != null ? Number(data.locationCheckInLongitude).toFixed(5) : "";
         const checkOutLat = data.locationCheckOutLatitude != null ? Number(data.locationCheckOutLatitude).toFixed(5) : "";
@@ -127,7 +134,8 @@ export default function AttendanceExportPage() {
           checkOutTime: checkOut ? format(checkOut, "HH:mm:ss") : "--",
           lunchOutTime: lunchOut ? format(lunchOut, "HH:mm:ss") : "--",
           lunchInTime: lunchIn ? format(lunchIn, "HH:mm:ss") : "--",
-          totalHours: totalHours > 0 ? totalHours.toFixed(2) : "--",
+          totalHours: totalHoursNum > 0 ? totalHoursNum.toFixed(2) : "--",
+          totalHoursNum,
           breakDurationMinutes: data.totalBreakDuration ? Math.round(data.totalBreakDuration / 60) : 0,
           locationType,
           checkInCoords: checkInLat ? `${checkInLat}, ${checkInLng}` : "",
@@ -136,7 +144,6 @@ export default function AttendanceExportPage() {
         });
       });
 
-      // Sort by date desc
       rows.sort((a, b) => b.dateStr.localeCompare(a.dateStr));
       setAttendanceRecords(rows);
     } catch (e: any) {
@@ -167,6 +174,67 @@ export default function AttendanceExportPage() {
       return true;
     });
   }, [attendanceRecords, selectedDepartment, selectedEmployeeId, searchQuery]);
+
+  // VISUALIZATION AGGREGATIONS
+  // 1. Daily Attendance Trend
+  const dailyTrendData = React.useMemo(() => {
+    const map = new Map<string, { date: string, present: number, late: number, outOfRange: number }>();
+    filteredRecords.forEach(r => {
+      const d = r.dateFormatted;
+      if (!map.has(d)) {
+        map.set(d, { date: d, present: 0, late: 0, outOfRange: 0 });
+      }
+      const entry = map.get(d)!;
+      if (r.status === "present") entry.present++;
+      else if (r.status === "late") entry.late++;
+      if (r.isOutOfRange) entry.outOfRange++;
+    });
+    return Array.from(map.values()).reverse();
+  }, [filteredRecords]);
+
+  // 2. Department Breakdown
+  const departmentBreakdown = React.useMemo(() => {
+    const map = new Map<string, { name: string, count: number, totalHours: number }>();
+    filteredRecords.forEach(r => {
+      const dept = r.department || "General";
+      if (!map.has(dept)) {
+        map.set(dept, { name: dept, count: 0, totalHours: 0 });
+      }
+      const entry = map.get(dept)!;
+      entry.count++;
+      entry.totalHours += r.totalHoursNum || 0;
+    });
+    return Array.from(map.values());
+  }, [filteredRecords]);
+
+  // 3. Status Distribution
+  const statusPieData = React.useMemo(() => {
+    const present = filteredRecords.filter(r => r.status === "present").length;
+    const late = filteredRecords.filter(r => r.status === "late").length;
+    const outOfRange = filteredRecords.filter(r => r.isOutOfRange).length;
+    return [
+      { name: "Present (In Geofence)", value: Math.max(0, present - outOfRange) },
+      { name: "Late Arrivals", value: late },
+      { name: "Outside Geofence", value: outOfRange }
+    ].filter(item => item.value > 0);
+  }, [filteredRecords]);
+
+  // 4. Top Employees by Working Hours
+  const topWorkingEmployees = React.useMemo(() => {
+    const map = new Map<string, { name: string, department: string, hours: number, shifts: number }>();
+    filteredRecords.forEach(r => {
+      if (!map.has(r.employeeName)) {
+        map.set(r.employeeName, { name: r.employeeName, department: r.department, hours: 0, shifts: 0 });
+      }
+      const entry = map.get(r.employeeName)!;
+      entry.hours += r.totalHoursNum || 0;
+      entry.shifts++;
+    });
+    return Array.from(map.values())
+      .map(e => ({ ...e, hours: Number(e.hours.toFixed(1)) }))
+      .sort((a, b) => b.hours - a.hours)
+      .slice(0, 7);
+  }, [filteredRecords]);
 
   // Download Excel (.xlsx)
   const handleExportExcel = () => {
@@ -199,7 +267,6 @@ export default function AttendanceExportPage() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance_Report");
 
-    // Auto-fit column width
     const maxWidths = Object.keys(excelData[0] || {}).map(key => ({
       wch: Math.max(key.length + 4, 16)
     }));
@@ -211,6 +278,65 @@ export default function AttendanceExportPage() {
     toast({
       title: "Export Complete",
       description: `Downloaded ${filteredRecords.length} attendance rows to ${filename}`
+    });
+  };
+
+  // Download PDF Report
+  const handleExportPdf = () => {
+    if (filteredRecords.length === 0) {
+      toast({ variant: "destructive", title: "No Records", description: "No attendance records available for the selected range." });
+      return;
+    }
+
+    const pdfDoc = new jsPDF({ orientation: "landscape" });
+
+    // Header styling
+    pdfDoc.setFontSize(16);
+    pdfDoc.setTextColor(88, 28, 135); // primary purple
+    pdfDoc.text("MarsHRM - Organization Attendance Audit Report", 14, 18);
+
+    pdfDoc.setFontSize(9);
+    pdfDoc.setTextColor(100);
+    pdfDoc.text(`Generated on: ${format(new Date(), "dd MMM yyyy HH:mm")} IST | Range: ${startDateStr} to ${endDateStr} | Total Records: ${filteredRecords.length}`, 14, 25);
+
+    const tableBody = filteredRecords.map(r => [
+      r.dateFormatted,
+      r.employeeName,
+      r.department,
+      r.status.toUpperCase(),
+      r.checkInTime,
+      r.checkOutTime,
+      `${r.totalHours} hrs`,
+      r.locationType,
+      r.checkInCoords || "--"
+    ]);
+
+    autoTable(pdfDoc, {
+      startY: 30,
+      head: [["Date", "Employee", "Department", "Status", "Check-In", "Check-Out", "Work Hours", "Location", "GPS Coords"]],
+      body: tableBody,
+      theme: "grid",
+      headStyles: {
+        fillColor: [109, 40, 217], // purple
+        textColor: 255,
+        fontSize: 8,
+        fontStyle: "bold"
+      },
+      styles: {
+        fontSize: 7,
+        cellPadding: 2
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      }
+    });
+
+    const filename = `Attendance_Audit_Report_${startDateStr}_to_${endDateStr}.pdf`;
+    pdfDoc.save(filename);
+
+    toast({
+      title: "PDF Download Complete",
+      description: `Saved ${filename} successfully.`
     });
   };
 
@@ -242,10 +368,10 @@ export default function AttendanceExportPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-fade-in-up pb-20 font-jakarta text-left">
       <PageHeader
-        title="Attendance Records Export"
-        description="Comprehensive attendance audit log and Excel report generation synced live with geofence, clock times, break intervals, and employee profiles."
+        title="Attendance Records & Visual Analytics"
+        description="Comprehensive attendance audit log, visual KPI graphs, and Excel/PDF export synced live with geofence, clock times, break intervals, and employee profiles."
       >
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button
             onClick={fetchAttendance}
             variant="outline"
@@ -254,6 +380,14 @@ export default function AttendanceExportPage() {
           >
             <RefreshCw className={cn("size-4 mr-2", isLoading && "animate-spin")} />
             Sync Database
+          </Button>
+          <Button
+            onClick={handleExportPdf}
+            disabled={filteredRecords.length === 0 || isLoading}
+            className="rounded-none h-11 px-5 font-black uppercase text-[10px] tracking-widest bg-rose-600 hover:bg-rose-700 text-white shadow-lg"
+          >
+            <FileDown className="size-4 mr-2" />
+            Download PDF
           </Button>
           <Button
             onClick={handleExportExcel}
@@ -393,106 +527,237 @@ export default function AttendanceExportPage() {
         </div>
       </div>
 
-      {/* ATTENDANCE DATA TABLE */}
-      <Card className="border-none ring-1 ring-border/50 bg-white rounded-none shadow-sm overflow-hidden text-left">
-        <CardHeader className="bg-muted/10 p-4 border-b flex flex-row items-center justify-between">
-          <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
-            <FileSpreadsheet className="size-4 text-emerald-600" /> Synced Attendance Database Records
-          </CardTitle>
-          <Badge className="bg-emerald-100 text-emerald-800 rounded-none border-none text-[8px] font-black uppercase px-2 py-0.5">
-            Excel Ready
-          </Badge>
-        </CardHeader>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/20">
-              <TableRow>
-                <TableHead className="font-black uppercase text-[9px] py-4 px-6">Date</TableHead>
-                <TableHead className="font-black uppercase text-[9px] py-4">Employee</TableHead>
-                <TableHead className="font-black uppercase text-[9px] py-4">Department</TableHead>
-                <TableHead className="font-black uppercase text-[9px] py-4">Status</TableHead>
-                <TableHead className="font-black uppercase text-[9px] py-4">Check-In</TableHead>
-                <TableHead className="font-black uppercase text-[9px] py-4">Check-Out</TableHead>
-                <TableHead className="font-black uppercase text-[9px] py-4">Break (Mins)</TableHead>
-                <TableHead className="font-black uppercase text-[9px] py-4">Work Hours</TableHead>
-                <TableHead className="font-black uppercase text-[9px] py-4 px-6">Location Verification</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-48 text-center animate-pulse uppercase font-black text-xs text-muted-foreground">
-                    Syncing Attendance Records from Cloud Firestore...
-                  </TableCell>
-                </TableRow>
-              ) : filteredRecords.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-48 text-center uppercase font-bold text-xs text-muted-foreground italic">
-                    No attendance records found for the selected query.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredRecords.map((row) => (
-                  <TableRow key={row.id} className="border-border/50 hover:bg-muted/5 transition-colors">
-                    <TableCell className="font-mono text-xs font-bold py-4 px-6 text-slate-800">
-                      {row.dateFormatted}
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <div>
-                        <p className="font-black text-xs uppercase text-slate-900">{row.employeeName}</p>
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase">{row.jobTitle}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs font-bold uppercase text-slate-700 py-4">
-                      {row.department}
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <Badge className={cn(
-                        "rounded-none text-[8px] font-black uppercase px-2 py-0.5 border-none",
-                        row.status === "present" ? "bg-emerald-100 text-emerald-800" :
-                        row.status === "late" ? "bg-amber-100 text-amber-800" :
-                        "bg-rose-100 text-rose-800"
-                      )}>
-                        {row.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs font-bold py-4 text-emerald-700">
-                      {row.checkInTime}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs font-bold py-4 text-rose-700">
-                      {row.checkOutTime}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs font-bold py-4 text-slate-700">
-                      {row.breakDurationMinutes}m
-                    </TableCell>
-                    <TableCell className="font-mono text-xs font-black py-4 text-primary">
-                      {row.totalHours !== "--" ? `${row.totalHours} hrs` : "--"}
-                    </TableCell>
-                    <TableCell className="py-4 px-6">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className={cn(
-                            "text-[8px] font-black uppercase px-1.5 py-0.5 rounded-none",
-                            row.isOutOfRange ? "bg-amber-100 text-amber-800" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          )}>
-                            {row.locationType}
-                          </span>
-                        </div>
-                        {row.checkInCoords && (
-                          <p className="text-[8px] font-mono text-muted-foreground font-bold">
-                            {row.checkInCoords}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
+      {/* VIEW TABS: VISUAL METRICS VS DATA TABLE */}
+      <Tabs value={viewTab} onValueChange={setViewTab} className="w-full space-y-6">
+        <TabsList className="bg-white border rounded-none p-1 h-12 shadow-sm">
+          <TabsTrigger value="records" className="rounded-none font-black uppercase text-[10px] tracking-wider px-6 flex items-center gap-2">
+            <FileSpreadsheet className="size-4" /> Attendance Database Table ({filteredRecords.length})
+          </TabsTrigger>
+          <TabsTrigger value="charts" className="rounded-none font-black uppercase text-[10px] tracking-wider px-6 flex items-center gap-2">
+            <BarChart3 className="size-4" /> Visual Attendance Analytics & Graphs
+          </TabsTrigger>
+        </TabsList>
+
+        {/* TAB 1: DATA TABLE */}
+        <TabsContent value="records">
+          <Card className="border-none ring-1 ring-border/50 bg-white rounded-none shadow-sm overflow-hidden text-left">
+            <CardHeader className="bg-muted/10 p-4 border-b flex flex-row items-center justify-between">
+              <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                <FileSpreadsheet className="size-4 text-emerald-600" /> Synced Attendance Database Records
+              </CardTitle>
+              <Badge className="bg-emerald-100 text-emerald-800 rounded-none border-none text-[8px] font-black uppercase px-2 py-0.5">
+                Excel & PDF Ready
+              </Badge>
+            </CardHeader>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-muted/20">
+                  <TableRow>
+                    <TableHead className="font-black uppercase text-[9px] py-4 px-6">Date</TableHead>
+                    <TableHead className="font-black uppercase text-[9px] py-4">Employee</TableHead>
+                    <TableHead className="font-black uppercase text-[9px] py-4">Department</TableHead>
+                    <TableHead className="font-black uppercase text-[9px] py-4">Status</TableHead>
+                    <TableHead className="font-black uppercase text-[9px] py-4">Check-In</TableHead>
+                    <TableHead className="font-black uppercase text-[9px] py-4">Check-Out</TableHead>
+                    <TableHead className="font-black uppercase text-[9px] py-4">Break (Mins)</TableHead>
+                    <TableHead className="font-black uppercase text-[9px] py-4">Work Hours</TableHead>
+                    <TableHead className="font-black uppercase text-[9px] py-4 px-6">Location Verification</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-48 text-center animate-pulse uppercase font-black text-xs text-muted-foreground">
+                        Syncing Attendance Records from Cloud Firestore...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredRecords.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-48 text-center uppercase font-bold text-xs text-muted-foreground italic">
+                        No attendance records found for the selected query.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredRecords.map((row) => (
+                      <TableRow key={row.id} className="border-border/50 hover:bg-muted/5 transition-colors">
+                        <TableCell className="font-mono text-xs font-bold py-4 px-6 text-slate-800">
+                          {row.dateFormatted}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div>
+                            <p className="font-black text-xs uppercase text-slate-900">{row.employeeName}</p>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase">{row.jobTitle}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs font-bold uppercase text-slate-700 py-4">
+                          {row.department}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <Badge className={cn(
+                            "rounded-none text-[8px] font-black uppercase px-2 py-0.5 border-none",
+                            row.status === "present" ? "bg-emerald-100 text-emerald-800" :
+                            row.status === "late" ? "bg-amber-100 text-amber-800" :
+                            "bg-rose-100 text-rose-800"
+                          )}>
+                            {row.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs font-bold py-4 text-emerald-700">
+                          {row.checkInTime}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs font-bold py-4 text-rose-700">
+                          {row.checkOutTime}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs font-bold py-4 text-slate-700">
+                          {row.breakDurationMinutes}m
+                        </TableCell>
+                        <TableCell className="font-mono text-xs font-black py-4 text-primary">
+                          {row.totalHours !== "--" ? `${row.totalHours} hrs` : "--"}
+                        </TableCell>
+                        <TableCell className="py-4 px-6">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn(
+                                "text-[8px] font-black uppercase px-1.5 py-0.5 rounded-none",
+                                row.isOutOfRange ? "bg-amber-100 text-amber-800" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              )}>
+                                {row.locationType}
+                              </span>
+                            </div>
+                            {row.checkInCoords && (
+                              <p className="text-[8px] font-mono text-muted-foreground font-bold">
+                                {row.checkInCoords}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* TAB 2: VISUAL ANALYTICS & CHARTS */}
+        <TabsContent value="charts" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+            {/* 1. Daily Turnout & Punctuality Trend */}
+            <Card className="border-none ring-1 ring-border/50 bg-white rounded-none shadow-sm overflow-hidden text-left">
+              <CardHeader className="bg-muted/10 p-4 border-b">
+                <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                  <TrendingUp className="size-4 text-primary" /> Daily Attendance Turnout & Punctuality Trend
+                </CardTitle>
+                <CardDescription className="text-[9px] font-bold uppercase text-muted-foreground">
+                  Present count vs late arrivals across the selected dates
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="h-[280px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dailyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                      <XAxis dataKey="date" tick={{ fontSize: 9 }} angle={-25} textAnchor="end" />
+                      <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+                      <Tooltip contentStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                      <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                      <Bar dataKey="present" name="Present" fill="#10b981" />
+                      <Bar dataKey="late" name="Late Arrivals" fill="#f59e0b" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 2. Geofence Compliance & Status Distribution */}
+            <Card className="border-none ring-1 ring-border/50 bg-white rounded-none shadow-sm overflow-hidden text-left">
+              <CardHeader className="bg-muted/10 p-4 border-b">
+                <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                  <PieChartIcon className="size-4 text-emerald-600" /> Geofence Verification & Compliance Share
+                </CardTitle>
+                <CardDescription className="text-[9px] font-bold uppercase text-muted-foreground">
+                  Proportion of authorized office check-ins vs out-of-range coordinates
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="h-[280px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusPieData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={85}
+                        innerRadius={45}
+                        paddingAngle={4}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        labelLine={false}
+                      >
+                        {statusPieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 3. Department Volume Breakdown */}
+            <Card className="border-none ring-1 ring-border/50 bg-white rounded-none shadow-sm overflow-hidden text-left">
+              <CardHeader className="bg-muted/10 p-4 border-b">
+                <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                  <Building2 className="size-4 text-blue-600" /> Department-Wise Shift Volume
+                </CardTitle>
+                <CardDescription className="text-[9px] font-bold uppercase text-muted-foreground">
+                  Total attendance records captured per operational team
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="h-[280px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={departmentBreakdown} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.3} />
+                      <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={90} />
+                      <Tooltip contentStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                      <Bar dataKey="count" name="Total Shifts" fill="#8b5cf6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 4. Top Contributors by Working Hours */}
+            <Card className="border-none ring-1 ring-border/50 bg-white rounded-none shadow-sm overflow-hidden text-left">
+              <CardHeader className="bg-muted/10 p-4 border-b">
+                <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                  <Clock className="size-4 text-amber-600" /> Top Cumulative Working Hours by Employee
+                </CardTitle>
+                <CardDescription className="text-[9px] font-bold uppercase text-muted-foreground">
+                  Highest net productive hours clocked in selected range
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="h-[280px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topWorkingEmployees} margin={{ top: 10, right: 10, left: -20, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                      <XAxis dataKey="name" tick={{ fontSize: 8 }} angle={-25} textAnchor="end" />
+                      <YAxis tick={{ fontSize: 9 }} />
+                      <Tooltip contentStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                      <Bar dataKey="hours" name="Net Work Hours" fill="#3b82f6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
-
