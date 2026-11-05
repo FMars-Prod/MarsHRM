@@ -50,6 +50,7 @@ import {
   Video,
   Layers,
   FileSpreadsheet,
+  BellRing,
 } from "lucide-react";
 import React from "react";
 
@@ -102,6 +103,7 @@ const groups = [
   {
     label: "OPERATIONS",
     links: [
+      { href: "/dashboard/notifications", label: "Notification Centre", icon: BellRing, roles: EXEC_ROLES, badgeKey: "pendingAttRequestsCount" },
       { href: "/dashboard/attendance-export", label: "Attendance Records Export", icon: FileSpreadsheet, roles: EXEC_ROLES },
       { href: "/dashboard/attendance-requests", label: "Approvals", icon: CheckCircle2, roles: LEAD_ROLES, badgeKey: "pendingAttRequestsCount" },
       { href: "/dashboard/documents", label: "Documents", icon: FileBox, roles: ALL_ROLES },

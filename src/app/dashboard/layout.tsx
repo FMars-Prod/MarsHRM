@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sidebar';
 import { MainNav } from '@/components/geohrm/main-nav';
 import { UserNav } from '@/components/geohrm/user-nav';
-import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert, ListTodo, CheckCircle2, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { Building2, Sparkles, Search, Bell, HelpCircle, LayoutGrid, ChevronRight, LogOut, Loader2, Command, ShieldCheck, MapPin, ShieldAlert, ListTodo, CheckCircle2, AlertCircle, Clock, CheckCircle, Megaphone, Calendar, LifeBuoy, UserCheck, ExternalLink } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useCollection, useAuth } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
@@ -68,6 +68,7 @@ const SEARCHABLE_LINKS = [
     { label: "Teams", href: "/dashboard/teams", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Organization Chart", href: "/dashboard/org-structure", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Asset Management", href: "/dashboard/assets", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
+    { label: "Notification Centre", href: "/dashboard/notifications", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Approvals", href: "/dashboard/attendance-requests", roles: ['Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Documents", href: "/dashboard/documents", roles: ['Member', 'Team Lead', 'HR Manager', 'CEO/MD', 'CEO/Admin'] },
     { label: "Complaints", href: "/dashboard/compliance", roles: ['HR Manager', 'CEO/MD', 'CEO/Admin'] },
@@ -238,6 +239,23 @@ export default function DashboardLayout({
     );
   }, [completedTasks, user]);
 
+  const unreadAnnouncementsList = useMemo(() => {
+    if (!allAnnouncements || !readAnnouncements) return [];
+    const readIds = new Set(readAnnouncements.map((a: any) => a.id));
+    return allAnnouncements.filter((a: any) => !readIds.has(a.id)).slice(0, 5);
+  }, [allAnnouncements, readAnnouncements]);
+
+  const todaysEventsList = useMemo(() => {
+    if (!events) return [];
+    return events.filter((e: any) => e.date && isToday(e.date.toDate())).slice(0, 5);
+  }, [events]);
+
+  const updatedTicketsList = useMemo(() => {
+    if (!userTickets) return [];
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return userTickets.filter((t: any) => t.lastUpdatedDate && (t.lastUpdatedDate.toDate ? t.lastUpdatedDate.toDate() : new Date(t.lastUpdatedDate)) > twentyFourHoursAgo).slice(0, 5);
+  }, [userTickets]);
+
   const totalNotifications = (leaveRequests?.length || 0) + unreadAnnouncements + todaysEventsCount + (locationRequests?.length || 0) + ticketUpdateCount + (attRequests?.length || 0) + taskReminders.length + teamCompletedTasks.length;
 
   const filteredSearchLinks = useMemo(() => {
@@ -403,87 +421,188 @@ export default function DashboardLayout({
                            )}
                        </Button>
                    </PopoverTrigger>
-                   <PopoverContent className="w-[340px] p-0 rounded-3xl border border-white/20 shadow-3xl bg-white/80 backdrop-blur-xl overflow-hidden" align="end" sideOffset={12}>
-                       <div className="p-6 border-b bg-white/50 backdrop-blur-md">
-                           <h4 className="text-lg font-black uppercase tracking-tighter text-primary text-left">Notifications</h4>
-                           <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 text-left">Latest Updates</p>
-                       </div>
-                       <ScrollArea className="max-h-[450px]">
-                           <div className="p-4 space-y-3">
-                               {totalNotifications === 0 ? (
-                                   <div className="py-12 text-center opacity-30 grayscale flex flex-col items-center">
-                                       <CheckCircle2 className="size-10 mb-2" />
-                                       <p className="font-bold uppercase text-[10px] tracking-widest">System Clear</p>
-                                   </div>
-                               ) : (
-                                   <>
-                                       {teamCompletedTasks.map((todo: any) => {
-                                           const completedBy = allUsers?.find((u: any) => u.id === todo.assignedTo);
-                                           return (
-                                               <Link 
-                                                  href="/dashboard/todo" 
-                                                  key={todo.id}
-                                                  onClick={() => setIsNotificationsOpen(false)}
-                                                  className="flex items-start gap-3 p-4 bg-emerald-50/60 backdrop-blur-sm hover:bg-emerald-100/80 transition-all border border-emerald-100/50 shadow-sm rounded-2xl"
-                                               >
-                                                   <Avatar className="size-10 rounded-none border border-emerald-200 ring-2 ring-white">
-                                                        <AvatarImage src={completedBy?.avatar} className="object-cover" />
-                                                        <AvatarFallback className="bg-emerald-500 text-white text-[9px] font-black">{completedBy?.firstName?.[0]}</AvatarFallback>
-                                                   </Avatar>
-                                                   <div className="flex-1 min-w-0 text-left space-y-2">
-                                                       <div className="flex justify-between items-start gap-2">
-                                                            <p className="text-[10px] font-black uppercase text-emerald-700">Task Completed</p>
-                                                            <span className="text-[8px] font-bold text-muted-foreground opacity-40 whitespace-nowrap">{todo.completedAt ? format(todo.completedAt.toDate(), 'HH:mm') : ''}</span>
-                                                       </div>
-                                                       <p className="text-[11px] font-black truncate leading-tight uppercase text-slate-800">{todo.task}</p>
-                                                       <div className="grid grid-cols-2 gap-2 pt-1 border-t border-emerald-100/50">
-                                                            <div>
-                                                                <p className="text-[7px] font-black text-muted-foreground/60 uppercase">Assigned</p>
-                                                                <p className="text-[8px] font-bold text-slate-500">{todo.createdAt ? format(todo.createdAt.toDate(), 'p, MMM d') : 'N/A'}</p>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="text-[7px] font-black text-emerald-600/60 uppercase">Completed</p>
-                                                                <p className="text-[8px] font-black text-emerald-700">{todo.completedAt ? format(todo.completedAt.toDate(), 'p, MMM d') : 'N/A'}</p>
-                                                            </div>
-                                                       </div>
-                                                       <p className="text-[9px] font-black text-slate-900 uppercase pt-1 italic">By: {todo.assignedToName}</p>
-                                                   </div>
-                                               </Link>
-                                           );
-                                       })}
-                                       {taskReminders.map((todo: any) => (
-                                           <Link 
-                                              href="/dashboard/todo" 
-                                              key={todo.id}
-                                              onClick={() => setIsNotificationsOpen(false)}
-                                              className="flex items-center gap-3 p-3 bg-red-50/60 backdrop-blur-sm hover:bg-red-100/80 transition-all border border-red-100/50 rounded-2xl"
-                                           >
-                                               <div className="size-8 bg-red-500 text-white flex items-center justify-center rounded-xl"><Clock className="size-4"/></div>
-                                               <div className="flex-1 min-w-0 text-left">
-                                                   <p className="text-[10px] font-bold uppercase text-red-700 text-left">Task Reminder</p>
-                                                   <p className="text-xs font-black truncate">{todo.task}</p>
-                                               </div>
-                                           </Link>
-                                       ))}
-                                       {leaveRequests?.map((req: any, i: number) => (
-                                           <Link 
-                                              href="/dashboard/leave" 
-                                              key={i}
-                                              onClick={() => setIsNotificationsOpen(false)}
-                                              className="flex items-center gap-3 p-3 bg-indigo-50/60 backdrop-blur-sm hover:bg-indigo-100/80 transition-all border border-indigo-100/50 rounded-2xl group"
-                                           >
-                                               <div className="size-8 bg-indigo-600 text-white flex items-center justify-center rounded-xl"><Command className="size-4"/></div>
-                                               <div className="flex-1 min-w-0 text-left">
-                                                   <p className="text-[10px] font-bold uppercase text-indigo-700">Leave Request</p>
-                                                   <p className="text-xs font-semibold truncate text-slate-800">{req.employeeName} submitted a request</p>
-                                               </div>
-                                           </Link>
-                                       ))}
-                                   </>
-                               )}
-                           </div>
-                       </ScrollArea>
-                   </PopoverContent>
+                   <PopoverContent className="w-[380px] p-0 rounded-2xl border border-slate-200/80 shadow-2xl bg-white/95 backdrop-blur-xl overflow-hidden" align="end" sideOffset={12}>
+                        <div className="p-4 px-5 border-b bg-gradient-to-r from-purple-50/80 via-white to-purple-50/50 flex items-center justify-between">
+                            <div>
+                                <h4 className="text-sm font-black uppercase tracking-tight text-primary flex items-center gap-1.5">
+                                    <Bell className="size-4" /> Notifications
+                                </h4>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/75">
+                                    {totalNotifications} updates requiring attention
+                                </p>
+                            </div>
+                            {isPrivileged && (
+                                <Link 
+                                    href="/dashboard/notifications" 
+                                    onClick={() => setIsNotificationsOpen(false)}
+                                    className="text-[10px] font-black uppercase text-primary hover:underline flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-md"
+                                >
+                                    Manage <ChevronRight className="size-3" />
+                                </Link>
+                            )}
+                        </div>
+                        <ScrollArea className="max-h-[460px]">
+                            <div className="p-3 space-y-2">
+                                {totalNotifications === 0 ? (
+                                    <div className="py-12 text-center opacity-40 flex flex-col items-center">
+                                        <CheckCircle2 className="size-10 mb-2 text-emerald-500" />
+                                        <p className="font-bold uppercase text-[10px] tracking-widest text-slate-700">All caught up! System clear</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {teamCompletedTasks.map((todo: any) => {
+                                            const completedBy = allUsers?.find((u: any) => u.id === todo.assignedTo);
+                                            return (
+                                                <Link 
+                                                   href="/dashboard/todo" 
+                                                   key={todo.id}
+                                                   onClick={() => setIsNotificationsOpen(false)}
+                                                   className="flex items-start gap-3 p-3 bg-slate-50/80 hover:bg-emerald-50/70 transition-all border border-slate-100 hover:border-emerald-200 rounded-xl"
+                                                >
+                                                    <Avatar className="size-9 rounded-lg border border-slate-200 ring-1 ring-white shrink-0 mt-0.5">
+                                                         <AvatarImage src={completedBy?.avatar} className="object-cover" />
+                                                         <AvatarFallback className="bg-emerald-500 text-white text-[9px] font-black">{completedBy?.firstName?.[0]}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex-1 min-w-0 text-left space-y-1">
+                                                        <div className="flex justify-between items-center gap-2">
+                                                             <Badge className="bg-emerald-100 text-emerald-800 border-none rounded-none text-[8px] font-black uppercase px-1.5 py-0">Task Done</Badge>
+                                                             <span className="text-[9px] font-medium text-slate-400 whitespace-nowrap">{todo.completedAt ? format(todo.completedAt.toDate(), 'HH:mm') : ''}</span>
+                                                        </div>
+                                                        <p className="text-xs font-bold truncate text-slate-800">{todo.task}</p>
+                                                        <p className="text-[9px] font-bold text-slate-500 truncate">By {todo.assignedToName || completedBy?.firstName || 'team member'}</p>
+                                                    </div>
+                                                </Link>
+                                            );
+                                        })}
+                                        {taskReminders.map((todo: any) => (
+                                            <Link 
+                                               href="/dashboard/todo" 
+                                               key={todo.id}
+                                               onClick={() => setIsNotificationsOpen(false)}
+                                               className="flex items-center gap-3 p-3 bg-red-50/60 hover:bg-red-100/70 transition-all border border-red-100 rounded-xl"
+                                            >
+                                                <div className="size-8 bg-red-500 text-white flex items-center justify-center rounded-lg shrink-0"><Clock className="size-4"/></div>
+                                                <div className="flex-1 min-w-0 text-left">
+                                                    <div className="flex justify-between items-center">
+                                                        <Badge className="bg-red-100 text-red-800 border-none rounded-none text-[8px] font-black uppercase px-1.5 py-0">Deadline</Badge>
+                                                    </div>
+                                                    <p className="text-xs font-bold truncate text-slate-800 mt-0.5">{todo.task}</p>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                        {leaveRequests?.map((req: any, i: number) => (
+                                            <Link 
+                                               href="/dashboard/leave" 
+                                               key={"leave-" + (req.id || i)}
+                                               onClick={() => setIsNotificationsOpen(false)}
+                                               className="flex items-center gap-3 p-3 bg-indigo-50/60 hover:bg-indigo-100/70 transition-all border border-indigo-100 rounded-xl group"
+                                            >
+                                                <div className="size-8 bg-indigo-600 text-white flex items-center justify-center rounded-lg shrink-0"><Command className="size-4"/></div>
+                                                <div className="flex-1 min-w-0 text-left">
+                                                    <div className="flex items-center justify-between">
+                                                        <Badge className="bg-indigo-100 text-indigo-800 border-none rounded-none text-[8px] font-black uppercase px-1.5 py-0">Leave</Badge>
+                                                    </div>
+                                                    <p className="text-xs font-bold truncate text-slate-800 mt-0.5">{req.employeeName || 'Employee'}</p>
+                                                    <p className="text-[10px] font-medium text-slate-500 truncate">{req.category || 'Leave'}: {req.reason || 'Requested'}</p>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                        {attRequests?.map((req: any, i: number) => (
+                                            <Link 
+                                               href="/dashboard/attendance-requests" 
+                                               key={"att-" + (req.id || i)}
+                                               onClick={() => setIsNotificationsOpen(false)}
+                                               className="flex items-center gap-3 p-3 bg-amber-50/60 hover:bg-amber-100/70 transition-all border border-amber-100 rounded-xl group"
+                                            >
+                                                <div className="size-8 bg-amber-500 text-white flex items-center justify-center rounded-lg shrink-0"><UserCheck className="size-4"/></div>
+                                                <div className="flex-1 min-w-0 text-left">
+                                                    <div className="flex items-center justify-between">
+                                                        <Badge className="bg-amber-100 text-amber-800 border-none rounded-none text-[8px] font-black uppercase px-1.5 py-0">Punch Approval</Badge>
+                                                    </div>
+                                                    <p className="text-xs font-bold truncate text-slate-800 mt-0.5">{req.employeeName || 'Employee'}</p>
+                                                    <p className="text-[10px] font-medium text-slate-500 truncate">{req.type || 'Punch'} • {req.reason || 'Needs punch approval'}</p>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                        {locationRequests?.map((req: any, i: number) => (
+                                            <Link 
+                                               href="/dashboard/location-requests" 
+                                               key={"loc-" + (req.id || i)}
+                                               onClick={() => setIsNotificationsOpen(false)}
+                                               className="flex items-center gap-3 p-3 bg-purple-50/60 hover:bg-purple-100/70 transition-all border border-purple-100 rounded-xl group"
+                                            >
+                                                <div className="size-8 bg-purple-600 text-white flex items-center justify-center rounded-lg shrink-0"><MapPin className="size-4"/></div>
+                                                <div className="flex-1 min-w-0 text-left">
+                                                    <div className="flex items-center justify-between">
+                                                        <Badge className="bg-purple-100 text-purple-800 border-none rounded-none text-[8px] font-black uppercase px-1.5 py-0">Location Access</Badge>
+                                                    </div>
+                                                    <p className="text-xs font-bold truncate text-slate-800 mt-0.5">{req.employeeName || 'Employee'}</p>
+                                                    <p className="text-[10px] font-medium text-slate-500 truncate">WFH / Branch Request</p>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                        {unreadAnnouncementsList.map((ann: any) => (
+                                            <Link 
+                                               href="/dashboard/announcements?tab=announcements" 
+                                               key={"ann-" + ann.id}
+                                               onClick={() => setIsNotificationsOpen(false)}
+                                               className="flex items-center gap-3 p-3 bg-blue-50/60 hover:bg-blue-100/70 transition-all border border-blue-100 rounded-xl group"
+                                            >
+                                                <div className="size-8 bg-blue-600 text-white flex items-center justify-center rounded-lg shrink-0"><Megaphone className="size-4"/></div>
+                                                <div className="flex-1 min-w-0 text-left">
+                                                    <div className="flex items-center justify-between">
+                                                        <Badge className="bg-blue-100 text-blue-800 border-none rounded-none text-[8px] font-black uppercase px-1.5 py-0">Company Feed</Badge>
+                                                    </div>
+                                                    <p className="text-xs font-bold truncate text-slate-800 mt-0.5">{ann.title}</p>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                        {todaysEventsList.map((evt: any) => (
+                                            <Link 
+                                               href="/dashboard/announcements?tab=events" 
+                                               key={"evt-" + evt.id}
+                                               onClick={() => setIsNotificationsOpen(false)}
+                                               className="flex items-center gap-3 p-3 bg-pink-50/60 hover:bg-pink-100/70 transition-all border border-pink-100 rounded-xl group"
+                                            >
+                                                <div className="size-8 bg-pink-500 text-white flex items-center justify-center rounded-lg shrink-0"><Calendar className="size-4"/></div>
+                                                <div className="flex-1 min-w-0 text-left">
+                                                    <div className="flex items-center justify-between">
+                                                        <Badge className="bg-pink-100 text-pink-800 border-none rounded-none text-[8px] font-black uppercase px-1.5 py-0">Event</Badge>
+                                                    </div>
+                                                    <p className="text-xs font-bold truncate text-slate-800 mt-0.5">{evt.name}: {evt.event}</p>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                        {updatedTicketsList.map((ticket: any) => (
+                                            <Link 
+                                               href="/dashboard/issues" 
+                                               key={"ticket-" + ticket.id}
+                                               onClick={() => setIsNotificationsOpen(false)}
+                                               className="flex items-center gap-3 p-3 bg-orange-50/60 hover:bg-orange-100/70 transition-all border border-orange-100 rounded-xl group"
+                                            >
+                                                <div className="size-8 bg-orange-500 text-white flex items-center justify-center rounded-lg shrink-0"><LifeBuoy className="size-4"/></div>
+                                                <div className="flex-1 min-w-0 text-left">
+                                                    <div className="flex items-center justify-between">
+                                                        <Badge className="bg-orange-100 text-orange-800 border-none rounded-none text-[8px] font-black uppercase px-1.5 py-0">Support</Badge>
+                                                    </div>
+                                                    <p className="text-xs font-bold truncate text-slate-800 mt-0.5">{ticket.title || ticket.issueType || 'Ticket update'}</p>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </>
+                                )}
+                            </div>
+                        </ScrollArea>
+                        {isPrivileged && (
+                            <div className="p-2.5 border-t bg-slate-50/80 text-center">
+                                <Button asChild variant="ghost" size="sm" className="w-full text-xs font-black uppercase tracking-wider text-primary hover:bg-primary/5">
+                                    <Link href="/dashboard/notifications" onClick={() => setIsNotificationsOpen(false)}>
+                                        Open Notification Management <ExternalLink className="size-3.5 ml-1.5" />
+                                    </Link>
+                                </Button>
+                            </div>
+                        )}
+                    </PopoverContent>
                 </Popover>
 
                 <Button asChild variant="ghost" size="icon" className="rounded-none h-10 w-10">
