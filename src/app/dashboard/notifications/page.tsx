@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, updateDocumentNonBlocking } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
 import { doc, collection, query, where, orderBy, limit, serverTimestamp, Timestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -99,11 +99,26 @@ export default function NotificationManagementPage() {
 
       const attDateId = req.dateId || format(new Date(), "yyyy-MM-dd");
       const attendanceRef = doc(firestore, `users/${req.employeeId}/attendances`, attDateId);
-      updateDocumentNonBlocking(attendanceRef, {
+      
+      const attendanceUpdate: any = {
         id: attDateId,
         employeeId: req.employeeId,
         isOutOfRange: false,
-      });
+      };
+
+      const userInitiatedTime = req.requestTimestamp;
+      if (req.type === 'Clock Out') {
+        if (userInitiatedTime) attendanceUpdate.checkOutTime = userInitiatedTime;
+        if (req.requestedLatitude != null) attendanceUpdate.locationCheckOutLatitude = req.requestedLatitude;
+        if (req.requestedLongitude != null) attendanceUpdate.locationCheckOutLongitude = req.requestedLongitude;
+      } else {
+        if (userInitiatedTime) attendanceUpdate.checkInTime = userInitiatedTime;
+        attendanceUpdate.status = req.intendedStatus || 'present';
+        if (req.requestedLatitude != null) attendanceUpdate.locationCheckInLatitude = req.requestedLatitude;
+        if (req.requestedLongitude != null) attendanceUpdate.locationCheckInLongitude = req.requestedLongitude;
+      }
+
+      setDocumentNonBlocking(attendanceRef, attendanceUpdate, { merge: true });
 
       toast({ title: "Approved", description: `Punch request approved for ${req.employeeName || 'employee'}.` });
     } catch (e: any) {

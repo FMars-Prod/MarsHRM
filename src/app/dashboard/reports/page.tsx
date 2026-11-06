@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList, Building2, ChevronRight, MapPin, LocateFixed, Navigation, FileSpreadsheet, ShieldAlert, AlertCircle, ShieldCheck, Upload } from "lucide-react";
+import { PlusCircle, Search, Target, X, Plus, FileText, Briefcase, CheckCircle2, Mic, Loader2, DollarSign, ExternalLink, Download, Clock, Zap, History, Activity, PhoneCall, Link as LinkIcon, FileDown, Trash2, Brain, Users, TrendingUp, BarChart3, ListChecks, UserPlus, GraduationCap, FileCheck, Share2, ClipboardList, Building2, ChevronRight, MapPin, LocateFixed, Navigation, FileSpreadsheet, ShieldAlert, AlertCircle, ShieldCheck, Upload, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
@@ -396,23 +396,208 @@ const LiveLocationDisplayInForm = () => {
 };
 
 const ShiftHeaderFields = () => {
-    const { control } = useFormContext();
+    const { control, setValue } = useFormContext();
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const todayId = React.useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+    
+    // 1. Current user doc for profile & shift assignment
+    const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+    const { data: userData } = useDoc<any>(userDocRef);
+
+    // 2. Today's attendance document
+    const attRef = useMemoFirebase(() => user ? doc(firestore, `users/${user.uid}/attendances`, todayId) : null, [user, firestore, todayId]);
+    const { data: todayAttendance } = useDoc<any>(attRef);
+
+    // 3. Organization location settings for direct attendance toggle
+    const locationSettingsRef = useMemoFirebase(() => doc(firestore, 'settings', 'location'), [firestore]);
+    const { data: locationSettings } = useDoc<any>(locationSettingsRef);
+
+    // 4. Master organizational shifts
+    const shiftsQuery = useMemoFirebase(() => query(collection(firestore, 'settings', 'config', 'shifts'), orderBy('name', 'asc')), [firestore]);
+    const { data: orgShifts } = useCollection<any>(shiftsQuery);
+
+    // 5. Today's attendance approval request (if submitted while outside geofence)
+    const attRequestQuery = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return query(
+            collection(firestore, 'attendanceApprovalRequests'),
+            where('employeeId', '==', user.uid),
+            where('dateId', '==', todayId),
+            limit(1)
+        );
+    }, [user, firestore, todayId]);
+    const { data: attRequests } = useCollection<any>(attRequestQuery);
+    const todayRequest = attRequests?.[0] || null;
+
+    const isDirectAttendanceMode = Boolean(
+        userData?.attendanceMode === 'direct' ||
+        (userData?.attendanceMode !== 'strict' && locationSettings?.directAttendanceEnabled)
+    );
+
+    // Resolve assigned shift start / end timings as fallback
+    const assignedShift = React.useMemo(() => {
+        if (!orgShifts || orgShifts.length === 0) return null;
+        if (userData?.shiftType) {
+            const found = orgShifts.find((s: any) => s.name?.toLowerCase() === userData.shiftType?.toLowerCase());
+            if (found) return found;
+        }
+        return orgShifts.find((s: any) => s.name?.toLowerCase().includes('general') || s.name?.toLowerCase().includes('day')) || orgShifts[0];
+    }, [orgShifts, userData?.shiftType]);
+
+    // Compute automatic shift start & end based on verified attendance / approval / profile
+    const autoTimes = React.useMemo(() => {
+        let startTime = "";
+        let endTime = "";
+        let statusBadge = "Manual Entry";
+        let statusColor = "bg-slate-100 text-slate-700";
+
+        const formatTimeToHHMM = (dateObj: any): string => {
+            if (!dateObj) return "";
+            try {
+                const d = dateObj instanceof Timestamp ? dateObj.toDate() : (dateObj.toDate ? dateObj.toDate() : new Date(dateObj));
+                if (isNaN(d.getTime())) return "";
+                const hours = String(d.getHours()).padStart(2, '0');
+                const minutes = String(d.getMinutes()).padStart(2, '0');
+                return `${hours}:${minutes}`;
+            } catch {
+                return "";
+            }
+        };
+
+        const checkInDate = todayAttendance?.checkInTime;
+        const checkOutDate = todayAttendance?.checkOutTime;
+
+        if (checkInDate) {
+            startTime = formatTimeToHHMM(checkInDate);
+        }
+        if (checkOutDate) {
+            endTime = formatTimeToHHMM(checkOutDate);
+        }
+
+        // Check approval status if request exists
+        if (todayRequest) {
+            if (todayRequest.status === 'Approved') {
+                if (!startTime && todayRequest.requestTimestamp) {
+                    startTime = formatTimeToHHMM(todayRequest.requestTimestamp);
+                }
+                statusBadge = "Verified & Approved";
+                statusColor = "bg-emerald-100 text-emerald-800";
+            } else if (todayRequest.status === 'Pending') {
+                if (!startTime && todayRequest.requestTimestamp) {
+                    startTime = formatTimeToHHMM(todayRequest.requestTimestamp);
+                }
+                statusBadge = "Pending Admin Approval";
+                statusColor = "bg-amber-100 text-amber-800";
+            } else if (todayRequest.status === 'Rejected') {
+                statusBadge = "Request Rejected (Manual)";
+                statusColor = "bg-rose-100 text-rose-800";
+            }
+        } else if (isDirectAttendanceMode) {
+            if (startTime) {
+                statusBadge = "Direct Sync (Auto)";
+                statusColor = "bg-emerald-100 text-emerald-800";
+            } else if (assignedShift?.start) {
+                statusBadge = "Profile Shift Preset";
+                statusColor = "bg-blue-100 text-blue-800";
+            }
+        } else if (startTime) {
+            statusBadge = "Geofence Clock-in Sync";
+            statusColor = "bg-emerald-100 text-emerald-800";
+        }
+
+        // If clock-out not yet clicked at report submission time, default to current time
+        if (startTime && !endTime) {
+            const now = new Date();
+            endTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        }
+
+        // Fallback to assigned shift schedule if empty
+        if (!startTime && assignedShift?.start) {
+            startTime = assignedShift.start;
+        }
+        if (!endTime && assignedShift?.end) {
+            endTime = assignedShift.end;
+        }
+
+        return { startTime, endTime, statusBadge, statusColor };
+    }, [todayAttendance, todayRequest, isDirectAttendanceMode, assignedShift]);
+
+    // Automatically synchronize into form fields
+    React.useEffect(() => {
+        if (autoTimes.startTime) {
+            setValue("logInTime", autoTimes.startTime, { shouldDirty: false });
+        }
+        if (autoTimes.endTime) {
+            setValue("logOutTime", autoTimes.endTime, { shouldDirty: false });
+        }
+    }, [autoTimes.startTime, autoTimes.endTime, setValue]);
+
+    const handleSyncFromAttendance = () => {
+        if (autoTimes.startTime) setValue("logInTime", autoTimes.startTime);
+        if (autoTimes.endTime) setValue("logOutTime", autoTimes.endTime);
+    };
+
     return (
         <div className="space-y-4 mb-8 text-left">
             <LiveLocationDisplayInForm />
-            <div className="grid grid-cols-2 gap-6 text-left">
-            <FormField control={control} name="logInTime" render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Shift Start</FormLabel>
-                    <FormControl><Input type="time" {...field} className="rounded-none h-11" /></FormControl>
-                </FormItem>
-            )} />
-            <FormField control={control} name="logOutTime" render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="text-[10px] uppercase font-black text-muted-foreground">Shift End</FormLabel>
-                    <FormControl><Input type="time" {...field} className="rounded-none h-11" /></FormControl>
-                </FormItem>
-            )} />
+
+            <div className="p-4 border bg-gradient-to-r from-primary/5 via-white to-transparent ring-1 ring-border/50 text-left space-y-3">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Clock className="size-4 text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+                            Shift Time Protocol
+                        </span>
+                        <Badge className={cn("text-[8px] font-black uppercase px-2 py-0.5 rounded-none border-none", autoTimes.statusColor)}>
+                            {autoTimes.statusBadge}
+                        </Badge>
+                    </div>
+
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleSyncFromAttendance}
+                        className="h-7 px-2.5 text-[8px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 rounded-none"
+                    >
+                        <RefreshCw className="size-3 mr-1" /> Re-Sync
+                    </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6 text-left">
+                    <FormField control={control} name="logInTime" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] uppercase font-black text-muted-foreground flex items-center justify-between">
+                                <span>Shift Start</span>
+                                {field.value && <span className="font-mono text-emerald-600 text-[9px]">Synced</span>}
+                            </FormLabel>
+                            <FormControl>
+                                <Input type="time" {...field} className="rounded-none h-11 font-mono font-bold" />
+                            </FormControl>
+                        </FormItem>
+                    )} />
+                    <FormField control={control} name="logOutTime" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-[10px] uppercase font-black text-muted-foreground flex items-center justify-between">
+                                <span>Shift End</span>
+                                {field.value && <span className="font-mono text-emerald-600 text-[9px]">Synced</span>}
+                            </FormLabel>
+                            <FormControl>
+                                <Input type="time" {...field} className="rounded-none h-11 font-mono font-bold" />
+                            </FormControl>
+                        </FormItem>
+                    )} />
+                </div>
+
+                <p className="text-[8px] font-bold uppercase text-slate-500 tracking-wide">
+                    {todayRequest && todayRequest.status === 'Pending' 
+                        ? '⚠️ Approval request pending admin review. Shift start time is synced from your initial submission.'
+                        : isDirectAttendanceMode 
+                            ? '⚡ Direct attendance active: Shift times are automatically fetched from device clock-in & clock-out.'
+                            : '📍 Shift times are synced from verified office geofence clock-in & clock-out.'}
+                </p>
             </div>
         </div>
     );
